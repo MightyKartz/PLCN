@@ -26,10 +26,11 @@ Download the latest release for your platform from the [Releases](https://github
 ## Usage
 
 1. **Run the application**:
-   - Windows: Double-click `PLCN-Windows.exe`.
-   - macOS/Linux: Run `./PLCN-macOS` or `./PLCN-Linux` in the terminal.
+   - Windows: Run `.\PLCN-Windows.exe ui` in command line.
+   - macOS: Run `./PLCN-macOS ui` in terminal.
+   - Linux: Run `./PLCN-Linux ui` in terminal.
    
-   *Note: On first run, it will open a Web UI in your default browser.*
+   *Note: Running with `ui` command will automatically open the Web UI.*
 
 2. **Configure via Web UI**:
    - **Single Mode**: Select a single `.lpl` file, choose the system (e.g., `Sony - PlayStation`), and set the thumbnails directory.

@@ -26,10 +26,11 @@ PLCN 是一个专为 RetroArch 用户设计的强大工具，可以自动将播�
 ## 使用方法
 
 1. **运行程序**：
-   - Windows: 双击 `PLCN-Windows.exe`。
-   - macOS/Linux: 在终端中运行 `./PLCN-macOS` 或 `./PLCN-Linux`。
+   - Windows: 在命令行中运行 `.\PLCN-Windows.exe ui`
+   - macOS: 在终端中运行 `./PLCN-macOS ui`
+   - Linux: 在终端中运行 `./PLCN-Linux ui`
    
-   *注意：首次运行时，会自动在默认浏览器中打开 Web 配置界面。*
+   *注意：运行 `ui` 命令会自动在默认浏览器中打开 Web 配置界面。*
 
 2. **Web 界面配置**：
    - **单个处理**：选择单个 `.lpl` 文件，选择对应的系统（如 `Sony - PlayStation`），并设置缩略图保存目录。
