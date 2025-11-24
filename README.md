@@ -1,47 +1,47 @@
 # PLCN (Playlist CN)
 
-PLCN is a powerful tool designed for RetroArch users to automatically translate game names in playlists to Chinese and download matching thumbnails from the official Libretro server.
+PLCN 是一个专为 RetroArch 用户设计的强大工具，可以自动将播放列表中的游戏名称翻译成中文，并从官方 Libretro 服务器下载匹配的缩略图。
 
-[中文说明 (Chinese Readme)](README_CN.md)
+[English Readme](README_EN.md)
 
-## Features
+## 主要功能
 
-- **Automatic Translation**: Translates game names in `.lpl` playlists to Chinese using a local database.
-- **Smart Thumbnail Downloading**: 
-  - Automatically identifies the standard English name of the game (even if the file is named in Chinese).
-  - Downloads thumbnails (Boxart, Snap, Title) from the official Libretro server.
-  - Fixes common naming issues (e.g., "Rage Racer" -> "Ridge Racer") using the official `libretro-database`.
-- **Batch Processing**: Process multiple playlists at once.
-- **Web UI**: User-friendly web interface for easy configuration and execution.
-- **Cross-Platform**: Available for Windows, macOS, and Linux.
+- **自动翻译**：利用本地数据库将 `.lpl` 播放列表中的游戏名称自动翻译为中文。
+- **智能缩略图下载**：
+  - 即使文件名为中文，也能自动识别游戏的标准英文名称。
+  - 从官方 Libretro 服务器下载缩略图（封面、截图、标题画面）。
+  - 集成官方 `libretro-database`，自动修正常见的命名错误（例如 "Rage Racer" -> "Ridge Racer"）。
+- **批量处理**：支持一次性处理文件夹中的多个播放列表。
+- **Web 界面**：提供友好的网页界面，方便配置和操作。
+- **跨平台**：支持 Windows、macOS 和 Linux。
 
-## Installation
+## 安装说明
 
-Download the latest release for your platform from the [Releases](https://github.com/MightyKartz/PLCN/releases) page.
+请从 [Releases](https://github.com/MightyKartz/PLCN/releases) 页面下载对应平台的最新版本。
 
-- **Windows**: Download `PLCN-Windows.exe`
-- **macOS**: Download `PLCN-macOS`
-- **Linux**: Download `PLCN-Linux`
+- **Windows**: 下载 `PLCN-Windows.exe`
+- **macOS**: 下载 `PLCN-macOS`
+- **Linux**: 下载 `PLCN-Linux`
 
-## Usage
+## 使用方法
 
-1. **Run the application**:
-   - Windows: Double-click `PLCN-Windows.exe`.
-   - macOS/Linux: Run `./PLCN-macOS` or `./PLCN-Linux` in the terminal.
+1. **运行程序**：
+   - Windows: 双击 `PLCN-Windows.exe`。
+   - macOS/Linux: 在终端中运行 `./PLCN-macOS` 或 `./PLCN-Linux`。
    
-   *Note: On first run, it will open a Web UI in your default browser.*
+   *注意：首次运行时，会自动在默认浏览器中打开 Web 配置界面。*
 
-2. **Configure via Web UI**:
-   - **Single Mode**: Select a single `.lpl` file, choose the system (e.g., `Sony - PlayStation`), and set the thumbnails directory.
-   - **Batch Mode**: Select a directory containing multiple `.lpl` files to process them all.
+2. **Web 界面配置**：
+   - **单个处理**：选择单个 `.lpl` 文件，选择对应的系统（如 `Sony - PlayStation`），并设置缩略图保存目录。
+   - **批量处理**：选择包含多个 `.lpl` 文件的目录，即可批量处理所有列表。
 
-3. **Start Processing**:
-   - Click "Start Run" to begin.
-   - View real-time logs in the browser window.
+3. **开始处理**：
+   - 点击“开始运行”按钮。
+   - 在浏览器窗口下方查看实时的运行日志。
 
-## Credits & Acknowledgements
+## 致谢与鸣谢
 
-Special thanks to **yingw** for the comprehensive ROM name translation database:
+特别感谢 **yingw** 提供的详尽 ROM 名称翻译数据库：
 - [rom-name-cn](https://github.com/yingw/rom-name-cn)
 
-This project uses the data from `rom-name-cn` to provide accurate Chinese translations for thousands of retro games.
+本项目使用了 `rom-name-cn` 的数据，为成千上万的怀旧游戏提供了准确的中文翻译。
