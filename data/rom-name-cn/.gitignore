@@ -1,0 +1,6 @@
+temp/
+\[tempate\]/
+template/
+backup*/
+resource/**
+.DS_Store
