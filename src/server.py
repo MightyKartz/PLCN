@@ -8,7 +8,13 @@ import subprocess
 
 PORT = 7777
 CONFIG_FILE = "config.json"
-TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "templates")
+
+def get_base_path():
+    if getattr(sys, 'frozen', False):
+        return sys._MEIPASS
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+TEMPLATE_DIR = os.path.join(get_base_path(), "src", "templates")
 
 class ConfigHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
@@ -79,9 +85,8 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                 
                 rom_db_path = config.get("rom_name_cn_path", "data/rom-name-cn")
                 if not os.path.exists(rom_db_path):
-                    # Try relative to project root if not absolute
-                    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                    rom_db_path = os.path.join(project_root, rom_db_path)
+                    # Try relative to base path
+                    rom_db_path = os.path.join(get_base_path(), rom_db_path)
                 
                 systems = []
                 if os.path.exists(rom_db_path):
@@ -152,7 +157,12 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                     config = {}
                 
                 # Construct command
-                cmd = [sys.executable, '-u', 'src/plcn.py'] # -u for unbuffered
+                if getattr(sys, 'frozen', False):
+                    # Running as compiled executable
+                    cmd = [sys.executable]
+                else:
+                    # Running as script
+                    cmd = [sys.executable, '-u', 'src/plcn.py'] # -u for unbuffered
                 
                 process = subprocess.Popen(
                     cmd,
@@ -222,10 +232,15 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(b"Template not found")
 
 def run_server():
-    # Change to the project root directory to find config.json easily
-    # Assuming this script is in src/
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    os.chdir(project_root)
+    # Change to the directory where we want to store config.json
+    if getattr(sys, 'frozen', False):
+        # If frozen, use the executable's directory
+        exe_dir = os.path.dirname(sys.executable)
+        os.chdir(exe_dir)
+    else:
+        # Development mode: use project root
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        os.chdir(project_root)
     
     print(f"Starting server at http://localhost:{PORT}")
     socketserver.TCPServer.allow_reuse_address = True

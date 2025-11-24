@@ -65,7 +65,12 @@ def main():
     # Determine values from args or config
     # Priority: Args > Config
     
-    rom_name_cn_path = args.rom_name_cn_path or config.get("rom_name_cn_path", "data/rom-name-cn")
+    rom_name_cn_path = args.rom_name_cn_path or config.get("rom_name_cn_path")
+    if not rom_name_cn_path:
+        if getattr(sys, 'frozen', False):
+            rom_name_cn_path = os.path.join(sys._MEIPASS, "data", "rom-name-cn")
+        else:
+            rom_name_cn_path = "data/rom-name-cn"
     
     # Check for batch mode
     batch_dir = args.batch_dir or config.get("batch_dir")
