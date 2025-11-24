@@ -242,6 +242,15 @@ def run_server():
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         os.chdir(project_root)
     
+    print(f"DEBUG: sys.frozen = {getattr(sys, 'frozen', False)}")
+    if getattr(sys, 'frozen', False):
+        print(f"DEBUG: sys._MEIPASS = {getattr(sys, '_MEIPASS', 'Not Found')}")
+    print(f"DEBUG: TEMPLATE_DIR = {TEMPLATE_DIR}")
+    if os.path.exists(TEMPLATE_DIR):
+        print(f"DEBUG: Contents of TEMPLATE_DIR: {os.listdir(TEMPLATE_DIR)}")
+    else:
+        print(f"DEBUG: TEMPLATE_DIR does not exist!")
+
     print(f"Starting server at http://localhost:{PORT}")
     socketserver.TCPServer.allow_reuse_address = True
     with socketserver.TCPServer(("", PORT), ConfigHandler) as httpd:
