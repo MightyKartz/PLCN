@@ -1,4 +1,4 @@
-# PLCN (Playlist CN)
+# PLCN
 
 PLCN is a powerful tool designed for RetroArch users to automatically translate game names in playlists to Chinese and download matching thumbnails from the official Libretro server.
 
