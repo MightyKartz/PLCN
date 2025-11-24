@@ -17,7 +17,7 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
         include:
           - os: ubuntu-latest
-            artifact_name: plcn-linux
+            artifact_name: plcn
             asset_name: plcn-linux
           - os: windows-latest
             artifact_name: plcn.exe
@@ -56,12 +56,18 @@ jobs:
     - name: Download All Artifacts
       uses: actions/download-artifact@v4
 
+    - name: Rename Artifacts
+      run: |
+        mv plcn-linux/plcn PLCN-Linux
+        mv plcn-macos/plcn PLCN-macOS
+        mv plcn-windows.exe/plcn.exe PLCN-Windows.exe
+
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          plcn-linux/plcn-linux
-          plcn-windows.exe/plcn.exe
-          plcn-macos/plcn
+          PLCN-Linux
+          PLCN-Windows.exe
+          PLCN-macOS
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
