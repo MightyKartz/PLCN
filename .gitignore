@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+
+# System
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Project specific
+thumbnails/
+data/rom-name-cn/
+data/libretro-db/
+config.json
+*.log
+server.log
+
+# IDE
+.vscode/
+.idea/
+
+# Agent
+.gemini/

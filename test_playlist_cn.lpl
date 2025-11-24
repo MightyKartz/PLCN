@@ -1,0 +1,29 @@
+{
+    "version": "1.0",
+    "items": [
+        {
+            "path": "/roms/snes/Donkey Kong Country (USA).sfc",
+            "label": "超级大金刚",
+            "core_path": "DETECT",
+            "core_name": "DETECT",
+            "crc32": "DETECT",
+            "db_name": "Nintendo - Super Nintendo Entertainment System.lpl"
+        },
+        {
+            "path": "/roms/snes/Final Fantasy III (USA).sfc",
+            "label": "最终幻想6",
+            "core_path": "DETECT",
+            "core_name": "DETECT",
+            "crc32": "DETECT",
+            "db_name": "Nintendo - Super Nintendo Entertainment System.lpl"
+        },
+        {
+            "path": "/roms/snes/Chrono Trigger (USA).sfc",
+            "label": "超时空之轮",
+            "core_path": "DETECT",
+            "core_name": "DETECT",
+            "crc32": "DETECT",
+            "db_name": "Nintendo - Super Nintendo Entertainment System.lpl"
+        }
+    ]
+}

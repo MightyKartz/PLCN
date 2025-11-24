@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PLCN</title>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --bg-color: #f5f7fa;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --border-radius: 12px;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            max-width: 700px;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+            font-size: 1.8rem;
+        }
+
+        /* Tab styles */
+        .tabs {
+            display: flex;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #e1e4e8;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 1rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab:hover {
+            color: var(--primary-color);
+        }
+
+        .tab.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid #e1e4e8;
+            border-radius: 8px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        select:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+        }
+
+        select {
+            flex: 1;
+            width: 100%;
+            padding: 0.8rem;
+            padding-right: 0.8rem;
+            /* Same as input */
+            border: 1px solid #e1e4e8;
+            border-radius: 8px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+            appearance: none;
+            background-color: #fff;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: calc(100% - 0.8rem) center;
+            background-size: 1em;
+        }
+
+        .btn {
+            padding: 1rem;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+        }
+
+        .btn-small {
+            padding: 0.8rem 1rem;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+
+        .btn:hover {
+            background-color: #357abd;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-block {
+            width: 100%;
+        }
+
+        .status {
+            margin-top: 1rem;
+            text-align: center;
+            font-size: 0.9rem;
+            min-height: 1.2em;
+        }
+
+        .status.success {
+            color: #2ecc71;
+        }
+
+        .status.error {
+            color: #e74c3c;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 600px;
+            border-radius: var(--border-radius);
+            max-height: 70vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .modal-body {
+            flex: 1;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 4px;
+        }
+
+        .file-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .file-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+        }
+
+        .file-item:hover {
+            background-color: #f5f7fa;
+        }
+
+        .file-item.selected {
+            background-color: #e3f2fd;
+        }
+
+        .file-icon {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: black;
+        }
+
+        .modal-footer {
+            margin-top: 1rem;
+            text-align: right;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>PLCN</h1>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('single')">单个处理</button>
+            <button class="tab" onclick="switchTab('batch')">批量处理</button>
+        </div>
+
+        <!-- Single Processing Tab -->
+        <div id="single-tab" class="tab-content active">
+
+            <div class="form-group">
+                <label for="playlist_path">播放列表路径 (.lpl)</label>
+                <div class="input-group">
+                    <input type="text" id="playlist_path" placeholder="/path/to/playlist.lpl">
+                    <button class="btn btn-small" onclick="openFilePicker('playlist_path', false)">选择文件</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="system_name">系统名称 (System Name)</label>
+                <div class="input-group">
+                    <select id="system_name">
+                        <option value="">加载中...</option>
+                    </select>
+                    <button class="btn btn-small" style="visibility: hidden; pointer-events: none;">占位</button>
+                </div>
+                <small style="color: #666; display: block; margin-top: 5px;">选择播放列表后会自动识别，也可手动选择</small>
+            </div>
+
+            <div class="form-group">
+                <label for="thumbnails_dir">缩略图目录 (Thumbnails Dir)</label>
+                <div class="input-group">
+                    <input type="text" id="thumbnails_dir" placeholder="/path/to/retroarch/thumbnails">
+                    <button class="btn btn-small" onclick="openFilePicker('thumbnails_dir', true)">选择目录</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="rom_name_cn_path">ROM中文名称库路径</label>
+                <div class="input-group">
+                    <input type="text" id="rom_name_cn_path" placeholder="data/rom-name-cn">
+                    <button class="btn btn-small" onclick="openFilePicker('rom_name_cn_path', true)">选择目录</button>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 2rem; text-align: center;">
+                <button class="btn" style="background-color: #2ecc71; font-size: 1.1rem; padding: 0.8rem 2rem;"
+                    onclick="executeTask('single')">开始处理</button>
+            </div>
+
+            <!-- Single mode log container -->
+            <div id="single-log-container" style="margin-top: 2rem; display: none;">
+                <label>运行日志</label>
+                <div id="single-log-view" style="
+                    background-color: #1e1e1e; 
+                    color: #d4d4d4; 
+                    padding: 1rem; 
+                    border-radius: 8px; 
+                    height: 300px; 
+                    overflow-y: auto; 
+                    font-family: 'Consolas', 'Monaco', monospace; 
+                    font-size: 0.9rem;
+                    white-space: pre-wrap;
+                "></div>
+            </div>
+        </div>
+
+        <!-- Batch Processing Tab -->
+        <div id="batch-tab" class="tab-content">
+
+            <div class="form-group">
+                <label for="batch_dir">播放列表目录</label>
+                <div class="input-group">
+                    <input type="text" id="batch_dir" placeholder="/path/to/retroarch/playlists">
+                    <button class="btn btn-small" onclick="openFilePicker('batch_dir', true)">选择目录</button>
+                </div>
+                <small style="color: #666; display: block; margin-top: 5px;">选择包含多个 .lpl 文件的文件夹，将一次性处理所有文件</small>
+            </div>
+
+            <div class="form-group">
+                <label for="batch_thumbnails_dir">缩略图目录 (Thumbnails Dir)</label>
+                <div class="input-group">
+                    <input type="text" id="batch_thumbnails_dir" placeholder="/path/to/retroarch/thumbnails">
+                    <button class="btn btn-small" onclick="openFilePicker('batch_thumbnails_dir', true)">选择目录</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="batch_rom_name_cn_path">ROM中文名称库路径</label>
+                <div class="input-group">
+                    <input type="text" id="batch_rom_name_cn_path" placeholder="data/rom-name-cn">
+                    <button class="btn btn-small" onclick="openFilePicker('batch_rom_name_cn_path', true)">选择目录</button>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 2rem; text-align: center;">
+                <button class="btn" style="background-color: #2ecc71; font-size: 1.1rem; padding: 0.8rem 2rem;"
+                    onclick="executeTask('batch')">开始处理</button>
+            </div>
+
+            <!-- Batch mode log container -->
+            <div id="batch-log-container" style="margin-top: 2rem; display: none;">
+                <label>运行日志</label>
+                <div id="batch-log-view" style="
+                    background-color: #1e1e1e; 
+                    color: #d4d4d4; 
+                    padding: 1rem; 
+                    border-radius: 8px; 
+                    height: 300px; 
+                    overflow-y: auto; 
+                    font-family: 'Consolas', 'Monaco', monospace; 
+                    font-size: 0.9rem;
+                    white-space: pre-wrap;
+                "></div>
+            </div>
+        </div>
+
+        <div id="status" class="status"></div>
+    </div>
+
+    <!-- File Picker Modal -->
+    <div id="fileModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">选择文件</h3>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <div style="margin-bottom: 10px; font-weight: bold;" id="currentPath"></div>
+            <div class="modal-body">
+                <ul id="fileList" class="file-list"></ul>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-small" onclick="selectCurrentDir()" id="selectDirBtn"
+                    style="display: none;">选择当前目录</button>
+                <button class="btn btn-small" onclick="closeModal()" style="background-color: #999;">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTargetInputId = '';
+        let isDirectoryMode = false;
+        let currentPath = '.';
+
+        function switchTab(tab) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Update tab contents
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.getElementById(tab + '-tab').classList.add('active');
+        }
+
+        async function loadConfig() {
+            try {
+                const response = await fetch('/api/config');
+                const config = await response.json();
+
+                // Single mode fields - use single_* keys
+                document.getElementById('playlist_path').value = config.single_playlist_path || '';
+                document.getElementById('system_name').value = config.single_system_name || '';
+                document.getElementById('thumbnails_dir').value = config.single_thumbnails_dir || '';
+                document.getElementById('rom_name_cn_path').value = config.single_rom_name_cn_path || 'data/rom-name-cn';
+
+                // Batch mode fields - use batch_* keys
+                document.getElementById('batch_dir').value = config.batch_dir || '';
+                document.getElementById('batch_thumbnails_dir').value = config.batch_thumbnails_dir || '';
+                document.getElementById('batch_rom_name_cn_path').value = config.batch_rom_name_cn_path || 'data/rom-name-cn';
+            } catch (error) {
+                showStatus('加载配置失败', 'error');
+            }
+        }
+
+        async function saveConfig(mode) {
+            let config = {};
+
+            if (mode === 'single') {
+                config = {
+                    // Save single mode config with single_* keys
+                    single_playlist_path: document.getElementById('playlist_path').value,
+                    single_system_name: document.getElementById('system_name').value,
+                    single_thumbnails_dir: document.getElementById('thumbnails_dir').value,
+                    single_rom_name_cn_path: document.getElementById('rom_name_cn_path').value,
+                    // Use config for actual execution
+                    playlist_path: document.getElementById('playlist_path').value,
+                    system_name: document.getElementById('system_name').value,
+                    thumbnails_dir: document.getElementById('thumbnails_dir').value,
+                    rom_name_cn_path: document.getElementById('rom_name_cn_path').value,
+                    batch_dir: '' // Clear batch mode
+                };
+            } else if (mode === 'batch') {
+                config = {
+                    // Save batch mode config with batch_* keys
+                    batch_dir: document.getElementById('batch_dir').value,
+                    batch_thumbnails_dir: document.getElementById('batch_thumbnails_dir').value,
+                    batch_rom_name_cn_path: document.getElementById('batch_rom_name_cn_path').value,
+                    // Use config for actual execution
+                    playlist_path: '',
+                    system_name: '',
+                    thumbnails_dir: document.getElementById('batch_thumbnails_dir').value,
+                    rom_name_cn_path: document.getElementById('batch_rom_name_cn_path').value
+                };
+            }
+
+            try {
+                const response = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(config)
+                });
+
+                if (!response.ok) {
+                    throw new Error('保存配置失败');
+                }
+                return true;
+            } catch (error) {
+                showStatus('保存出错: ' + error.message, 'error');
+                return false;
+            }
+        }
+
+        function showStatus(message, type) {
+            const el = document.getElementById('status');
+            el.textContent = message;
+            el.className = 'status ' + type;
+            setTimeout(() => {
+                el.textContent = '';
+                el.className = 'status';
+            }, 3000);
+        }
+
+        // File Picker Logic
+        function openFilePicker(inputId, directoryMode) {
+            currentTargetInputId = inputId;
+            isDirectoryMode = directoryMode;
+
+            document.getElementById('modalTitle').textContent = directoryMode ? '选择目录' : '选择文件';
+            document.getElementById('selectDirBtn').style.display = directoryMode ? 'inline-block' : 'none';
+            document.getElementById('fileModal').style.display = 'block';
+
+            // Start from current value if valid path, else current dir
+            const currentVal = document.getElementById(inputId).value;
+            loadFileList(currentVal || '.');
+        }
+
+        function closeModal() {
+            document.getElementById('fileModal').style.display = 'none';
+        }
+
+        async function loadFileList(path) {
+            try {
+                const response = await fetch(`/api/fs/list?path=${encodeURIComponent(path)}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    // If path invalid, try root or current
+                    if (path !== '.') loadFileList('.');
+                    return;
+                }
+
+                currentPath = data.current_path;
+                document.getElementById('currentPath').textContent = currentPath;
+
+                const listEl = document.getElementById('fileList');
+                listEl.innerHTML = '';
+
+                data.items.forEach(item => {
+                    const li = document.createElement('li');
+                    li.className = 'file-item';
+                    const icon = item.is_dir ? '📁' : '📄';
+                    li.innerHTML = `<span class="file-icon">${icon}</span> ${item.name}`;
+
+                    li.onclick = () => {
+                        if (item.is_dir) {
+                            loadFileList(item.path);
+                        } else if (!isDirectoryMode) {
+                            selectFile(item.path);
+                        }
+                    };
+
+                    listEl.appendChild(li);
+                });
+            } catch (error) {
+                console.error('Error loading file list:', error);
+            }
+        }
+
+        function selectFile(path) {
+            document.getElementById(currentTargetInputId).value = path;
+            closeModal();
+
+            // Auto-detect system name if playlist selected
+            if (currentTargetInputId === 'playlist_path') {
+                detectSystemName(path);
+            }
+        }
+
+        function selectCurrentDir() {
+            document.getElementById(currentTargetInputId).value = currentPath;
+            closeModal();
+        }
+
+        async function executeTask(mode) {
+            // Validate required fields
+            if (mode === 'single') {
+                const playlistPath = document.getElementById('playlist_path').value;
+                const systemName = document.getElementById('system_name').value;
+                const thumbnailsDir = document.getElementById('thumbnails_dir').value;
+
+                if (!playlistPath) {
+                    showStatus('请选择播放列表文件', 'error');
+                    return;
+                }
+                if (!systemName) {
+                    showStatus('请选择系统名称', 'error');
+                    return;
+                }
+                if (!thumbnailsDir) {
+                    showStatus('请选择缩略图目录', 'error');
+                    return;
+                }
+            } else if (mode === 'batch') {
+                const batchDir = document.getElementById('batch_dir').value;
+                const thumbnailsDir = document.getElementById('batch_thumbnails_dir').value;
+
+                if (!batchDir) {
+                    showStatus('请选择播放列表目录', 'error');
+                    return;
+                }
+                if (!thumbnailsDir) {
+                    showStatus('请选择缩略图目录', 'error');
+                    return;
+                }
+            }
+
+            // 1. Save Config
+            const saved = await saveConfig(mode);
+            if (!saved) return;
+
+            // 2. Prepare UI - use mode-specific log container
+            const logContainerId = mode === 'single' ? 'single-log-container' : 'batch-log-container';
+            const logViewId = mode === 'single' ? 'single-log-view' : 'batch-log-view';
+
+            const logView = document.getElementById(logViewId);
+            const logContainer = document.getElementById(logContainerId);
+            logContainer.style.display = 'block';
+            logView.innerHTML = ''; // Clear previous logs
+
+            if (mode === 'single') {
+                showStatus('正在处理单个播放列表...', 'success');
+            } else {
+                showStatus('正在批量处理...', 'success');
+            }
+
+            // 3. Start SSE
+            const eventSource = new EventSource('/api/execute');
+
+            eventSource.onmessage = function (event) {
+                const data = JSON.parse(event.data);
+
+                if (data.done) {
+                    eventSource.close();
+                    showStatus('运行完成！', 'success');
+                    logView.innerHTML += '\n[✓ 完成]\n';
+                    logView.scrollTop = logView.scrollHeight;
+                    return;
+                }
+
+                if (data.error) {
+                    eventSource.close();
+                    showStatus('运行出错: ' + data.error, 'error');
+                    logView.innerHTML += `\n[✗ 错误] ${data.error}\n`;
+                    return;
+                }
+
+                if (data.message) {
+                    logView.innerHTML += data.message + '\n';
+                    logView.scrollTop = logView.scrollHeight;
+                }
+            };
+
+            eventSource.onerror = function (error) {
+                console.error('EventSource failed:', error);
+                eventSource.close();
+                showStatus('连接断开', 'error');
+            };
+        }
+
+        // Load config on startup
+        loadSystems().then(() => {
+            loadConfig();
+        });
+
+        async function loadSystems() {
+            try {
+                const response = await fetch('/api/systems');
+                const data = await response.json();
+
+                const select = document.getElementById('system_name');
+                select.innerHTML = '<option value="">请选择系统...</option>';
+
+                if (data.systems) {
+                    data.systems.forEach(sys => {
+                        const option = document.createElement('option');
+                        option.value = sys;
+                        option.textContent = sys;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading systems:', error);
+                showStatus('加载系统列表失败', 'error');
+            }
+        }
+
+        async function detectSystemName(path) {
+            try {
+                const response = await fetch(`/api/playlist/detect?path=${encodeURIComponent(path)}`);
+                const data = await response.json();
+
+                if (data.system_name) {
+                    const select = document.getElementById('system_name');
+                    select.value = data.system_name;
+                    // If the detected system is not in the list (e.g. custom), we might want to add it or warn
+                    // For now, if it's not in the list, the value won't be set visually if strict, 
+                    // but standard select behavior allows setting value if option exists.
+                    // If option doesn't exist, we could add it dynamically?
+                    // Let's check if it exists.
+                    if (select.value !== data.system_name) {
+                        // Option doesn't exist, maybe add it as a temporary option?
+                        const option = document.createElement('option');
+                        option.value = data.system_name;
+                        option.textContent = data.system_name + " (未找到匹配的翻译库)";
+                        select.appendChild(option);
+                        select.value = data.system_name;
+                    }
+                    showStatus(`已自动识别系统: ${data.system_name}`, 'success');
+                } else {
+                    showStatus('无法自动识别系统，请手动选择', 'error');
+                }
+            } catch (error) {
+                console.error('Error detecting system:', error);
+            }
+        }
+    </script>
+</body>
+
+</html>
