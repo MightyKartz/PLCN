@@ -234,8 +234,19 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                     config = json.load(f)
             
             rom_name_cn_path = config.get("rom_name_cn_path", "data/rom-name-cn")
+            print(f"DEBUG search_db: Original rom_name_cn_path = {rom_name_cn_path}")
+            print(f"DEBUG search_db: sys.frozen = {getattr(sys, 'frozen', False)}")
+            print(f"DEBUG search_db: sys._MEIPASS = {getattr(sys, '_MEIPASS', 'Not set')}")
+            
             if getattr(sys, 'frozen', False) and not os.path.isabs(rom_name_cn_path):
-                    rom_name_cn_path = os.path.join(sys._MEIPASS, rom_name_cn_path)
+                rom_name_cn_path = os.path.join(sys._MEIPASS, rom_name_cn_path)
+                print(f"DEBUG search_db: Updated rom_name_cn_path = {rom_name_cn_path}")
+            
+            print(f"DEBUG search_db: Final rom_name_cn_path = {rom_name_cn_path}")
+            print(f"DEBUG search_db: Path exists = {os.path.exists(rom_name_cn_path)}")
+            if os.path.exists(rom_name_cn_path):
+                csv_files = glob.glob(os.path.join(rom_name_cn_path, "*.csv"))
+                print(f"DEBUG search_db: Found {len(csv_files)} CSV files")
 
             # Initialize DB
             from database import DatabaseManager
@@ -246,9 +257,15 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
             cursor = conn.cursor()
             cursor.execute("SELECT count(*) FROM translations")
             count = cursor.fetchone()[0]
+            print(f"DEBUG search_db: Database contains {count} translations")
+            
             if count == 0:
                 print(f"Database empty. Importing CSVs from {rom_name_cn_path}...")
                 db.import_csvs(rom_name_cn_path)
+                # Check count again after import
+                cursor.execute("SELECT count(*) FROM translations")
+                count = cursor.fetchone()[0]
+                print(f"DEBUG search_db: After import, database contains {count} translations")
             
             results = db.search_by_keyword(keyword, system=system)
             db.close()
