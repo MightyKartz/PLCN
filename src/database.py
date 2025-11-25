@@ -522,7 +522,7 @@ class DatabaseManager:
                 return []
             
             # Fuzzy search on English names
-            matches = process.extract(keyword, english_names, scorer=fuzz.token_sort_ratio, limit=limit)
+            matches = process.extract(keyword, english_names, scorer=fuzz.partial_ratio, limit=limit)
             
             print(f"DEBUG search_by_keyword: Top 5 matches: {[(m[0], m[1]) for m in matches[:5]]}")
             
