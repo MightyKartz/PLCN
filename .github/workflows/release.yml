@@ -56,20 +56,29 @@ jobs:
     - name: Download All Artifacts
       uses: actions/download-artifact@v4
 
-    - name: Rename Artifacts
+    - name: Package Artifacts
       run: |
+        # Rename and set permissions
         mv plcn-linux/plcn PLCN-Linux
         mv plcn-macos/plcn PLCN-macOS
         mv plcn-windows.exe/plcn.exe PLCN-Windows.exe
         chmod +x PLCN-Linux
         chmod +x PLCN-macOS
+        
+        # Package with tar.gz to preserve permissions
+        tar -czf PLCN-Linux-x64.tar.gz PLCN-Linux
+        tar -czf PLCN-macOS-x64.tar.gz PLCN-macOS
+        
+        # Windows doesn't need tar (no permissions)
+        # Just rename for clarity
+        mv PLCN-Windows.exe PLCN-Windows-x64.exe
 
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          PLCN-Linux
-          PLCN-Windows.exe
-          PLCN-macOS
+          PLCN-Linux-x64.tar.gz
+          PLCN-macOS-x64.tar.gz
+          PLCN-Windows-x64.exe
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
