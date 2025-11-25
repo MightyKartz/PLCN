@@ -458,6 +458,8 @@ class DatabaseManager:
         # Determine if keyword is Chinese or English
         is_chinese = any(ord(c) >= 128 for c in keyword)
         
+        print(f"DEBUG search_by_keyword: keyword='{keyword}', system='{system}', is_chinese={is_chinese}")
+        
         if is_chinese:
             # Build Chinese names cache (optionally filtered by system)
             if system:
@@ -475,15 +477,19 @@ class DatabaseManager:
             candidates = [(row[0], row[1], row[2]) for row in cursor.fetchall()]
             chinese_names = [c[0] for c in candidates]
             
+            print(f"DEBUG search_by_keyword: Found {len(candidates)} candidates")
+            
             if not chinese_names:
                 return []
             
             # Fuzzy search on Chinese names
             matches = process.extract(keyword, chinese_names, scorer=fuzz.WRatio, limit=limit)
             
+            print(f"DEBUG search_by_keyword: Top 5 matches: {matches[:5]}")
+            
             # Build results from matches
             for match_name, score, _ in matches:
-                if score >= 70:  # Use threshold
+                if score >= 65:  # Use threshold (lowered from 70)
                     # Find the corresponding record
                     for cn, en, sys in candidates:
                         if cn == match_name:
@@ -510,15 +516,20 @@ class DatabaseManager:
             candidates = [(row[0], row[1], row[2]) for row in cursor.fetchall()]
             english_names = [c[0] for c in candidates]
             
+            print(f"DEBUG search_by_keyword: Found {len(candidates)} candidates")
+            
             if not english_names:
                 return []
             
             # Fuzzy search on English names
             matches = process.extract(keyword, english_names, scorer=fuzz.token_sort_ratio, limit=limit)
             
+            print(f"DEBUG search_by_keyword: Top 5 matches: {[(m[0], m[1]) for m in matches[:5]]}")
+            
             # Build results from matches
             for match_name, score, _ in matches:
-                if score >= 80:  # Use threshold
+                print(f"DEBUG search_by_keyword: Checking match '{match_name}' with score {score}")
+                if score >= 60:  # Use threshold (lowered from 80)
                     # Find the corresponding record
                     for en, cn, sys in candidates:
                         if en == match_name:
@@ -529,6 +540,7 @@ class DatabaseManager:
                             })
                             break
             
+        print(f"DEBUG search_by_keyword: Returning {len(results)} results")
         return results
 
     def close(self):
