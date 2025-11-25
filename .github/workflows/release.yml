@@ -61,6 +61,8 @@ jobs:
         mv plcn-linux/plcn PLCN-Linux
         mv plcn-macos/plcn PLCN-macOS
         mv plcn-windows.exe/plcn.exe PLCN-Windows.exe
+        chmod +x PLCN-Linux
+        chmod +x PLCN-macOS
 
     - name: Create Release
       uses: softprops/action-gh-release@v1
