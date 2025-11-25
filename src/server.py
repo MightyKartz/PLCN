@@ -167,9 +167,8 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                     config = json.load(f)
             
             rom_db_path = config.get("rom_name_cn_path", "data/rom-name-cn")
-            if not os.path.exists(rom_db_path):
-                # Try relative to base path
-                rom_db_path = os.path.join(get_base_path(), rom_db_path)
+            if getattr(sys, 'frozen', False) and not os.path.isabs(rom_db_path):
+                rom_db_path = os.path.join(sys._MEIPASS, rom_db_path)
             
             systems = []
             if os.path.exists(rom_db_path):
@@ -240,7 +239,16 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
 
             # Initialize DB
             from database import DatabaseManager
-            db = DatabaseManager() 
+            db = DatabaseManager()
+            
+            # Check if database is empty and import CSVs if needed
+            conn = db.get_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT count(*) FROM translations")
+            count = cursor.fetchone()[0]
+            if count == 0:
+                print(f"Database empty. Importing CSVs from {rom_name_cn_path}...")
+                db.import_csvs(rom_name_cn_path)
             
             results = db.search_by_keyword(keyword, system=system)
             db.close()
