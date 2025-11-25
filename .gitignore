@@ -15,8 +15,6 @@ venv/
 
 # Project specific
 thumbnails/
-data/rom-name-cn/
-data/libretro-db/
 config.json
 *.log
 server.log

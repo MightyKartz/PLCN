@@ -266,6 +266,33 @@
             margin-top: 1rem;
             text-align: right;
         }
+
+        /* Table Styles */
+        .preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .preview-table th,
+        .preview-table td {
+            border: 1px solid #e1e4e8;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .preview-table th {
+            background-color: #f5f7fa;
+            font-weight: 600;
+        }
+
+        .preview-table input {
+            width: 100%;
+            padding: 4px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
     </style>
 </head>
 
@@ -318,8 +345,33 @@
             </div>
 
             <div class="form-group" style="margin-top: 2rem; text-align: center;">
+                <button class="btn"
+                    style="background-color: #3498db; font-size: 1.1rem; padding: 0.8rem 2rem; margin-right: 1rem;"
+                    onclick="previewTask()">预览 & 校对</button>
                 <button class="btn" style="background-color: #2ecc71; font-size: 1.1rem; padding: 0.8rem 2rem;"
-                    onclick="executeTask('single')">开始处理</button>
+                    onclick="executeTask('single')">直接运行</button>
+            </div>
+
+            <!-- Preview Container -->
+            <div id="preview-container" style="margin-top: 2rem; display: none;">
+                <h3 class="section-title">预览更改</h3>
+                <div style="max-height: 400px; overflow-y: auto; border: 1px solid #e1e4e8; border-radius: 8px;">
+                    <table class="preview-table">
+                        <thead>
+                            <tr>
+                                <th>原名 (Label)</th>
+                                <th>新名 (New Label)</th>
+                                <th>封面源 (Thumbnail Source)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="preview-table-body">
+                            <!-- Rows will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top: 1rem; text-align: right;">
+                    <button class="btn" onclick="applyChanges()">应用更改</button>
+                </div>
             </div>
 
             <!-- Single mode log container -->
@@ -584,21 +636,84 @@
                 const systemName = document.getElementById('system_name').value;
                 const thumbnailsDir = document.getElementById('thumbnails_dir').value;
 
-                if (!playlistPath) {
-                    showStatus('请选择播放列表文件', 'error');
+                if (!playlistPath || !systemName || !thumbnailsDir) {
+                    showStatus('请填写所有必要信息', 'error');
                     return;
                 }
-                if (!systemName) {
-                    showStatus('请选择系统名称', 'error');
-                    return;
+
+                // 1. Save Config
+                const saved = await saveConfig(mode);
+                if (!saved) return;
+
+                // 2. Direct Run: Preview -> Apply
+                showStatus('正在直接运行...', 'success');
+
+                // Show progress modal AND log container
+                document.getElementById('progress-modal').style.display = 'block';
+                document.getElementById('progress-message').textContent = '正在分析播放列表...';
+                document.getElementById('progress-stats').textContent = '步骤 1/2';
+                document.getElementById('task-progress').value = 0;
+
+                // Also show log for detailed info
+                document.getElementById('single-log-container').style.display = 'block';
+                const logView = document.getElementById('single-log-view');
+                logView.innerHTML = '<strong>运行日志：</strong><br>';
+                logView.innerHTML += '开始直接运行...<br>';
+
+                try {
+                    // Step 1: Preview to get changes
+                    logView.innerHTML += '正在分析播放列表...<br>';
+                    const previewResponse = await fetch('/api/playlist/preview', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            playlist_path: playlistPath,
+                            system_name: systemName
+                        })
+                    });
+                    const previewData = await previewResponse.json();
+                    if (previewData.error) throw new Error(previewData.error);
+
+                    logView.innerHTML += `分析完成，共 ${previewData.changes.length} 个游戏需要处理<br>`;
+
+                    // Update progress
+                    document.getElementById('progress-message').textContent = '分析完成，正在应用更改并下载封面...';
+                    document.getElementById('progress-stats').textContent = '步骤 2/2';
+                    document.getElementById('task-progress').value = 50;
+
+                    // Step 2: Apply changes
+                    logView.innerHTML += '正在应用更改并下载封面...<br>';
+                    const applyResponse = await fetch('/api/playlist/apply', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            playlist_path: playlistPath,
+                            changes: previewData.changes,
+                            thumbnails_dir: thumbnailsDir
+                        })
+                    });
+                    const applyData = await applyResponse.json();
+                    if (applyData.error) throw new Error(applyData.error);
+
+                    if (applyData.job_id) {
+                        logView.innerHTML += '后台任务已启动，正在下载封面...<br>';
+                        trackProgress(applyData.job_id);
+                    } else {
+                        alert('Error starting job: ' + (applyData.error || 'Unknown error'));
+                        document.getElementById('progress-modal').style.display = 'none';
+                    }
+
+                } catch (error) {
+                    showStatus('运行失败: ' + error.message, 'error');
+                    logView.innerHTML += `<br><span style="color:red">错误: ${error.message}</span><br>`;
+                    alert('错误: ' + error.message);
+                    document.getElementById('progress-modal').style.display = 'none';
                 }
-                if (!thumbnailsDir) {
-                    showStatus('请选择缩略图目录', 'error');
-                    return;
-                }
+                return;
             } else if (mode === 'batch') {
                 const batchDir = document.getElementById('batch_dir').value;
                 const thumbnailsDir = document.getElementById('batch_thumbnails_dir').value;
+                const romNameCnPath = document.getElementById('batch_rom_name_cn_path').value;
 
                 if (!batchDir) {
                     showStatus('请选择播放列表目录', 'error');
@@ -608,59 +723,38 @@
                     showStatus('请选择缩略图目录', 'error');
                     return;
                 }
+
+                // 1. Save Config
+                const saved = await saveConfig(mode);
+                if (!saved) return;
+
+                // 2. Start Batch Job
+                document.getElementById('progress-modal').style.display = 'block';
+                document.getElementById('progress-message').textContent = "正在启动批量处理...";
+
+                try {
+                    const response = await fetch('/api/batch/apply', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            batch_dir: batchDir,
+                            thumbnails_dir: thumbnailsDir,
+                            rom_name_cn_path: romNameCnPath
+                        })
+                    });
+
+                    const data = await response.json();
+                    if (data.job_id) {
+                        trackProgress(data.job_id);
+                    } else {
+                        alert('Error starting batch job: ' + (data.error || 'Unknown error'));
+                        document.getElementById('progress-modal').style.display = 'none';
+                    }
+                } catch (error) {
+                    alert('Error: ' + error.message);
+                    document.getElementById('progress-modal').style.display = 'none';
+                }
             }
-
-            // 1. Save Config
-            const saved = await saveConfig(mode);
-            if (!saved) return;
-
-            // 2. Prepare UI - use mode-specific log container
-            const logContainerId = mode === 'single' ? 'single-log-container' : 'batch-log-container';
-            const logViewId = mode === 'single' ? 'single-log-view' : 'batch-log-view';
-
-            const logView = document.getElementById(logViewId);
-            const logContainer = document.getElementById(logContainerId);
-            logContainer.style.display = 'block';
-            logView.innerHTML = ''; // Clear previous logs
-
-            if (mode === 'single') {
-                showStatus('正在处理单个播放列表...', 'success');
-            } else {
-                showStatus('正在批量处理...', 'success');
-            }
-
-            // 3. Start SSE
-            const eventSource = new EventSource('/api/execute');
-
-            eventSource.onmessage = function (event) {
-                const data = JSON.parse(event.data);
-
-                if (data.done) {
-                    eventSource.close();
-                    showStatus('运行完成！', 'success');
-                    logView.innerHTML += '\n[✓ 完成]\n';
-                    logView.scrollTop = logView.scrollHeight;
-                    return;
-                }
-
-                if (data.error) {
-                    eventSource.close();
-                    showStatus('运行出错: ' + data.error, 'error');
-                    logView.innerHTML += `\n[✗ 错误] ${data.error}\n`;
-                    return;
-                }
-
-                if (data.message) {
-                    logView.innerHTML += data.message + '\n';
-                    logView.scrollTop = logView.scrollHeight;
-                }
-            };
-
-            eventSource.onerror = function (error) {
-                console.error('EventSource failed:', error);
-                eventSource.close();
-                showStatus('连接断开', 'error');
-            };
         }
 
         // Load config on startup
@@ -718,6 +812,339 @@
             } catch (error) {
                 console.error('Error detecting system:', error);
             }
+        }
+
+        let currentChanges = [];
+
+        async function previewTask() {
+            const playlistPath = document.getElementById('playlist_path').value;
+            const systemName = document.getElementById('system_name').value;
+
+            if (!playlistPath || !systemName) {
+                showStatus('请先选择播放列表和系统', 'error');
+                return;
+            }
+
+            showStatus('正在分析播放列表...', 'success');
+
+            try {
+                const response = await fetch('/api/playlist/preview', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        playlist_path: playlistPath,
+                        system_name: systemName
+                    })
+                });
+
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+
+                currentChanges = data.changes;
+                renderPreviewTable(currentChanges);
+                document.getElementById('preview-container').style.display = 'block';
+                document.getElementById('single-log-container').style.display = 'none'; // Hide log
+                showStatus('分析完成，请校对', 'success');
+
+            } catch (error) {
+                showStatus('预览失败: ' + error.message, 'error');
+            }
+        }
+
+        function renderPreviewTable(changes) {
+            const tbody = document.getElementById('preview-table-body');
+            tbody.innerHTML = '';
+
+            changes.forEach((change, index) => {
+                const tr = document.createElement('tr');
+                tr.dataset.index = index; // Store index for search modal
+
+                // Original Label
+                const tdOriginal = document.createElement('td');
+                tdOriginal.textContent = change.original_label;
+                tr.appendChild(tdOriginal);
+
+                // New Label (Editable)
+                const tdNew = document.createElement('td');
+                const inputNew = document.createElement('input');
+                inputNew.type = 'text';
+                inputNew.className = 'new-label-input'; // Add class for selection
+                inputNew.value = change.new_label || '';
+                inputNew.style.width = '100%';
+                inputNew.onchange = (e) => {
+                    currentChanges[index].new_label = e.target.value;
+                };
+                tdNew.appendChild(inputNew);
+                tr.appendChild(tdNew);
+
+                // Thumbnail Source (Editable + Search + Preview)
+                const tdThumb = document.createElement('td');
+                tdThumb.style.display = 'flex';
+                tdThumb.style.alignItems = 'center';
+                tdThumb.style.gap = '5px';
+
+                const inputThumb = document.createElement('input');
+                inputThumb.type = 'text';
+                inputThumb.className = 'thumb-source-input'; // Add class for selection
+                inputThumb.value = change.thumbnail_source || '';
+                inputThumb.placeholder = '留空则不下载';
+                inputThumb.style.flex = '1';
+                inputThumb.onchange = (e) => {
+                    currentChanges[index].thumbnail_source = e.target.value;
+                };
+
+                const btnSearch = document.createElement('button');
+                btnSearch.textContent = '🔍';
+                btnSearch.title = '搜索数据库';
+                btnSearch.className = 'btn small';
+                btnSearch.onclick = () => openSearchModal(index);
+
+                tdThumb.appendChild(inputThumb);
+                tdThumb.appendChild(btnSearch);
+
+                // Preview Link (if source exists)
+                if (change.thumbnail_source) {
+                    const linkPreview = document.createElement('a');
+                    // Construct Libretro URL (Named_Boxarts)
+                    const system = document.getElementById('system_name').value;
+                    const filename = change.thumbnail_source.replace(/[&*/:`<>?\|]/g, '_') + '.png';
+                    linkPreview.href = `https://thumbnails.libretro.com/${encodeURIComponent(system)}/Named_Boxarts/${encodeURIComponent(filename)}`;
+                    linkPreview.target = '_blank';
+                    linkPreview.textContent = '👁️';
+                    linkPreview.title = '预览封面 (Libretro)';
+                    linkPreview.style.textDecoration = 'none';
+                    tdThumb.appendChild(linkPreview);
+                }
+
+                tr.appendChild(tdThumb);
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function applyChanges() {
+            const playlistPath = document.getElementById('playlist_path').value;
+            const thumbnailsDir = document.getElementById('thumbnails_dir').value;
+
+            if (!thumbnailsDir) {
+                showStatus('请选择缩略图目录', 'error');
+                return;
+            }
+
+            showStatus('正在应用更改并下载封面...', 'success');
+            document.getElementById('preview-container').style.display = 'none';
+            document.getElementById('single-log-container').style.display = 'block';
+            const logView = document.getElementById('single-log-view');
+            logView.innerHTML = '正在后台处理，请稍候...<br>(由于是并发下载，日志可能不会实时显示详细进度)<br>';
+
+            try {
+                const response = await fetch('/api/playlist/apply', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        playlist_path: playlistPath,
+                        changes: currentChanges,
+                        thumbnails_dir: thumbnailsDir
+                    })
+                });
+
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+
+                if (data.job_id) {
+                    trackProgress(data.job_id);
+                } else {
+                    alert('Error starting job: ' + (data.error || 'Unknown error'));
+                    document.getElementById('progress-modal').style.display = 'none';
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+                document.getElementById('progress-modal').style.display = 'none';
+            }
+        }
+    </script>
+    <!-- Search Modal -->
+    <div id="search-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeSearchModal()">&times;</span>
+            <h2>搜索数据库</h2>
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <input type="text" id="search-input" placeholder="输入游戏名 (中/英)" style="flex: 1; padding: 8px;">
+                <button onclick="performSearch()" class="btn primary">搜索</button>
+            </div>
+            <div id="search-results" style="max-height: 300px; overflow-y: auto;">
+                <!-- Results will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Modal -->
+    <div id="progress-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="text-align: center;">
+            <h2>正在处理...</h2>
+            <div style="margin: 20px 0;">
+                <progress id="task-progress" value="0" max="100" style="width: 100%; height: 20px;"></progress>
+            </div>
+            <p id="progress-message">准备中...</p>
+            <p id="progress-stats">0 / 0</p>
+        </div>
+    </div>
+
+    <script>
+        // ... (Existing JS) ...
+
+        // Search Modal Logic
+        let currentSearchRowIndex = -1;
+
+        function openSearchModal(rowIndex) {
+            currentSearchRowIndex = rowIndex;
+            document.getElementById('search-modal').style.display = 'block';
+            document.getElementById('search-input').value = '';
+            document.getElementById('search-results').innerHTML = '';
+            document.getElementById('search-input').focus();
+        }
+
+        function closeSearchModal() {
+            document.getElementById('search-modal').style.display = 'none';
+        }
+
+        async function performSearch() {
+            const query = document.getElementById('search-input').value;
+            if (!query) return;
+
+            // Get current system
+            const system = document.getElementById('system_name').value;
+
+            const resultsDiv = document.getElementById('search-results');
+            resultsDiv.innerHTML = '<p>搜索中...</p>';
+
+            try {
+                let url = `/api/search?query=${encodeURIComponent(query)}`;
+                if (system) {
+                    url += `&system=${encodeURIComponent(system)}`;
+                }
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.results && data.results.length > 0) {
+                    let html = '<table class="preview-table"><thead><tr><th>英文名</th><th>中文名</th><th>系统</th><th>操作</th></tr></thead><tbody>';
+                    data.results.forEach(item => {
+                        html += `
+                            <tr>
+                                <td>${item.english_name}</td>
+                                <td>${item.chinese_name}</td>
+                                <td>${item.system || '-'}</td>
+                                <td><button class="btn small" onclick="selectSearchResult('${item.english_name.replace(/'/g, "\\'")}', '${item.chinese_name.replace(/'/g, "\\'")}')">选择</button></td>
+                            </tr>
+                        `;
+                    });
+                    html += '</tbody></table>';
+                    resultsDiv.innerHTML = html;
+                } else {
+                    resultsDiv.innerHTML = '<p>未找到结果。</p>';
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<p style="color: red;">搜索出错: ${error.message}</p>`;
+            }
+        }
+
+        function selectSearchResult(englishName, chineseName) {
+            if (currentSearchRowIndex !== -1) {
+                // Update the row
+                const row = document.querySelector(`#preview-table-body tr[data-index="${currentSearchRowIndex}"]`);
+                if (row) {
+                    const labelInput = row.querySelector('.new-label-input');
+                    const thumbInput = row.querySelector('.thumb-source-input');
+
+                    if (labelInput) {
+                        labelInput.value = chineseName;
+                        currentChanges[currentSearchRowIndex].new_label = chineseName; // Update currentChanges array
+                    }
+                    if (thumbInput) {
+                        thumbInput.value = englishName;
+                        currentChanges[currentSearchRowIndex].thumbnail_source = englishName; // Update currentChanges array
+                    }
+
+                    // Highlight change
+                    row.style.backgroundColor = '#e6fffa';
+                }
+            }
+            closeSearchModal();
+        }
+
+        // Apply Changes with Progress
+        // The applyChanges function was already replaced above.
+        // This section is for the trackProgress function and other related logic.
+
+        function trackProgress(jobId) {
+            const eventSource = new EventSource(`/api/progress?job_id=${jobId}`);
+            const progressBar = document.getElementById('task-progress');
+            const progressMsg = document.getElementById('progress-message');
+            const progressStats = document.getElementById('progress-stats');
+
+            // Get log view if it exists (for Direct Run)
+            const logView = document.getElementById('single-log-view');
+
+            eventSource.onmessage = function (event) {
+                const data = JSON.parse(event.data);
+
+                if (data.error) {
+                    progressMsg.textContent = "Error: " + data.error;
+                    progressMsg.style.color = "red";
+                    if (logView) {
+                        logView.innerHTML += `<span style="color:red">错误: ${data.error}</span><br>`;
+                    }
+                    eventSource.close();
+                    setTimeout(() => { document.getElementById('progress-modal').style.display = 'none'; }, 3000);
+                    return;
+                }
+
+                if (data.total > 0) {
+                    progressBar.max = data.total;
+                    progressBar.value = data.progress;
+                    progressStats.textContent = `${data.progress} / ${data.total}`;
+                }
+
+                if (data.message) {
+                    progressMsg.textContent = data.message;
+                    // Append detailed log
+                    if (logView) {
+                        const timestamp = new Date().toLocaleTimeString();
+                        logView.innerHTML += `[${timestamp}] ${data.message}<br>`;
+                        // Auto-scroll to bottom
+                        logView.scrollTop = logView.scrollHeight;
+                    }
+                }
+
+                if (data.status === 'completed') {
+                    progressMsg.textContent = "完成！";
+                    if (logView) {
+                        logView.innerHTML += `<span style="color:green">✓ 所有操作完成！</span><br>`;
+                    }
+                    eventSource.close();
+                    setTimeout(() => {
+                        document.getElementById('progress-modal').style.display = 'none';
+                        alert('应用更改完成！');
+                        document.getElementById('preview-container').style.display = 'none'; // Hide preview section
+                    }, 1000);
+                } else if (data.status === 'failed') {
+                    progressMsg.textContent = "失败: " + data.error;
+                    if (logView) {
+                        logView.innerHTML += `<span style="color:red">✗ 失败: ${data.error}</span><br>`;
+                    }
+                    eventSource.close();
+                }
+            };
+
+            eventSource.onerror = function () {
+                console.error('EventSource failed for progress tracking.');
+                eventSource.close();
+                progressMsg.textContent = "连接断开，无法追踪进度。";
+                progressMsg.style.color = "orange";
+                if (logView) {
+                    logView.innerHTML += `<span style="color:orange">⚠ 连接断开，无法追踪进度。</span><br>`;
+                }
+            };
         }
     </script>
 </body>

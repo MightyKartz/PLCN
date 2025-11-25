@@ -1,3 +1,3 @@
-pyinstaller>=6.0.0
-requests>=2.31.0
-
+pyinstaller
+requests
+rapidfuzz>=2.31.0

@@ -126,131 +126,245 @@ def detect_system(playlist_path):
         print(f"Error detecting system for {playlist_path}: {e}")
     return None
 
-def process_playlist(playlist_path, system_name, thumbnails_dir, rom_name_cn_path):
-    # 1. Initialize components
+def analyze_playlist(playlist_path, system_name, rom_name_cn_path):
+    """
+    Analyzes the playlist and returns a list of proposed changes.
+    Returns:
+        list of dicts: {
+            'index': int,
+            'original_label': str,
+            'path': str,
+            'new_label': str,
+            'thumbnail_source': str (Standard English Name or None),
+            'system': str
+        }
+    """
+    
+    # Clean FBNeo/Arcade game names
+    def clean_arcade_name(game_name):
+        """
+        Cleans arcade game names by removing region codes, version info, and dates.
+        Examples:
+          "1941: Counter Attack (World 900227)" -> "1941: Counter Attack"
+          "Street Fighter II' - Champion Edition (USA 920313)" -> "Street Fighter II' - Champion Edition"
+        """
+        import re
+        # Remove region and date codes like (World 900227), (USA 920313), (Japan), etc.
+        cleaned = re.sub(r'\s*\([^)]*\d{6}[^)]*\)$', '', game_name)  # Remove (Region YYMMDD)
+        cleaned = re.sub(r'\s*\([^)]*\)$', '', cleaned)  # Remove remaining (Region) or (version)
+        return cleaned.strip()
+    
+    # Normalize system name (remove timestamp and number suffixes)
+    # e.g., "Nintendo - SNES (20240830-122750) (3308)" -> "Nintendo - SNES"
+    def normalize_system_name(system_name):
+        import re
+        # Remove patterns like (YYYYMMDD-HHMMSS) and (number)
+        normalized = re.sub(r'\s*\(\d{8}-\d{6}\)\s*', '', system_name)
+        normalized = re.sub(r'\s*\(\d+\)\s*$', '', normalized)
+        return normalized.strip()
+    
+    normalized_system = normalize_system_name(system_name)
+    print(f"System: {system_name}")
+    if normalized_system != system_name:
+        print(f"Normalized to: {normalized_system} (for database matching)")
+    
+    # Initialize components
     playlist_manager = PlaylistManager(playlist_path)
-    translator = Translator(rom_name_cn_path, system_name)
-    downloader = ThumbnailDownloader(thumbnails_dir)
-
-    # 2. Deduplicate items (remove duplicate entries for same game with different file extensions)
+    translator = Translator(rom_name_cn_path, normalized_system)
+    
+    # Deduplicate items (in memory for analysis)
+    # Note: This modifies the playlist_manager's internal state
     removed_count = playlist_manager.deduplicate_items()
     if removed_count > 0:
-        print(f"Removed {removed_count} duplicate entries (e.g., .bin files when .cue exists)")
+        print(f"Removed {removed_count} duplicate entries")
 
-    # 3. Process playlist
     items = playlist_manager.get_items()
-    print(f"Found {len(items)} items in playlist.")
+    proposed_changes = []
 
     for i, item in enumerate(items):
         original_label = item.get('label')
         path = item.get('path')
         
+        new_label = original_label
+        thumbnail_source = None
+        
+        # Special handling for FBNeo/Arcade games
+        # These games have region codes like "(World 900227)" that need to be removed
+        is_arcade = 'Arcade' in normalized_system or 'FBNeo' in normalized_system
+        
+        if is_arcade and original_label and not any('\u4e00' <= char <= '\u9fff' for char in original_label):
+            # Clean the arcade name (remove region codes and dates)
+            cleaned_name = clean_arcade_name(original_label)
+            print(f"  [{i}] Arcade game detected: '{original_label}' -> '{cleaned_name}'")
+            
+            # Try to translate the cleaned name
+            translated_cn, english_name = translator.translate(cleaned_name)
+            
+            # Check if we found a match
+            if (translated_cn and translated_cn != cleaned_name) or (english_name and english_name != cleaned_name):
+                # We found a match in database
+                if english_name:
+                    thumbnail_source = english_name
+                    print(f"  [{i}] Found English name: '{english_name}'")
+                if translated_cn and translated_cn != cleaned_name:
+                    new_label = translated_cn
+                    print(f"  [{i}] Found Chinese name: '{translated_cn}'")
+            else:
+                # No match found, use cleaned name as label for consistency
+                new_label = cleaned_name
+                print(f"  [{i}] No match found in database")
+            
+            proposed_changes.append({
+                'index': i,
+                'original_label': original_label,
+                'path': path,
+                'new_label': new_label,
+                'thumbnail_source': thumbnail_source,
+                'system': system_name
+            })
+            continue
+        
+        # Priority 0: If original_label already contains Chinese and is not empty, use it
+        # This preserves user's manual edits from previous runs
+        if original_label and any('\u4e00' <= char <= '\u9fff' for char in original_label):
+            print(f"  [{i}] Using existing Chinese label: '{original_label}'")
+            new_label = original_label
+            # Try to find English name for thumbnail
+            translated_cn, english_name = translator.translate(original_label)
+            # Check if we found a match (either name changed from original)
+            if (translated_cn and translated_cn != original_label) or (english_name and english_name != original_label):
+                # We found a match in database
+                if english_name and english_name != original_label:
+                    thumbnail_source = english_name
+                    print(f"  [{i}] Found thumbnail source: '{english_name}'")
+                if translated_cn and translated_cn != original_label:
+                    new_label = translated_cn
+                    print(f"  [{i}] Updated label to standard name: '{translated_cn}'")
+            else:
+                print(f"  [{i}] No thumbnail source found for '{original_label}'")
+            
+            proposed_changes.append({
+                'index': i,
+                'original_label': original_label,
+                'path': path,
+                'new_label': new_label,
+                'thumbnail_source': thumbnail_source,
+                'system': system_name
+            })
+            continue
+        
+        # Logic to determine new label and thumbnail source from filename
         # Priority 1: Check if filename (without extension) contains Chinese characters
         if path:
-            filename_no_ext = os.path.splitext(os.path.basename(path))[0]
+            # Handle RetroArch archive paths (e.g. /path/to/Game.zip#Inner.nes)
+            basename = os.path.basename(path)
+            if '#' in basename:
+                basename = basename.split('#')[0]
+            
+            filename_no_ext = os.path.splitext(basename)[0]
+            
             if filename_no_ext and any('\u4e00' <= char <= '\u9fff' for char in filename_no_ext):
-                # Extract clean game name by removing tags in square brackets
-                # Example: "[Wii]胧村正[贴吧中文典藏版]" -> "胧村正"
                 import re
-                clean_name = re.sub(r'\[.*?\]', '', filename_no_ext).strip()
+                # Remove content in brackets [] and parentheses ()
+                clean_name = re.sub(r'\[.*?\]', '', filename_no_ext)
+                clean_name = re.sub(r'\(.*?\)', '', clean_name).strip()
                 
-                # If after removing brackets we still have Chinese text, use it
                 if clean_name and any('\u4e00' <= char <= '\u9fff' for char in clean_name):
-                    print(f"Using Chinese filename: '{clean_name}' (extracted from '{filename_no_ext}')")
-                    playlist_manager.update_label(i, clean_name)
-                    
-                    # Need to find English name for thumbnail download
-                    # Try reverse lookup: Chinese -> English in translation_map
-                    english_name = translator.reverse_translation_map.get(clean_name)
-                    if english_name:
-                        print(f"  Found English name via reverse lookup: '{english_name}'")
-                    
-                    # If not found via reverse lookup, try using original_label if it's English
-                    if not english_name and original_label and not any('\u4e00' <= char <= '\u9fff' for char in original_label):
-                        english_name = original_label
-                        print(f"  Using original label as English name: '{english_name}'")
-                    
-                    # Download thumbnail using English name
-                    if english_name:
-                        downloader.download_thumbnail(system_name, english_name, clean_name)
+                    new_label = clean_name
+                    # Use translator.translate to get fuzzy matching
+                    print(f"  [{i}] Translating: '{clean_name}'")
+                    translated_cn, english_name = translator.translate(clean_name)
+                    # Check if we found a match
+                    if (translated_cn and translated_cn != clean_name) or (english_name and english_name != clean_name):
+                        # We found a match in database
+                        if english_name:
+                            thumbnail_source = english_name
+                            print(f"  [{i}] Found English name: '{english_name}'")
+                        if translated_cn and translated_cn != clean_name:
+                            new_label = translated_cn
+                            print(f"  [{i}] Updated label to standard name: '{translated_cn}'")
                     else:
-                        print(f"  Warning: No English name found for '{clean_name}', skipping thumbnail download")
-                    continue
+                        print(f"  [{i}] No match found")
+                        if original_label and not any('\u4e00' <= char <= '\u9fff' for char in original_label):
+                            thumbnail_source = original_label
+                            print(f"  [{i}] Using original label as fallback: '{original_label}'")
                 else:
-                    # If no clean Chinese name extracted, use full filename
-                    print(f"Using Chinese filename: '{filename_no_ext}' for '{original_label}'")
-                    playlist_manager.update_label(i, filename_no_ext)
-                    
-                    # Try reverse lookup with full filename
-                    english_name = translator.reverse_translation_map.get(filename_no_ext)
-                    if english_name:
-                        print(f"  Found English name via reverse lookup: '{english_name}'")
-                    
-                    if not english_name and original_label and not any('\u4e00' <= char <= '\u9fff' for char in original_label):
-                        english_name = original_label
-                        print(f"  Using original label as English name: '{english_name}'")
-                    
-                    if english_name:
-                        downloader.download_thumbnail(system_name, english_name, filename_no_ext)
+                    new_label = filename_no_ext
+                    print(f"  [{i}] Translating: '{filename_no_ext}'")
+                    translated_cn, english_name = translator.translate(filename_no_ext)
+                    # Check if we found a match
+                    if (translated_cn and translated_cn != filename_no_ext) or (english_name and english_name != filename_no_ext):
+                        # We found a match in database
+                        if english_name:
+                            thumbnail_source = english_name
+                            print(f"  [{i}] Found English name: '{english_name}'")
+                        if translated_cn and translated_cn != filename_no_ext:
+                            new_label = translated_cn
+                            print(f"  [{i}] Updated label to standard name: '{translated_cn}'")
                     else:
-                        print(f"  Warning: No English name found for '{filename_no_ext}', skipping thumbnail download")
-                    continue
+                        print(f"  [{i}] No match found")
+                        if original_label and not any('\u4e00' <= char <= '\u9fff' for char in original_label):
+                            thumbnail_source = original_label
+                            print(f"  [{i}] Using original label as fallback: '{original_label}'")
+                
+                proposed_changes.append({
+                    'index': i,
+                    'original_label': original_label,
+                    'path': path,
+                    'new_label': new_label,
+                    'thumbnail_source': thumbnail_source,
+                    'system': system_name
+                })
+                continue
         
         # Priority 2: Check if parent directory name contains Chinese characters
         if path:
             parent_dir = os.path.basename(os.path.dirname(path))
-            # Check if parent_dir contains Chinese characters
             if parent_dir and any('\u4e00' <= char <= '\u9fff' for char in parent_dir):
-                print(f"Using Chinese parent directory name: '{parent_dir}' for '{original_label}'")
-                playlist_manager.update_label(i, parent_dir)
+                new_label = parent_dir
                 
-                # Need to get standard English name for thumbnail download
-                # Try reverse lookup first: Chinese parent dir -> English in translation_map
-                standard_english_name = translator.reverse_translation_map.get(parent_dir)
-                if standard_english_name:
-                    print(f"  Found English name via reverse lookup: '{standard_english_name}'")
-                
-                # If not found via reverse lookup, try translating the original label or filename
-                if not standard_english_name:
+                # Use translator.translate for fuzzy matching
+                translated_cn, english_name = translator.translate(parent_dir)
+                # Check if we found a match
+                if (translated_cn and translated_cn != parent_dir) or (english_name and english_name != parent_dir):
+                    # We found a match in database
+                    if english_name:
+                        thumbnail_source = english_name
+                    if translated_cn and translated_cn != parent_dir:
+                        new_label = translated_cn
+                else:
+                    # Try translating candidates
                     filename_no_ext = os.path.splitext(os.path.basename(path))[0] if path else None
                     candidates = []
-                    if filename_no_ext:
-                        candidates.append(filename_no_ext)
-                    if original_label and original_label != filename_no_ext:
-                        candidates.append(original_label)
+                    if filename_no_ext: candidates.append(filename_no_ext)
+                    if original_label and original_label != filename_no_ext: candidates.append(original_label)
                     
-                    # Try to find standard English name through translation (uses normalization internally)
                     for candidate in candidates:
                         _, std_en = translator.translate(candidate)
-                        # Only accept if we got a different result (meaning translation was found)
                         if std_en and std_en != candidate:
-                            standard_english_name = std_en
-                            print(f"  Using standard English name for thumbnail: '{standard_english_name}'")
+                            thumbnail_source = std_en
                             break
-                
-                # Use standard English name if found, otherwise use filename or original label
-                download_name = standard_english_name if standard_english_name else (filename_no_ext if filename_no_ext else original_label)
-                if not standard_english_name:
-                    print(f"  Warning: No standard English name found, using '{download_name}' for thumbnail download")
                     
-                downloader.download_thumbnail(system_name, download_name, parent_dir)
+                    if not thumbnail_source:
+                        thumbnail_source = filename_no_ext if filename_no_ext else original_label
+
+                proposed_changes.append({
+                    'index': i,
+                    'original_label': original_label,
+                    'path': path,
+                    'new_label': new_label,
+                    'thumbnail_source': thumbnail_source,
+                    'system': system_name
+                })
                 continue
-        
-        # Candidates for translation matching:
-        # Priority:
-        # 1. The filename without extension (Most accurate usually)
-        # 2. The original label (Might be custom)
-        # 3. The parent directory name (Fallback)
+
+        # Priority 3: Translation
         candidates = []
-        
         if path:
             filename_no_ext = os.path.splitext(os.path.basename(path))[0]
-            if filename_no_ext:
-                candidates.append(filename_no_ext)
-        
+            if filename_no_ext: candidates.append(filename_no_ext)
         if original_label and original_label not in candidates:
             candidates.append(original_label)
-            
         if path:
             parent_dir = os.path.basename(os.path.dirname(path))
             if parent_dir and parent_dir not in candidates:
@@ -269,23 +383,69 @@ def process_playlist(playlist_path, system_name, thumbnails_dir, rom_name_cn_pat
                 break
         
         if translated_label:
-            print(f"Translating: '{matched_english_name}' -> '{translated_label}' (Standard EN: '{standard_english_name}')")
-            playlist_manager.update_label(i, translated_label)
-            
-            # 3. Download thumbnails
-            # We use the STANDARD English name (from DB) to find the thumbnail on the server
-            # And save it with the TRANSLATED label (Chinese)
-            # If standard_english_name is None (shouldn't happen if translated), fallback to matched_english_name
-            download_name = standard_english_name if standard_english_name else matched_english_name
-            downloader.download_thumbnail(system_name, download_name, translated_label)
-        else:
-            print(f"No translation found for: '{original_label}' (checked candidates: {candidates})")
+            new_label = translated_label
+            thumbnail_source = standard_english_name if standard_english_name else matched_english_name
+        
+        proposed_changes.append({
+            'index': i,
+            'original_label': original_label,
+            'path': path,
+            'new_label': new_label,
+            'thumbnail_source': thumbnail_source,
+            'system': system_name
+        })
 
-    # 4. Save playlist
-    # Overwrite the original file as requested
-    output_path = playlist_path
-    playlist_manager.save(output_path)
-    print(f"Saved translated playlist to {output_path}")
+    return proposed_changes
+
+def apply_changes(playlist_path, changes, thumbnails_dir, backup=True, progress_callback=None):
+    """
+    Applies the changes to the playlist and downloads thumbnails.
+    """
+    # 0. Backup
+    if backup:
+        backup_path = playlist_path + ".bak"
+        import shutil
+        shutil.copy2(playlist_path, backup_path)
+        print(f"Backed up playlist to {backup_path}")
+
+    playlist_manager = PlaylistManager(playlist_path)
+    # Re-deduplicate to ensure indices match (assuming analyze was run on fresh load)
+    # WARNING: If analyze removed items, indices in 'changes' must align with post-deduplication items.
+    # Ideally, analyze should return the FULL list of items including unchanged ones, or we trust the order.
+    # Since we re-instantiate PlaylistManager, we must ensure deterministic behavior.
+    playlist_manager.deduplicate_items()
+    
+    downloader = ThumbnailDownloader(thumbnails_dir)
+    download_tasks = []
+    
+    for change in changes:
+        index = change['index']
+        new_label = change['new_label']
+        thumbnail_source = change['thumbnail_source']
+        system = change['system']
+        
+        # Update label
+        if new_label:
+            playlist_manager.update_label(index, new_label)
+            
+        # Collect download task
+        if thumbnail_source and new_label:
+            download_tasks.append((system, thumbnail_source, new_label))
+            
+    # Save playlist
+    playlist_manager.save(playlist_path)
+    print(f"Saved updated playlist to {playlist_path}")
+    
+    # Batch download
+    if download_tasks:
+        downloader.download_batch(download_tasks, progress_callback=progress_callback)
+
+def process_playlist(playlist_path, system_name, thumbnails_dir, rom_name_cn_path):
+    print(f"Analyzing playlist: {playlist_path}")
+    changes = analyze_playlist(playlist_path, system_name, rom_name_cn_path)
+    
+    print(f"Applying {len(changes)} changes...")
+    apply_changes(playlist_path, changes, thumbnails_dir)
 
 if __name__ == "__main__":
     main()
