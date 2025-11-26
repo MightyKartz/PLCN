@@ -213,18 +213,21 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path):
             translated_cn, english_name = translator.translate(cleaned_name)
             
             # Check if we found a match
-            if (translated_cn and translated_cn != cleaned_name) or (english_name and english_name != cleaned_name):
-                # We found a match in database
-                if english_name:
-                    thumbnail_source = english_name
-                    print(f"  [{i}] Found English name: '{english_name}'")
-                if translated_cn and translated_cn != cleaned_name:
-                    new_label = translated_cn
-                    print(f"  [{i}] Found Chinese name: '{translated_cn}'")
+            if translated_cn and translated_cn != cleaned_name:
+                # Found Chinese translation
+                new_label = translated_cn
+                thumbnail_source = english_name if english_name else cleaned_name
+                print(f"  [{i}] Found Chinese translation: '{translated_cn}'")
+            elif english_name and english_name != cleaned_name:
+                # No Chinese translation, but found standardized English name
+                new_label = english_name
+                thumbnail_source = english_name
+                print(f"  [{i}] Using standardized English name: '{english_name}'")
             else:
                 # No match found, use cleaned name as label for consistency
                 new_label = cleaned_name
-                print(f"  [{i}] No match found in database")
+                thumbnail_source = cleaned_name
+                print(f"  [{i}] No match found, using cleaned name")
             
             proposed_changes.append({
                 'index': i,
@@ -249,11 +252,15 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path):
                 if english_name and english_name != original_label:
                     thumbnail_source = english_name
                     print(f"  [{i}] Found thumbnail source: '{english_name}'")
+                # Update to standardized Chinese name if available
                 if translated_cn and translated_cn != original_label:
                     new_label = translated_cn
-                    print(f"  [{i}] Updated label to standard name: '{translated_cn}'")
+                    print(f"  [{i}] Updated to standardized Chinese name: '{translated_cn}'")
             else:
+                # No match found, keep original label but still try to download thumbnails
                 print(f"  [{i}] No thumbnail source found for '{original_label}'")
+                thumbnail_source = original_label  # Try with Chinese name as fallback
+
             
             proposed_changes.append({
                 'index': i,
@@ -287,15 +294,18 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path):
                     print(f"  [{i}] Translating: '{clean_name}'")
                     translated_cn, english_name = translator.translate(clean_name)
                     # Check if we found a match
-                    if (translated_cn and translated_cn != clean_name) or (english_name and english_name != clean_name):
-                        # We found a match in database
-                        if english_name:
-                            thumbnail_source = english_name
-                            print(f"  [{i}] Found English name: '{english_name}'")
-                        if translated_cn and translated_cn != clean_name:
-                            new_label = translated_cn
-                            print(f"  [{i}] Updated label to standard name: '{translated_cn}'")
+                    if translated_cn and translated_cn != clean_name:
+                        # Found Chinese translation
+                        new_label = translated_cn
+                        thumbnail_source = english_name if english_name else clean_name
+                        print(f"  [{i}] Found Chinese translation: '{translated_cn}'")
+                    elif english_name and english_name != clean_name:
+                        # No Chinese, but found standardized English name
+                        new_label = english_name
+                        thumbnail_source = english_name
+                        print(f"  [{i}] Using standardized English name: '{english_name}'")
                     else:
+                        # No match found
                         print(f"  [{i}] No match found")
                         if original_label and not any('\u4e00' <= char <= '\u9fff' for char in original_label):
                             thumbnail_source = original_label
@@ -305,15 +315,18 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path):
                     print(f"  [{i}] Translating: '{filename_no_ext}'")
                     translated_cn, english_name = translator.translate(filename_no_ext)
                     # Check if we found a match
-                    if (translated_cn and translated_cn != filename_no_ext) or (english_name and english_name != filename_no_ext):
-                        # We found a match in database
-                        if english_name:
-                            thumbnail_source = english_name
-                            print(f"  [{i}] Found English name: '{english_name}'")
-                        if translated_cn and translated_cn != filename_no_ext:
-                            new_label = translated_cn
-                            print(f"  [{i}] Updated label to standard name: '{translated_cn}'")
+                    if translated_cn and translated_cn != filename_no_ext:
+                        # Found Chinese translation
+                        new_label = translated_cn
+                        thumbnail_source = english_name if english_name else filename_no_ext
+                        print(f"  [{i}] Found Chinese translation: '{translated_cn}'")
+                    elif english_name and english_name != filename_no_ext:
+                        # No Chinese, but found standardized English name
+                        new_label = english_name
+                        thumbnail_source = english_name
+                        print(f"  [{i}] Using standardized English name: '{english_name}'")
                     else:
+                        # No match found
                         print(f"  [{i}] No match found")
                         if original_label and not any('\u4e00' <= char <= '\u9fff' for char in original_label):
                             thumbnail_source = original_label
@@ -338,12 +351,14 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path):
                 # Use translator.translate for fuzzy matching
                 translated_cn, english_name = translator.translate(parent_dir)
                 # Check if we found a match
-                if (translated_cn and translated_cn != parent_dir) or (english_name and english_name != parent_dir):
-                    # We found a match in database
-                    if english_name:
-                        thumbnail_source = english_name
-                    if translated_cn and translated_cn != parent_dir:
-                        new_label = translated_cn
+                if translated_cn and translated_cn != parent_dir:
+                    # Found Chinese translation
+                    new_label = translated_cn
+                    thumbnail_source = english_name if english_name else parent_dir
+                elif english_name and english_name != parent_dir:
+                    # No Chinese, but found standardized English name
+                    new_label = english_name
+                    thumbnail_source = english_name
                 else:
                     # Try translating candidates
                     filename_no_ext = os.path.splitext(os.path.basename(path))[0] if path else None
@@ -389,14 +404,31 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path):
         for candidate in candidates:
             translation, std_en = translator.translate(candidate)
             if translation != candidate:
+                # Found Chinese translation
                 translated_label = translation
                 matched_english_name = candidate
                 standard_english_name = std_en
                 break
+            elif std_en != candidate:
+                # No Chinese translation, but found standardized English name
+                # Store this as a fallback option
+                if not standard_english_name:  # Only use first match
+                    standard_english_name = std_en
+                    matched_english_name = candidate
         
+        # Determine new_label and thumbnail_source
         if translated_label:
+            # Priority 1: Use Chinese translation
             new_label = translated_label
             thumbnail_source = standard_english_name if standard_english_name else matched_english_name
+        elif standard_english_name and standard_english_name != matched_english_name:
+            # Priority 2: Use standardized English name (if different from original)
+            new_label = standard_english_name
+            thumbnail_source = standard_english_name
+        else:
+            # No translation or standardization found, keep original
+            new_label = original_label
+            thumbnail_source = original_label
         
         proposed_changes.append({
             'index': i,
