@@ -37,6 +37,18 @@ def kill_process_on_port(port):
         pass
 
 def main():
+    # Auto-launch UI if no arguments provided (e.g., double-click on macOS)
+    if len(sys.argv) == 1:
+        print("No arguments provided. Starting Web UI...")
+        # Clean up any existing process on the port
+        kill_process_on_port(server.PORT)
+        
+        url = f"http://localhost:{server.PORT}"
+        print(f"Opening {url}")
+        webbrowser.open(url)
+        server.run_server()
+        return
+    
     # Check for 'ui' subcommand
     if len(sys.argv) > 1 and sys.argv[1] == 'ui':
         print("Starting Web UI...")

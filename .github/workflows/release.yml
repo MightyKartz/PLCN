@@ -53,31 +53,25 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-
     - name: Download All Artifacts
       uses: actions/download-artifact@v4
 
     - name: Package Artifacts
       run: |
-        # Linux
-        mkdir PLCN-Linux
-        mv plcn-linux/plcn PLCN-Linux/PLCN-Linux
-        cp scripts/start_linux.sh PLCN-Linux/
-        chmod +x PLCN-Linux/PLCN-Linux
-        chmod +x PLCN-Linux/start_linux.sh
+        # Rename and set permissions
+        mv plcn-linux/plcn PLCN-Linux
+        mv plcn-macos/plcn PLCN-macOS
+        mv plcn-windows.exe/plcn.exe PLCN-Windows.exe
+        chmod +x PLCN-Linux
+        chmod +x PLCN-macOS
+        
+        # Package with tar.gz to preserve permissions
         tar -czf PLCN-Linux-x64.tar.gz PLCN-Linux
-
-        # macOS
-        mkdir PLCN-macOS
-        mv plcn-macos/plcn PLCN-macOS/PLCN-macOS
-        cp scripts/start_macos.command PLCN-macOS/
-        chmod +x PLCN-macOS/PLCN-macOS
-        chmod +x PLCN-macOS/start_macos.command
         tar -czf PLCN-macOS-x64.tar.gz PLCN-macOS
         
-        # Windows
-        mv plcn-windows.exe/plcn.exe PLCN-Windows-x64.exe
+        # Windows doesn't need tar (no permissions)
+        # Just rename for clarity
+        mv PLCN-Windows.exe PLCN-Windows-x64.exe
 
     - name: Create Release
       uses: softprops/action-gh-release@v1

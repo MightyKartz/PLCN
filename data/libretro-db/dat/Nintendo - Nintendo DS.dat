@@ -1,0 +1,2554 @@
+clrmamepro (
+	name "Nintendo - Nintendo DS"
+	description "Nintendo - Nintendo DS"
+	version "2025.11.10"
+	homepage "http://github.com/robloach/libretro-dats"
+)
+
+game (
+	name "'Chou' Kowai Hanashi DS - Ao no Shou (Japan)"
+	region "Japan"
+	serial "BKAJ"
+	rom ( name "'Chou' Kowai Hanashi DS - Ao no Shou (Japan).nds" size 134217728 crc 6131F00F md5 08BA3CBEBE3FA36F5554E6A02C5D8E97 sha1 D31627EC4D6689A5B024C53EAFAE8EF4543A1063 serial "BKAJ" )
+)
+game (
+	name "'Josei no Hinkaku' Juku DS - Tsuyoku, Yasashiku, Utsukushiku - Bando Mariko Shinsho (Japan)"
+	region "Japan"
+	serial "CJHJ"
+	rom ( name "'Josei no Hinkaku' Juku DS - Tsuyoku, Yasashiku, Utsukushiku - Bando Mariko Shinsho (Japan).nds" size 67108864 crc C106D9D6 md5 2A018D98F1DC98A3B68E0CBFB7F3D30A sha1 CCB90B77CDB69554EDDD6D138BDF22B9D1C3D344 serial "CJHJ" )
+)
+game (
+	name "007 - Blood Stone (Canada) (Fr)"
+	region "Canada"
+	serial "BJBX"
+	rom ( name "007 - Blood Stone (Canada) (Fr).nds" size 67108864 crc CDF33AD4 md5 58DDFF08BA51075CAF7556EDB7DD5B3B sha1 C9A6F28D3C356810A8D2DF48C540A48A0B80263D serial "BJBX" )
+)
+game (
+	name "007 - Blood Stone (France)"
+	region "France"
+	serial "BJBF"
+	rom ( name "007 - Blood Stone (France).nds" size 67108864 crc 1FCCF595 md5 9B2132E18451CC31DFF255681DBBBA00 sha1 0E49395EDC31C21C0814C03A4893A1E86DE9F856 serial "BJBF" )
+)
+game (
+	name "007 - Blood Stone (Germany)"
+	region "Germany"
+	serial "BJBD"
+	rom ( name "007 - Blood Stone (Germany).nds" size 67108864 crc 306109D2 md5 F7F5A87552D41FE1682F70FDA66DBF3B sha1 65C1CDB6CBE2B07FBE46120743D7D31679E0834E serial "BJBD" )
+)
+game (
+	name "007 - Blood Stone (USA)"
+	region "USA"
+	serial "BJBE"
+	rom ( name "007 - Blood Stone (USA).nds" size 67108864 crc 8AA9E6C7 md5 03BA799635F3E34CFD64F353330F6799 sha1 DADBCCF3CCAA2A084D4FE3ECE410C495C842811F serial "BJBE" )
+)
+game (
+	name "007 - Blood Stone (United Kingdom)"
+	region "United Kingdom"
+	serial "BJBP"
+	rom ( name "007 - Blood Stone (United Kingdom).nds" size 67108864 crc F84E3F38 md5 753D9C13FDAED25E564DC622B0A5C867 sha1 FC10DE3B17C76082C4998AF4DDFC324BCA332E5F serial "BJBP" )
+)
+game (
+	name "007 - Ein Quantum Trost (Germany)"
+	region "Germany"
+	serial "CQSD"
+	rom ( name "007 - Ein Quantum Trost (Germany).nds" size 33554432 crc 20734B5D md5 6CC0E5EC579ACAC7357DBD4829388B26 sha1 472E3954AEA5F99FBC55F0F0985020122BA706C6 serial "CQSD" )
+)
+game (
+	name "007 - Quantum of Solace (Europe) (En,Fr)"
+	region "Europe"
+	serial "CQSP"
+	rom ( name "007 - Quantum of Solace (Europe) (En,Fr).nds" size 33554432 crc 06B361C3 md5 407A71D4D2167C0B4E42C53B4E440981 sha1 A1A860F2B7F4DF1DD1A4AEAB70F294494351F736 serial "CQSP" )
+)
+game (
+	name "007 - Quantum of Solace (Europe) (Es,It)"
+	region "Europe"
+	serial "CQSX"
+	rom ( name "007 - Quantum of Solace (Europe) (Es,It).nds" size 33554432 crc 50501C02 md5 FC59502F8F2E4CBD6B4A1291DA962715 sha1 0AB236810EF7E31D97CCD85D53A7A26020FD5A6F serial "CQSX" )
+)
+game (
+	name "007 - Quantum of Solace (Korea)"
+	region "Korea"
+	serial "CQSK"
+	rom ( name "007 - Quantum of Solace (Korea).nds" size 33554432 crc 6967847A md5 8B1FE8ECF1E4F03AE49D434EA7C7DCF7 sha1 64BC4E0F64100172F2612F532E73999B9A1CBC77 serial "CQSK" )
+)
+game (
+	name "007 - Quantum of Solace (USA) (En,Fr)"
+	region "USA"
+	serial "CQSE"
+	rom ( name "007 - Quantum of Solace (USA) (En,Fr).nds" size 33554432 crc 283013FA md5 ED77D9951A61E1B2AEBBDC3C3EDD7F07 sha1 C2D2434D0323312F4FC2680D8FF9659BE7E38201 serial "CQSE" )
+)
+game (
+	name "1 contre 100 (France)"
+	region "France"
+	serial "YJYF"
+	rom ( name "1 contre 100 (France).nds" size 8388608 crc 1A8E7B04 md5 5704AABEA2344951B49EA32112B2B6CE sha1 CE0DADEF94BF1D11012D01187FC573E91561F588 serial "YJYF" )
+)
+game (
+	name "1 gegen 100 (Germany)"
+	region "Germany"
+	serial "YJYD"
+	rom ( name "1 gegen 100 (Germany).nds" size 8388608 crc 220D4186 md5 64EE6C3DE769F93DC47FF4FC5A3B5979 sha1 80A346745F8AAB540CEED1A04168AFC92C32F5EB serial "YJYD" )
+)
+game (
+	name "1 vs 100 (Australia)"
+	region "Australia"
+	serial "YJYP"
+	rom ( name "1 vs 100 (Australia).nds" size 8388608 crc A9C59AA6 md5 9F95759F95E451489CB0ED1BDF61D41E sha1 546FAA05D1C37D9418F27A0C370C8BF491443B6D serial "YJYP" )
+)
+game (
+	name "1 vs 100 (USA)"
+	region "USA"
+	serial "CIOE"
+	rom ( name "1 vs 100 (USA).nds" size 16777216 crc A5174778 md5 674D741EE9320C484165986C4D5DDD71 sha1 650DAE605ECF42A7A305D13AC8A3A50F17958E39 serial "CIOE" )
+)
+game (
+	name "1-nichi 10-pun de E ga Jouzu ni Kakeru DS (Japan)"
+	region "Japan"
+	serial "YJZJ"
+	rom ( name "1-nichi 10-pun de E ga Jouzu ni Kakeru DS (Japan).nds" size 33554432 crc 3B21E446 md5 2D8726303B99CD8D3C3EAA5E8862246E sha1 DC0C608F71CC46920B8E6E3973BB354FC52D6FF6 serial "YJZJ" )
+)
+game (
+	name "10 voor Taal (Netherlands)"
+	region "Netherlands"
+	serial "CTPH"
+	rom ( name "10 voor Taal (Netherlands).nds" size 8388608 crc E93B216D md5 1356CB0647739A58745E657A0CD769D1 sha1 05EDC81CA37FCC72E6D94F3A81924A3560A6FFA9 serial "CTPH" )
+)
+game (
+	name "100 All-Time Favorites (USA) (En,Fr,Es)"
+	region "USA"
+	serial "BOZE"
+	rom ( name "100 All-Time Favorites (USA) (En,Fr,Es).nds" size 33554432 crc 5D25D20A md5 9727B85CECEFC0AA047B0152A277D866 sha1 3229BA046CDD2D345D5A434E298A294476A6ABEB serial "BOZE" )
+)
+game (
+	name "100 Classic Book Collection (Europe)"
+	region "Europe"
+	serial "YBNP"
+	rom ( name "100 Classic Book Collection (Europe).nds" size 67108864 crc 7CC015E2 md5 7365F8F9C5711C8F02F5DDD483C981D6 sha1 F438B3D199AEC12D221F8C2CDE67D9EBCB289B35 serial "YBNP" )
+)
+game (
+	name "100 Classic Books (USA)"
+	region "USA"
+	serial "YBNE"
+	rom ( name "100 Classic Books (USA).nds" size 67108864 crc EE869BEB md5 734B2BC6B6439A9CC940EC6CE3071EAE sha1 51C358E9E24149F38A6006B008DF560029A45E61 serial "YBNE" )
+)
+game (
+	name "100 Classic Games (Europe) (En,Fr,De,Es,Nl)"
+	region "Europe"
+	serial "BX6P"
+	rom ( name "100 Classic Games (Europe) (En,Fr,De,Es,Nl).nds" size 8388608 crc 17C3AA61 md5 ED5BC83CE7B72445165FD2E89F86A935 sha1 E1C6BD6E8E812F332E2E655BB3F39E7B8B9F3082 serial "BX6P" )
+)
+game (
+	name "100 Classic Games (Europe) (En,Fr,De,Es,Nl) (Rev 1)"
+	region "Europe"
+	serial "BX6P"
+	rom ( name "100 Classic Games (Europe) (En,Fr,De,Es,Nl) (Rev 1).nds" size 8388608 crc 873F3DA3 md5 DBC9E5A2BDC8C10DD002454EBB0BD4D6 sha1 AB0F2FA9AFC7CA6B2A949B82CFBA236E72730974 serial "BX6P" )
+)
+game (
+	name "100 Livres Classiques (France)"
+	region "France"
+	serial "YBNF"
+	rom ( name "100 Livres Classiques (France).nds" size 67108864 crc B2D9264F md5 E9C7160D0C35AED2658EDF69941A4CDA sha1 47A66630B927E143D2E57BF0A9C6845DC4C5FE41 serial "YBNF" )
+)
+game (
+	name "1000 Bornes - Coups-Fourres et Courses Folles! (France)"
+	region "France"
+	serial "CMBF"
+	rom ( name "1000 Bornes - Coups-Fourres et Courses Folles! (France).nds" size 16777216 crc 31770B8E md5 99FBACC420D0D0040473612AED8F586C sha1 BD0F2632119464E3CF6878696CED452C0E7F92B5 serial "CMBF" )
+)
+game (
+	name "1000 Cooking Recipes from Elle a Table (Europe) (En,Fr,De,Es,It) (NDSi Enhanced)"
+	region "Europe"
+	serial "VETP"
+	rom ( name "1000 Cooking Recipes from Elle a Table (Europe) (En,Fr,De,Es,It) (NDSi Enhanced).nds" size 134217728 crc A9B1F1DE md5 338CAC568DCBA1CA53051E443F3B005B sha1 1AB191EFEA5A9A280B0D9A2565EA353C52BF6D07 serial "VETP" )
+)
+game (
+	name "1001 Crosswords (Europe)"
+	region "Europe"
+	serial "TCXP"
+	rom ( name "1001 Crosswords (Europe).nds" size 8388608 crc BDE636ED md5 064855312303150C4211C68D43C004C5 sha1 2256341F41FE6DBC7F17381F3E469142B18878F1 serial "TCXP" )
+)
+game (
+	name "1001 Touch Games (Europe)"
+	region "Europe"
+	serial "B8KP"
+	rom ( name "1001 Touch Games (Europe).nds" size 33554432 crc 8B7F1306 md5 3B339BEAA8D23CF124E9631769E40582 sha1 C3ED853B8C230226E38D2385D1A7AFF7C145C758 serial "B8KP" )
+)
+game (
+	name "1001 Touch Games (Europe) (En,Fr,It,Nl)"
+	region "Europe"
+	serial "B8KX"
+	rom ( name "1001 Touch Games (Europe) (En,Fr,It,Nl).nds" size 33554432 crc 33ED73A4 md5 38C411283790E1DE1126ED5376E207A2 sha1 E5DDCD11584F3582B55A45137C7CB289984FA2CF serial "B8KX" )
+)
+game (
+	name "1001 Touch Games (Germany)"
+	region "Germany"
+	serial "B8KD"
+	rom ( name "1001 Touch Games (Germany).nds" size 33554432 crc CFF1FBFA md5 3C7E78ECFC528C301C8B8D476E9C9E94 sha1 17F06C925673B30CB37A3E35C1F85ED3B6FC2EF4 serial "B8KD" )
+)
+game (
+	name "1001 Touch Games (USA)"
+	region "USA"
+	serial "B8KE"
+	rom ( name "1001 Touch Games (USA).nds" size 33554432 crc 1040E3D8 md5 81716AF87CE5F9C2F9FE09B496D7DD96 sha1 561DB2031723466363EC0CE9749411090AE6BBE0 serial "B8KE" )
+)
+game (
+	name "101 Dino Pets (Europe) (En,Fr,De,It)"
+	region "Europe"
+	serial "C5NP"
+	rom ( name "101 Dino Pets (Europe) (En,Fr,De,It).nds" size 16777216 crc B5EBAB09 md5 56E629E20FD09294904BB15486AA141D sha1 9AB311FD99850DC925FCFFAE8AC90C7C108F7852 serial "C5NP" )
+)
+game (
+	name "101 in 1 Explosive Megamix (Europe) (En,Fr,De,Es,It,Nl)"
+	region "Europe"
+	serial "CQZP"
+	rom ( name "101 in 1 Explosive Megamix (Europe) (En,Fr,De,Es,It,Nl).nds" size 33554432 crc C29D7A43 md5 8B4F6C09FB83C89B2BBDD863EC300D6D sha1 74CECDD7056F2BA0C4FE355C78F6EF7FD9AE4DDB serial "CQZP" )
+)
+game (
+	name "101 in 1 Explosive Megamix (USA) (En,Fr,Es)"
+	region "USA"
+	serial "CQZE"
+	rom ( name "101 in 1 Explosive Megamix (USA) (En,Fr,Es).nds" size 33554432 crc 61857FAE md5 0F1DE4253FB6FE457130B01D4E680762 sha1 B320735C817C226078E01107CE56A398F22D9318 serial "CQZE" )
+)
+game (
+	name "101 in 1 Sports Megamix (Europe) (En,Fr,De,Es,It,Nl)"
+	region "Europe"
+	serial "B2NP"
+	rom ( name "101 in 1 Sports Megamix (Europe) (En,Fr,De,Es,It,Nl).nds" size 33554432 crc C0B165F8 md5 94ECD56EEACD8388682943405276B82B sha1 CEB7ADC7ADAF21929FD89196F30854B274C20E09 serial "B2NP" )
+)
+game (
+	name "101 in 1 Sports Megamix (USA) (En,Fr,Es)"
+	region "USA"
+	serial "B2NE"
+	rom ( name "101 in 1 Sports Megamix (USA) (En,Fr,Es).nds" size 33554432 crc 72659E39 md5 CA20A2A7E06B596159F8B6521839DD7B sha1 9D60447BDEA20DBAD41FEE2BEEED1CAC14CDA46B serial "B2NE" )
+)
+game (
+	name "11 Card Games (Europe) (En,De,Es)"
+	region "Europe"
+	serial "BGCP"
+	rom ( name "11 Card Games (Europe) (En,De,Es).nds" size 8388608 crc 3D29E171 md5 64EAA39BDD6CD807539AACDAF5AA684F sha1 A624968C47540711AD166518362BEB508E1BCD8E serial "BGCP" )
+)
+game (
+	name "12 (Europe)"
+	region "Europe"
+	serial "CI2P"
+	rom ( name "12 (Europe).nds" size 8388608 crc 86B1E4CF md5 F9432D38B4473F6F8D4BE0384881E942 sha1 5C4A5CA179C6547A851A404DF75504E8571E4629 serial "CI2P" )
+)
+game (
+	name "123 Sesame Street - Cookie's Counting Carnival - The Videogame (Australia)"
+	region "Australia"
+	serial "BSRU"
+	rom ( name "123 Sesame Street - Cookie's Counting Carnival - The Videogame (Australia).nds" size 16777216 crc 42E22120 md5 CA1DB53790315C62C0EE6902A90C92CE sha1 5E2AFA05C3306E099F940F61312D175C08CDFF42 serial "BSRU" )
+)
+game (
+	name "123 Sesame Street - Cookie's Counting Carnival - The Videogame (USA)"
+	region "USA"
+	serial "BSRE"
+	rom ( name "123 Sesame Street - Cookie's Counting Carnival - The Videogame (USA).nds" size 16777216 crc 7AB2EEF5 md5 1CB6F0EAF36F795A14B5EBA66D9F21F8 sha1 75B8EEE9C06B37B866BAEA63FFABAB05BD89D61D serial "BSRE" )
+)
+game (
+	name "123 Sesame Street - Elmo's A-to-Zoo Adventure - The Videogame (Australia)"
+	region "Australia"
+	serial "BERU"
+	rom ( name "123 Sesame Street - Elmo's A-to-Zoo Adventure - The Videogame (Australia).nds" size 33554432 crc B76542DA md5 184F814B8B081D260AA385E864D2F084 sha1 780BBD1DC6FF1DE4A67DE9460119D93BE1B47EF9 serial "BERU" )
+)
+game (
+	name "123 Sesame Street - Elmo's A-to-Zoo Adventure - The Videogame (USA)"
+	region "USA"
+	serial "BERE"
+	rom ( name "123 Sesame Street - Elmo's A-to-Zoo Adventure - The Videogame (USA).nds" size 33554432 crc F8F17AE7 md5 465A6EF26DD6884A20A25745CBE02A60 sha1 63098994064FEC5BB6876F95E75544D257988CB9 serial "BERE" )
+)
+game (
+	name "123 Sesame Street - Ready, Set, Grover! - With Elmo - The Videogame (USA) (En,Es)"
+	region "USA"
+	serial "BYTE"
+	rom ( name "123 Sesame Street - Ready, Set, Grover! - With Elmo - The Videogame (USA) (En,Es).nds" size 134217728 crc CB2BAF20 md5 490D9BF45FA7F077BDB5B7597FBFD545 sha1 0B214400EF437ED9FB168FEBF9A6D8238E3E41F2 serial "BYTE" )
+)
+game (
+	name "1500 DS Spirits - Mahjong V (Japan)"
+	region "Japan"
+	serial "BQMJ"
+	rom ( name "1500 DS Spirits - Mahjong V (Japan).nds" size 16777216 crc 8F8C1AEA md5 FD9943C763DD8B05711CC54E26324D04 sha1 E3EC538B0F4E62C48BB4EBB54BB32F127E46A053 serial "BQMJ" )
+)
+game (
+	name "1500 DS Spirits - Shougi V (Japan)"
+	region "Japan"
+	serial "B4YJ"
+	rom ( name "1500 DS Spirits - Shougi V (Japan).nds" size 8388608 crc 14410F3C md5 ACF38A337BC848B7186065925F34B4C5 sha1 BD43C2669CFD86806750E55DA0B4DB8FE6EF925E serial "B4YJ" )
+)
+game (
+	name "1500 DS Spirits Vol. 1 - Mahjong (Japan)"
+	region "Japan"
+	serial "A8AJ"
+	rom ( name "1500 DS Spirits Vol. 1 - Mahjong (Japan).nds" size 8388608 crc 3FF7E5D0 md5 2F91C06C37824FC617454C9987285684 sha1 BB796DFD3FE67E4574F2306B3063BBAD0C88E575 serial "A8AJ" )
+)
+game (
+	name "1500 DS Spirits Vol. 10 - Igo (Japan)"
+	region "Japan"
+	serial "YVVJ"
+	rom ( name "1500 DS Spirits Vol. 10 - Igo (Japan).nds" size 8388608 crc 2177A1BF md5 52D2759FB7C2530551C7B00FF09F9AC1 sha1 D1284684E9A0BDEB85956EC701F18D13107D264F serial "YVVJ" )
+)
+game (
+	name "1500 DS Spirits Vol. 2 - Shougi (Japan)"
+	region "Japan"
+	serial "A8EJ"
+	rom ( name "1500 DS Spirits Vol. 2 - Shougi (Japan).nds" size 8388608 crc 265B3B03 md5 1DF2278139646193F045FED58EDD7BE6 sha1 4D44CD57EA63362BD7BB046FB41D744F1F5405CE serial "A8EJ" )
+)
+game (
+	name "1500 DS Spirits Vol. 3 - Block Kuzushi (Japan)"
+	region "Japan"
+	serial "A8HJ"
+	rom ( name "1500 DS Spirits Vol. 3 - Block Kuzushi (Japan).nds" size 8388608 crc 04F3BF00 md5 558404B0539B2322FA86DF3940A1981D sha1 8BEC133AF919244328BCC2EAF71C73337F672685 serial "A8HJ" )
+)
+game (
+	name "1500 DS Spirits Vol. 4 - Reversi (Japan)"
+	region "Japan"
+	serial "A8WJ"
+	rom ( name "1500 DS Spirits Vol. 4 - Reversi (Japan).nds" size 8388608 crc 8D3C028D md5 ADCFA7266A6145FBCDEDD9D35295C314 sha1 134B87A1A4258EAAC18FC04FDD7A00B0B7AAD171 serial "A8WJ" )
+)
+game (
+	name "1500 DS Spirits Vol. 5 - Hanafuda (Japan)"
+	region "Japan"
+	serial "A8YJ"
+	rom ( name "1500 DS Spirits Vol. 5 - Hanafuda (Japan).nds" size 8388608 crc 74AE04DC md5 F54212D8258E530B2CAF1D987B419955 sha1 979F415A17A9ED99420B78DA5B462B132F9762CB serial "A8YJ" )
+)
+game (
+	name "1500 DS Spirits Vol. 6 - Trump (Japan)"
+	region "Japan"
+	serial "YV6J"
+	rom ( name "1500 DS Spirits Vol. 6 - Trump (Japan).nds" size 8388608 crc 7EACE6DF md5 AF90CA338F38B6A35FAE7F36E219475A sha1 DDE5D9FA6B938BDCAFDF1158B891D1B9581DB58C serial "YV6J" )
+)
+game (
+	name "1500 DS Spirits Vol. 7 - Chess (Japan)"
+	region "Japan"
+	serial "YV7J"
+	rom ( name "1500 DS Spirits Vol. 7 - Chess (Japan).nds" size 8388608 crc 04D1AFDE md5 4D11B864B51DBC5CCD88D93DD9E80680 sha1 E7D6540A274B387D688C9402A2BA750FE17916D2 serial "YV7J" )
+)
+game (
+	name "1500 DS Spirits Vol. 8 - Darts (Japan)"
+	region "Japan"
+	serial "YV8J"
+	rom ( name "1500 DS Spirits Vol. 8 - Darts (Japan).nds" size 8388608 crc E4EDEDB6 md5 01BE09F0E33463190B0BD262D8BC7F3D sha1 A7B9B26D61F8A87385F6436F1B946D38319D1719 serial "YV8J" )
+)
+game (
+	name "1500 DS Spirits Vol. 9 - 2-nin Uchi Mahjong (Japan)"
+	region "Japan"
+	serial "YV9J"
+	rom ( name "1500 DS Spirits Vol. 9 - 2-nin Uchi Mahjong (Japan).nds" size 8388608 crc BA088659 md5 1D24B0FDF9F3DC7C77132EF15D1915F7 sha1 7CFEE1BB8737623466C5DFA83F21DEB723D5B3D4 serial "YV9J" )
+)
+game (
+	name "18 Card Games (Europe) (En,Fr,De,Es,Nl)"
+	region "Europe"
+	serial "BY8P"
+	rom ( name "18 Card Games (Europe) (En,Fr,De,Es,Nl).nds" size 8388608 crc D2909BEA md5 18E178A1BD27C6456212A71AA77057F2 sha1 37E9A2BEADB745DA866EB96B99F3DE4355D73AD2 serial "BY8P" )
+)
+game (
+	name "18 Classic Card Games (USA)"
+	region "USA"
+	serial "BY8E"
+	rom ( name "18 Classic Card Games (USA).nds" size 8388608 crc FC154DB1 md5 CBB58CD9AA61683244393B5CA03765C7 sha1 50A5284444EE483B37FF42C4D4F620FB9D6BE5EA serial "BY8E" )
+)
+game (
+	name "1seg Jushin Adapter - DS Television (Japan)"
+	region "Japan"
+	serial "UNSJ"
+	rom ( name "1seg Jushin Adapter - DS Television (Japan).nds" size 8388608 crc D18C23FA md5 4F398BF7346F2ECDAFB1F94B53C7E3C7 sha1 2D4B4F09C3495605C5B2BB675113B999C2AE1A5B serial "UNSJ" )
+)
+game (
+	name "2 Game Pack - My Amusement Park + Digging for Dinosaurs (USA)"
+	region "USA"
+	serial "TKSE"
+	rom ( name "2 Game Pack - My Amusement Park + Digging for Dinosaurs (USA).nds" size 33554432 crc E6322125 md5 05F86FD0B0C090CD2A6EA9020443BC1E sha1 50BF4A9B2DF81C59F7EE952931FEBB6C21671B68 serial "TKSE" )
+)
+game (
+	name "2 Game Pack! - Monster Trucks Mayhem + ATV - Thunder Ridge Riders (USA)"
+	region "USA"
+	serial "YAME"
+	rom ( name "2 Game Pack! - Monster Trucks Mayhem + ATV - Thunder Ridge Riders (USA).nds" size 8388608 crc A23F348C md5 F5EEC5CB1C991D3AA485107D8572CE22 sha1 8BCFBF360ED614CBD12328D2C8514054C6DF5944 serial "YAME" )
+)
+game (
+	name "2 Games in 1 - Jewel Master - Cradle of Egypt + Mahjongg - Ancient Egypt (Europe) (En,Fr,De,Es,It,Nl)"
+	region "Europe"
+	serial "BXJP"
+	rom ( name "2 Games in 1 - Jewel Master - Cradle of Egypt + Mahjongg - Ancient Egypt (Europe) (En,Fr,De,Es,It,Nl).nds" size 8388608 crc 207D4993 md5 2752896D7B200ED24DA98A6D7FAEAC68 sha1 5631B29197717454248F65E90D3627F584FD64A7 serial "BXJP" )
+)
+game (
+	name "2 Games on 1 Card - Monster Trucks Mayhem & ATV - Thunder Ridge Riders (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "YAMP"
+	rom ( name "2 Games on 1 Card - Monster Trucks Mayhem & ATV - Thunder Ridge Riders (Europe) (En,Fr,De,Es,It).nds" size 8388608 crc 2DD469FD md5 79608CFDF956049BF0BA70DDF7FCF6EE sha1 DBB7CA3C8F652FB67337CEED756198CDDE32088B serial "YAMP" )
+)
+game (
+	name "2 in 1 - Best Of Bibi Und Tina - Die Grosse Schnitzeljagd + Das Grosse Unwetter (Germany)"
+	region "Germany"
+	serial "TBUD"
+	rom ( name "2 in 1 - Best Of Bibi Und Tina - Die Grosse Schnitzeljagd + Das Grosse Unwetter (Germany).nds" size 33554432 crc F04AB4D4 md5 64F5400894645A03216563B251F4A26B sha1 A8F1BBBE5DEF777E4F147DFC726B44CC0CD8F0B5 serial "TBUD" )
+)
+game (
+	name "2 in 1 - Best of Bibi Blocksberg - Neustadt im Hex-Chaos + Das Gestohlene Hexbuch (Germany)"
+	region "Germany"
+	serial "TBDD"
+	rom ( name "2 in 1 - Best of Bibi Blocksberg - Neustadt im Hex-Chaos + Das Gestohlene Hexbuch (Germany).nds" size 67108864 crc AC411FBC md5 8558D381C757F9A2AEFC9C97BB5A2CEF sha1 C3C95BBF105B87C086286F16FC3CFEF6BF16C877 serial "TBDD" )
+)
+game (
+	name "2 in 1 - Mahjong + Mahjong Around the World (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "TMZP"
+	rom ( name "2 in 1 - Mahjong + Mahjong Around the World (Europe) (En,Fr,De,Es,It).nds" size 16777216 crc 23BD4C31 md5 A0017F26ED5ACF06870BCFF8A1589AE5 sha1 EBA231A4EA5C4EB3E2CB05F68C3AD776808AA358 serial "TMZP" )
+)
+game (
+	name "2 in 1 - Music for Kids + Englisch Macht Spass - Eine Reise nach London! (Europe) (En,De) (NDSi Enhanced)"
+	region "Europe"
+	serial "VEMP"
+	rom ( name "2 in 1 - Music for Kids + Englisch Macht Spass - Eine Reise nach London! (Europe) (En,De) (NDSi Enhanced).nds" size 67108864 crc CC3C2AD5 md5 F27991D854ED52F2D273C943B844736B sha1 85F035F038A6CE124B3B0D0BC0C8E93A042287A4 serial "VEMP" )
+)
+game (
+	name "2 in 1 - My Little Baby + My Boyfriend (Europe) (En,Fr,De,Es,It,Sv,No,Da)"
+	region "Europe"
+	serial "TMQP"
+	rom ( name "2 in 1 - My Little Baby + My Boyfriend (Europe) (En,Fr,De,Es,It,Sv,No,Da).nds" size 33554432 crc D89D861C md5 50763E42DFD4E7EA390C5E298149AE06 sha1 8C30E9FE532A65E27461F1B10EA17B6667019295 serial "TMQP" )
+)
+game (
+	name "2 in 1 - My Pet Hotel + My Vet Practice - In the Country (Europe) (En,Fr,De)"
+	region "Europe"
+	serial "TMVP"
+	rom ( name "2 in 1 - My Pet Hotel + My Vet Practice - In the Country (Europe) (En,Fr,De).nds" size 67108864 crc 2F91D4D2 md5 6CBA9AF73DA94CA2AF69728201D48096 sha1 162948108499B0067E4F0C3D6C9109B0BF0277D2 serial "TMVP" )
+)
+game (
+	name "2 in 1 - My Pet Hotel 2 + My Vet Practice - In the Country (Europe) (Fr,De)"
+	region "Europe"
+	serial "TM5X"
+	rom ( name "2 in 1 - My Pet Hotel 2 + My Vet Practice - In the Country (Europe) (Fr,De).nds" size 67108864 crc EE0C0653 md5 990ADB9F1171A4565E9D157FB68EA1F3 sha1 27B72F757B25980E9C00F416E42506363397BA37 serial "TM5X" )
+)
+game (
+	name "2 in 1 - My Pet School + Best Friends - My Horse (Europe) (En,Fr,De)"
+	region "Europe"
+	serial "TMUP"
+	rom ( name "2 in 1 - My Pet School + Best Friends - My Horse (Europe) (En,Fr,De).nds" size 67108864 crc 211E391A md5 1FAB58CBBC35FC8CCF26C3B746E4A379 sha1 E827174291C5B14C51322C235A03B1E04CA4BFA7 serial "TMUP" )
+)
+game (
+	name "2 in 1 - My Riding Stables + My Riding Stables - Life with Horses (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "TMGP"
+	rom ( name "2 in 1 - My Riding Stables + My Riding Stables - Life with Horses (Europe) (En,Fr,De,Es,It).nds" size 67108864 crc 6AF04D90 md5 295CBF56F242360D81CD68524B4420DC sha1 D78265EC2C870BFB7230FD38F2344ED695265DF6 serial "TMGP" )
+)
+game (
+	name "2 in 1 - My Riding Stables + My Western Horse (Europe) (En,Fr,De)"
+	region "Europe"
+	serial "TLWP"
+	rom ( name "2 in 1 - My Riding Stables + My Western Horse (Europe) (En,Fr,De).nds" size 33554432 crc BFC275DE md5 FF1951F10D8A519F314C86DD9A44CCB4 sha1 A32A8B70435A4A0044430A361AC190D8183A3C0E serial "TLWP" )
+)
+game (
+	name "2 in 1 - My Vet Practice + My Pet Hotel 2 (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "TMTP"
+	rom ( name "2 in 1 - My Vet Practice + My Pet Hotel 2 (Europe) (En,Fr,De,Es,It).nds" size 67108864 crc 84177A46 md5 14C0A9880E325E8253CA8265837C6A8F sha1 58E0C6ECE14E0E56BC04CAB31A461F9F975F1BAB serial "TMTP" )
+)
+game (
+	name "2-Pack - Pinkalicious - It's Party Time! & Silverlicious - Sweet Adventure (USA)"
+	region "USA"
+	serial "TLPE"
+	rom ( name "2-Pack - Pinkalicious - It's Party Time! & Silverlicious - Sweet Adventure (USA).nds" size 33554432 crc 81F5D86D md5 74DDF6C2E5470BA59606AAD008CE6CC3 sha1 8DBFF37FFDAA41C9C591F4799464E38BA1E23A70 serial "TLPE" )
+)
+game (
+	name "200 Klassische Buecher (Germany)"
+	region "Germany"
+	serial "BKBD"
+	rom ( name "200 Klassische Buecher (Germany).nds" size 16777216 crc 0D353854 md5 1CED718BF6F2CECEB801B17A1BF09D4A sha1 A557280FD5CD3C46C132E70FCA89B5EE5F6D5B0F serial "BKBD" )
+)
+game (
+	name "2006 FIFA World Cup - Germany 2006 (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "A6WP"
+	rom ( name "2006 FIFA World Cup - Germany 2006 (Europe) (En,Fr,De,Es,It).nds" size 33554432 crc 08E8E997 md5 400052D9334E1777BD375F0A37F2C6C9 sha1 5B439DC2CF6BC878423C358B988BE94F9D7D0B40 serial "A6WP" )
+)
+game (
+	name "2006 FIFA World Cup - Germany 2006 (USA) (En,Fr,De,Es,It)"
+	region "USA"
+	serial "A6WE"
+	rom ( name "2006 FIFA World Cup - Germany 2006 (USA) (En,Fr,De,Es,It).nds" size 33554432 crc 49DD142D md5 38AD5F48562F4F5093B72664E25902A9 sha1 E7B3C46C70A4065FF8F36537E54BA79415BC5401 serial "A6WE" )
+)
+game (
+	name "3 Game Pack! - Cradle of Rome + Cradle of Athena + Cradle of Egypt (Europe) (En,Fr,De,Es,It,Nl)"
+	region "Europe"
+	serial "B38P"
+	rom ( name "3 Game Pack! - Cradle of Rome + Cradle of Athena + Cradle of Egypt (Europe) (En,Fr,De,Es,It,Nl).nds" size 16777216 crc E3455372 md5 60B5A349C0A2D02A7C26AEABAC3FA945 sha1 606338141714F40B5F58F0B65BC05B8A9C4355EB serial "B38P" )
+)
+game (
+	name "3 Game Pack! - Cradle of Rome + Cradle of Athena + Cradle of Egypt (Europe) (En,Fr,De,Es,It,Nl) (Rev 1)"
+	region "Europe"
+	serial "B38P"
+	rom ( name "3 Game Pack! - Cradle of Rome + Cradle of Athena + Cradle of Egypt (Europe) (En,Fr,De,Es,It,Nl) (Rev 1).nds" size 16777216 crc 72FDC3CC md5 999140CFC62840FFC2D1086A39FC16BD sha1 32D35181C2D4667E19E21FF9B3B4841C2F435932 serial "B38P" )
+)
+game (
+	name "3 Game Pack! - Uno & Skip-Bo & Uno Free Fall (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "AUOP"
+	rom ( name "3 Game Pack! - Uno & Skip-Bo & Uno Free Fall (Europe) (En,Fr,De,Es,It).nds" size 8388608 crc 451F3DA6 md5 2E1C3340FB82D2661DD11EA18E4EB1CB sha1 7FF164E4B0F76493E06D8C2F1FAE84474C35B7CE serial "AUOP" )
+)
+game (
+	name "3 Game Pack! - Uno + Skip-Bo + Uno Free Fall (USA)"
+	region "USA"
+	serial "AUOE"
+	rom ( name "3 Game Pack! - Uno + Skip-Bo + Uno Free Fall (USA).nds" size 8388608 crc 45A2B130 md5 713132C7714BF275D364B2EFDAC7F6E9 sha1 933C8AE2F45F12551E459C9E0E5CE040BFFFE515 serial "AUOE" )
+)
+game (
+	name "3 in 1 - Animals (Europe) (En,Fr,De)"
+	region "Europe"
+	serial "TQ3P"
+	rom ( name "3 in 1 - Animals (Europe) (En,Fr,De).nds" size 67108864 crc 51765829 md5 7EB086FB89D72C34498044FB50313D14 sha1 50EE41F8F5C52E8200500C8300B68F67FD9DD773 serial "TQ3P" )
+)
+game (
+	name "3 in 1 - Horses (Europe) (En,Fr,De)"
+	region "Europe"
+	serial "TCFP"
+	rom ( name "3 in 1 - Horses (Europe) (En,Fr,De).nds" size 67108864 crc 56D99D74 md5 159EF08CF6D1B10F60500257B3E3C90D sha1 FBCC1813CB4AB6EEA3E8FE68AABA7DC73A46154F serial "TCFP" )
+)
+game (
+	name "3 in 1 - My Horse + My Vet Practice + My Vet Practice in the Country (Europe) (Fr,De,It)"
+	region "Europe"
+	serial "TBZZ"
+	rom ( name "3 in 1 - My Horse + My Vet Practice + My Vet Practice in the Country (Europe) (Fr,De,It).nds" size 67108864 crc 7DC6E55D md5 FCAE2AA8DA136A35ABF8769FA5479ACD sha1 8D2504378E82A3F39704BBA44E1F19A320E4C21C serial "TBZZ" )
+)
+game (
+	name "3 in 1 - My Riding Stables + My Pet School + My Western Horse (Europe) (Fr,De,It)"
+	region "Europe"
+	serial "TBXX"
+	rom ( name "3 in 1 - My Riding Stables + My Pet School + My Western Horse (Europe) (Fr,De,It).nds" size 67108864 crc A6ACBAE3 md5 A60D41701CD257D94788AC3C09384F86 sha1 D18FF8B638B99EFE5157000E87CFDB96DC7E78D4 serial "TBXX" )
+)
+game (
+	name "3 in 1 - My Riding Stables - Life with Horses + My Pet Hotel 2 & + My Pet School (Europe) (Fr,De,It)"
+	region "Europe"
+	serial "TBYY"
+	rom ( name "3 in 1 - My Riding Stables - Life with Horses + My Pet Hotel 2 & + My Pet School (Europe) (Fr,De,It).nds" size 67108864 crc FC1B9DEF md5 DA0DF2AD5692B1CB104456BED18A6333 sha1 C7DE54F4256543C40C016971009F9BA36FC56132 serial "TBYY" )
+)
+game (
+	name "3 in 1 - My Vet Practice & Riding Star & My Vet Practice in Australia (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "TM7P"
+	rom ( name "3 in 1 - My Vet Practice & Riding Star & My Vet Practice in Australia (Europe) (En,Fr,De,Es,It).nds" size 67108864 crc E062D29E md5 D0BEFD9487888B938EC2376C688744E5 sha1 F07FAFB62B682B167CEBDC51E043A17B85ACDE22 serial "TM7P" )
+)
+game (
+	name "3 in 1 - Solitaire, Mahjong & Tangram (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "B7LP"
+	rom ( name "3 in 1 - Solitaire, Mahjong & Tangram (Europe) (En,Fr,De,Es,It).nds" size 8388608 crc 8FA376FA md5 209681DFD26ABB47B0E05E9D69CE4B1B sha1 6ED611EA228FA26EA4A6BBA6A9EA556E1895E015 serial "B7LP" )
+)
+game (
+	name "4 Elements (Europe)"
+	region "Europe"
+	serial "B4EP"
+	rom ( name "4 Elements (Europe).nds" size 16777216 crc C3BA7EF8 md5 CB0D8A333213E9A7C839C189A328EBC1 sha1 6F117E63A6FDA974F527068C85B34CD8263E86D2 serial "B4EP" )
+)
+game (
+	name "4 Elements (Europe) (Fr,De)"
+	region "Europe"
+	serial "B4EX"
+	rom ( name "4 Elements (Europe) (Fr,De).nds" size 16777216 crc AF9992BD md5 5C852D83EFA3851802A600924C4CDAFF sha1 34E1BE9B72D5F0EF4A8E67D0AFACC5A42F21296C serial "B4EX" )
+)
+game (
+	name "4 Elements (Europe) (Fr,Nl)"
+	region "Europe"
+	serial "B4EY"
+	rom ( name "4 Elements (Europe) (Fr,Nl).nds" size 16777216 crc BCC41B36 md5 E26ADC713E693A4CFE6B5537DE758897 sha1 2F816C37C7BB4931B5AEE967AB66817DA5C86979 serial "B4EY" )
+)
+game (
+	name "4 Game Fun Pack - Monopoly + Boggle + Yahtzee + Battleship (Europe)"
+	region "Europe"
+	serial "AHBP"
+	rom ( name "4 Game Fun Pack - Monopoly + Boggle + Yahtzee + Battleship (Europe).nds" size 33554432 crc E9EE3900 md5 E2DF07802DC54E32388CDB723EBD9353 sha1 FA04D9F36228D21CF494507A684A921243BAB7F6 serial "AHBP" )
+)
+game (
+	name "4 Game Fun Pack - Monopoly + Boggle + Yahtzee + Battleship (USA)"
+	region "USA"
+	serial "AHBE"
+	rom ( name "4 Game Fun Pack - Monopoly + Boggle + Yahtzee + Battleship (USA).nds" size 33554432 crc C9AEAA82 md5 3A51DFF858C5B82EECD9AF007994D178 sha1 FBB9941054D528DE502F8666E209DD9D5CD998C2 serial "AHBE" )
+)
+game (
+	name "4 Game Pack! - Battleship + Connect Four + Sorry! + Trouble (USA)"
+	region "USA"
+	serial "ABEE"
+	rom ( name "4 Game Pack! - Battleship + Connect Four + Sorry! + Trouble (USA).nds" size 8388608 crc 6B1E186D md5 07892F6E91F1EC36151477044314FAB0 sha1 004F3891E1F65B310FDA6A5A2641A2275BF03BF8 serial "ABEE" )
+)
+game (
+	name "4 Game Pack! - Clue + Aggravation + Perfection + Mouse Trap (USA)"
+	region "USA"
+	serial "ALPE"
+	rom ( name "4 Game Pack! - Clue + Aggravation + Perfection + Mouse Trap (USA).nds" size 8388608 crc 10C456A2 md5 655688C4ED0A9957D2DB89EFDE26B97D sha1 C0EA72D72DF3200DEA38669EF41029A49A25F04E serial "ALPE" )
+)
+game (
+	name "4 Kyouka Perfect Clear DS (Japan) (Not for Resale)"
+	region "Japan"
+	serial "B4QJ"
+	rom ( name "4 Kyouka Perfect Clear DS (Japan) (Not for Resale).nds" size 33554432 crc 79EB2974 md5 38A15DEC00D6215F5F9464D698444FC2 sha1 E1434A29B1DE0DF2F8F306D1B9ED62D27372B3BF serial "B4QJ" )
+)
+game (
+	name "4 Kyouka Perfect Clear DS - Eigo Onsei Tsuki (Japan) (Not for Resale)"
+	region "Japan"
+	serial "TPCJ"
+	rom ( name "4 Kyouka Perfect Clear DS - Eigo Onsei Tsuki (Japan) (Not for Resale).nds" size 134217728 crc C2EA2DC5 md5 9E192BEAFCB6FDF09EF59B33B201A459 sha1 87174310EDF0F5A83E5D12C1082E91560CECCDD6 serial "TPCJ" )
+)
+game (
+	name "4 in 1 - Meine Tierarztpraxis + Meine Tierpension + Mein Gestuet + Mein Pferd (Germany)"
+	region "Germany"
+	serial "TB2D"
+	rom ( name "4 in 1 - Meine Tierarztpraxis + Meine Tierpension + Mein Gestuet + Mein Pferd (Germany).nds" size 67108864 crc 9E7DADDE md5 A4636390288322BB24BB952DA2FBF4BC sha1 C4497F1C22693ED1B3C5E30B19786FAB7A7D4627 serial "TB2D" )
+)
+game (
+	name "42 All-Time Classics (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "ATDP"
+	rom ( name "42 All-Time Classics (Europe) (En,Fr,De,Es,It).nds" size 16777216 crc 4205AC89 md5 9AAD21C4CFA12ADC4819C6F6DFB13882 sha1 23209A69980FB5BCAF134A0F249FE9DF79A979C7 serial "ATDP" )
+)
+game (
+	name "42 All-Time Classics (Europe) (En,Fr,De,Es,It) (Rev 1)"
+	region "Europe"
+	serial "ATDP"
+	rom ( name "42 All-Time Classics (Europe) (En,Fr,De,Es,It) (Rev 1).nds" size 16777216 crc B004D51C md5 9ED7A943D20B6A8D37F3DA342B2F040C sha1 A3541F5DC4545916A410B08671BF44D75D7F4D00 serial "ATDP" )
+)
+game (
+	name "5-Nen Kanji Keisan Nigate Hunter DS (Japan) (Not for Resale)"
+	region "Japan"
+	serial "TLXJ"
+	rom ( name "5-Nen Kanji Keisan Nigate Hunter DS (Japan) (Not for Resale).nds" size 16777216 crc 3DFAD57B md5 7A2ECC14524354E9A8C6930A9C1BA463 sha1 9E90CBB950B920457833AC54C9C941DC5F5B559E serial "TLXJ" )
+)
+game (
+	name "5-kyuu kara 1-kyuu Kanzen Taiou Saishin Kako Mondai - Nijishiken Taisaku - Eiken Kanzenban (Japan)"
+	region "Japan"
+	serial "BEKJ"
+	rom ( name "5-kyuu kara 1-kyuu Kanzen Taiou Saishin Kako Mondai - Nijishiken Taisaku - Eiken Kanzenban (Japan).nds" size 134217728 crc 7867EBD6 md5 CCA27D3EF23FB37402B59D7F377D50F8 sha1 142C80B021905C4483C75487C0D6423450E04B17 serial "BEKJ" )
+)
+game (
+	name "5-kyuu kara 1-kyuu Kanzen Taiou Saishin Kako Mondai - Nijishiken Taisaku - Eiken Kanzenban (Japan) (Rev 1)"
+	region "Japan"
+	serial "BEKJ"
+	rom ( name "5-kyuu kara 1-kyuu Kanzen Taiou Saishin Kako Mondai - Nijishiken Taisaku - Eiken Kanzenban (Japan) (Rev 1).nds" size 134217728 crc A82E6068 md5 C57BA7ABABE5FCF3C4E49698CC0CA61E sha1 3CADD916EE95DAD3BE38FE9B2E46EF89B78DDB5F serial "BEKJ" )
+)
+game (
+	name "50 Classic Games (Europe) (En,Fr,De,Es,It,Nl)"
+	region "Europe"
+	serial "BB5P"
+	rom ( name "50 Classic Games (Europe) (En,Fr,De,Es,It,Nl).nds" size 8388608 crc 3CAF6644 md5 ED030D1BF4980966843CDF1F27F30949 sha1 D02F64966D619BB84504603597DB4D73B7BD0BDC serial "BB5P" )
+)
+game (
+	name "50 Classic Games (USA)"
+	region "USA"
+	serial "BPRE"
+	rom ( name "50 Classic Games (USA).nds" size 8388608 crc BD1021D4 md5 86DC856AE079D7C65F7AF6EA982DBADC sha1 C7CCD740197AC8B3BD0E0E92FBEDDB5C849999FF serial "BPRE" )
+)
+game (
+	name "50 Classic Games (USA) (Rev 1)"
+	region "USA"
+	serial "BPRE"
+	rom ( name "50 Classic Games (USA) (Rev 1).nds" size 8388608 crc 2FF8F43B md5 E9C1D40DFFD5CD203E0EBD65B11F82B7 sha1 48C723B57E65C16B3456EA778CF152602BB60D64 serial "BPRE" )
+)
+game (
+	name "50 Jeux Incontournables (France) (En,Fr,De,Es,It,Nl)"
+	region "France"
+	serial "BPRX"
+	rom ( name "50 Jeux Incontournables (France) (En,Fr,De,Es,It,Nl).nds" size 8388608 crc BE75A3B1 md5 4670D1540B965132242CBF3327A41527 sha1 CDE4B0EA86C4CBEC553C2F56A5488CF304486D42 serial "BPRX" )
+)
+game (
+	name "50 Jeux Incontournables (France) (En,Fr,De,Es,It,Nl) (Rev 1)"
+	region "France"
+	serial "BPRX"
+	rom ( name "50 Jeux Incontournables (France) (En,Fr,De,Es,It,Nl) (Rev 1).nds" size 8388608 crc 3BAF806A md5 11FCCA4989AB8824BC675AF47E65CF1C sha1 13138065954FEF87DBA1F3E17D8C9A7116C52B1A serial "BPRX" )
+)
+game (
+	name "50 More Classic Games (USA)"
+	region "USA"
+	serial "B5OE"
+	rom ( name "50 More Classic Games (USA).nds" size 8388608 crc 37B2B7FC md5 6F29EDC99A927A56718F5D65855A3EF0 sha1 95ABC980398A6201F17372069223D9369C18CFA9 serial "B5OE" )
+)
+game (
+	name "7 Wonders - Treasures of Seven (Europe)"
+	region "Europe"
+	serial "B7GP"
+	rom ( name "7 Wonders - Treasures of Seven (Europe).nds" size 8388608 crc A474D622 md5 FCD2623976E3C333424549313C7EC034 sha1 F4770147609B9524C4ADB33DD14417F220C1FF2F serial "B7GP" )
+)
+game (
+	name "7 Wonders - Treasures of Seven (France) (Fr,Nl)"
+	region "France"
+	serial "B7VF"
+	rom ( name "7 Wonders - Treasures of Seven (France) (Fr,Nl).nds" size 16777216 crc 7509BDF9 md5 8EA1FCE7EC1EFDEFB879E3EF24B1852A sha1 821D55C87ECB88B58E44CBB181AD23685AC899C6 serial "B7VF" )
+)
+game (
+	name "7 Wonders - Treasures of Seven (USA)"
+	region "USA"
+	serial "B7VE"
+	rom ( name "7 Wonders - Treasures of Seven (USA).nds" size 8388608 crc C8F8916F md5 C691E67019E97C09EEB5AD9581A188CB sha1 7E95EAC20A5795B7C33DA653BB5CE7DE5C4FDFC1 serial "B7VE" )
+)
+game (
+	name "7 Wonders II (Europe)"
+	region "Europe"
+	serial "B7WP"
+	rom ( name "7 Wonders II (Europe).nds" size 16777216 crc 30AFD2AD md5 24F79864CD8F6DEF49A34DF46A5C6FCE sha1 2FF31D187AEABD134CCCFDA021F61B1EC131EA84 serial "B7WP" )
+)
+game (
+	name "7 Wonders II (Europe) (En,Fr)"
+	region "Europe"
+	serial "B7WX"
+	rom ( name "7 Wonders II (Europe) (En,Fr).nds" size 16777216 crc 2FFD67B7 md5 3EA3B9E339E42ED2E75EE0D1F9FD1977 sha1 DDE9FF61C280623E2F6B066961FED0BC9EA9BE63 serial "B7WX" )
+)
+game (
+	name "7 Wonders II (Germany)"
+	region "Germany"
+	serial "B7WD"
+	rom ( name "7 Wonders II (Germany).nds" size 16777216 crc 1159B560 md5 AC2F96B51D4540D6B1A028C77107F356 sha1 95D90E08B6566856A505E2DEE936F5493D892BE8 serial "B7WD" )
+)
+game (
+	name "7 Wonders II (USA)"
+	region "USA"
+	serial "B7WE"
+	rom ( name "7 Wonders II (USA).nds" size 16777216 crc 65189C8D md5 BDC2725BAB4BCA7EA2E11FEC1E028A73 sha1 8EE44404B8D1D271FC13DCD8D14E953D578223E3 serial "B7WE" )
+)
+game (
+	name "7 Wonders of the Ancient World (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "Y7WP"
+	rom ( name "7 Wonders of the Ancient World (Europe) (En,Fr,De,Es,It).nds" size 16777216 crc EE2017F7 md5 B8C424935A3A279769ED7547976B5881 sha1 A4E9CA9442583040702F276F6AD6F972122837FB serial "Y7WP" )
+)
+game (
+	name "7 Wonders of the Ancient World (USA)"
+	region "USA"
+	serial "Y7WE"
+	rom ( name "7 Wonders of the Ancient World (USA).nds" size 8388608 crc 14D7A26F md5 178D3A3C1988B505B29145D94F46B9EA sha1 83C1AA3FAEFE0BFF8123B6A3D6DC2E8603AF91F8 serial "Y7WE" )
+)
+game (
+	name "700 Mannin no Atama o Yoku Suru - Chou Keisan DS - 13000 Mon + Image Keisan (Japan)"
+	region "Japan"
+	serial "C3KJ"
+	rom ( name "700 Mannin no Atama o Yoku Suru - Chou Keisan DS - 13000 Mon + Image Keisan (Japan).nds" size 8388608 crc 32F9521F md5 F7E791029C8F4655A86D0506FB620580 sha1 95BBEAD43FE8583C831F2860469E20A7C8FF4FF4 serial "C3KJ" )
+)
+game (
+	name "7th Dragon (Japan)"
+	region "Japan"
+	serial "CD6J"
+	rom ( name "7th Dragon (Japan).nds" size 134217728 crc D888FF05 md5 327E4DBD2ADA9FE4A41E344332F6B519 sha1 4CDF1233A8679AA7905CFFA488715F1E548C41D6 serial "CD6J" )
+)
+game (
+	name "8BallAllstars (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "A8BP"
+	rom ( name "8BallAllstars (Europe) (En,Fr,De,Es,It).nds" size 8388608 crc 4D7BA590 md5 BE09EE49564EF780E416EABB844633EF sha1 32BD6F45314960AC23E502EF401BC6F72671540E serial "A8BP" )
+)
+game (
+	name "8BallAllstars (Europe) (En,Fr,De,Es,It) (Beta)"
+	releaseyear "2008"
+	releasemonth "02"
+	releaseday "11"
+	region "Europe"
+	serial "A8BP"
+	rom ( name "8BallAllstars (Europe) (En,Fr,De,Es,It) (Beta) (2008-02-11).nds" size 8388608 crc 5FE84EAC md5 E3F3A69BA00855212E169BC123B55FC5 sha1 666D49DC7E23C5D2C179F1D2CC1ECC497D80444E serial "A8BP" )
+)
+game (
+	name "8BallAllstars (Europe) (En,Fr,De,Es,It) (Beta)"
+	releaseyear "2008"
+	releasemonth "02"
+	releaseday "26"
+	region "Europe"
+	serial "A8BP"
+	rom ( name "8BallAllstars (Europe) (En,Fr,De,Es,It) (Beta) (2008-02-26).nds" size 8388608 crc 43AF7D7C md5 D002492E4E1F20442BF05535E6708F2D sha1 4C37209EE607666AC3D5B3155120ABD2567625DB serial "A8BP" )
+)
+game (
+	name "8BallAllstars (Europe) (En,Fr,De,Es,It) (Multiplayer) (DS Broadcast)"
+	region "Europe"
+	serial "NTRJ"
+	rom ( name "8BallAllstars (Europe) (En,Fr,De,Es,It) (Multiplayer) (DS Broadcast).nds" size 754888 crc C4DE52D4 md5 57D5C86BCE055FBE99A26CA0455C185C sha1 FBAC5C4F79FE776BD59C8AD59A69A9C5C175523E serial "NTRJ" )
+)
+game (
+	name "99 no Namida (Japan)"
+	region "Japan"
+	serial "YUGJ"
+	rom ( name "99 no Namida (Japan).nds" size 33554432 crc C4DE9489 md5 3DC6B961115C27B1C9860164548AB177 sha1 272BA98C906896AC26CBB91D4ACE67EF321BE814 serial "YUGJ" )
+)
+game (
+	name "A Ressha de Ikou DS (Japan)"
+	region "Japan"
+	serial "BARJ"
+	rom ( name "A Ressha de Ikou DS (Japan).nds" size 33554432 crc 796973FD md5 583C8132E306A86CFCAEC645376B30B9 sha1 18BE7B4684B2752B5B918C466E1F0775888A33F6 serial "BARJ" )
+)
+game (
+	name "A-Max Boxing (Japan) (Proto)"
+	region "Japan"
+	serial "NTRJ"
+	rom ( name "A-Max Boxing (Japan) (Proto).nds" size 1168928 crc AB10B1EC md5 9547D807E084252D403B3156284CA0C2 sha1 F6FBF899204D2F997D6D9AF334FD9DEF1727890E serial "NTRJ" )
+)
+game (
+	name "A-Max Tennis (Japan) (En) (Proto)"
+	region "Japan"
+	serial "NTRJ"
+	rom ( name "A-Max Tennis (Japan) (En) (Proto).nds" size 428184 crc 909D7FC9 md5 8A368519EEAB52AEF63E96CBFD23A405 sha1 4D3EFCCFACA2C2CCEA498D38C4A41B7843A3A067 serial "NTRJ" )
+)
+game (
+	name "AFL Mascot Manor (Australia)"
+	region "Australia"
+	serial "CQQP"
+	rom ( name "AFL Mascot Manor (Australia).nds" size 67108864 crc 097F4866 md5 A5775548D65675A9D53BDC63DFF2755F sha1 7B57B2E8D9D264C3B8A4AB3C74345782E1907D90 serial "CQQP" )
+)
+game (
+	name "ALC no 10-punkan Eigo Master - Chuukyuu (Japan)"
+	region "Japan"
+	serial "AQGJ"
+	rom ( name "ALC no 10-punkan Eigo Master - Chuukyuu (Japan).nds" size 67108864 crc 17490AD0 md5 7D48BE13F53D7FCCE2028F1AB373F1D7 sha1 BB2AC0AD39B143CAACDAA63E4BB63B62AABB1E3B serial "AQGJ" )
+)
+game (
+	name "ALC no 10-punkan Eigo Master - Chuukyuu (Japan) (Rev 1)"
+	region "Japan"
+	serial "AQGJ"
+	rom ( name "ALC no 10-punkan Eigo Master - Chuukyuu (Japan) (Rev 1).nds" size 67108864 crc 664A8FC7 md5 525BCECAAE7AC98277E99B426BD2718A sha1 7EA721ED18BB50C9771B0187CE02E2214E0DAFFD serial "AQGJ" )
+)
+game (
+	name "ALC no 10-punkan Eigo Master - Joukyuu (Japan)"
+	region "Japan"
+	serial "AQHJ"
+	rom ( name "ALC no 10-punkan Eigo Master - Joukyuu (Japan).nds" size 67108864 crc E2C5A7C5 md5 C74BCA7A749F2D0F118BFFE3E63D1010 sha1 711D3C8E13B26C27DC82717713FE137303BC3B89 serial "AQHJ" )
+)
+game (
+	name "ALC no 10-punkan Eigo Master - Joukyuu (Japan) (Rev 1)"
+	region "Japan"
+	serial "AQHJ"
+	rom ( name "ALC no 10-punkan Eigo Master - Joukyuu (Japan) (Rev 1).nds" size 67108864 crc 4A363F2E md5 C263C80F3725B79B80D45AE760F5F437 sha1 56C0215ACCD51092D05F12179609AD9A519604E6 serial "AQHJ" )
+)
+game (
+	name "ALC no 10-punkan Eigo Master - Shokyuu (Japan)"
+	region "Japan"
+	serial "AQFJ"
+	rom ( name "ALC no 10-punkan Eigo Master - Shokyuu (Japan).nds" size 67108864 crc 9CE76D7B md5 A4D88C0B2CC80103C14052009B64F0ED sha1 052561AAF4262AB5101035CDEEBEA2C5A6755497 serial "AQFJ" )
+)
+game (
+	name "ALC no 10-punkan Eigo Master - Shokyuu (Japan) (Rev 1)"
+	region "Japan"
+	serial "AQFJ"
+	rom ( name "ALC no 10-punkan Eigo Master - Shokyuu (Japan) (Rev 1).nds" size 67108864 crc 01F4A24A md5 F319EC0A77729D4ADD1FB13F076B6B2E sha1 B8E0C8CB81AE4170056D3BCA6F534DA043816570 serial "AQFJ" )
+)
+game (
+	name "AMF Bowling Pinbusters! (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "YAFP"
+	rom ( name "AMF Bowling Pinbusters! (Europe) (En,Fr,De,Es,It).nds" size 33554432 crc C86CEAF4 md5 73A055D3E10B077E8FF83923A3D7440D sha1 EEBEA1BCFDB884C5B6961FABC8DE4DD54446782D serial "YAFP" )
+)
+game (
+	name "AMF Bowling Pinbusters! (USA)"
+	region "USA"
+	serial "YAFE"
+	rom ( name "AMF Bowling Pinbusters! (USA).nds" size 33554432 crc E9F907D8 md5 5BD889B4799EC5A2E1B2A8F6A98CF629 sha1 25867A541C8282BBFD4046BF9D8CF469C0B6AE96 serial "YAFE" )
+)
+game (
+	name "ANA Original - Gotouchi Kentei DS (Japan) (Not for Resale)"
+	region "Japan"
+	serial "YANJ"
+	rom ( name "ANA Original - Gotouchi Kentei DS (Japan) (Not for Resale).nds" size 67108864 crc E9B35CAA md5 91F5619692548BD703FDF3B2F5E22DFD sha1 6ACB15FDBFB3517737EF358BF2538EA9CAA6CDB5 serial "YANJ" )
+)
+game (
+	name "ASH - Archaic Sealed Heat (Japan)"
+	region "Japan"
+	serial "YASJ"
+	rom ( name "ASH - Archaic Sealed Heat (Japan).nds" size 268435456 crc 3890DE2E md5 F05A2CEE03612A5BD325B3C9D13CCE80 sha1 B1417C097172635BB35C1633F901DD46C947366F serial "YASJ" )
+)
+game (
+	name "ATV Quad Frenzy (Europe) (En,Fr,De)"
+	region "Europe"
+	serial "ATVP"
+	rom ( name "ATV Quad Frenzy (Europe) (En,Fr,De).nds" size 33554432 crc 7F58B941 md5 94AE38525C50A69661B686B0F5D0485B sha1 5A22060EBEFF7A62F2879E58F9448CC74342C0E8 serial "ATVP" )
+)
+game (
+	name "ATV Quad Frenzy (USA)"
+	region "USA"
+	serial "ATVE"
+	rom ( name "ATV Quad Frenzy (USA).nds" size 16777216 crc C2C45790 md5 1627868759088708ADB43A4EB77A06AA sha1 1789D8A576B36F020F865191057BCB68DCCF7CAE serial "ATVE" )
+)
+game (
+	name "ATV Quad Kings (Europe) (En,Fr,De,Es,It,Nl)"
+	region "Europe"
+	serial "BQKP"
+	rom ( name "ATV Quad Kings (Europe) (En,Fr,De,Es,It,Nl).nds" size 16777216 crc 4AF31B14 md5 4CE4CB2026CF54E9CCAA9F649AA9ABC9 sha1 4F402B345BE136CD605AB541DFA200E2D619F5D2 serial "BQKP" )
+)
+game (
+	name "ATV Quad Kings (USA) (En,Fr,Es)"
+	region "USA"
+	serial "BQKE"
+	rom ( name "ATV Quad Kings (USA) (En,Fr,Es).nds" size 16777216 crc E71780B5 md5 BA362EBC0FB70E97B6CD12414CF0DF7E sha1 6504DF4089738447E285A73F421CA8E13A8A16F3 serial "BQKE" )
+)
+game (
+	name "ATV Wild Ride (USA)"
+	region "USA"
+	serial "BN8E"
+	rom ( name "ATV Wild Ride (USA).nds" size 16777216 crc 201DEC57 md5 6449E2DAF5DC70548DC1B152C62B14E3 sha1 1F35FDE3D59498827E36BD700A11CF2ED8C58BC3 serial "BN8E" )
+)
+game (
+	name "Ab durch die Hecke (Germany)"
+	region "Germany"
+	serial "AH5D"
+	rom ( name "Ab durch die Hecke (Germany).nds" size 33554432 crc ADFC811A md5 E88B02A426C26387F38C26B03E6A6077 sha1 D1A89616FD2BB8AA37893A3DA0BCD041E2EB08DB serial "AH5D" )
+)
+game (
+	name "Ace Attorney Investigations - Miles Edgeworth (Europe)"
+	region "Europe"
+	serial "C32P"
+	rom ( name "Ace Attorney Investigations - Miles Edgeworth (Europe).nds" size 67108864 crc 4352DFC3 md5 D7D7289A44188792AD50909D24602D88 sha1 9B144D75A109F0C9F392AFBB02713BD897FC26FC serial "C32P" )
+)
+game (
+	name "Ace Attorney Investigations - Miles Edgeworth (USA)"
+	region "USA"
+	serial "C32E"
+	rom ( name "Ace Attorney Investigations - Miles Edgeworth (USA).nds" size 67108864 crc 90AC37B6 md5 23066E71E5FDB465CB9482075404EA32 sha1 740105DD2F9719D88B73053BC1638681E6AE9042 serial "C32E" )
+)
+game (
+	name "AceKard 2 (World)"
+	serial "ACEK"
+	rom ( name "AceKard 2 (World) (Unl).nds" size 262144 crc 41F71585 md5 B45CA807240DF7712C4A7A63205581C2 sha1 7391E57C8B91C0F0946FB884729EF802081A7B32 serial "ACEK" )
+)
+game (
+	name "AceKard 2 (World) (v2.1)"
+	serial "ACEK"
+	rom ( name "AceKard 2 (World) (v2.1) (Unl).nds" size 131072 crc 595CA25F md5 32FD851C32099A51377A7EC342E03BE8 sha1 06890FA1F7B49077ACA83BB61DB19C02B4EDDF38 serial "ACEK" )
+)
+game (
+	name "AceKard 2i (World)"
+	serial "ACEK"
+	rom ( name "AceKard 2i (World) (Unl).nds" size 131072 crc 5E11A402 md5 E41548DD56B936AD4B3ECAABD277EA79 sha1 99B3CDC8A5ECB8427BC4BAF7A3EA78579DACF6E0 serial "ACEK" )
+)
+game (
+	name "AceKard R.P.G. (World)"
+	serial "ACEK"
+	rom ( name "AceKard R.P.G. (World) (Unl).nds" size 131072 crc E14F2FAB md5 DCA58CCF68833849DD5542B6B81E4C59 sha1 D935B32A161211156A72FBB2644CD066CB10AFC5 serial "ACEK" )
+)
+game (
+	name "Action Replay DS (World) (v1.02)"
+	serial "DSAR"
+	rom ( name "Action Replay DS (World) (v1.02) (Unl).nds" size 16777216 crc 505577D8 md5 A18DAE1E8216F70CA02BD56C52A92D63 sha1 51191C4569E40921887D51FDC37C237C97B03F4B serial "DSAR" )
+)
+game (
+	name "Action Replay DS (World) (v1.54)"
+	serial "DSAR"
+	rom ( name "Action Replay DS (World) (v1.54) (Unl).nds" size 16777216 crc 388859AE md5 6673473FD1DA114EB78ECBB74DA998A4 sha1 4D43BCF7EBE930777F13CD846E7021547294BCB2 serial "DSAR" )
+)
+game (
+	name "Actionloop (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "APLP"
+	rom ( name "Actionloop (Europe) (En,Fr,De,Es,It).nds" size 8388608 crc C4F612F6 md5 27BB2FCE6FE0CF4258E97AFE4421CE12 sha1 3A03C103B00767F079CB2E0DFAE57E9DC0F56546 serial "APLP" )
+)
+game (
+	name "Actionloop - Multiplayer (Europe) (DS Broadcast)"
+	region "Europe"
+	rom ( name "Actionloop - Multiplayer (Europe) (DS Broadcast).bcn" size 856 crc 05315509 md5 9FBB187BEBC4941837BDBB72CB6E06FA sha1 C9D44ED55918C80A382D893A7B1AD6FCBBA11925 )
+)
+game (
+	name "Active Health with Carol Vorderman (Europe)"
+	region "Europe"
+	serial "IA8P"
+	rom ( name "Active Health with Carol Vorderman (Europe).nds" size 67108864 crc 46B34056 md5 CC0082EB5AA4973C885874D7200B5F54 sha1 A54FE59E8BD5353CE1237576FF500C19FCBF833D serial "IA8P" )
+)
+game (
+	name "Actua Pool (Europe) (En,De,Es,It)"
+	region "Europe"
+	serial "AOLP"
+	rom ( name "Actua Pool (Europe) (En,De,Es,It).nds" size 8388608 crc 9F436CE3 md5 5099B29ABF3A86FFCA95D2A6B97E771D sha1 6F4A2F4B07841BB27AB83089529A9610EEE7894B serial "AOLP" )
+)
+game (
+	name "Actua Pool (France)"
+	region "France"
+	serial "AOLF"
+	rom ( name "Actua Pool (France).nds" size 8388608 crc 0750AB7A md5 AF2DF52507DFAE950CE9941228736360 sha1 41BD29154C1ED29A865DEFF099D3A8ED3ECF9067 serial "AOLF" )
+)
+game (
+	name "Addy - Do You Speak English (Europe) (Fr,De,Es,It)"
+	region "Europe"
+	serial "CAFX"
+	rom ( name "Addy - Do You Speak English (Europe) (Fr,De,Es,It).nds" size 16777216 crc C4CA2F9B md5 87CF9BA2C1C076F6442D5135CA3C7458 sha1 E15E9025FFD437053B94E3CE4D6F0CD675E9116D serial "CAFX" )
+)
+game (
+	name "Addy Junior - Mein Koerper (Germany)"
+	region "Germany"
+	serial "YHVD"
+	rom ( name "Addy Junior - Mein Koerper (Germany).nds" size 67108864 crc 8707C247 md5 BF6968E231E745182A6FCAC7190EC52F sha1 C86CB00516AC6BFEF19F3D632A9B8A2143DFFDBA serial "YHVD" )
+)
+game (
+	name "Adi l'Entraineur - Mathematiques, Francais 6e & 5e (France)"
+	region "France"
+	serial "CAEF"
+	rom ( name "Adi l'Entraineur - Mathematiques, Francais 6e & 5e (France).nds" size 16777216 crc 7C93E779 md5 E1D8F7EAABD2FC32AAF5411641BBE216 sha1 943980947ED052289E5802F18E28DDFD7E24BA9C serial "CAEF" )
+)
+game (
+	name "Adi l'Entraineur - Mathematiques, Francais CE1-CE2 (France)"
+	region "France"
+	serial "CACF"
+	rom ( name "Adi l'Entraineur - Mathematiques, Francais CE1-CE2 (France).nds" size 16777216 crc 54639107 md5 8396CE58CBBEF3A3ED0098057AF8D861 sha1 B8B140C53B9DCE086C8A17CFDE654E4039DB7EC2 serial "CACF" )
+)
+game (
+	name "Adi l'Entraineur - Mathematiques, Francais CM1-CM2 (France)"
+	region "France"
+	serial "CADF"
+	rom ( name "Adi l'Entraineur - Mathematiques, Francais CM1-CM2 (France).nds" size 16777216 crc A951A78A md5 BD32FD4AE2C8B6C9AA29BAF15BD3E7FF sha1 9BDCDF74E089D8B540E8C3654048C723F0F69916 serial "CADF" )
+)
+game (
+	name "Adi l'Entraineur - Objectif Anglais (France)"
+	region "France"
+	serial "CAFF"
+	rom ( name "Adi l'Entraineur - Objectif Anglais (France).nds" size 16777216 crc 5A87DC39 md5 37DF00F01A77E13486E72B73C91271FF sha1 607C3D6203108DC08C30B0F239F3D888D07B2244 serial "CAFF" )
+)
+game (
+	name "Adibou - Je Joue a Lire et a Compter (France)"
+	region "France"
+	serial "CC9F"
+	rom ( name "Adibou - Je Joue a Lire et a Compter (France).nds" size 33554432 crc 0BB42643 md5 B5C4E5F6BAA042B0AB1FF00F3D69937B sha1 7F4ED33B319D3659E543B3B4C18CE98FC84BDAD8 serial "CC9F" )
+)
+game (
+	name "Adibou - Je Joue avec les Lettres et les Nombres (France)"
+	region "France"
+	serial "CC8F"
+	rom ( name "Adibou - Je Joue avec les Lettres et les Nombres (France).nds" size 33554432 crc ED0C8E89 md5 B73D3BE61B85F9252EB6BCD0E02315BA sha1 C3B3F016DA988BFE2CE6C6744B71EE9764817877 serial "CC8F" )
+)
+game (
+	name "Adibou Aventure - J'Explore le Corps Humain (France)"
+	region "France"
+	serial "YHVF"
+	rom ( name "Adibou Aventure - J'Explore le Corps Humain (France).nds" size 67108864 crc DF3D6120 md5 A6604C3ABA312D4A1953D2A9AB3CF2E4 sha1 0FAFF5A5B78901B89F244A0D4C910E54B2DDE3CA serial "YHVF" )
+)
+game (
+	name "Advance Wars - Dark Conflict (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "YW2P"
+	rom ( name "Advance Wars - Dark Conflict (Europe) (En,Fr,De,Es,It).nds" size 67108864 crc 4DAAE63F md5 CB1B68160D35BCB057DA2CD1EC06655C sha1 93200AA84CCCD0FB728DFE747440DC4EE89EADDA serial "YW2P" )
+)
+game (
+	name "Advance Wars - Days of Ruin (USA) (En,Fr,Es)"
+	region "USA"
+	serial "YW2E"
+	rom ( name "Advance Wars - Days of Ruin (USA) (En,Fr,Es).nds" size 67108864 crc EAC313F3 md5 B92CD828815BECBA6EDA4C715C433AB0 sha1 D7AC135E1144729839881DAE29A1184C88ED6B2C serial "YW2E" )
+)
+game (
+	name "Advance Wars - Days of Ruin - Exclusive Movie - Battle (USA) (Video)"
+	region "USA"
+	serial "NTRJ"
+	rom ( name "Advance Wars - Days of Ruin - Exclusive Movie - Battle (USA) (Video).nds" size 2141384 crc 20DB7912 md5 802D77336DB865E6FC131080C648BC48 sha1 9E2FBE0C52F862A2C5B7D951F2B04BF682E83E8F serial "NTRJ" )
+)
+game (
+	name "Advance Wars - Days of Ruin - Exclusive Movie - Story (USA) (Video)"
+	region "USA"
+	serial "NTRJ"
+	rom ( name "Advance Wars - Days of Ruin - Exclusive Movie - Story (USA) (Video).nds" size 1732296 crc BF38B3C7 md5 C83B4C1931F80D161E49D3E4D9075DAD sha1 583A9DB2695887C3687C82948199FBE7E7E85290 serial "NTRJ" )
+)
+game (
+	name "Advance Wars - Dual Strike (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "AWRP"
+	rom ( name "Advance Wars - Dual Strike (Europe) (En,Fr,De,Es,It).nds" size 33554432 crc C42D8E67 md5 E6105BC672701A516B730C31754F7859 sha1 03B63875930BD8FDEA50902D7D2E0A4614AC36EB serial "AWRP" )
+)
+game (
+	name "Advance Wars - Dual Strike (Europe) (En,Fr,De,Es,It) (Wii U Virtual Console)"
+	region "Europe"
+	serial "WUP-N-DA3P"
+	rom ( name "Advance Wars - Dual Strike (Europe) (En,Fr,De,Es,It) (Wii U Virtual Console).nds" size 33554432 crc 6E85F024 md5 5688028E515F2EB068576886625F83E3 sha1 63E44444A76495556E75789B98865F21E0B338E9 serial "WUP-N-DA3P" )
+)
+game (
+	name "Advance Wars - Dual Strike (USA) (Wii U Virtual Console)"
+	region "USA"
+	serial "WUP-N-DA3E"
+	rom ( name "Advance Wars - Dual Strike (USA) (Wii U Virtual Console).nds" size 33554432 crc E1C238F5 md5 F60C88F2D680623C8B1A05931EE4B6B1 sha1 9B1E727A5C57FB2EEFFF00BF1BD3EECDA6E87D51 serial "WUP-N-DA3E" )
+)
+game (
+	name "Advance Wars - Dual Strike (USA, Australia)"
+	region "USA"
+	serial "AWRE"
+	rom ( name "Advance Wars - Dual Strike (USA, Australia).nds" size 33554432 crc 4D9A91E3 md5 6119B65D4F854953A5B85BC692166476 sha1 5A8D22D41CAA2C0FF41FB4A2B885A6BE607E22D9 serial "AWRE" )
+)
+game (
+	name "Adventure Time - Hey Ice King! Why'd You Steal Our Garbage!! (USA)"
+	region "USA"
+	serial "TATE"
+	rom ( name "Adventure Time - Hey Ice King! Why'd You Steal Our Garbage!! (USA).nds" size 33554432 crc D9D7E611 md5 7271684457E98C2D801F5B31A0ABAAD0 sha1 6F984E11F9F0E0F542D34B3908C75836B0006B71 serial "TATE" )
+)
+game (
+	name "Adventure Time - Hey Ice King! Why'd You Steal Our Garbage!! (USA) (Beta)"
+	releaseyear "2012"
+	releasemonth "07"
+	releaseday "20"
+	region "USA"
+	serial "NTRJ"
+	rom ( name "Adventure Time - Hey Ice King! Why'd You Steal Our Garbage!! (USA) (Beta) (2012-07-20).nds" size 61103908 crc 9EB5F2F5 md5 FF4ECCB38E31C093C2D3B8E9D1E6276D sha1 5A294065711BAEEFFE3DDF901C2E18881F301B3F serial "NTRJ" )
+)
+game (
+	name "Adventures of Pinocchio (Europe)"
+	region "Europe"
+	serial "CPKP"
+	rom ( name "Adventures of Pinocchio (Europe).nds" size 33554432 crc 84C2DF05 md5 FBF60B68AB9B6AD327B466BBA272FB87 sha1 697CFE56848FD3DF640F0B45FD479C815F98DE71 serial "CPKP" )
+)
+game (
+	name "Affari Tuoi (Italy)"
+	region "Italy"
+	serial "YLAI"
+	rom ( name "Affari Tuoi (Italy).nds" size 8388608 crc E0C7CC1D md5 B8C83E8DE9FFE90926922B297FB96AA3 sha1 965CB0A08D77DDE6D5D9A744D737B92DD26140C5 serial "YLAI" )
+)
+game (
+	name "Again - FBI Chou Shinri Sousakan (Japan)"
+	region "Japan"
+	serial "CA5J"
+	rom ( name "Again - FBI Chou Shinri Sousakan (Japan).nds" size 134217728 crc 0E28537C md5 E0849FFBE52CBB55C09581B78F73078D sha1 A5FAFE51AB7CC6F65FC03541D63BC315402C2F88 serial "CA5J" )
+)
+game (
+	name "Again - Interactive Crime Novel (USA)"
+	region "USA"
+	serial "CA5E"
+	rom ( name "Again - Interactive Crime Novel (USA).nds" size 134217728 crc C7A4676F md5 F623E48BEE530CBF73A22C18847ACC4B sha1 3853FB8E1BB751E93D748046A29DC9826EC4C614 serial "CA5E" )
+)
+game (
+	name "Agatha Christie - The ABC Murders (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "BAGP"
+	rom ( name "Agatha Christie - The ABC Murders (Europe) (En,Fr,De,Es,It).nds" size 16777216 crc 6F622416 md5 ABDAB5E1B974C7A726CE4C9D525D038D sha1 81F9E89D63C3D6500B8E9E196234254355CE2E31 serial "BAGP" )
+)
+game (
+	name "Agatha Christie - The ABC Murders (Europe) (En,Fr,De,Es,Nl)"
+	region "Europe"
+	serial "BAGX"
+	rom ( name "Agatha Christie - The ABC Murders (Europe) (En,Fr,De,Es,Nl).nds" size 16777216 crc 03068C47 md5 7F0A9BF3BF0401A3FC8742160211C50A sha1 07753BCC1E75DA6B42F26331A06B93C38C462BD7 serial "BAGX" )
+)
+game (
+	name "Agatha Christie - The ABC Murders (USA) (En,Fr,Es)"
+	region "USA"
+	serial "BAGE"
+	rom ( name "Agatha Christie - The ABC Murders (USA) (En,Fr,Es).nds" size 16777216 crc 7A850E39 md5 B549DFE9418634EB3D2CA3E01890116A sha1 C9F5E6FDA31B021A52379E62B62637439B8D15D2 serial "BAGE" )
+)
+game (
+	name "Age of Empires - Mythologies (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "CEPP"
+	rom ( name "Age of Empires - Mythologies (Europe) (En,Fr,De,Es,It).nds" size 134217728 crc F4F0EC07 md5 ABF85BD29B785BDD75B5D043DCEF0051 sha1 B0CA794E9B89C899B671EF18DC2AEFEE77A37448 serial "CEPP" )
+)
+game (
+	name "Age of Empires - Mythologies (USA) (En,Fr)"
+	region "USA"
+	serial "CEPE"
+	rom ( name "Age of Empires - Mythologies (USA) (En,Fr).nds" size 134217728 crc 0297F9EA md5 51F007F5464164459E93C2D2E46128B9 sha1 1CA981AF55AFE0D05AEE25D85F66786C325AFE67 serial "CEPE" )
+)
+game (
+	name "Age of Empires - The Age of Kings (Europe) (En,Es,It)"
+	region "Europe"
+	serial "AEKX"
+	rom ( name "Age of Empires - The Age of Kings (Europe) (En,Es,It).nds" size 67108864 crc 8AEBC321 md5 A1064BED71A8166625ACD7F421BA4275 sha1 12F6C3A21011E25FD544D413BCCE6AE6B5CBB2CA serial "AEKX" )
+)
+game (
+	name "Age of Empires - The Age of Kings (Europe) (En,Fr,De)"
+	region "Europe"
+	serial "AEKP"
+	rom ( name "Age of Empires - The Age of Kings (Europe) (En,Fr,De).nds" size 67108864 crc B5AECC63 md5 EFCD2442AD2F56B985AAFDD3A8A136FB sha1 2D9A1A8827B303AF241E35964D2EAADD60C2AF5A serial "AEKP" )
+)
+game (
+	name "Age of Empires - The Age of Kings (USA)"
+	region "USA"
+	serial "AEKE"
+	rom ( name "Age of Empires - The Age of Kings (USA).nds" size 67108864 crc F49A566E md5 5D25798EA86F42FF345C812A0955E656 sha1 E92B412DD09B826F3D0978BD9C4058E4FC310EEE serial "AEKE" )
+)
+game (
+	name "Aibou DS (Japan)"
+	region "Japan"
+	serial "CIVJ"
+	rom ( name "Aibou DS (Japan).nds" size 134217728 crc 9CD0E7AE md5 B47170925FC44EF2336DFCC4723A64D7 sha1 E5E93D21A086D52D59F8EB24ABCDFEE48E83E926 serial "CIVJ" )
+)
+game (
+	name "Air Traffic Chaos (USA)"
+	region "USA"
+	serial "CAOE"
+	rom ( name "Air Traffic Chaos (USA).nds" size 16777216 crc 43A5568C md5 D5303E912294F0B834180234A5E7AB26 sha1 4F36E459B6D2472C403A008A61140377A6C53229 serial "CAOE" )
+)
+game (
+	name "Akachan wa Doko kara Kuru no (Japan)"
+	region "Japan"
+	serial "AKAJ"
+	rom ( name "Akachan wa Doko kara Kuru no (Japan).nds" size 134217728 crc 381D31A0 md5 BD835116C4F53250615364B8C1A82068 sha1 9AF62B419A43FC1DF31ADA777747D1F28C832F4E serial "AKAJ" )
+)
+game (
+	name "Akagawa Jirou Mystery - Tsuki no Hikari - Shizumeru Kane no Satsujin (Japan)"
+	region "Japan"
+	serial "CJ6J"
+	rom ( name "Akagawa Jirou Mystery - Tsuki no Hikari - Shizumeru Kane no Satsujin (Japan).nds" size 134217728 crc 368A0C26 md5 F085F6A1386B0B4171DC861FE133511C sha1 BFC5625CB2BDAAA58C1E6A2BE7FF7BAC35B9B079 serial "CJ6J" )
+)
+game (
+	name "Akagawa Jirou Mystery - Yasoukyoku - Hon ni Manekareta Satsujin (Japan)"
+	region "Japan"
+	serial "YOQJ"
+	rom ( name "Akagawa Jirou Mystery - Yasoukyoku - Hon ni Manekareta Satsujin (Japan).nds" size 134217728 crc 36A30C71 md5 14FA1A639B1F3C3083052F45FD3A7C1A sha1 D582457544F715E8FEC00F56E3312EA148E54721 serial "YOQJ" )
+)
+game (
+	name "Akai Ito DS (Japan)"
+	region "Japan"
+	serial "CIAJ"
+	rom ( name "Akai Ito DS (Japan).nds" size 134217728 crc AE7E2FC0 md5 25805F210CE22DFC182A7A2FF8D6CD86 sha1 954F2BA3E6DE48DDE666835E1B951C84F507093B serial "CIAJ" )
+)
+game (
+	name "Akai Ito Destiny DS (Japan)"
+	region "Japan"
+	serial "BIDJ"
+	rom ( name "Akai Ito Destiny DS (Japan).nds" size 134217728 crc DB592926 md5 1826DE48164D0EFB64E3ED433E295D42 sha1 03E02FF10BE0682DBB0518A6E4B0B8068F2334FB serial "BIDJ" )
+)
+game (
+	name "Akko de Pon! - Ikasama Hourouki (Japan)"
+	region "Japan"
+	serial "YHMJ"
+	rom ( name "Akko de Pon! - Ikasama Hourouki (Japan).nds" size 33554432 crc 74E4B802 md5 E69392C9606DB566B4C5EDCB1C880183 sha1 5A5FA68FCECF2AAFE18DDBBFBBB37C6046BC932C serial "YHMJ" )
+)
+game (
+	name "Akko ni Omakase! - Brain Shock (Japan)"
+	region "Japan"
+	serial "AOVJ"
+	rom ( name "Akko ni Omakase! - Brain Shock (Japan).nds" size 67108864 crc 2F0AF285 md5 EDA6922D5A141557E9F02E8B3AEE951C sha1 70B9CCC6D3CC221B4191917100B4775DC1179AA5 serial "AOVJ" )
+)
+game (
+	name "Akogare Girls Collection - Lovely Youchien Nikki (Japan)"
+	region "Japan"
+	serial "B44J"
+	rom ( name "Akogare Girls Collection - Lovely Youchien Nikki (Japan).nds" size 16777216 crc 8F27A4E3 md5 FB6E83B159350E9E83312C1E2E1CC420 sha1 22682AB68BF7C387CEC980AA337FDFE47885DA65 serial "B44J" )
+)
+game (
+	name "Akogare Girls Collection - Mister Donut DS (Japan)"
+	region "Japan"
+	serial "BO6J"
+	rom ( name "Akogare Girls Collection - Mister Donut DS (Japan).nds" size 16777216 crc 28BA9AE9 md5 ED7194AABF5FE644BCBCC6B86BCC049C sha1 A9522AD5AE5F0409114686794C6F6345DE4D3E8E serial "BO6J" )
+)
+game (
+	name "Akogare Girls Collection - Ohanaya-san Monogatari (Japan)"
+	region "Japan"
+	serial "TFSJ"
+	rom ( name "Akogare Girls Collection - Ohanaya-san Monogatari (Japan).nds" size 33554432 crc CBFC0228 md5 F045418CA4A3ACE8C5E79B7F7AB41773 sha1 6E512E9AE011E08837C13F03DC120C23E674BA1F serial "TFSJ" )
+)
+game (
+	name "Akogare Girls Collection - Pika Pika Nurse Monogatari (Japan)"
+	region "Japan"
+	serial "TC5J"
+	rom ( name "Akogare Girls Collection - Pika Pika Nurse Monogatari (Japan).nds" size 33554432 crc 9A1883D2 md5 A34872927F88333C16DA37A6F8B84E4C sha1 53A0F0FEF10BFE4D8F48CF02111EADA7618205EA serial "TC5J" )
+)
+game (
+	name "Akogare Girls Collection - Suteki ni Nurse Days (Japan)"
+	region "Japan"
+	serial "B4NJ"
+	rom ( name "Akogare Girls Collection - Suteki ni Nurse Days (Japan).nds" size 8388608 crc 15D44146 md5 271C37D8C7FAF2847A88EB3818E56A77 sha1 DD5AD2628B301F92EF03FA7E6BCE01F0BB7609A6 serial "B4NJ" )
+)
+game (
+	name "Akumajou Dracula - Gallery of Labyrinth (Japan)"
+	region "Japan"
+	serial "ACBJ"
+	rom ( name "Akumajou Dracula - Gallery of Labyrinth (Japan).nds" size 67108864 crc D97D85AE md5 D035F4A5BD02C5CC25359A830FB01025 sha1 35FBAE07FA24E0991AD1DD12717C84824081DDE1 serial "ACBJ" )
+)
+game (
+	name "Akumajou Dracula - Gallery of Labyrinth (Japan) (Rev 1)"
+	region "Japan"
+	serial "ACBJ"
+	rom ( name "Akumajou Dracula - Gallery of Labyrinth (Japan) (Rev 1).nds" size 67108864 crc 8708ECE6 md5 6733F8B0170C9C51B79FBE024FEF2223 sha1 05F3ECEA560E1EAC9CDF955AFF59AB2AB8684FE9 serial "ACBJ" )
+)
+game (
+	name "Akumajou Dracula - Sougetsu no Juujika (Japan) (Rev 1)"
+	region "Japan"
+	serial "ACVJ"
+	rom ( name "Akumajou Dracula - Sougetsu no Juujika (Japan) (Rev 1).nds" size 67108864 crc 0DF769EE md5 B3868D4C5AEF98B73F084BBAEEAE39DB sha1 C03A0FF7275116A321FB9242FCC823F2FC9AC87B serial "ACVJ" )
+)
+game (
+	name "Akumajou Dracula - Ubawareta Kokuin (Japan)"
+	region "Japan"
+	serial "YR9J"
+	rom ( name "Akumajou Dracula - Ubawareta Kokuin (Japan).nds" size 67108864 crc CFAED479 md5 E41352DCDAECA96F9F30F705F21979E5 sha1 33AF5D6DC9FC2BB1C890D63D2E11CB959055748B serial "YR9J" )
+)
+game (
+	name "Alex Rider - Stormbreaker (Europe) (En,Fr,De,Es)"
+	region "Europe"
+	serial "ALXX"
+	rom ( name "Alex Rider - Stormbreaker (Europe) (En,Fr,De,Es).nds" size 33554432 crc 51764CAA md5 8C39A4A83C0940C07FDEEEC7A2FDBA4A sha1 9AF8DAC8A0EEE93D28AB8FDAB5B5A7DBA04DC1D7 serial "ALXX" )
+)
+game (
+	name "Alex Rider - Stormbreaker (USA)"
+	region "USA"
+	serial "ALXE"
+	rom ( name "Alex Rider - Stormbreaker (USA).nds" size 33554432 crc 62CA01D6 md5 6378864F19964C16997FDDE43D064D2B sha1 9B2A3DA2397EB16FDF0762B7015138995A0CE884 serial "ALXE" )
+)
+game (
+	name "Alex Rider - Stormbreaker (United Kingdom)"
+	region "United Kingdom"
+	serial "ALXP"
+	rom ( name "Alex Rider - Stormbreaker (United Kingdom).nds" size 33554432 crc 96398140 md5 A64304DF9EC073F765AC89626BEA0C72 sha1 88A07D18DE38666D896FF166A5E9595749712CEC serial "ALXP" )
+)
+game (
+	name "Alice in Wonderland (Europe) (En,Fr,De,Es,It,Nl) (NDSi Enhanced)"
+	region "Europe"
+	serial "VALV"
+	rom ( name "Alice in Wonderland (Europe) (En,Fr,De,Es,It,Nl) (NDSi Enhanced).nds" size 67108864 crc FE1C5D3C md5 B66CEB5828A068CDBD35BC8E917F9E79 sha1 0CDFD34CC15C2F52A1AE5B53A22902C6330D67AE serial "VALV" )
+)
+game (
+	name "Alice in Wonderland (USA) (En,Fr,Es) (NDSi Enhanced)"
+	region "USA"
+	serial "VALE"
+	rom ( name "Alice in Wonderland (USA) (En,Fr,Es) (NDSi Enhanced).nds" size 67108864 crc 731611C9 md5 4C8F57CEFDF6732D5B544AB8A137A83E sha1 BACAB6AD618BB371E4D1E20CC1FF0A9EC04183E4 serial "VALE" )
+)
+game (
+	name "Alien Friends (Europe) (Proto)"
+	region "Europe"
+	serial "NTRJ"
+	rom ( name "Alien Friends (Europe) (Proto).nds" size 6891584 crc 980C3372 md5 8079AEF139EB8FBDA569A5A2FD911E71 sha1 1861FF3B0E1737D1C688D108D8971022CA3944FD serial "NTRJ" )
+)
+game (
+	name "Aliens - Infestation (Europe) (En,Fr,De)"
+	region "Europe"
+	serial "B79P"
+	rom ( name "Aliens - Infestation (Europe) (En,Fr,De).nds" size 33554432 crc C8823461 md5 1C8AB32842695C4DBF5EAB5689E8074B sha1 BEC3711D400BD6F24E3771DCAEB96BA7FA797E52 serial "B79P" )
+)
+game (
+	name "Aliens - Infestation (USA) (En,Fr,De)"
+	region "USA"
+	serial "CEYE"
+	rom ( name "Aliens - Infestation (USA) (En,Fr,De).nds" size 33554432 crc AC03D612 md5 E6758E44DEEDD14639898FAA26EA6985 sha1 A9A69B6259F06CD4AC5D0E53E5BEB5141B124B2D serial "CEYE" )
+)
+game (
+	name "Aliens in the Attic (Europe) (En,Fr,De,Es,It,Nl)"
+	region "Europe"
+	serial "C4RP"
+	rom ( name "Aliens in the Attic (Europe) (En,Fr,De,Es,It,Nl).nds" size 33554432 crc F3124477 md5 F6276DE988247082E660EB264F09BFA1 sha1 1D7669EC72F2072B36C13D2C2236240D2BC33717 serial "C4RP" )
+)
+game (
+	name "Aliens in the Attic (Europe) (En,Fr,De,Es,It,Nl) (Rev 1)"
+	region "Europe"
+	serial "C4RP"
+	rom ( name "Aliens in the Attic (Europe) (En,Fr,De,Es,It,Nl) (Rev 1).nds" size 33554432 crc 926EF3FF md5 4F2E1D0DB56985F3722F79A651CC8419 sha1 3AFDFF95F1FB165F33BFA674D1D2CB10C070D9F5 serial "C4RP" )
+)
+game (
+	name "Aliens in the Attic (USA) (En,Fr,De,Es,It,Nl)"
+	region "USA"
+	serial "C4RE"
+	rom ( name "Aliens in the Attic (USA) (En,Fr,De,Es,It,Nl).nds" size 33554432 crc E391C0BA md5 A86F2B0DB00FBAA46431E108DBED939C sha1 D0D2F86F5285573F1767698E33DD457BC708872A serial "C4RE" )
+)
+game (
+	name "All Kamen Rider - Rider Generation (Japan)"
+	region "Japan"
+	serial "TAKJ"
+	rom ( name "All Kamen Rider - Rider Generation (Japan).nds" size 67108864 crc 986B74F0 md5 ADC87F72D8F315BFF1024635D4681F08 sha1 CC6A531ACF0E325E242827673241AE2D6333391E serial "TAKJ" )
+)
+game (
+	name "All Kamen Rider - Rider Generation (Japan) (Beta)"
+	releaseyear "2011"
+	releasemonth "06"
+	releaseday "02"
+	region "Japan"
+	serial "TAKJ"
+	rom ( name "All Kamen Rider - Rider Generation (Japan) (Beta) (2011-06-02).nds" size 67108864 crc 73B19440 md5 4F6E9712B014D3D43929EE475BEA6924 sha1 869B03E4FB6B06CD14AA58C06F5A1011773C0293 serial "TAKJ" )
+)
+game (
+	name "All Kamen Rider - Rider Generation 2 (Japan)"
+	region "Japan"
+	serial "TRGJ"
+	rom ( name "All Kamen Rider - Rider Generation 2 (Japan).nds" size 134217728 crc F2F761CD md5 6F174DBB21E3A37ECFA76FE6C9ABAFF4 sha1 C4DBE2EFD96272268408A61E01ED7B158CDA5FE6 serial "TRGJ" )
+)
+game (
+	name "All Star Cheer Squad (USA)"
+	region "USA"
+	serial "YAUE"
+	rom ( name "All Star Cheer Squad (USA).nds" size 67108864 crc D731F56B md5 1D08C54CF9D1047164FE3F07C7905C5E sha1 64F51CDC9EEA24D3EDC6B59E86EA76E7DA6489E5 serial "YAUE" )
+)
+game (
+	name "All Star Cheerleader (Europe) (En,De,Es)"
+	region "Europe"
+	serial "YAUP"
+	rom ( name "All Star Cheerleader (Europe) (En,De,Es).nds" size 67108864 crc 8CAB3003 md5 3FDE5A29FD6A92D88615AA2938F96120 sha1 3B9FA4A9696A39AF160530C35205605296ADE930 serial "YAUP" )
+)
+game (
+	name "All Star Cheerleader (Europe) (Sv,No,Da,Fi)"
+	region "Europe"
+	serial "YAUX"
+	rom ( name "All Star Cheerleader (Europe) (Sv,No,Da,Fi).nds" size 67108864 crc F9E97573 md5 3B9793BA89C74601AB11306BAD37B915 sha1 CF32BE2A86F86D2FB4C503F3BF8F328F5D61DFFA serial "YAUX" )
+)
+game (
+	name "Allez Raconte (France)"
+	region "France"
+	serial "BAZF"
+	rom ( name "Allez Raconte (France).nds" size 67108864 crc A5203143 md5 5A1BBA8DFCF3F9E88B1CB0A96DE04D1A sha1 137F7C3F57F5D1C0775F514C02553F6E6F3A4593 serial "BAZF" )
+)
+game (
+	name "Allied Ace Pilots (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "YAPP"
+	rom ( name "Allied Ace Pilots (Europe) (En,Fr,De,Es,It).nds" size 16777216 crc F8388C6D md5 01C967D349E00F959BA92B1F4779691B sha1 D984D2DB2992F19516F884C1807550F6568D792B serial "YAPP" )
+)
+game (
+	name "Alpha and Omega (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "BHVP"
+	rom ( name "Alpha and Omega (Europe) (En,Fr,De,Es,It).nds" size 33554432 crc 159DD46C md5 449CF4F9FE3348EDB3779D9408701E59 sha1 0BE6F66DF136ADA36FDE49033FFCBBBB6E4B02CB serial "BHVP" )
+)
+game (
+	name "Alpha and Omega (USA)"
+	region "USA"
+	serial "BHVE"
+	rom ( name "Alpha and Omega (USA).nds" size 33554432 crc 9FCDFB1B md5 6F343EAB91BF1F0A10FE4646DE269DD0 sha1 84C9E94D0FE1DECBB825AFD60FC3235DD48815C5 serial "BHVE" )
+)
+game (
+	name "Alssongdalssong - Myeonghwatamheom DS (Korea)"
+	region "Korea"
+	serial "C48K"
+	rom ( name "Alssongdalssong - Myeonghwatamheom DS (Korea).nds" size 67108864 crc F605A8D7 md5 D9FE7DFD7D72CE14493C5F3973F8F0CE sha1 EDD07B6FBFF905F4A4C90267AECD7AD6668FF00D serial "C48K" )
+)
+game (
+	name "Altron 3D Action (Japan) (Proto)"
+	region "Japan"
+	serial "A3TE"
+	rom ( name "Altron 3D Action (Japan) (Proto).nds" size 16777216 crc 6C2301CF md5 6AC73D5E73DCB2F87AE93B5B73D12AFF sha1 921A7CED59AC5B3641F96EA2FDAABB4804F92DB8 serial "A3TE" )
+)
+game (
+	name "Alvin and the Chipmunks (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "YAIP"
+	rom ( name "Alvin and the Chipmunks (Europe) (En,Fr,De,Es,It).nds" size 67108864 crc C1FD7D52 md5 90CE3D001FB553B3AEFF513C5C151990 sha1 2DD78D9CFC2D76A6D1614D292864D2C6C737C186 serial "YAIP" )
+)
+game (
+	name "Alvin and the Chipmunks (USA) (En,Fr)"
+	region "USA"
+	serial "YAIE"
+	rom ( name "Alvin and the Chipmunks (USA) (En,Fr).nds" size 67108864 crc B80D4547 md5 8F336788295C48D10DB8D94E2466C3C6 sha1 8714CCA32C55760751F7CA7A7001149C31506038 serial "YAIE" )
+)
+game (
+	name "Alvin and the Chipmunks - Chipwrecked (Europe)"
+	region "Europe"
+	serial "B7ZP"
+	rom ( name "Alvin and the Chipmunks - Chipwrecked (Europe).nds" size 67108864 crc E8F42C13 md5 B2F6789D3FE23D6F1D43A8F6799D54A1 sha1 4FDA7AE55D361E732BD437D5DC18A1487E0A5855 serial "B7ZP" )
+)
+game (
+	name "Alvin and the Chipmunks - Chipwrecked (Europe) (Fr,De,Es,It)"
+	region "Europe"
+	serial "B7ZX"
+	rom ( name "Alvin and the Chipmunks - Chipwrecked (Europe) (Fr,De,Es,It).nds" size 67108864 crc 579A3008 md5 8882274F6889A28808D6A0A753A83ADF sha1 704308876FB289495EECA51EE5BA79A8F831CFEB serial "B7ZX" )
+)
+game (
+	name "Alvin and the Chipmunks - Chipwrecked (USA) (En,Fr)"
+	region "USA"
+	serial "B7ZE"
+	rom ( name "Alvin and the Chipmunks - Chipwrecked (USA) (En,Fr).nds" size 67108864 crc B621FB53 md5 90BB60A515116D8988D38D915EB07528 sha1 0E206A4D8E332926FDDB8F8C161EDC1249F919AA serial "B7ZE" )
+)
+game (
+	name "Alvin and the Chipmunks - The Squeakquel (Europe) (En,Fr,De)"
+	region "Europe"
+	serial "BAVX"
+	rom ( name "Alvin and the Chipmunks - The Squeakquel (Europe) (En,Fr,De).nds" size 67108864 crc C9F3DB0F md5 0E103140746EB781256DB263E6CECED4 sha1 68C8D6272F891696462BA7687F40F491C26FEB9A serial "BAVX" )
+)
+game (
+	name "Alvin and the Chipmunks - The Squeakquel (USA)"
+	region "USA"
+	serial "BAVE"
+	rom ( name "Alvin and the Chipmunks - The Squeakquel (USA).nds" size 67108864 crc 44041FA9 md5 8F8EA1B28D5019A38686A925E26CE1A1 sha1 56A10EF295A1790A4A2433FC6354E02BAA57B3BB serial "BAVE" )
+)
+game (
+	name "Aly & AJ Adventure, The (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "YNYP"
+	rom ( name "Aly & AJ Adventure, The (Europe) (En,Fr,De,Es,It).nds" size 8388608 crc BBA28EB8 md5 9FA63F3F2DFD4B31995E603E32D58D70 sha1 479B701DE3951D6809D261797067E688BC2B4364 serial "YNYP" )
+)
+game (
+	name "Aly & AJ Adventure, The (USA)"
+	region "USA"
+	serial "YNYE"
+	rom ( name "Aly & AJ Adventure, The (USA).nds" size 8388608 crc F9DD55F4 md5 D38166C4A3F3AA612279268A4FBF64F1 sha1 9A3CD23AD4375B81B7A0C624BCCCBB00D1482DC2 serial "YNYE" )
+)
+game (
+	name "Amazing Adventures - The Forgotten Ruins (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "CA7P"
+	rom ( name "Amazing Adventures - The Forgotten Ruins (Europe) (En,Fr,De,Es,It).nds" size 33554432 crc AB5E2DF3 md5 44A01E55A68AB3D23B8500A026C55481 sha1 62EEF5A00AD4D4639D872E7F6A699F44977F743D serial "CA7P" )
+)
+game (
+	name "Amazing Adventures - The Forgotten Ruins (USA)"
+	region "USA"
+	serial "CA7E"
+	rom ( name "Amazing Adventures - The Forgotten Ruins (USA).nds" size 33554432 crc 8DBC8E8B md5 28F662959C82A70438272358E2CE5FAB sha1 7CAF1974D9ECD52DA26DEDD397D795FC9F509D23 serial "CA7E" )
+)
+game (
+	name "Amazing Spider-Man, The (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "TAMP"
+	rom ( name "Amazing Spider-Man, The (Europe) (En,Fr,De,Es,It).nds" size 33554432 crc 456FC615 md5 47AFEF56558E746DABE814DDDDE806AE sha1 ECCC9261D812BA83ADD10FFB34231BDE2512AC3E serial "TAMP" )
+)
+game (
+	name "Amazing Spider-Man, The (USA) (En,Fr,Es)"
+	region "USA"
+	serial "TAME"
+	rom ( name "Amazing Spider-Man, The (USA) (En,Fr,Es).nds" size 33554432 crc 3B12A5D4 md5 FF511B7AD07363DD0D2E02990A24BEB4 sha1 150B9D5DBF82C23BDBC9B92083C19478B60BE3BA serial "TAME" )
+)
+game (
+	name "America's Next Top Model (Europe) (En,De)"
+	region "Europe"
+	serial "C2MP"
+	rom ( name "America's Next Top Model (Europe) (En,De).nds" size 33554432 crc 393A72AB md5 42078FD3C5EFF85CDEB346123C9767AA sha1 AA90928D23A9D3D35D621D66588999DB8F46C7AA serial "C2MP" )
+)
+game (
+	name "America's Next Top Model (Europe) (En,Fr,Es,It)"
+	region "Europe"
+	serial "YNLY"
+	rom ( name "America's Next Top Model (Europe) (En,Fr,Es,It).nds" size 67108864 crc FF9D8B29 md5 AEB7255ACCEB60C5D10504EC4D3EAEF1 sha1 6B68E659777D6CF55152A55F61840DA37BB766B5 serial "YNLY" )
+)
+game (
+	name "America's Next Top Model (Europe) (En,Fr,Es,It,Sv,No,Da)"
+	region "Europe"
+	serial "YNLZ"
+	rom ( name "America's Next Top Model (Europe) (En,Fr,Es,It,Sv,No,Da).nds" size 67108864 crc 81F9EF04 md5 1E499DFE39B07620A1CEF1D8D1195E9B sha1 F82986E694E8CAD45D9E5139321DEFBD566EEFDF serial "YNLZ" )
+)
+game (
+	name "America's Next Top Model (USA)"
+	region "USA"
+	serial "C2ME"
+	rom ( name "America's Next Top Model (USA).nds" size 33554432 crc A03BE77A md5 4C4683488015BD26F57FF37E5A082BD5 sha1 7F47775611C9E79B16B37ED7A6EDC5A8B8ACFDB8 serial "C2ME" )
+)
+game (
+	name "America's Test Kitchen - Let's Get Cooking (USA)"
+	region "USA"
+	serial "BKCE"
+	rom ( name "America's Test Kitchen - Let's Get Cooking (USA).nds" size 268435456 crc 7313474F md5 6B855598895995DAFAAB80FDB8EE39C2 sha1 8D7F7F8A768CD4258BA1CD4478560A0FB69DBFA0 serial "BKCE" )
+)
+game (
+	name "America's Test Kitchen - Let's Get Cooking - Single Recipe Download Version (USA) (DS Broadcast)"
+	region "USA"
+	serial "NTRJ"
+	rom ( name "America's Test Kitchen - Let's Get Cooking - Single Recipe Download Version (USA) (DS Broadcast).nds" size 1131208 crc 57069BF6 md5 D7A173108A99A9D338CBA36433E83C08 sha1 32638C657D25FE180C3EE5C39AF475D290943346 serial "NTRJ" )
+)
+game (
+	name "American Dragon - Jake Long (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "ARDP"
+	rom ( name "American Dragon - Jake Long (Europe) (En,Fr,De,Es,It).nds" size 33554432 crc 0AB5344E md5 9E9DA7A0EA61CC929D705249D6F25D67 sha1 D401816567FF92529727BAD585BB57A36CD877BB serial "ARDP" )
+)
+game (
+	name "American Dragon - Jake Long - Attack of the Dark Dragon (USA) (Beta) (Build A)"
+	releaseyear "2005"
+	releasemonth "11"
+	releaseday "14"
+	region "USA"
+	serial "NTRJ"
+	rom ( name "American Dragon - Jake Long - Attack of the Dark Dragon (USA) (Beta) (2005-11-14) (Build A).nds" size 3172288 crc 67752F75 md5 727311AA472E9C7FF8974651C49A5723 sha1 D34463715AE27FEDBDFCCF75B1B116E4B59F77DD serial "NTRJ" )
+)
+game (
+	name "American Dragon - Jake Long - Attack of the Dark Dragon (USA) (Beta) (Build B)"
+	releaseyear "2005"
+	releasemonth "11"
+	releaseday "14"
+	region "USA"
+	serial "NTRJ"
+	rom ( name "American Dragon - Jake Long - Attack of the Dark Dragon (USA) (Beta) (2005-11-14) (Build B).nds" size 3344320 crc 0B1E7D3C md5 2BC8308F974C40A01926B284F3A4A8E9 sha1 AFB348641E192131E26C3D18CE6CD66F2A8FF69E serial "NTRJ" )
+)
+game (
+	name "American Dragon - Jake Long - Attack of the Dark Dragon (USA) (Beta) (Stable)"
+	releaseyear "2005"
+	releasemonth "12"
+	releaseday "05"
+	region "USA"
+	serial "NTRJ"
+	rom ( name "American Dragon - Jake Long - Attack of the Dark Dragon (USA) (Beta) (2005-12-05) (Stable).nds" size 4241920 crc 286807EA md5 07EF316DFDA43A5C93DC86514C1D0B8D sha1 3CFA2B2E162C0726011A27F1522E714F9ECFA95B serial "NTRJ" )
+)
+game (
+	name "American Dragon - Jake Long - Attack of the Dark Dragon (USA) (Beta) (Unstable)"
+	releaseyear "2005"
+	releasemonth "12"
+	releaseday "05"
+	region "USA"
+	serial "NTRJ"
+	rom ( name "American Dragon - Jake Long - Attack of the Dark Dragon (USA) (Beta) (2005-12-05) (Unstable).nds" size 4242432 crc 28512BEA md5 9F12C024596AAA5AF537E4B58D23BE7A sha1 66964F31B357CF9BE365EDF6F65BB0B23138B6FA serial "NTRJ" )
+)
+game (
+	name "American Dragon - Jake Long - Attack of the Dark Dragon (USA) (Beta) (Sound Test)"
+	releaseyear "2005"
+	releasemonth "12"
+	releaseday "21"
+	region "USA"
+	serial "NTRJ"
+	rom ( name "American Dragon - Jake Long - Attack of the Dark Dragon (USA) (Beta) (2005-12-21) (Sound Test).nds" size 6063472 crc 761F85C1 md5 C949000B1E91AAB9AAC3E04DDE5F0A1C sha1 B3D2D924AC1878D7C1245684F6C29C9BD7B9D9D1 serial "NTRJ" )
+)
+game (
+	name "American Dragon - Jake Long - Attack of the Dark Dragon (USA) (Beta)"
+	releaseyear "2005"
+	releasemonth "12"
+	releaseday "23"
+	region "USA"
+	serial "NTRJ"
+	rom ( name "American Dragon - Jake Long - Attack of the Dark Dragon (USA) (Beta) (2005-12-23).nds" size 6101872 crc CD05CD80 md5 03EF9DD2B03FFFA447572D53C34203AA sha1 6E76CED1A9C38AFAC802857412A46627A2D67AF8 serial "NTRJ" )
+)
+game (
+	name "American Dragon - Jake Long - Attack of the Dark Dragon (USA) (Beta)"
+	releaseyear "2006"
+	releasemonth "01"
+	releaseday "06"
+	region "USA"
+	serial "NTRJ"
+	rom ( name "American Dragon - Jake Long - Attack of the Dark Dragon (USA) (Beta) (2006-01-06).nds" size 6291824 crc CD6F6910 md5 B543CCA5AD855AA3128024F2207D648A sha1 96ABFE36F0006FE274EDD79079A4DA765F035B54 serial "NTRJ" )
+)
+game (
+	name "American Dragon - Jake Long - Attack of the Dark Dragon (USA) (Beta)"
+	releaseyear "2006"
+	releasemonth "01"
+	releaseday "09"
+	region "USA"
+	serial "NTRJ"
+	rom ( name "American Dragon - Jake Long - Attack of the Dark Dragon (USA) (Beta) (2006-01-09).nds" size 6317936 crc 6A02E60F md5 3E2E08B87B4C3A7A2243ABF4E508DA81 sha1 02D3F1A490CFFC2429D497ADDF76E2D3C6600F34 serial "NTRJ" )
+)
+game (
+	name "American Dragon - Jake Long - Attack of the Dark Dragon (USA) (Beta)"
+	releaseyear "2006"
+	releasemonth "01"
+	releaseday "10"
+	region "USA"
+	serial "NTRJ"
+	rom ( name "American Dragon - Jake Long - Attack of the Dark Dragon (USA) (Beta) (2006-01-10).nds" size 6448496 crc 5E92B636 md5 4DFDB2204F4D189276037E623DCB48E0 sha1 2C1C37AC9194A326A34A27532172DBDDAE1C9037 serial "NTRJ" )
+)
+game (
+	name "American Dragon - Jake Long - Attack of the Dark Dragon (USA) (En,Fr,De,Es,It)"
+	region "USA"
+	serial "ARDE"
+	rom ( name "American Dragon - Jake Long - Attack of the Dark Dragon (USA) (En,Fr,De,Es,It).nds" size 33554432 crc 4D7856B3 md5 FBD24EA05454988AA508728FA098DA3D sha1 1DA70494499EA2524941442D96AA2EC371D1EC6F serial "ARDE" )
+)
+game (
+	name "American Dragon - Jake Long - Attack of the Dark Dragon (USA) (En,Fr,De,Es,It) (Beta)"
+	releaseyear "2006"
+	releasemonth "06"
+	releaseday "23"
+	region "USA"
+	serial "NTRJ"
+	rom ( name "American Dragon - Jake Long - Attack of the Dark Dragon (USA) (En,Fr,De,Es,It) (Beta) (2006-06-23).nds" size 33554432 crc 1A3F548C md5 3EAE9D1BC12BDACE05F585D7FA3B3370 sha1 4D5781A2613FCF862DB724F12CFC26D57F35154F serial "NTRJ" )
+)
+game (
+	name "American Dragon - Jake Long - Attack of the Dark Dragon (USA) (En,Fr,De,Es,It) (Beta)"
+	releaseyear "2006"
+	releasemonth "06"
+	releaseday "26"
+	region "USA"
+	serial "NTRJ"
+	rom ( name "American Dragon - Jake Long - Attack of the Dark Dragon (USA) (En,Fr,De,Es,It) (Beta) (2006-06-26).nds" size 33554432 crc D90EA727 md5 A756AE5AA1A6A54F57F6CB49810AFDE9 sha1 2CEF55FD3B8D9425FA8DC98990167027E181A599 serial "NTRJ" )
+)
+game (
+	name "American Girl - Julie Finds a Way (USA)"
+	region "USA"
+	serial "YAJE"
+	rom ( name "American Girl - Julie Finds a Way (USA).nds" size 16777216 crc E9BF39E8 md5 DE06D9FD5A1F85FE04231E72C3AFFDC2 sha1 73A4A417E219D1DA933F731D8ECAD235B8BD790D serial "YAJE" )
+)
+game (
+	name "American Girl - Kit Mystery Challenge! (USA)"
+	region "USA"
+	serial "CAME"
+	rom ( name "American Girl - Kit Mystery Challenge! (USA).nds" size 16777216 crc 5F6413A3 md5 68DEC68C39D37834913E49516233E4EB sha1 58E1155C650F91756F08F5867F512E2AB0C93DEE serial "CAME" )
+)
+game (
+	name "Amici (Italy)"
+	region "Italy"
+	serial "C6AI"
+	rom ( name "Amici (Italy).nds" size 8388608 crc 86B74F9A md5 87C6E1B7495B74F78DBC1E71487175CD sha1 6FD39C6B95B3939E82F23B13F48D33CFC11A1E4E serial "C6AI" )
+)
+game (
+	name "An M. Night Shyamalan Film - The Last Airbender (Europe) (En,Fr,De,Es,It) (NDSi Enhanced)"
+	region "Europe"
+	serial "VLAV"
+	rom ( name "An M. Night Shyamalan Film - The Last Airbender (Europe) (En,Fr,De,Es,It) (NDSi Enhanced).nds" size 67108864 crc E1FC5E13 md5 4410FDC77C3015E15987CF99F98E2E82 sha1 FF1A9E1188E90510224AFD995FFDDEE6B7BFFE62 serial "VLAV" )
+)
+game (
+	name "An M. Night Shyamalan Film - The Last Airbender (USA) (En,Fr) (NDSi Enhanced)"
+	region "USA"
+	serial "VLAE"
+	rom ( name "An M. Night Shyamalan Film - The Last Airbender (USA) (En,Fr) (NDSi Enhanced).nds" size 67108864 crc 4404ABEA md5 AB8A2FB4A1C85DB77707D72F3C28A717 sha1 B0EB4C863F1043468F85BEB81C82494BE57DDF70 serial "VLAE" )
+)
+game (
+	name "Anan Kanshuu - Onna Dikara Kinkyuu Up! DS (Japan)"
+	region "Japan"
+	serial "ALZJ"
+	rom ( name "Anan Kanshuu - Onna Dikara Kinkyuu Up! DS (Japan).nds" size 33554432 crc 9EE9F94C md5 FA78F7482A72A50F4BB9B743C6E9A2D4 sha1 015F1A5976299B3B440958EB9D9C15860430EA78 serial "ALZJ" )
+)
+game (
+	name "Anata Dake no Private Lesson - DS de Hajimeru Tipness no Yoga (Japan)"
+	region "Japan"
+	serial "AY4J"
+	rom ( name "Anata Dake no Private Lesson - DS de Hajimeru Tipness no Yoga (Japan).nds" size 134217728 crc 9DCC09D3 md5 1194732F03EF68FFCC2DEA7D0DA70FFA sha1 EA371D88E9D5792908C44A88756068C79632E179 serial "AY4J" )
+)
+game (
+	name "Anata mo DS de Classic Kiite Mimasenka (Japan)"
+	region "Japan"
+	serial "AE7J"
+	rom ( name "Anata mo DS de Classic Kiite Mimasenka (Japan).nds" size 134217728 crc 05918EFF md5 56D74A109D7B74CA0EF9540DF1E93D2F sha1 72BAB04823BFCD88C02E25075E5E820FF8C15282 serial "AE7J" )
+)
+game (
+	name "Ancient Spirits - Columbus' Legacy (Europe) (En,Fr,De,Nl)"
+	region "Europe"
+	serial "BXCP"
+	rom ( name "Ancient Spirits - Columbus' Legacy (Europe) (En,Fr,De,Nl).nds" size 16777216 crc 7A13F5BB md5 E504DFB09B9445264E2E9523059EF7F3 sha1 9E05E3438647A04E303239A0F3AEC51CD02F8879 serial "BXCP" )
+)
+game (
+	name "Angel Cat Sugar (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "C5OP"
+	rom ( name "Angel Cat Sugar (Europe) (En,Fr,De,Es,It).nds" size 16777216 crc E61F21FB md5 CE40F8C8E5568C092A0335591EAF48F2 sha1 DE44D00FA3EA34F03C088C67F9AFEA68E4611E19 serial "C5OP" )
+)
+game (
+	name "Angel Cat Sugar (Europe) (Sv,No,Da,Fi)"
+	region "Europe"
+	serial "C5OX"
+	rom ( name "Angel Cat Sugar (Europe) (Sv,No,Da,Fi).nds" size 16777216 crc B9C9CF83 md5 AF0CD2204461100E4360DF979B68F8F0 sha1 CB1786A0F0281544C22EAB0D0453EB4273BCF7BD serial "C5OX" )
+)
+game (
+	name "Angelique Duet (Japan)"
+	region "Japan"
+	serial "ANNJ"
+	rom ( name "Angelique Duet (Japan).nds" size 67108864 crc C3C5B613 md5 F8409B64D1B4CC7EB7ECCB59B36118DB sha1 4BC78EBA1D66A0878EB4E039F1D27E73491EB98E serial "ANNJ" )
+)
+game (
+	name "AniMates! (USA) (En,Fr)"
+	region "USA"
+	serial "A6YE"
+	rom ( name "AniMates! (USA) (En,Fr).nds" size 16777216 crc E64EE620 md5 9B7724DEE35BC1F53D4F28DBD0FAB1B4 sha1 302D76465B1D9AC99F52726D779E588D3743E81F serial "A6YE" )
+)
+game (
+	name "Animal Boxing (USA)"
+	region "USA"
+	serial "CABE"
+	rom ( name "Animal Boxing (USA).nds" size 16777216 crc 53BB8BE5 md5 D2E98BAF13D943849EFBDBE766966074 sha1 5B9D8EF8864295144A04B19022C71E3C411F8C86 serial "CABE" )
+)
+game (
+	name "Animal Color Cross (USA) (Proto)"
+	region "USA"
+	serial "NTRJ"
+	rom ( name "Animal Color Cross (USA) (Proto).nds" size 8388608 crc AA23EED9 md5 E504DF15F4C1A3EE5B173E8BC35FC8A3 sha1 3F44860F4C55CDC760328AFFBC307A6B6711C3CA serial "NTRJ" )
+)
+game (
+	name "Animal Crossing - City Folk - Moving Van (USA) (Wii Broadcast)"
+	region "USA"
+	serial "NTRJ"
+	rom ( name "Animal Crossing - City Folk - Moving Van (USA) (Wii Broadcast).nds" size 322760 crc 98B3CF22 md5 60814A549E65BE35A77C1ECE1D13C223 sha1 9C8D48EC77C72922AF016EA0BD2B253D07D0F515 serial "NTRJ" )
+)
+game (
+	name "Animal Crossing - City Folk - Suitcase (USA) (Wii Broadcast)"
+	region "USA"
+	serial "NTRJ"
+	rom ( name "Animal Crossing - City Folk - Suitcase (USA) (Wii Broadcast).nds" size 420040 crc C7B9F1CC md5 72BAD364AEBF2884F9AA46F02C6E1437 sha1 E6F4B8EAF8431C9AE1EB3D640E1F4E434F1599F0 serial "NTRJ" )
+)
+game (
+	name "Animal Crossing - Let's Go to the City - Moving Van (Europe) (Wii Broadcast)"
+	region "Europe"
+	serial "NTRJ"
+	rom ( name "Animal Crossing - Let's Go to the City - Moving Van (Europe) (Wii Broadcast).nds" size 323272 crc E713B5C5 md5 1CF4C2E83CB8B8AB4F6EFA72C37B532D sha1 68691D38EE02E82386EB96FCA3BCB1705EDB1C1F serial "NTRJ" )
+)
+game (
+	name "Animal Crossing - Let's Go to the City - Suitcase (Europe) (Wii Broadcast)"
+	region "Europe"
+	serial "NTRJ"
+	rom ( name "Animal Crossing - Let's Go to the City - Suitcase (Europe) (Wii Broadcast).nds" size 421064 crc 8BE60E70 md5 ED1651EE8520FFEC457E11B86519DEDD sha1 A0301115B3D76914F7B721ED415BBF052CBEA134 serial "NTRJ" )
+)
+game (
+	name "Animal Crossing - Wild World (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "ADMP"
+	rom ( name "Animal Crossing - Wild World (Europe) (En,Fr,De,Es,It).nds" size 67108864 crc C677970C md5 9D0DDA4CA7227C31BB31002342B8530E sha1 858DA57A18852E75304E423519DDE6A548D5264B serial "ADMP" )
+)
+game (
+	name "Animal Crossing - Wild World (Europe) (En,Fr,De,Es,It) (Wii U Virtual Console)"
+	region "Europe"
+	serial "WUP-N-DAYP"
+	rom ( name "Animal Crossing - Wild World (Europe) (En,Fr,De,Es,It) (Wii U Virtual Console).nds" size 67108864 crc C60CBCEF md5 63A77904BB57620B35CE7037F0EEE77E sha1 496EB5D80047ABB25B4AFD0DA8BB822B4C85B93E serial "WUP-N-DAYP" )
+)
+game (
+	name "Animal Crossing - Wild World (USA)"
+	region "USA"
+	serial "ADME"
+	rom ( name "Animal Crossing - Wild World (USA).nds" size 33554432 crc F24508AA md5 8B69D0A78772A5D8DF0FAFD7B01169AB sha1 F1BEF752B30DC158D55B48518C80840A7C4586AF serial "ADME" )
+)
+game (
+	name "Animal Crossing - Wild World (USA) (Rev 1)"
+	region "USA"
+	serial "ADME"
+	rom ( name "Animal Crossing - Wild World (USA) (Rev 1).nds" size 33554432 crc 7E62F586 md5 A5793ED9DDE3A1918A2B91637D9BAEDE sha1 77FDE3E30E1E6068395D1F96EA63BE569B61C351 serial "ADME" )
+)
+game (
+	name "Animal Crossing - Wild World (USA) (Rev 1) (Wii U Virtual Console)"
+	region "USA"
+	serial "WUP-N-DAYE"
+	rom ( name "Animal Crossing - Wild World (USA) (Rev 1) (Wii U Virtual Console).nds" size 33554432 crc 7E404FAB md5 C196F060F8C7DE732EE387DA1A95363F sha1 A953F9F4FCDD30843E1BA28EE27D9B1648069ED9 serial "WUP-N-DAYE" )
+)
+game (
+	name "Animal Genius (Europe) (En,Fr,De,Es,It,Nl,Sv,No,Da)"
+	region "Europe"
+	serial "YAGP"
+	rom ( name "Animal Genius (Europe) (En,Fr,De,Es,It,Nl,Sv,No,Da).nds" size 67108864 crc 68B8266D md5 9939918C41A550CA99AED3AB89103B2D sha1 5E629CBAD45C24CE70025D7FE11282033ABE7501 serial "YAGP" )
+)
+game (
+	name "Animal Genius (USA)"
+	region "USA"
+	serial "YAGE"
+	rom ( name "Animal Genius (USA).nds" size 16777216 crc 09FD9780 md5 C281BEA0BBCA3448D12BE19BF1F7A953 sha1 28B3041DA0C1616EA5B2FADF6261DFB799FE7A35 serial "YAGE" )
+)
+game (
+	name "Animal Kororo (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "CPLP"
+	rom ( name "Animal Kororo (Europe) (En,Fr,De,Es,It).nds" size 33554432 crc 9BD87113 md5 8F67E632B7FCFD96AFD09CCDD283DC0A sha1 7C60952EFC5C244CB1FA5C1F24E61A42A3B28D3A serial "CPLP" )
+)
+game (
+	name "Animal Life - Africa (Europe) (En,Fr,De,Es,It) (NDSi Enhanced)"
+	region "Europe"
+	serial "VAFP"
+	rom ( name "Animal Life - Africa (Europe) (En,Fr,De,Es,It) (NDSi Enhanced).nds" size 33554432 crc 3155C807 md5 9CF57D7DA02E9E72153756A45BA1287A sha1 C57C29AD52DC6EA92A22864FB8332630BB940456 serial "VAFP" )
+)
+game (
+	name "Animal Life - Australia (Europe) (En,Fr,De,Es,It) (NDSi Enhanced)"
+	region "Europe"
+	serial "VASP"
+	rom ( name "Animal Life - Australia (Europe) (En,Fr,De,Es,It) (NDSi Enhanced).nds" size 33554432 crc D67F20AD md5 0605C6186E22CFF022A8B0B9DC58C079 sha1 B5E022A468E45D85726C82E41A3DE4AFDCD3ACC2 serial "VASP" )
+)
+game (
+	name "Animal Life - Dinosaurs (Europe) (En,Fr,De,Es,It) (NDSi Enhanced)"
+	region "Europe"
+	serial "VADP"
+	rom ( name "Animal Life - Dinosaurs (Europe) (En,Fr,De,Es,It) (NDSi Enhanced).nds" size 33554432 crc 3609D70E md5 D5530932451F58173A18579DD2A2F59E sha1 89B49D67C6B4B2C8EBC36E021D99CAA28C4EA198 serial "VADP" )
+)
+game (
+	name "Animal Life - Eurasia (Europe) (En,Fr,De,Es,It) (NDSi Enhanced)"
+	region "Europe"
+	serial "VAEP"
+	rom ( name "Animal Life - Eurasia (Europe) (En,Fr,De,Es,It) (NDSi Enhanced).nds" size 33554432 crc 97FCD8AB md5 32EB9BD2012B5EFC6448FD735E3CB118 sha1 03B3235196640775022C27503D57D2FF80CD3C1B serial "VAEP" )
+)
+game (
+	name "Animal Life - North America (Europe) (En,Fr,De,Es,It) (NDSi Enhanced)"
+	region "Europe"
+	serial "VAMP"
+	rom ( name "Animal Life - North America (Europe) (En,Fr,De,Es,It) (NDSi Enhanced).nds" size 33554432 crc E22BFC33 md5 556339AC5B786C80DAED9291033355E6 sha1 62C8CFDE9BFED7DDA24F1E580C1B9472EFEB6B8B serial "VAMP" )
+)
+game (
+	name "Animal Paradise (Europe) (En,Fr,De,Es,It,Nl)"
+	region "Europe"
+	serial "A8DP"
+	rom ( name "Animal Paradise (Europe) (En,Fr,De,Es,It,Nl).nds" size 67108864 crc 1BD192BD md5 0AB641A56B9C7FCB075A122624FAC72A sha1 30724894B76076B2E703A397D468397F5269358B serial "A8DP" )
+)
+game (
+	name "Animal Paradise (USA) (En,Fr,Es)"
+	region "USA"
+	serial "CPRE"
+	rom ( name "Animal Paradise (USA) (En,Fr,Es).nds" size 67108864 crc 86FBC850 md5 64BBC16656E3509DF6F29A802ED9B203 sha1 099CC2C9900F1113C0B03237774B905D8FDF8705 serial "CPRE" )
+)
+game (
+	name "Animal Paradise - Wild (USA) (En,Fr,Es)"
+	region "USA"
+	serial "CAAE"
+	rom ( name "Animal Paradise - Wild (USA) (En,Fr,Es).nds" size 67108864 crc 7DFF7A89 md5 6B542927F37CE245EA72406C66251C73 sha1 6A50F42526F63CEF60193F8CC34DD7CD59F9BBAA serial "CAAE" )
+)
+game (
+	name "Animal Planet - Emergency Vets (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "C4VP"
+	rom ( name "Animal Planet - Emergency Vets (Europe) (En,Fr,De,Es,It).nds" size 16777216 crc 6F04FF83 md5 143533D69D6A0881639EEE6F8213A8D2 sha1 4F68B44AC7C0997718C3D82BB1E1D1F5A30184F2 serial "C4VP" )
+)
+game (
+	name "Animal Planet - Emergency Vets (USA) (En,Fr)"
+	region "USA"
+	serial "CAJE"
+	rom ( name "Animal Planet - Emergency Vets (USA) (En,Fr).nds" size 16777216 crc 884E6A7B md5 D5D41170AA6D4A44FB9EF3FD38403E31 sha1 A0C46DD94F805816B7ABDE01A8D295B6E499D075 serial "CAJE" )
+)
+game (
+	name "Animal Planet - Vet Collection (USA)"
+	region "USA"
+	serial "BA2E"
+	rom ( name "Animal Planet - Vet Collection (USA).nds" size 67108864 crc 4636305E md5 5CAA8E1F58501AA07F0199739EF87DC6 sha1 3749328503C282C643B8FC1EDE668B54F0561A70 serial "BA2E" )
+)
+game (
+	name "Animal Planet - Vet Life (Europe) (En,De,Es,It)"
+	region "Europe"
+	serial "BV2P"
+	rom ( name "Animal Planet - Vet Life (Europe) (En,De,Es,It).nds" size 33554432 crc F5F656DC md5 DAC026CF8776ED6149A0B922D0E3CE87 sha1 3A6637FC6E77A82F348A9DC298ADD5352CAA7E45 serial "BV2P" )
+)
+game (
+	name "Animal Planet - Vet Life (USA)"
+	region "USA"
+	serial "BV2E"
+	rom ( name "Animal Planet - Vet Life (USA).nds" size 33554432 crc 34BE56B9 md5 4728F8351E6005D14179E7B8171710BC sha1 76A995210A039147A1A61D561800B10E9E977902 serial "BV2E" )
+)
+game (
+	name "Animal World - Big Cats (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "B8AP"
+	rom ( name "Animal World - Big Cats (Europe) (En,Fr,De,Es,It).nds" size 33554432 crc E103E80C md5 DED42790B59CB6CA98BA511C4164AF95 sha1 DA650ED75ADB19FF402223D6B4CEA0512ADDF6EC serial "B8AP" )
+)
+game (
+	name "Animal World - Dinosaurs (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "BAWP"
+	rom ( name "Animal World - Dinosaurs (Europe) (En,Fr,De,Es,It).nds" size 33554432 crc 0500D9D8 md5 32E59F6E44422E447CA29EC5A3DAF27B sha1 DDB777535088089FFED8222A1F1AD2FD7F5C367E serial "BAWP" )
+)
+game (
+	name "Animaniacs - Lights, Camera, Action! (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "ALCP"
+	rom ( name "Animaniacs - Lights, Camera, Action! (Europe) (En,Fr,De,Es,It).nds" size 16777216 crc 993BA22D md5 FD223745B9C297719AD32CA09FF8DFA2 sha1 42C6957ABBCA1AAFAB8D2E36790B35FD284006AF serial "ALCP" )
+)
+game (
+	name "Animaniacs - Lights, Camera, Action! (Europe) (En,Fr,De,Es,It) (Rev 1)"
+	region "Europe"
+	serial "ALCP"
+	rom ( name "Animaniacs - Lights, Camera, Action! (Europe) (En,Fr,De,Es,It) (Rev 1).nds" size 16777216 crc D97FDF24 md5 492759F3B4A54A5BD1DEB4643C1D621F sha1 D453E2275405048E088441F9346361E3BCF8D652 serial "ALCP" )
+)
+game (
+	name "Ankh - Curse of the Scarab King (Europe) (En,Es,It,Nl,Pl,Ru)"
+	region "Europe"
+	serial "YAKP"
+	rom ( name "Ankh - Curse of the Scarab King (Europe) (En,Es,It,Nl,Pl,Ru).nds" size 134217728 crc 1C0B4E82 md5 2AA12A1960746EF32ADE679EB3F4068D sha1 13EC6F28EB0C16391CB513BC4150303BC4C60F45 serial "YAKP" )
+)
+game (
+	name "Ankh - Der Fluch des Skarabaeenkoenigs (Germany) (En,Fr,De)"
+	region "Germany"
+	serial "YAKD"
+	rom ( name "Ankh - Der Fluch des Skarabaeenkoenigs (Germany) (En,Fr,De).nds" size 134217728 crc 71E57D73 md5 4C90A2A769A4DFCC7AC7324F79EDC0D2 sha1 2DE37A3C7C114A1814DE9F11ADDFE02EAA34938D serial "YAKD" )
+)
+game (
+	name "Ankh - La Malediction du Roi Scarabee (France) (En,Fr)"
+	region "France"
+	serial "YAKF"
+	rom ( name "Ankh - La Malediction du Roi Scarabee (France) (En,Fr).nds" size 134217728 crc D7661128 md5 4539F8507ED10A1A760B12C3A53B5096 sha1 053E23C1737A86C1075A09B86C0449569176281B serial "YAKF" )
+)
+game (
+	name "Anky's Ruiterschool (Europe) (Fr,Nl)"
+	region "Europe"
+	serial "YRTX"
+	rom ( name "Anky's Ruiterschool (Europe) (Fr,Nl).nds" size 33554432 crc 31A72AF4 md5 0AA1B7D54A326EC2F68EBF6B4ABB315E sha1 8A40AA592F71050823F5DC43699A5A704AFBF8E3 serial "YRTX" )
+)
+game (
+	name "Anna & die Liebe (Germany)"
+	region "Germany"
+	serial "C25D"
+	rom ( name "Anna & die Liebe (Germany).nds" size 33554432 crc 9E5C9F38 md5 AE11EDCF19813A898305C0C753FE1EDA sha1 84006CED2CD6A68CE16857AC28A2999B73782BE6 serial "C25D" )
+)
+game (
+	name "Annie M.G. Schmidt's Pluk van de Petteflet (Netherlands)"
+	region "Netherlands"
+	serial "CQWH"
+	rom ( name "Annie M.G. Schmidt's Pluk van de Petteflet (Netherlands).nds" size 33554432 crc 952C88A3 md5 BCE57EC87BA653B2DA1061C1A565E05A sha1 6422281BAE7E514C5DAC22791E4FEFED0C02ABC3 serial "CQWH" )
+)
+game (
+	name "Annie no Atelier - Sera-tou no Renkinjutsushi (Japan)"
+	region "Japan"
+	serial "CA2J"
+	rom ( name "Annie no Atelier - Sera-tou no Renkinjutsushi (Japan).nds" size 134217728 crc E429A982 md5 6FD9C0D09EDE3DC6661C740B613F562A sha1 E5798FEA741AB6D9C5BF787A0E501AC13EFEAC6E serial "CA2J" )
+)
+game (
+	name "Anno - Create a New World (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "CANP"
+	rom ( name "Anno - Create a New World (Europe) (En,Fr,De,Es,It).nds" size 33554432 crc E9413106 md5 65FD3D50CC4DF0814FDB0310F93F60BC sha1 8A9CE3FB0DDF50709852BAC3D68E2FC02E9A6BE7 serial "CANP" )
+)
+game (
+	name "Anno 1701 - Dawn of Discovery (Europe) (En,Fr,De,Es,It,Nl)"
+	region "Europe"
+	serial "A2LP"
+	rom ( name "Anno 1701 - Dawn of Discovery (Europe) (En,Fr,De,Es,It,Nl).nds" size 16777216 crc CF98C24F md5 51F11E05EDBC35471488006B08BCC618 sha1 4AD5E1B09CE0503E407678D570955BB043200D89 serial "A2LP" )
+)
+game (
+	name "Anno 1701 - Dawn of Discovery (USA) (En,Fr,Es)"
+	region "USA"
+	serial "A2LE"
+	rom ( name "Anno 1701 - Dawn of Discovery (USA) (En,Fr,Es).nds" size 16777216 crc 3877D3D3 md5 CE3675416285D701C86836EF3FEDB1DB sha1 AA9B2FA71F6C83CA578B4460BC4DBED9D5299FC8 serial "A2LE" )
+)
+game (
+	name "Annyeong! Haemtori - Haemtoriwa BanggaBangga Chingudeul (Korea)"
+	region "Korea"
+	serial "A8CK"
+	rom ( name "Annyeong! Haemtori - Haemtoriwa BanggaBangga Chingudeul (Korea).nds" size 33554432 crc 7FC46D5D md5 4EF856B3D8D69119067653856FC6AF65 sha1 24FEF38CDE44FE531F65D9276ED9C0C5A004ACF6 serial "A8CK" )
+)
+game (
+	name "Anone DS (Japan) (NDSi Enhanced)"
+	region "Japan"
+	serial "VANJ"
+	rom ( name "Anone DS (Japan) (NDSi Enhanced).nds" size 33554432 crc 0B36F0DC md5 6340727E22FD46D78695D49A8170FAFD sha1 9ECB4E698849DCAD4A55FE0EDCEEA7DDA8736DF9 serial "VANJ" )
+)
+game (
+	name "Another Code - Futatsu no Kioku (Japan)"
+	region "Japan"
+	serial "ANOJ"
+	rom ( name "Another Code - Futatsu no Kioku (Japan).nds" size 33554432 crc EC861AB2 md5 5933D51FD3BFCE700FEA8A61E6783FC2 sha1 A2EA8009A0A85544FF87B437F9475F54455983C1 serial "ANOJ" )
+)
+game (
+	name "Another Code - Two Memories (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "ANOP"
+	rom ( name "Another Code - Two Memories (Europe) (En,Fr,De,Es,It).nds" size 33554432 crc 66A34884 md5 CB56E2AE11AA7F4FE344504F311708F8 sha1 F40B6F7BFC2F877893D08FEEE7CD339555DA0511 serial "ANOP" )
+)
+game (
+	name "Another Time, Another Leaf - Kagami no Naka no Tantei (Japan)"
+	region "Japan"
+	serial "CMZJ"
+	rom ( name "Another Time, Another Leaf - Kagami no Naka no Tantei (Japan).nds" size 67108864 crc CAE12234 md5 913F26FB902FABB31AE84F3AC0C8FC7F sha1 C41F357233F4E620427B804D36E75EB4F6EAEBF3 serial "CMZJ" )
+)
+game (
+	name "Anpanman to Asobo - ABC Kyoushitsu (Japan)"
+	region "Japan"
+	serial "APEJ"
+	rom ( name "Anpanman to Asobo - ABC Kyoushitsu (Japan).nds" size 67108864 crc 492E09D2 md5 9ADBD24236AFB73755E945F7AFFA805E sha1 B15E7D6F22239E4CEA0D90177C8AF7AE67B7F597 serial "APEJ" )
+)
+game (
+	name "Anpanman to Asobo - Aiueo Kyoushitsu (Japan)"
+	region "Japan"
+	serial "APOJ"
+	rom ( name "Anpanman to Asobo - Aiueo Kyoushitsu (Japan).nds" size 67108864 crc FBA9A90C md5 7F5704039964A8B36A6335945670E842 sha1 925D7352EDCB8303924738FE191855D3E08C475D serial "APOJ" )
+)
+game (
+	name "Anpanman to Asobo - Aiueo Kyoushitsu (Japan) (Rev 1)"
+	region "Japan"
+	serial "APOJ"
+	rom ( name "Anpanman to Asobo - Aiueo Kyoushitsu (Japan) (Rev 1).nds" size 67108864 crc C213C4ED md5 0B95916DD77081E9E0003FDD2F3D435D sha1 CE663DF1DCA596753711E783B4B03EF6081A126B serial "APOJ" )
+)
+game (
+	name "Anpanman to Asobo - Aiueo Kyoushitsu DX (Japan)"
+	region "Japan"
+	serial "BAPJ"
+	rom ( name "Anpanman to Asobo - Aiueo Kyoushitsu DX (Japan).nds" size 67108864 crc 849B61F5 md5 C5D53E61DA9071621385995A8B08D4E0 sha1 9F5BA9701555E960FE1AD3E5A1F38FD2D4DC7C42 serial "BAPJ" )
+)
+game (
+	name "Anpanman to Asobo - Aiueo Kyoushitsu DX (Japan) (Rev 1)"
+	region "Japan"
+	serial "BAPJ"
+	rom ( name "Anpanman to Asobo - Aiueo Kyoushitsu DX (Japan) (Rev 1).nds" size 67108864 crc 25D24CAA md5 C0EBE9E1A5E215C4E87EE3520EBE43C6 sha1 2693BB52523182F43E6E03A19BCB1AC493D1B3B2 serial "BAPJ" )
+)
+game (
+	name "Anpanman to Touch de Waku Waku Training (Japan)"
+	region "Japan"
+	serial "A3PJ"
+	rom ( name "Anpanman to Touch de Waku Waku Training (Japan).nds" size 33554432 crc 1A44ED68 md5 94A54A18B74C37B48311702A049AD269 sha1 89B7B03D3A2D83D229C7B2A7EECC29FC65E3B683 serial "A3PJ" )
+)
+game (
+	name "Ant Nation (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "BANP"
+	rom ( name "Ant Nation (Europe) (En,Fr,De,Es,It).nds" size 16777216 crc 00F7A863 md5 3F5590FC7F32FE62B5F88A4D85A044E5 sha1 048CF6DAB5D3DAB70E5381F55902EF851FA45149 serial "BANP" )
+)
+game (
+	name "Ant Nation (USA) (En,Fr,Es)"
+	region "USA"
+	serial "CARE"
+	rom ( name "Ant Nation (USA) (En,Fr,Es).nds" size 16777216 crc FF678699 md5 157B3AB346FDB88E0970682ABB569649 sha1 CAE5A1E08AEE9A22ADA9C02A124DFE8CB3168B33 serial "CARE" )
+)
+game (
+	name "Aodon DS - Hanabi no Kiwami & Hanabi no Takumi (Japan)"
+	region "Japan"
+	serial "BHNJ"
+	rom ( name "Aodon DS - Hanabi no Kiwami & Hanabi no Takumi (Japan).nds" size 268435456 crc 7A8D7CEB md5 866D2F87160AEBD4AFE6E2AAF31E3FEB sha1 7C5532416B863B171FE1AE773FDC83DEB85F0A12 serial "BHNJ" )
+)
+game (
+	name "Apassionata (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "CAXP"
+	rom ( name "Apassionata (Europe) (En,Fr,De,Es,It).nds" size 33554432 crc 9A78E4AB md5 BE405AE579230CE238AB152CD2A0367C sha1 E477430E99F7F2578AB25E62D86E5ACA91BA7C0F serial "CAXP" )
+)
+game (
+	name "Apathy - Narugami Gakuen Toshi Densetsu Tantei Kyoku (Japan)"
+	region "Japan"
+	serial "YN9J"
+	rom ( name "Apathy - Narugami Gakuen Toshi Densetsu Tantei Kyoku (Japan).nds" size 33554432 crc B9139FBF md5 5D0EDFAFF9414369ECC7315910039FD8 sha1 731791D9A3C22EC828FAFF2678A6C9FD0392D43D serial "YN9J" )
+)
+game (
+	name "Ape Maia, L' (Italy)"
+	region "Italy"
+	serial "TMJI"
+	rom ( name "Ape Maia, L' (Italy).nds" size 33554432 crc 19F28C80 md5 55CB23747FDF1EE565D947678D44984D sha1 502D6B99F63AA30DBD9A2A64EF4974795C1581C4 serial "TMJI" )
+)
+game (
+	name "Apollo Justice - Ace Attorney (Europe)"
+	region "Europe"
+	serial "AGCP"
+	rom ( name "Apollo Justice - Ace Attorney (Europe).nds" size 67108864 crc 9FB7A35A md5 F51CADDD3A6A2D4A5DB287023C7B5E77 sha1 B17F9C5403555939C0F62CFCA5ED9CBE0300FA10 serial "AGCP" )
+)
+game (
+	name "Apollo Justice - Ace Attorney (Europe) (Es,It)"
+	region "Europe"
+	serial "AGCY"
+	rom ( name "Apollo Justice - Ace Attorney (Europe) (Es,It).nds" size 67108864 crc 6A3647EE md5 93333106972266C9A6A34AC676AA6F38 sha1 B48CAEBFAE02635B99D5077FD8C0A8FBD849C4B7 serial "AGCY" )
+)
+game (
+	name "Apollo Justice - Ace Attorney (Europe) (Fr,De)"
+	region "Europe"
+	serial "AGCX"
+	rom ( name "Apollo Justice - Ace Attorney (Europe) (Fr,De).nds" size 67108864 crc 607F0E7F md5 5C7163AFB6849E4E5272E8300E2B9C05 sha1 5BA9442B141BB4E48EBFA0308058B13F3053CB14 serial "AGCX" )
+)
+game (
+	name "Apollo Justice - Ace Attorney (USA)"
+	region "USA"
+	serial "AGCE"
+	rom ( name "Apollo Justice - Ace Attorney (USA).nds" size 67108864 crc AD99478D md5 5BF349BEE8A1121AF7D02D0D323BBA73 sha1 E76B2CCC4143F53847738C9AEA434D63F2F836DB serial "AGCE" )
+)
+game (
+	name "Appare! Shougi Jiisan - Washi to Shoubu ja (Japan)"
+	region "Japan"
+	serial "ASYJ"
+	rom ( name "Appare! Shougi Jiisan - Washi to Shoubu ja (Japan).nds" size 8388608 crc EB5BFC71 md5 4ED7BEE14BE116680A29CAA74F491C18 sha1 09B9483351E39DBD7E8FC6EC280D7148AB13FD73 serial "ASYJ" )
+)
+game (
+	name "Apprends avec Pokemon A la Conquete du Clavier (France)"
+	region "France"
+	serial "UZPF"
+	rom ( name "Apprends avec Pokemon A la Conquete du Clavier (France).nds" size 134217728 crc BD728697 md5 EE099BD969BECCB7F61A91767ABF221F sha1 6899D6265B47230D20C608BED105EA0FA92B4A08 serial "UZPF" )
+)
+game (
+	name "Aprende Con Pokemon - Aventura Entre Las Teclas (Spain)"
+	region "Spain"
+	serial "UZPS"
+	rom ( name "Aprende Con Pokemon - Aventura Entre Las Teclas (Spain).nds" size 134217728 crc C91DE98E md5 F2E338517A0731F915FD0D8163C1CD46 sha1 0B6411B9DBF64B8724E663E85042A5BC3B16A9E3 serial "UZPS" )
+)
+game (
+	name "Aqua Panic! (Europe) (En,Fr,De,Es,It,Nl,Pt)"
+	region "Europe"
+	serial "CQ8P"
+	rom ( name "Aqua Panic! (Europe) (En,Fr,De,Es,It,Nl,Pt).nds" size 16777216 crc DF2CA827 md5 A4A5A6DF88E2AEF9CB56CE9AD7200AE1 sha1 18A5EB34A21B92EA3CD10D88C2EC5F4F80B767A5 serial "CQ8P" )
+)
+game (
+	name "Aqua Panic! (USA) (En,Fr,Es)"
+	region "USA"
+	serial "CQ8E"
+	rom ( name "Aqua Panic! (USA) (En,Fr,Es).nds" size 16777216 crc 9C5BA23B md5 5A2650D48BA750DAE0BE5C38447F4F78 sha1 082D9044A67E80A0643A373501CA59A5AEF04926 serial "CQ8E" )
+)
+game (
+	name "Aquarium by DS (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "AQ8P"
+	rom ( name "Aquarium by DS (Europe) (En,Fr,De,Es,It).nds" size 8388608 crc A4C0DB06 md5 3A6B3B845FCC23B0CEA6B72EB1526FBA sha1 01B1BF2C17A4AE9E31D27858D6B7E8B2D6D28BA2 serial "AQ8P" )
+)
+game (
+	name "Aquarium by DS (USA)"
+	region "USA"
+	serial "AQ8E"
+	rom ( name "Aquarium by DS (USA).nds" size 8388608 crc C2D3CB39 md5 D662844965BDF195F84004331BB2F693 sha1 F9F42745BA6F58C08A3F1483968D40D2C623B7D6 serial "AQ8E" )
+)
+game (
+	name "Aquela Ball (World) (Datel Games n' Music)"
+	rom ( name "Aquela Ball (World) (Datel Games n' Music) (Unl).nds" size 1056832 crc 7D52DC09 md5 B74C854B60A0F2B51064ABFC348B0662 sha1 8B528C9B69203CA7CDA6F357C5BC53D1BA65AC13 )
+)
+game (
+	name "Arabians Lost - The Engagement on Desert (Japan)"
+	region "Japan"
+	serial "BALJ"
+	rom ( name "Arabians Lost - The Engagement on Desert (Japan).nds" size 268435456 crc 802060F1 md5 7797FE1F2E93884F973C07E5379438B6 sha1 1211C48C42C838BD4609E96E7DE04CD005082610 serial "BALJ" )
+)
+game (
+	name "Aranuri - Badachingudeulkkwa hamkke Mandeuneun Sesang (Korea)"
+	region "Korea"
+	serial "B2AK"
+	rom ( name "Aranuri - Badachingudeulkkwa hamkke Mandeuneun Sesang (Korea).nds" size 67108864 crc 182B7C71 md5 0F29A112149E800D7E4712FCB1C56036 sha1 97980BEC6403C1AE3BD58B0B807961A37553A159 serial "B2AK" )
+)
+game (
+	name "Arashi no Yoru ni (Japan)"
+	region "Japan"
+	serial "AR4J"
+	rom ( name "Arashi no Yoru ni (Japan).nds" size 16777216 crc 72BEE77C md5 6E54281674D8625C64BE519F0AACB014 sha1 BF0EE21EA6D56A8C3DB3E5D838D1A292324107FA serial "AR4J" )
+)
+game (
+	name "Arashi no Yoru ni (Japan) (Rev 1)"
+	region "Japan"
+	serial "AR4J"
+	rom ( name "Arashi no Yoru ni (Japan) (Rev 1).nds" size 16777216 crc 4E036BFE md5 4C79C45F06597D843032D07637CB9C4F sha1 5B3242CB4F4B454888EF9DDA6E0FEDC2661C6784 serial "AR4J" )
+)
+game (
+	name "Arasuji de Kitaeru - Hayamimi no Susume DS (Japan)"
+	region "Japan"
+	serial "A6JJ"
+	rom ( name "Arasuji de Kitaeru - Hayamimi no Susume DS (Japan).nds" size 67108864 crc 262FED44 md5 81C650A351A1E641B1611D1FF239802E sha1 A7D1C846808A9409A02EE3BE5D13BF5462BB0236 serial "A6JJ" )
+)
+game (
+	name "Arasuji de Oboeru Sokudoku no Susume DS (Japan)"
+	region "Japan"
+	serial "A6LJ"
+	rom ( name "Arasuji de Oboeru Sokudoku no Susume DS (Japan).nds" size 8388608 crc B47C1E03 md5 D77BD37BC4BFDD5090EB57D438DAAF90 sha1 0C3FDD261ECAC88F2B103B6CA6C97E934AF00C89 serial "A6LJ" )
+)
+game (
+	name "Arceus Distribution 2009 (USA) (Wi-Fi Kiosk) (Save Data)"
+	region "USA"
+	serial "Y6XE"
+	rom ( name "Arceus Distribution 2009 (USA) (Wi-Fi Kiosk) (Save Data).nds" size 8388608 crc DE3B86F9 md5 1FA31347626E6DCCA6E4DF32F2758A4A sha1 DE592EBA4949E24F5CF3246E54E14949F2EB5E6C serial "Y6XE" )
+)
+game (
+	name "Arceus Distribution 2010 (Europe) (En,Fr,De,Es,It) (Wi-Fi Kiosk) (Save Data)"
+	region "Europe"
+	serial "Y6XP"
+	rom ( name "Arceus Distribution 2010 (Europe) (En,Fr,De,Es,It) (Wi-Fi Kiosk) (Save Data).nds" size 8388608 crc 3F457EEF md5 6EFD92FD0FEF8DCF76A988F1588C7E1D sha1 5BD580947350ABCCAF417EDC2920FE6CC9DD09CF serial "Y6XP" )
+)
+game (
+	name "Archime DS (Japan) (En,Ja)"
+	region "Japan"
+	serial "YK6J"
+	rom ( name "Archime DS (Japan) (En,Ja).nds" size 8388608 crc 9DFAE0B3 md5 7C01775FDC94CBE7FCD44123711F2C98 sha1 92040949AC54EDC2B7DF642927D351588F84739D serial "YK6J" )
+)
+game (
+	name "Arctic Tale (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "YA3P"
+	rom ( name "Arctic Tale (Europe) (En,Fr,De,Es,It).nds" size 8388608 crc 0285CFE7 md5 96FF1EF76A96DEC3730D3F9615B36BE4 sha1 8D56590C39C5C65C18D9ED76D68F9764B31C8A7C serial "YA3P" )
+)
+game (
+	name "Arctic Tale (USA)"
+	region "USA"
+	serial "YA3E"
+	rom ( name "Arctic Tale (USA).nds" size 8388608 crc 7D80CA8B md5 3B2E7D3C9CCD294CEC0A2516B250A6AF sha1 6663849C9F1F2E47E4D667C823F2A8B9BF991321 serial "YA3E" )
+)
+game (
+	name "Are You Smarter than a 10 Year Old - The Official Nintendo DS Game (Europe)"
+	region "Europe"
+	serial "CQOP"
+	rom ( name "Are You Smarter than a 10 Year Old - The Official Nintendo DS Game (Europe).nds" size 33554432 crc BF3407EA md5 703A978D6EBAF7B363FC42DB4AFC78D9 sha1 980F62799DFB815E5442D433635BE8872649ACAF serial "CQOP" )
+)
+game (
+	name "Are You Smarter than a 5th Grader (Australia)"
+	region "Australia"
+	serial "YS5P"
+	rom ( name "Are You Smarter than a 5th Grader (Australia).nds" size 33554432 crc D5FDB62B md5 112D2847190B128531CE0FBDBE45E259 sha1 B1F3C95537A7A1BCB10F13E25068C82E24A67B78 serial "YS5P" )
+)
+game (
+	name "Are You Smarter than a 5th Grader (USA)"
+	region "USA"
+	serial "YS5E"
+	rom ( name "Are You Smarter than a 5th Grader (USA).nds" size 67108864 crc A1F73675 md5 7DC9A6CFA88CE2B69F6B21F9ED75DD16 sha1 F9C7F22830988B2C9776D640B1D26F8494C60AD4 serial "YS5E" )
+)
+game (
+	name "Are You Smarter than a 5th Grader - Back to School (USA) (NDSi Enhanced)"
+	region "USA"
+	serial "VS5E"
+	rom ( name "Are You Smarter than a 5th Grader - Back to School (USA) (NDSi Enhanced).nds" size 33554432 crc 0D034C0A md5 EE9141E903733E5A91571E4368A9702C sha1 461A506CBAECF7A84E1378E758FCAE47950F1427 serial "VS5E" )
+)
+game (
+	name "Are You Smarter than a 5th Grader - Game Time (USA)"
+	region "USA"
+	serial "C5UE"
+	rom ( name "Are You Smarter than a 5th Grader - Game Time (USA).nds" size 33554432 crc AC27D1EF md5 DD45E905C796357F57F30A35D6577DDE sha1 0A3617C243E0BB44A15D4F564C61B30550EDE9A1 serial "C5UE" )
+)
+game (
+	name "Are You Smarter than a 5th Grader - Make the Grade (USA)"
+	region "USA"
+	serial "CSTE"
+	rom ( name "Are You Smarter than a 5th Grader - Make the Grade (USA).nds" size 67108864 crc A78A429E md5 58246C470A082365A577CEF8BF08DCF7 sha1 5838D7DCFCE315C879B36FAFFE2B71CE7FC0A683 serial "CSTE" )
+)
+game (
+	name "Arkanoid DS (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "YAAP"
+	rom ( name "Arkanoid DS (Europe) (En,Fr,De,Es,It).nds" size 67108864 crc 5C64C625 md5 AA53D44DF171D58E8E6F86C9979B2257 sha1 0B174256E2AC47180DB7D3E90317CA52ACAE543C serial "YAAP" )
+)
+game (
+	name "Arkanoid DS (Japan)"
+	region "Japan"
+	serial "YAAJ"
+	rom ( name "Arkanoid DS (Japan).nds" size 67108864 crc 1BFF72DD md5 3577F10AC6F83C891CF845572723F3EB sha1 D929BC0106263E380CD082A2D18591BFF02F7D3B serial "YAAJ" )
+)
+game (
+	name "Arkanoid DS (USA) (En,Fr,De,Es,It)"
+	region "USA"
+	serial "YAAE"
+	rom ( name "Arkanoid DS (USA) (En,Fr,De,Es,It).nds" size 67108864 crc 90F6817D md5 2F7A6BC79024186C781B7E9CC3813201 sha1 282997F94C73F283D75CABBB3BF549A34F16A29A serial "YAAE" )
+)
+game (
+	name "Army Men - Soldiers of Misfortune (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "CAYP"
+	rom ( name "Army Men - Soldiers of Misfortune (Europe) (En,Fr,De,Es,It).nds" size 33554432 crc D1C43500 md5 5BFB8B22C8A8E0E0C80D2AE19090D98F sha1 18DD5381F16087D5D2BB7BA2EDCC8A0FFFCAA4FD serial "CAYP" )
+)
+game (
+	name "Army Men - Soldiers of Misfortune (USA) (En,Fr,De,Es,It)"
+	region "USA"
+	serial "CAYE"
+	rom ( name "Army Men - Soldiers of Misfortune (USA) (En,Fr,De,Es,It).nds" size 33554432 crc FC9722BC md5 D3780AA4432A54C60240C75B26436F9E sha1 ADE4B7CBEB4BF8245C04B3E3E3FE06BB9EA91D41 serial "CAYE" )
+)
+game (
+	name "Around the World in 80 Days (Europe) (En,Fr,De)"
+	region "Europe"
+	serial "BW8P"
+	rom ( name "Around the World in 80 Days (Europe) (En,Fr,De).nds" size 16777216 crc D7CFFA81 md5 C5EB20D1D250CCA2A829658B2582D5EB sha1 4496521EAD34913B04646E4304638A1A78AD5432 serial "BW8P" )
+)
+game (
+	name "Around the World in 80 Days (Europe) (En,Fr,Nl)"
+	region "Europe"
+	serial "BW8X"
+	rom ( name "Around the World in 80 Days (Europe) (En,Fr,Nl).nds" size 16777216 crc 3166565E md5 82FF414BD9130214E4D0E528A157D66F sha1 D3C5611000BF896B93FC0AED4DB12C43F9B712E5 serial "BW8X" )
+)
+game (
+	name "Around the World in 80 Days (Europe) (En,Fr,Nl) (Rev 1)"
+	region "Europe"
+	serial "BW8X"
+	rom ( name "Around the World in 80 Days (Europe) (En,Fr,Nl) (Rev 1).nds" size 16777216 crc DAF61A84 md5 BDC7313F8A3717E3DD21DE6E6041B060 sha1 B3F6634FE6438EBC72DD49E72A89F9854F5A1E9F serial "BW8X" )
+)
+game (
+	name "Art Academy (Europe) (En,Fr,De,Es,It) (NDSi Enhanced)"
+	region "Europe"
+	serial "VAAV"
+	rom ( name "Art Academy (Europe) (En,Fr,De,Es,It) (NDSi Enhanced).nds" size 33554432 crc A45A4235 md5 6C523B9D72785D78DEC0613A2FD8BE66 sha1 E256E0E40B5629507A382A1C6DC57CF23C540F83 serial "VAAV" )
+)
+game (
+	name "Art Academy (USA) (En,Fr,Es) (NDSi Enhanced)"
+	region "USA"
+	serial "VAAE"
+	rom ( name "Art Academy (USA) (En,Fr,Es) (NDSi Enhanced).nds" size 33554432 crc 6E4F4D64 md5 9812EFE039BE566FF134395822C0E24C sha1 27551D10B6487C6E038E2B8EB93B6E0568B88822 serial "VAAE" )
+)
+game (
+	name "Art Puzzle - Das Kunstmagazin - Echter Puzzlespass fuer Unterwegs (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "BUZP"
+	rom ( name "Art Puzzle - Das Kunstmagazin - Echter Puzzlespass fuer Unterwegs (Europe) (En,Fr,De,Es,It).nds" size 8388608 crc E6904EEB md5 8B148F6AD9649CE7FAE3B2BF95A3F88E sha1 8FFA32C2AEA8E3208817DDAE600CEF55CBC6DF44 serial "BUZP" )
+)
+game (
+	name "Art of Murder - FBI Top Secret (Europe) (Fr,De) (NDSi Enhanced)"
+	region "Europe"
+	serial "VAOX"
+	rom ( name "Art of Murder - FBI Top Secret (Europe) (Fr,De) (NDSi Enhanced).nds" size 67108864 crc BAAE5542 md5 97D5C63F894E0FF95EF980BFA570ADC2 sha1 A3A6493C413ABF29CABE541769452D644E055967 serial "VAOX" )
+)
+game (
+	name "Arthur and the Invisibles - The Game (USA) (En,Fr,Es)"
+	region "USA"
+	serial "A2ME"
+	rom ( name "Arthur and the Invisibles - The Game (USA) (En,Fr,Es).nds" size 8388608 crc B3422859 md5 F04B57BD0944231CB4EB0F3F5C5F248B sha1 CD0E3BE78DFE72D47B4CB5765331C3717D09274E serial "A2ME" )
+)
+game (
+	name "Arthur and the Minimoys (Europe) (En,Fr,De,Es,It,Nl)"
+	region "Europe"
+	serial "A2MP"
+	rom ( name "Arthur and the Minimoys (Europe) (En,Fr,De,Es,It,Nl).nds" size 8388608 crc C985BEB9 md5 FA68EDF06294E1AF3D8B28B0F59EE8BD sha1 134BBBF80D1E8DE61C3DF55906188B8750E59990 serial "A2MP" )
+)
+game (
+	name "Arthur and the Revenge of Maltazard (Europe) (En,Fr,De,Es,It,Nl)"
+	region "Europe"
+	serial "BAMP"
+	rom ( name "Arthur and the Revenge of Maltazard (Europe) (En,Fr,De,Es,It,Nl).nds" size 33554432 crc 9FA55393 md5 A90598193AC115A30300DE468CF00902 sha1 B321CF5C214101EF5FAEA3ABA2BAC78C175B06C7 serial "BAMP" )
+)
+game (
+	name "Aruite Wakaru - Seikatsu Rhythm DS (Japan)"
+	region "Japan"
+	serial "IMWJ"
+	rom ( name "Aruite Wakaru - Seikatsu Rhythm DS (Japan).nds" size 67108864 crc 01A2A47D md5 B5DB6C254A07286EC569C0160F7027AA sha1 2A00FE7C74A49DEE0416F0A90CAAC29BCC74C7F2 serial "IMWJ" )
+)
+game (
+	name "Ash's PIKACHU! Distribution 2011 (USA) (Wi-Fi Kiosk) (Save Data)"
+	region "USA"
+	serial "Y8SE"
+	rom ( name "Ash's PIKACHU! Distribution 2011 (USA) (Wi-Fi Kiosk) (Save Data).nds" size 8388608 crc C6EBD2DE md5 7B2B413669DCB0E9AC8C3FFACE30A26E sha1 78BD91F515658C0DD6518F08086C77B612D12BE6 serial "Y8SE" )
+)
+game (
+	name "Asoberu Eigo - Word Magic DS (Japan)"
+	region "Japan"
+	serial "CZWJ"
+	rom ( name "Asoberu Eigo - Word Magic DS (Japan).nds" size 67108864 crc B9928247 md5 B120B57D9C99DC7661088BC7E47628EC sha1 7111EF7E481BFF68EF4A6D9C890603D626203D66 serial "CZWJ" )
+)
+game (
+	name "Asonde Igo ga Sarani Tsuyoku Naru! - Ginsei Igo DS - Chuukyuu Hen (Japan)"
+	region "Japan"
+	serial "C5EJ"
+	rom ( name "Asonde Igo ga Sarani Tsuyoku Naru! - Ginsei Igo DS - Chuukyuu Hen (Japan).nds" size 33554432 crc F804C14B md5 23BEDC250AF72B35CE9D6D98A25F8B81 sha1 9D489EA6C414E465B04C0DEB2E7978DC43245449 serial "C5EJ" )
+)
+game (
+	name "Asonde Igo ga Tsuyoku Naru! - Ginsei Igo DS (Japan)"
+	region "Japan"
+	serial "AE5J"
+	rom ( name "Asonde Igo ga Tsuyoku Naru! - Ginsei Igo DS (Japan).nds" size 16777216 crc E5DF3D88 md5 72B1913611906D8538C35E684CE4CA7A sha1 C83290CDBB35C6FB1716F4ED6DFAEB8C9EF742D1 serial "AE5J" )
+)
+game (
+	name "Asonde Shougi ga Tsuyoku Naru! - Ginsei Shougi DS (Japan)"
+	region "Japan"
+	serial "AE6J"
+	rom ( name "Asonde Shougi ga Tsuyoku Naru! - Ginsei Shougi DS (Japan).nds" size 67108864 crc 5D0569A4 md5 5338F0F5107A73F1159EB5969A533170 sha1 2157979895F4C2960E7FAEC57783B84CEBC8E1A7 serial "AE6J" )
+)
+game (
+	name "Asphalt - Urban GT (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "ASHP"
+	rom ( name "Asphalt - Urban GT (Europe) (En,Fr,De,Es,It).nds" size 33554432 crc FE9F5D36 md5 55EF0118F67B8BFCE10DB70B2AC2276C sha1 ED8C2085F049CD4FDB434E357B097FF673D05944 serial "ASHP" )
+)
+game (
+	name "Asphalt - Urban GT (Japan)"
+	region "Japan"
+	serial "ASHJ"
+	rom ( name "Asphalt - Urban GT (Japan).nds" size 33554432 crc 4D794AFC md5 7C09612BBEECDB516C2A881D61E17E43 sha1 56CF338C0F7BB35F28315F402ACEC042FF2C16D9 serial "ASHJ" )
+)
+game (
+	name "Asphalt - Urban GT (USA) (En,Fr,Es)"
+	region "USA"
+	serial "ASHE"
+	rom ( name "Asphalt - Urban GT (USA) (En,Fr,Es).nds" size 33554432 crc 4F604498 md5 0B6F9335CE684224FE272C011E6CA085 sha1 0B491C7FCEC58CE4A66904C73FE3025F3712C485 serial "ASHE" )
+)
+game (
+	name "Asphalt - Urban GT 2 (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "A4PP"
+	rom ( name "Asphalt - Urban GT 2 (Europe) (En,Fr,De,Es,It).nds" size 33554432 crc F830431E md5 9343D2A83C85CC39222E01A79E203283 sha1 3B6CE440E98B8B32511948F3F94B27759C6596A6 serial "A4PP" )
+)
+game (
+	name "Asphalt - Urban GT 2 (USA) (En,Fr,Es)"
+	region "USA"
+	serial "A4PE"
+	rom ( name "Asphalt - Urban GT 2 (USA) (En,Fr,Es).nds" size 33554432 crc 02D209BB md5 6FEFED7D6251DEB1836342C3CBD63D80 sha1 7787F4387712779AEB25D4305E79F92D7DAA6A1D serial "A4PE" )
+)
+game (
+	name "Assassin's Creed - Altair's Chronicles (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "YAHP"
+	rom ( name "Assassin's Creed - Altair's Chronicles (Europe) (En,Fr,De,Es,It).nds" size 67108864 crc 1F7E982C md5 A221730D2D3BCF81CAB4167317A40009 sha1 2B7053E200DB5F3890281F8C8EB36C71E879EC12 serial "YAHP" )
+)
+game (
+	name "Assassin's Creed - Altair's Chronicles (USA) (En,Fr,Es)"
+	region "USA"
+	serial "YAHE"
+	rom ( name "Assassin's Creed - Altair's Chronicles (USA) (En,Fr,Es).nds" size 67108864 crc 38A9A637 md5 297871150F8F0EDB8636EF9DFC18CD9F sha1 008981A459B5883E3BD24E18433176F44641C1C9 serial "YAHE" )
+)
+game (
+	name "Assassin's Creed II - Discovery (Europe) (En,Fr,De,Es,It,Nl,Sv,No,Da) (NDSi Enhanced)"
+	region "Europe"
+	serial "VACV"
+	rom ( name "Assassin's Creed II - Discovery (Europe) (En,Fr,De,Es,It,Nl,Sv,No,Da) (NDSi Enhanced).nds" size 67108864 crc 37D52B38 md5 E440432DEA0C81A4598FD1DDF653B28C sha1 AE9339B70F20303A24A49D96196D70B369F2228A serial "VACV" )
+)
+game (
+	name "Assassin's Creed II - Discovery (USA) (En,Fr,Es) (NDSi Enhanced)"
+	region "USA"
+	serial "VACE"
+	rom ( name "Assassin's Creed II - Discovery (USA) (En,Fr,Es) (NDSi Enhanced).nds" size 67108864 crc 3B902942 md5 137C38312A41A11DFF3BBA10AD383019 sha1 66A04A7D73D193C716A9963246B2E7CD3362F6E1 serial "VACE" )
+)
+game (
+	name "Asterix & Obelix XXL 2 - Mission Wifix (Europe) (En,Fr,De,Es,It,Nl)"
+	region "Europe"
+	serial "AOXP"
+	rom ( name "Asterix & Obelix XXL 2 - Mission Wifix (Europe) (En,Fr,De,Es,It,Nl).nds" size 33554432 crc 5F50B884 md5 4F3E817927433E8E9C6B8217EC59E6C8 sha1 FB9091228C815D8239FAD41DB1D29B937EED8354 serial "AOXP" )
+)
+game (
+	name "Asterix - Brain Trainer (Europe) (En,Fr,De,Es,It,Nl)"
+	region "Europe"
+	serial "CBTP"
+	rom ( name "Asterix - Brain Trainer (Europe) (En,Fr,De,Es,It,Nl).nds" size 33554432 crc D50CF5E3 md5 605455F6B4BAE8F40544AC5748C16647 sha1 3B7E6595D83EE9535337360525BF9FB72D73F990 serial "CBTP" )
+)
+game (
+	name "Asterix - These Romans Are Crazy! (Europe) (En,Fr,De,It,Nl)"
+	region "Europe"
+	serial "BAXP"
+	rom ( name "Asterix - These Romans Are Crazy! (Europe) (En,Fr,De,It,Nl).nds" size 67108864 crc 06069093 md5 086944A1F82BDCFB20ED8F5190E07400 sha1 553CE918446E696B3437C299D3F44836FA1AA691 serial "BAXP" )
+)
+game (
+	name "Asterix at the Olympic Games (Europe) (En,Fr,De,Es,It,Nl)"
+	region "Europe"
+	serial "YRZP"
+	rom ( name "Asterix at the Olympic Games (Europe) (En,Fr,De,Es,It,Nl).nds" size 16777216 crc F86A851D md5 FD045CF852319EAFE4D17853EAE95642 sha1 4C4FEF43D40A2008EA8C338EC64415339AEE7016 serial "YRZP" )
+)
+game (
+	name "Astro Boy - The Video Game (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "BTWP"
+	rom ( name "Astro Boy - The Video Game (Europe) (En,Fr,De,Es,It).nds" size 33554432 crc B701BBB0 md5 A2C43D83903117CCA2BCEE0286014E07 sha1 CB813A3FED751E8C99CE0C3F1F7C3403965FA5AE serial "BTWP" )
+)
+game (
+	name "Astro Boy - The Video Game (USA) (En,Fr,De,Es,It)"
+	region "USA"
+	serial "BTWE"
+	rom ( name "Astro Boy - The Video Game (USA) (En,Fr,De,Es,It).nds" size 33554432 crc 6AB7327F md5 CDE45A3DDFD1B6419FE316674DD25C78 sha1 4EFE4D28FA9D1AD1760D63F599D737CBC5941E9E serial "BTWE" )
+)
+game (
+	name "Astro Invaders (USA) (En,Fr,Es)"
+	region "USA"
+	serial "BA8E"
+	rom ( name "Astro Invaders (USA) (En,Fr,Es).nds" size 8388608 crc A453F0FB md5 F9533BC8B9783CBF1F07F8FA7D92C57E sha1 F87C07079F909D9CC0BC0AC083D75B97F09B41D7 serial "BA8E" )
+)
+game (
+	name "Astrology (Europe) (En,Fr,De,Es,It)"
+	region "Europe"
+	serial "CUEP"
+	rom ( name "Astrology (Europe) (En,Fr,De,Es,It).nds" size 16777216 crc E5F9119E md5 87A65C11705604A7D0E25D15CC311D7E sha1 617319B565EDE1F25B255EF3DD0C1F3A77F92E2A serial "CUEP" )
+)
+game (
+	name "Astrology DS - The Stars in Your Hands (USA) (En,Fr,Es)"
+	region "USA"
+	serial "CXPE"
+	rom ( name "Astrology DS - The Stars in Your Hands (USA) (En,Fr,Es).nds" size 33554432 crc 5002D8B7 md5 1A9E49F0DD534CC5DB51B1819851EEC4 sha1 8F1C499C59AF7F2598D76016B485F272D71D9FF6 serial "CXPE" )
+)
+game (
+	name "Atama de Do! Kotencotenco (Japan)"
+	region "Japan"
+	serial "AOUJ"
+	rom ( name "Atama de Do! Kotencotenco (Japan).nds" size 16777216 crc FB6D2809 md5 36FC99E3ADC53DE28D842C4BBD432763 sha1 8BBF1C6D2BC5AE650DAE3C3B06E994CBF8BE7B8E serial "AOUJ" )
+)
+game (
+	name "Atama no Kaiten no Training - Rubik's Cube & Chou Yuumei Puzzle-tachi (Japan)"
+	region "Japan"
+	serial "A2AJ"
+	rom ( name "Atama no Kaiten no Training - Rubik's Cube & Chou Yuumei Puzzle-tachi (Japan).nds" size 67108864 crc E259D302 md5 31A00C45C2BE26CB6DE1A61A01DD9AE6 sha1 7137FBE77FB70AFE5DA72689478563A1FEE7333D serial "A2AJ" )
+)
+game (
+	name "Atama o Kitaete Asobu Taisen Yajirushi Puzzle - Puppynu Vector One (Japan)"
+	region "Japan"
+	serial "A8PJ"
+	rom ( name "Atama o Kitaete Asobu Taisen Yajirushi Puzzle - Puppynu Vector One (Japan).nds" size 33554432 crc 063A95AC md5 1E5CC997643B947948D0B281EC17FEB9 sha1 611DAE2AECC4DD5D82E080212D481005EEBBE9F0 serial "A8PJ" )
+)
+game (
+	name "Atari Greatest Hits - Volume 1 (Europe) (En,Fr,De)"
+	region "Europe"
+	serial "BR6P"
+	rom ( name "Atari Greatest Hits - Volume 1 (Europe) (En,Fr,De).nds" size 33554432 crc 79A8292B md5 10A2A59BCB458EC7E85C1B0C54FB16C6 sha1 4EAC66A0B2FD7D222B7B4F4E67C032ED943161A9 serial "BR6P" )
+)
+game (
+	name "Atari Greatest Hits - Volume 1 (USA)"
+	region "USA"
+	serial "BR6E"
+	rom ( name "Atari Greatest Hits - Volume 1 (USA).nds" size 33554432 crc 85EC906F md5 03FA32241D375C3AD4C0CDFD59E796EB sha1 4591023079A6CB5CBD053EEEE7D8A3DF90953E1C serial "BR6E" )
+)
+game (
+	name "Atari Greatest Hits - Volume 2 (USA)"
+	region "USA"
+	serial "BR7E"
+	rom ( name "Atari Greatest Hits - Volume 2 (USA).nds" size 33554432 crc DE805B2A md5 F488070A011363516D9D929125B66DEA sha1 0DE023823F49DE115103E0EE943F1CCE8F7C2976 serial "BR7E" )
+)
+game (
+	name "Atarimix - Happy 10 Games (Japan)"
+	region "Japan"
+	serial "ATAJ"
+	rom ( name "Atarimix - Happy 10 Games (Japan).nds" size 16777216 crc FFC48B7C md5 ECF15926BBA1AF779E0F54F72B721866 sha1 033C4D8CF17FD5D70C167A22C5E4F80FA1287D57 serial "ATAJ" )
+)
+game (
+	name "Atelier Annie - Alchemists of Sera Island (USA)"
+	region "USA"
+	serial "CA2E"
+	rom ( name "Atelier Annie - Alchemists of Sera Island (USA).nds" size 134217728 crc D4A4803A md5 F46BD64EE54437FE7330A83035DBB6A0 sha1 FEA09DFC13373A59B1ED07253BB9121585DAF134 serial "CA2E" )
+)
+game (
+	name "Atlantic Quest (Europe) (Fr,De)"
+	region "Europe"
+	serial "B6QY"
+	rom ( name "Atlantic Quest (Europe) (Fr,De).nds" size 8388608 crc 28546238 md5 B9188C3156C0C545CF91031E9F8C0882 sha1 585971ABD3320FAAC31AF5B968E57EC5AAF851AF serial "B6QY" )
+)
+game (
+	name "Atlantic Quest + Galactic Quest (Europe) (En,Fr,De,Nl)"
+	region "Europe"
+	serial "TJDX"
+	rom ( name "Atlantic Quest + Galactic Quest (Europe) (En,Fr,De,Nl).nds" size 16777216 crc 141EB2C9 md5 0B71AE05C7AD0A3534394C2C9FEA68FA sha1 26011FD7E2BA1A929C897070917BC26D97098B91 serial "TJDX" )
+)
+game (
+	name "Atsumare! Power Pro Kun no DS Koushien (Japan)"
+	region "Japan"
+	serial "APXJ"
+	rom ( name "Atsumare! Power Pro Kun no DS Koushien (Japan).nds" size 67108864 crc BF616E27 md5 90B1FF1874F65A205E0DCF1EC1BCAA83 sha1 67CE30E66B263204AAD82CFA15DCCFDC47321C32 serial "APXJ" )
+)
+game (
+	name "Atsumare! Power Pro Kun no DS Koushien (Japan) (Rev 1)"
+	region "Japan"
+	serial "APXJ"
+	rom ( name "Atsumare! Power Pro Kun no DS Koushien (Japan) (Rev 1).nds" size 67108864 crc EB7E8F54 md5 515031803AEA602E90A822432231405B sha1 EC19244D3B2F37488484C47BF1E2185054520188 serial "APXJ" )
+)
+game (
+	name "Atsumete! Kirby (Japan)"
+	region "Japan"
+	serial "TADJ"
+	rom ( name "Atsumete! Kirby (Japan).nds" size 134217728 crc 47DB3918 md5 C712418B19ADF8C24DF639F2A9CC4616 sha1 4F1C377D6316E58F282187BE72A40655EC9A9825 serial "TADJ" )
+)
+game (
+	name "Atsumete! Kirby (Japan) (Wii U Virtual Console)"
+	region "Japan"
+	serial "WUP-N-DAVJ"
+	rom ( name "Atsumete! Kirby (Japan) (Wii U Virtual Console).nds" size 134217728 crc 620C3396 md5 5E827095CD5A455EA64EAE317ADE97D0 sha1 7D35E48D397049287D190E92C5CD9F95F966B4A6 serial "WUP-N-DAVJ" )
+)
+game (
+	name "Au Pays des PooYoos - Activites d'Eveil (France)"
+	region "France"
+	serial "BYPF"
+	rom ( name "Au Pays des PooYoos - Activites d'Eveil (France).nds" size 33554432 crc 5961F95A md5 0AC3D244E7DEB53E2BE9FB48DB963A30 sha1 AD1A3DDCB459B990A13B3EF398DCA3D7739B5212 serial "BYPF" )
+)
+game (
+	name "Auto Escuela - Aprueba Conmigo (Spain)"
+	region "Spain"
+	serial "BAQS"
+	rom ( name "Auto Escuela - Aprueba Conmigo (Spain).nds" size 134217728 crc E5C1D3D6 md5 29EA3442DD516599EC32F6A9CD1BB462 sha1 53E266B8CB44FDF4D6B3546D204D199253E7FE78 serial "BAQS" )
+)
+game (
+	name "Autoescuela Trainer (Spain)"
+	region "Spain"
+	serial "CAWS"
+	rom ( name "Autoescuela Trainer (Spain).nds" size 67108864 crc 409B85D3 md5 8035B55A8C3A96A48AD0403C5019F91B sha1 9DE3F41D7CDA59374F96855E2DCD83E89FA7BD2C serial "CAWS" )
+)
+game (
+	name "Avalon Code (Europe) (En,Fr,De)"
+	
