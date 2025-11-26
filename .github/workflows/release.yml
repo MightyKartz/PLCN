@@ -39,6 +39,31 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
+    - name: Setup LibretroDB
+      shell: bash
+      run: |
+        echo "Cloning libretro-database..."
+        git clone --depth 1 https://github.com/libretro/libretro-database.git temp_db
+        
+        echo "Creating data directories..."
+        mkdir -p "data/libretro-db/dat"
+        
+        echo "Copying Console DATs..."
+        # Copy all standard DATs
+        cp temp_db/dat/*.dat "data/libretro-db/dat/"
+        
+        echo "Copying FBNeo Arcade DATs..."
+        # Copy FBNeo split DATs (critical for Arcade)
+        cp temp_db/metadat/fbneo-split/*.dat "data/libretro-db/dat/"
+        
+        echo "Cleaning up..."
+        rm -rf temp_db
+        
+        echo "Verifying DAT files..."
+        ls -lh "data/libretro-db/dat/" | head -n 10
+        echo "Total DAT files: $(ls "data/libretro-db/dat/" | wc -l)"
+
+
     - name: Build with PyInstaller
       run: |
         pyinstaller plcn.spec
