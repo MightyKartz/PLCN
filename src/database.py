@@ -357,10 +357,13 @@ class DatabaseManager:
         row = cursor.fetchone()
         return (row['chinese_name'], row['english_name']) if row else (None, None)
 
-    def fuzzy_search_by_english(self, query, threshold=80, system=None):
+    def fuzzy_search_by_english(self, query, threshold=50, system=None):
         """
-        Fuzzy search for English name in the database.
+        Fuzzy search for English name in the database using normalized matching.
         Returns the Chinese name if a match is found with score >= threshold.
+        
+        Uses normalized names (alphanumeric only, lowercase) to better handle
+        variations like "1943kai" vs "1943 Kai" or "metalslug" vs "Metal Slug".
         """
         try:
             from rapidfuzz import process, fuzz
@@ -374,27 +377,39 @@ class DatabaseManager:
             systems = self.expand_system_mapping(system)
             if len(systems) > 1:
                 placeholders = ' OR '.join(['system LIKE ?' for _ in systems])
-                query_sql = f'SELECT english_name FROM translations WHERE {placeholders}'
+                query_sql = f'SELECT english_name, chinese_name FROM translations WHERE {placeholders}'
                 params = [f'{s}%' for s in systems]
                 cursor.execute(query_sql, params)
             else:
-                cursor.execute('SELECT english_name FROM translations WHERE system LIKE ?', (f'{systems[0]}%',))
+                cursor.execute('SELECT english_name, chinese_name FROM translations WHERE system LIKE ?', (f'{systems[0]}%',))
         else:
-            cursor.execute('SELECT english_name FROM translations')
+            cursor.execute('SELECT english_name, chinese_name FROM translations')
         
-        candidates = [row[0] for row in cursor.fetchall()]
+        candidates = [(row[0], row[1]) for row in cursor.fetchall()]
         
         if not candidates:
             return None
-            
-        # Extract best match
-        result = process.extractOne(query, candidates, scorer=fuzz.token_sort_ratio)
+        
+        # Normalize query
+        norm_query = self.normalize_name(query)
+        
+        # Create mapping: normalized_name -> (original_english, chinese)
+        norm_map = {}
+        for eng, cn in candidates:
+            norm_eng = self.normalize_name(eng)
+            if norm_eng not in norm_map:
+                norm_map[norm_eng] = (eng, cn)
+        
+        # Fuzzy match on normalized names
+        norm_candidates = list(norm_map.keys())
+        result = process.extractOne(norm_query, norm_candidates, scorer=fuzz.ratio)
         
         if result:
-            match, score, _ = result
+            match_norm, score, _ = result
             if score >= threshold:
-                print(f"Fuzzy match found: '{query}' -> '{match}' (Score: {score})")
-                return self.search_by_english(match, system=system)
+                original_eng, chinese = norm_map[match_norm]
+                print(f"Fuzzy match found: '{query}' (norm: '{norm_query}') -> '{original_eng}' (norm: '{match_norm}') (Score: {score})")
+                return chinese
         
         return None
 
