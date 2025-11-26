@@ -188,7 +188,7 @@ class LibretroDB:
     def get_standard_name(self, name):
         """
         Returns the standard English name for a given input name (fuzzy matched).
-        If multiple matches, tries to match region.
+        Uses multiple strategies: exact match, prefix match, fuzzy match.
         Returns None if no match found.
         """
         if not self.standard_names:
@@ -196,11 +196,20 @@ class LibretroDB:
         
         norm_name = self.normalize_name(name)
         
-        # Try exact normalized match first
+        # Strategy 1: Try exact normalized match
         candidates = self.standard_names.get(norm_name)
         
         if not candidates:
-            # Try fuzzy matching on normalized names
+            # Strategy 2: Try prefix match (for ROM names like "1943kai" matching "1943kaimidwaykaisen")
+            # This handles "shortname" matching "shortname: Full Title"
+            for db_norm, db_names in self.standard_names.items():
+                if db_norm.startswith(norm_name) and len(norm_name) >= 4:  # Minimum 4 chars to avoid false positives
+                    candidates = db_names
+                    print(f"LibretroDB prefix match: '{name}' (norm: '{norm_name}') -> '{db_norm}' -> '{db_names[0]}'")
+                    break
+        
+        if not candidates:
+            # Strategy 3: Try fuzzy matching on normalized names
             try:
                 from rapidfuzz import process, fuzz
                 result = process.extractOne(
