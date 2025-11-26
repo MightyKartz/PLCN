@@ -25,3 +25,6 @@ server.log
 
 # Agent
 .gemini/
+
+# Data
+data/libretro-db/dat/*.dat
