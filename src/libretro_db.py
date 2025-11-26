@@ -29,13 +29,25 @@ class LibretroDB:
         # URL encode the system name for the URL
         encoded_name = urllib.parse.quote(system_name)
         
-        base_urls = [
+        # Special handling for FBNeo and other arcade systems
+        base_urls = []
+        
+        # FBNeo Arcade Games has special location
+        if 'FBNeo' in system_name or system_name in ['Arcade - CPS1', 'Arcade - CPS2', 'Arcade - CPS3', 'Arcade - NEOGEO']:
+            base_urls.append(f"https://raw.githubusercontent.com/libretro/libretro-database/master/metadat/fbneo-split/{encoded_name}.dat")
+        
+        # SNK Neo Geo has its own location
+        if 'Neo Geo' in system_name or 'NEOGEO' in system_name:
+            base_urls.append(f"https://raw.githubusercontent.com/libretro/libretro-database/master/dat/SNK%20-%20Neo%20Geo.dat")
+        
+        # Standard locations
+        base_urls.extend([
             f"https://raw.githubusercontent.com/libretro/libretro-database/master/dat/{encoded_name}.dat",
             f"https://raw.githubusercontent.com/libretro/libretro-database/master/metadat/redump/{encoded_name}.dat",
             f"https://raw.githubusercontent.com/libretro/libretro-database/master/metadat/no-intro/{encoded_name}.dat",
             f"https://raw.githubusercontent.com/libretro/libretro-database/master/metadat/libretro-dats/{encoded_name}.dat",
             f"https://raw.githubusercontent.com/libretro/libretro-database/master/metadat/tosec/{encoded_name}.dat",
-        ]
+        ])
         
         target_path = self.get_dat_path(system_name)
         
@@ -54,7 +66,7 @@ class LibretroDB:
             
     def load_system_dat(self, system_name):
         """Loads the DAT file(s) for the system, downloading if necessary.
-        For mapped systems (like FBNeo), loads all mapped system DATs."""
+        For mapped systems (like FBNeo), loads all mapped system DATs plus the main system DAT."""
         
         self.standard_names = {} # Clear previous entries before loading new system(s)
         
@@ -62,16 +74,25 @@ class LibretroDB:
         base_system = system_name.split('(')[0].strip()
         
         if base_system in self.SYSTEM_MAPPINGS:
-            # Load all mapped systems
-            mapped_systems = self.SYSTEM_MAPPINGS[base_system]
-            print(f"Loading {len(mapped_systems)} DAT files for {base_system}...")
-            
+            # For mapped systems, try to load the main system DAT first
+            print(f"Loading main DAT for {base_system}...")
             loaded_count = 0
+            
+            # Try loading the main system DAT (e.g., "FBNeo - Arcade Games")
+            if self._load_single_dat(base_system):
+                loaded_count += 1
+                print(f"Loaded main {base_system} DAT")
+            
+            # Also load all mapped subsystems
+            mapped_systems = self.SYSTEM_MAPPINGS[base_system]
+            print(f"Loading {len(mapped_systems)} subsystem DAT files...")
+            
             for mapped_system in mapped_systems:
                 if self._load_single_dat(mapped_system):
                     loaded_count += 1
             
-            print(f"Loaded {loaded_count}/{len(mapped_systems)} normalized entries from {base_system}.")
+            total_entries = len(self.standard_names)
+            print(f"Loaded {loaded_count} DAT file(s) with {total_entries} total entries for {base_system}.")
             return loaded_count > 0
         else:
             # Single system
