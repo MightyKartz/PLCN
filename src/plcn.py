@@ -416,8 +416,10 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path):
                     standard_english_name = std_en
                     matched_english_name = candidate
         
+        
         # Determine new_label and thumbnail_source
-        if translated_label:
+        # Check if we have a Chinese translation (contains Chinese characters)
+        if translated_label and any('\u4e00' <= char <= '\u9fff' for char in translated_label):
             # Priority 1: Use Chinese translation
             new_label = translated_label
             thumbnail_source = standard_english_name if standard_english_name else matched_english_name
