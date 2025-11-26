@@ -22,7 +22,16 @@ class LibretroDB:
         self.standard_names = {} # normalized_name -> standard_english_name
         
     def get_dat_path(self, system_name):
-        return os.path.join(self.dat_dir, f"{system_name}.dat")
+        """Returns the path to the DAT file for the given system."""
+        # Check if running in frozen mode (PyInstaller)
+        if getattr(sys, 'frozen', False):
+            # Check bundled data first
+            bundled_path = os.path.join(sys._MEIPASS, 'data', 'libretro-db', 'dat', f'{system_name}.dat')
+            if os.path.exists(bundled_path):
+                return bundled_path
+                
+        # Check local data directory
+        return os.path.join(self.dat_dir, f'{system_name}.dat')
         
     def download_dat(self, system_name):
         """Downloads the DAT file for the given system from GitHub, trying multiple locations."""

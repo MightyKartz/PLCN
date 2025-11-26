@@ -544,30 +544,29 @@ class DatabaseManager:
                 return []
             
             # Fuzzy search on English names
-            # Use partial_ratio to find candidates, then filter
-            matches = process.extract(keyword, english_names, scorer=fuzz.partial_ratio, limit=limit*2) # Get more candidates to filter
+            # Hybrid approach:
+            # 1. For short queries (< 5 chars), use partial_ratio with word boundary check
+            # 2. For long queries, use token_sort_ratio to avoid "contained" matches in unrelated long titles
             
+            is_short_query = len(keyword) < 5
+            
+            if is_short_query:
+                # Use partial_ratio for short queries to find "Age" in "Age of Empires"
+                matches = process.extract(keyword, english_names, scorer=fuzz.partial_ratio, limit=limit*2)
+                keyword_regex = re.compile(r'\b' + re.escape(keyword), re.IGNORECASE)
+            else:
+                # Use token_sort_ratio for long queries to penalize length mismatches
+                # e.g. "The Age of Heroes" vs "Marvel Vs. Capcom..."
+                matches = process.extract(keyword, english_names, scorer=fuzz.token_sort_ratio, limit=limit*2)
+
             print(f"DEBUG search_by_keyword: Top matches (before filtering): {[(m[0], m[1]) for m in matches[:5]]}")
-            
-            import re
-            # Regex to check if keyword appears as a whole word or at start of a word
-            # e.g. "age" matches "Age of Empires" but NOT "Rage"
-            # \b matches word boundary.
-            # But we want to allow prefix matching too? "Age" -> "Age..."
-            # So \b{keyword} is good.
-            # But wait, partial_ratio handles substrings.
-            # If query is short, we want to be strict about word boundaries.
-            # If query is long, we can be looser?
-            
-            is_short_query = len(keyword) < 4
-            keyword_regex = re.compile(r'\b' + re.escape(keyword), re.IGNORECASE)
             
             # Build results from matches
             count = 0
             for match_name, score, _ in matches:
                 if score < 60: continue
                 
-                # Apply stricter filtering for short queries or high partial matches that might be "contained" matches
+                # Apply stricter filtering for short queries
                 if is_short_query:
                     # For short queries, require word boundary match
                     if not keyword_regex.search(match_name):

@@ -253,19 +253,26 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
             db = DatabaseManager()
             
             # Check if database is empty and import CSVs if needed
+            # Check if database needs import (run once per session or if empty)
             conn = db.get_connection()
             cursor = conn.cursor()
             cursor.execute("SELECT count(*) FROM translations")
             count = cursor.fetchone()[0]
             print(f"DEBUG search_db: Database contains {count} translations")
             
-            if count == 0:
-                print(f"Database empty. Importing CSVs from {rom_name_cn_path}...")
+            # Use a class attribute to track if we've checked for updates this session
+            if not hasattr(self.__class__, 'db_checked'):
+                self.__class__.db_checked = False
+            
+            if count == 0 or not self.__class__.db_checked:
+                print(f"Checking for new data in {rom_name_cn_path}...")
                 db.import_csvs(rom_name_cn_path)
+                self.__class__.db_checked = True
+                
                 # Check count again after import
                 cursor.execute("SELECT count(*) FROM translations")
                 count = cursor.fetchone()[0]
-                print(f"DEBUG search_db: After import, database contains {count} translations")
+                print(f"DEBUG search_db: After import/check, database contains {count} translations")
             
             results = db.search_by_keyword(keyword, system=system)
             db.close()
