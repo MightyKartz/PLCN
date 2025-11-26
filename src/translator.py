@@ -112,7 +112,15 @@ class Translator:
                 print(f"LibretroDB standard name: '{text}' -> '{standard_name}'")
                 return standard_name, standard_name
 
-        # 6. Fallback to LLM (if configured)
+        # 6. For Arcade/FBNeo games, clean the ROM name for better presentation
+        # This handles cases where LibretroDB has no data
+        if self.system_name and ('Arcade' in self.system_name or 'FBNeo' in self.system_name):
+            cleaned = self._clean_arcade_rom_name(text)
+            if cleaned != text:
+                print(f"Cleaned arcade ROM name: '{text}' -> '{cleaned}'")
+                return cleaned, cleaned
+
+        # 7. Fallback to LLM (if configured)
         if self.llm_client:
             llm_result = self.translate_with_llm(text)
             if llm_result:
@@ -120,7 +128,33 @@ class Translator:
         
         return text, text
 
+    def _clean_arcade_rom_name(self, name):
+        """
+        Cleans FBNeo/MAME ROM names to be more human-readable.
+        Examples:
+          - "1943kai" -> "1943 Kai"
+          - "sfii" -> "SFII"  (keep uppercase for well-known acronyms)
+          - "metalslug" -> "Metal Slug"
+        """
+        if not name:
+            return name
+        
+        import re
+        
+        # Add space before common suffixes
+        name = re.sub(r'(\d+)(kai|ex|plus|turbo|super|special|dx)', r'\1 \2', name, flags=re.IGNORECASE)
+        
+        # Add space between lowercase and uppercase (camelCase -> Camel Case)
+        name = re.sub(r'([a-z])([A-Z])', r'\1 \2', name)
+        
+        # Title case if all lowercase
+        if name.islower():
+            # Split by common separators and title case each word
+            words = re.split(r'([^a-zA-Z0-9]+)', name)
+            name = ''.join(word.title() if word.isalnum() else word for word in words)
+        
+        return name.strip()
+
     def translate_with_llm(self, text):
         # Placeholder for LLM integration
         return text
-
