@@ -102,7 +102,17 @@ class Translator:
              if fuzzy_cn:
                  return fuzzy_cn, text
 
-        # 5. Fallback to LLM (if configured)
+        # 5. Try LibretroDB for standard English name
+        # This helps games without Chinese translations get standardized names
+        if self.libretro_db:
+            standard_name = self.libretro_db.get_standard_name(text)
+            if standard_name and standard_name != text:
+                # Found standard English name in LibretroDB
+                # No Chinese translation available, use standard English as both label and thumbnail source
+                print(f"LibretroDB standard name: '{text}' -> '{standard_name}'")
+                return standard_name, standard_name
+
+        # 6. Fallback to LLM (if configured)
         if self.llm_client:
             llm_result = self.translate_with_llm(text)
             if llm_result:

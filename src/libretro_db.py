@@ -170,8 +170,32 @@ class LibretroDB:
         If multiple matches, tries to match region.
         Returns None if no match found.
         """
+        if not self.standard_names:
+            return None
+        
         norm_name = self.normalize_name(name)
+        
+        # Try exact normalized match first
         candidates = self.standard_names.get(norm_name)
+        
+        if not candidates:
+            # Try fuzzy matching on normalized names
+            try:
+                from rapidfuzz import process, fuzz
+                result = process.extractOne(
+                    norm_name,
+                    list(self.standard_names.keys()),
+                    scorer=fuzz.ratio
+                )
+                
+                if result and result[1] >= 80:  # High threshold for LibretroDB
+                    matched_norm = result[0]
+                    candidates = self.standard_names[matched_norm]
+                    print(f"LibretroDB fuzzy match: '{name}' (norm: '{norm_name}') -> '{matched_norm}' (Score: {result[1]})")
+                else:
+                    return None
+            except ImportError:
+                return None
         
         if not candidates:
             return None
