@@ -25,18 +25,35 @@ Download the latest release for your platform from the [Releases](https://github
 
 ## Usage
 
-1. **Run the application**:
-   - Windows: Run `.\PLCN-Windows.exe ui` in command line.
-   - macOS: Run `./PLCN-macOS ui` in terminal.
-   - Linux: Run `./PLCN-Linux ui` in terminal.
-   
-   *Note: Running with `ui` command will automatically open the Web UI.*
+### Quick Start
 
-2. **Configure via Web UI**:
+1. **Download and Extract**: Download the latest release from the [Releases](https://github.com/MightyKartz/PLCN/releases) page.
+
+2. **Grant Execute Permission** (macOS/Linux):
+   ```bash
+   # macOS
+   chmod +x PLCN-macOS
+   
+   # Linux
+   chmod +x PLCN-Linux
+   ```
+   
+   > **macOS Security Note**: When running for the first time, if you see "cannot be opened because the developer cannot be verified", go to **System Preferences > Security & Privacy** and click "Open Anyway".
+
+3. **Run the Application**:
+   - **Windows**: Double-click `PLCN-Windows.exe` or run from command line
+   - **macOS**: Double-click `PLCN-macOS` or run `./PLCN-macOS` in terminal
+   - **Linux**: Run `./PLCN-Linux` in terminal
+   
+   The Web UI will automatically open in your default browser.
+
+### Web Interface
+
+1. **Configuration**:
    - **Single Mode**: Select a single `.lpl` file, choose the system (e.g., `Sony - PlayStation`), and set the thumbnails directory.
    - **Batch Mode**: Select a directory containing multiple `.lpl` files to process them all.
 
-3. **Start Processing**:
+2. **Start Processing**:
    - Click "Start Run" to begin.
    - View real-time logs in the browser window.
 

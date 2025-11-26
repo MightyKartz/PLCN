@@ -25,19 +25,36 @@ PLCN 是一个专为 RetroArch 用户设计的强大工具，可以自动将播�
 
 ## 使用方法
 
-1. **运行程序**：
-   - Windows: 在命令行中运行 `.\PLCN-Windows.exe ui`
-   - macOS: 在终端中运行 `./PLCN-macOS ui`
-   - Linux: 在终端中运行 `./PLCN-Linux ui`
-   
-   *注意：运行 `ui` 命令会自动在默认浏览器中打开 Web 配置界面。*
+### 快速开始
 
-2. **Web 界面配置**：
+1. **下载并解压**：从 [Releases](https://github.com/MightyKartz/PLCN/releases) 下载最新版本。
+
+2. **赋予执行权限**（macOS/Linux）：
+   ```bash
+   # macOS
+   chmod +x PLCN-macOS
+   
+   # Linux
+   chmod +x PLCN-Linux
+   ```
+   
+   > **macOS 安全提示**：首次运行时，如果遇到"无法打开，因为无法验证开发者"的提示，请前往**系统偏好设置 > 安全性与隐私**，点击"仍要打开"按钮。
+
+3. **运行程序**：
+   - **Windows**: 双击 `PLCN-Windows.exe` 或在命令行运行
+   - **macOS**: 双击 `PLCN-macOS` 或在终端运行 `./PLCN-macOS`
+   - **Linux**: 在终端运行 `./PLCN-Linux`
+   
+   程序会自动在默认浏览器中打开 Web 界面。
+
+### Web 界面操作
+
+1. **配置**：
    - **单个处理**：选择单个 `.lpl` 文件，选择对应的系统（如 `Sony - PlayStation`），并设置缩略图保存目录。
    - **批量处理**：选择包含多个 `.lpl` 文件的目录，即可批量处理所有列表。
 
-3. **开始处理**：
-   - 点击“开始运行”按钮。
+2. **开始处理**：
+   - 点击"开始运行"按钮。
    - 在浏览器窗口下方查看实时的运行日志。
 
 ## 致谢与鸣谢
