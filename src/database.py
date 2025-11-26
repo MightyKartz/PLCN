@@ -169,7 +169,10 @@ class DatabaseManager:
                         if len(first_row) >= 2:
                             english_name = first_row[0].strip()
                             chinese_name = first_row[1].strip()
-                            if english_name and chinese_name:
+                            if not chinese_name:
+                                chinese_name = english_name
+                            
+                            if english_name:
                                 try:
                                     cursor.execute('''
                                         INSERT OR IGNORE INTO translations (english_name, chinese_name, system)
@@ -192,8 +195,10 @@ class DatabaseManager:
                                 mame_name = row[0].strip()
                                 english_name = row[1].strip()
                                 chinese_name = row[2].strip()
+                                if not chinese_name:
+                                    chinese_name = english_name
                                 
-                                if mame_name and english_name and chinese_name:
+                                if mame_name and english_name:
                                     try:
                                         # Store EN Name as english_name, CN Name as chinese_name
                                         cursor.execute('''
@@ -223,8 +228,10 @@ class DatabaseManager:
                             if len(row) >= 2:
                                 english_name = row[0].strip()
                                 chinese_name = row[1].strip()
+                                if not chinese_name:
+                                    chinese_name = english_name
                                 
-                                if english_name and chinese_name:
+                                if english_name:
                                     try:
                                         cursor.execute('''
                                             INSERT OR IGNORE INTO translations (english_name, chinese_name, system)
@@ -537,23 +544,51 @@ class DatabaseManager:
                 return []
             
             # Fuzzy search on English names
-            matches = process.extract(keyword, english_names, scorer=fuzz.partial_ratio, limit=limit)
+            # Use partial_ratio to find candidates, then filter
+            matches = process.extract(keyword, english_names, scorer=fuzz.partial_ratio, limit=limit*2) # Get more candidates to filter
             
-            print(f"DEBUG search_by_keyword: Top 5 matches: {[(m[0], m[1]) for m in matches[:5]]}")
+            print(f"DEBUG search_by_keyword: Top matches (before filtering): {[(m[0], m[1]) for m in matches[:5]]}")
+            
+            import re
+            # Regex to check if keyword appears as a whole word or at start of a word
+            # e.g. "age" matches "Age of Empires" but NOT "Rage"
+            # \b matches word boundary.
+            # But we want to allow prefix matching too? "Age" -> "Age..."
+            # So \b{keyword} is good.
+            # But wait, partial_ratio handles substrings.
+            # If query is short, we want to be strict about word boundaries.
+            # If query is long, we can be looser?
+            
+            is_short_query = len(keyword) < 4
+            keyword_regex = re.compile(r'\b' + re.escape(keyword), re.IGNORECASE)
             
             # Build results from matches
+            count = 0
             for match_name, score, _ in matches:
-                print(f"DEBUG search_by_keyword: Checking match '{match_name}' with score {score}")
-                if score >= 60:  # Use threshold (lowered from 80)
-                    # Find the corresponding record
-                    for en, cn, sys in candidates:
-                        if en == match_name:
-                            results.append({
-                                'english_name': en,
-                                'chinese_name': cn,
-                                'system': sys
-                            })
-                            break
+                if score < 60: continue
+                
+                # Apply stricter filtering for short queries or high partial matches that might be "contained" matches
+                if is_short_query:
+                    # For short queries, require word boundary match
+                    if not keyword_regex.search(match_name):
+                        print(f"DEBUG search_by_keyword: Skipping '{match_name}' (score {score}) - failed word boundary check")
+                        continue
+                
+                print(f"DEBUG search_by_keyword: Accepting match '{match_name}' with score {score}")
+                
+                # Find the corresponding record
+                for en, cn, sys in candidates:
+                    if en == match_name:
+                        results.append({
+                            'english_name': en,
+                            'chinese_name': cn,
+                            'system': sys
+                        })
+                        count += 1
+                        break
+                
+                if count >= limit:
+                    break
             
         print(f"DEBUG search_by_keyword: Returning {len(results)} results")
         return results
