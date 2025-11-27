@@ -272,33 +272,81 @@ class LibretroDB:
         all_names = list(all_names)
         
         # Use rapidfuzz for searching
+
         try:
             from rapidfuzz import fuzz, process
             
-            # Use word boundary matching for accurate word-level search
-            # "age" should match "The Age of Heroes" but NOT "Kage" or "Teenage"
-            keyword_pattern = r'\b' + re.escape(keyword) + r'\b'
-            keyword_regex = re.compile(keyword_pattern, re.IGNORECASE)
-            
-            # First filter by regex to get exact word matches
-            word_matches = []
-            for name in all_names:
-                if keyword_regex.search(name):
-                    word_matches.append(name)
-            
-            # If we have exact word matches, rank them by relevance
-            if word_matches:
-                # Use partial_ratio since we already filtered for word boundaries
-                # This ranks by how prominent the match is in the title
-                matches = process.extract(keyword, word_matches, scorer=fuzz.partial_ratio, limit=limit)
-                # Lower threshold since we know these are exact word matches
-                results = [match[0] for match in matches if match[1] >= 50]
+            # 1. Handle Short Queries (< 4 chars) with strict word boundary
+            if len(keyword) < 4:
+                keyword_pattern = r'\b' + re.escape(keyword) + r'\b'
+                keyword_regex = re.compile(keyword_pattern, re.IGNORECASE)
+                
+                results = []
+                for name in all_names:
+                    if keyword_regex.search(name):
+                        results.append(name)
+                        if len(results) >= limit:
+                            break
                 return results
-            else:
-                # Fallback to fuzzy search if no exact word matches
-                matches = process.extract(keyword, all_names, scorer=fuzz.partial_ratio, limit=limit)
-                results = [match[0] for match in matches if match[1] >= 85]
-                return results
+
+            # 2. Handle Long Queries (>= 4 chars) with smart fuzzy matching
+            
+            # Clean keyword for better matching (remove stop words)
+            clean_keyword = keyword
+            for stop_word in ["The ", "A ", "An "]:
+                if clean_keyword.lower().startswith(stop_word.lower()):
+                    clean_keyword = clean_keyword[len(stop_word):]
+                    break
+            
+            # Use partial_ratio to find candidates (handles "1943" -> "1943: ...")
+            # Get more candidates initially for re-ranking
+            matches = process.extract(clean_keyword, all_names, scorer=fuzz.partial_ratio, limit=limit*3)
+            
+            candidates = []
+            for match_name, score, _ in matches:
+                if score < 60: continue
+                
+                # Special handling when match is shorter than query
+                if len(match_name) < len(clean_keyword):
+                    # Verify with token_sort_ratio to ensure significant overlap
+                    verify_score = fuzz.token_sort_ratio(clean_keyword, match_name)
+                    if verify_score < 60:
+                        continue
+                
+                candidates.append(match_name)
+            
+            # Re-rank candidates
+            ranked_results = []
+            for name in candidates:
+                # Use clean_keyword for scoring
+                partial = fuzz.partial_ratio(clean_keyword, name)
+                token_sort = fuzz.token_sort_ratio(clean_keyword, name)
+                token_set = fuzz.token_set_ratio(clean_keyword, name)
+                
+                is_numeric_query = any(c.isdigit() for c in clean_keyword)
+                
+                if is_numeric_query:
+                    # For numeric, partial match is most important (e.g. "1943")
+                    final_score = partial
+                else:
+                    # For text, we want a balance.
+                    # token_sort_ratio is good for exact word matches (Age of Heroes vs Age of Heroes)
+                    # token_set_ratio is good for subsets (Age of Heroes vs Age of Heroes - Silkroad)
+                    # We take the max of sort/set to handle both short and long titles
+                    # But we add a small bonus if partial_ratio is very high (exact substring)
+                    
+                    base_score = max(token_sort, token_set)
+                    if partial >= 90:
+                        base_score += 5
+                    
+                    final_score = base_score
+                
+                ranked_results.append((name, final_score))
+            
+            # Sort by score descending
+            ranked_results.sort(key=lambda x: x[1], reverse=True)
+            
+            return [x[0] for x in ranked_results[:limit]]
             
         except ImportError:
             print("rapidfuzz not installed, falling back to simple search")
