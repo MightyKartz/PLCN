@@ -274,11 +274,22 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                     
                     print(f"DEBUG search_db: Found {len(libretro_results)} matches in LibretroDB")
                     
+                    # Initialize DatabaseManager to look up translations
+                    from database import DatabaseManager
+                    db_manager = DatabaseManager()
+                    conn = db_manager.get_connection()
+                    cursor = conn.cursor()
+                    
                     # Format results for frontend
                     for name in libretro_results:
+                        # Look up Chinese translation
+                        cursor.execute("SELECT chinese_name FROM translations WHERE english_name = ?", (name,))
+                        row = cursor.fetchone()
+                        chinese_name = row[0] if row else ""
+                        
                         results.append({
                             'english_name': name,
-                            'chinese_name': name,  # Use English name as placeholder
+                            'chinese_name': chinese_name,  # Empty string if no translation found
                             'system': system
                         })
                 else:
