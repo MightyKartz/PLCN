@@ -278,26 +278,21 @@ class LibretroDB:
         
         # Use rapidfuzz for searching
         try:
-            from rapidfuzz import process, fuzz
+            from rapidfuzz import fuzz, process
             
-            # Hybrid search similar to database.py
-            is_short_query = len(keyword) < 5
-            
-            if is_short_query:
-                # Partial match for short queries
-                matches = process.extract(keyword, all_names, scorer=fuzz.partial_ratio, limit=limit*2)
-                keyword_regex = re.compile(r'\b' + re.escape(keyword), re.IGNORECASE)
-            else:
-                # Token sort for long queries
-                matches = process.extract(keyword, all_names, scorer=fuzz.token_sort_ratio, limit=limit*2)
+            # Use partial_ratio for all queries to find substring matches
+            # This allows "age" to match "The Legend of Kage"
+            # and "The Age of Heroes" to match exact phrases
+            matches = process.extract(keyword, all_names, scorer=fuzz.partial_ratio, limit=limit*2)
             
             results = []
             for match_name, score, _ in matches:
-                if score < 60: continue
+                # Use threshold of 85 for better relevance
+                # Lower threshold for very short queries (3 chars or less)
+                threshold = 70 if len(keyword) <= 3 else 85
                 
-                if is_short_query:
-                    if not keyword_regex.search(match_name):
-                        continue
+                if score < threshold:
+                    continue
                         
                 results.append(match_name)
                 if len(results) >= limit:
