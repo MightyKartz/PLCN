@@ -6,15 +6,8 @@ import xml.etree.ElementTree as ET
 import re
 
 class LibretroDB:
-    # System mapping: maps virtual system names to multiple actual DAT system names
-    SYSTEM_MAPPINGS = {
-        "FBNeo - Arcade Games": [
-            "Arcade - CPS1",
-            "Arcade - CPS2",
-            "Arcade - CPS3",
-            "Arcade - NEOGEO"
-        ]
-    }
+    # No system mappings needed - main DAT files contain all games
+    SYSTEM_MAPPINGS = {}
     
     def __init__(self, storage_path):
         self.storage_path = storage_path
@@ -293,10 +286,13 @@ class LibretroDB:
                 if keyword_regex.search(name):
                     word_matches.append(name)
             
-            # If we have exact word matches, return them ranked by fuzzy score
+            # If we have exact word matches, rank them by relevance
             if word_matches:
-                matches = process.extract(keyword, word_matches, scorer=fuzz.ratio, limit=limit)
-                results = [match[0] for match in matches if match[1] >= 60]
+                # Use partial_ratio since we already filtered for word boundaries
+                # This ranks by how prominent the match is in the title
+                matches = process.extract(keyword, word_matches, scorer=fuzz.partial_ratio, limit=limit)
+                # Lower threshold since we know these are exact word matches
+                results = [match[0] for match in matches if match[1] >= 50]
                 return results
             else:
                 # Fallback to fuzzy search if no exact word matches

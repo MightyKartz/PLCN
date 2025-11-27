@@ -8,16 +8,9 @@ import re
 class DatabaseManager:
     DB_FILE = "plcn.db"
     
-    # System mapping: maps virtual system names to multiple actual CSV system names
-    SYSTEM_MAPPINGS = {
-        "FBNeo - Arcade Games": [
-            "FBNeo - Arcade Games",
-            "Arcade - CPS1",
-            "Arcade - CPS2",
-            "Arcade - CPS3",
-            "Arcade - NEOGEO"
-        ]
-    }
+    
+    # No system mappings needed - main DAT files contain all games
+    SYSTEM_MAPPINGS = {}
 
     def __init__(self, db_path=None):
         if db_path:
