@@ -273,89 +273,62 @@ class LibretroDB:
         
         # Use rapidfuzz for searching
 
+        # Strict Token Search Logic
+        # 1. Parse Query
+        stop_words = {"the", "of", "and", "a", "an", "in", "on", "at", "to", "for", "is", "are", "with", "by", "-"}
+        
+        # Normalize query: remove special chars (except spaces) for tokenization?
+        # Actually, let's just split by whitespace and handle non-alphanumeric in regex
+        raw_tokens = keyword.lower().split()
+        tokens = [t for t in raw_tokens if t not in stop_words]
+        if not tokens: tokens = raw_tokens
+        
+        # 2. Build Regexes for each token (enforce word boundary)
         try:
-            from rapidfuzz import fuzz, process
+            regexes = [re.compile(r'\b' + re.escape(t) + r'\b', re.IGNORECASE) for t in tokens]
+        except re.error:
+            # Fallback if regex compilation fails (e.g. bad escape)
+            return []
             
-            # 1. Handle Short Queries (< 4 chars) with strict word boundary
-            if len(keyword) < 4:
-                keyword_pattern = r'\b' + re.escape(keyword) + r'\b'
-                keyword_regex = re.compile(keyword_pattern, re.IGNORECASE)
+        # 3. Search
+        results = []
+        exact_phrase_matches = []
+        token_matches = []
+        
+        # Compile regex for exact phrase with word boundaries
+        try:
+            phrase_regex = re.compile(r'\b' + re.escape(keyword) + r'\b', re.IGNORECASE)
+        except re.error:
+            phrase_regex = None
+        
+        for name in all_names:
+            # Check 1: Exact phrase match (highest priority, with word boundaries)
+            # "Age" matches "Age of Heroes", but NOT "Savage"
+            if phrase_regex and phrase_regex.search(name):
+                exact_phrase_matches.append(name)
+                continue
                 
-                results = []
-                for name in all_names:
-                    if keyword_regex.search(name):
-                        results.append(name)
-                        if len(results) >= limit:
-                            break
-                return results
-
-            # 2. Handle Long Queries (>= 4 chars) with smart fuzzy matching
-            
-            # Clean keyword for better matching (remove stop words)
-            clean_keyword = keyword
-            for stop_word in ["The ", "A ", "An "]:
-                if clean_keyword.lower().startswith(stop_word.lower()):
-                    clean_keyword = clean_keyword[len(stop_word):]
-                    break
-            
-            # Use partial_ratio to find candidates (handles "1943" -> "1943: ...")
-            # Get more candidates initially for re-ranking
-            matches = process.extract(clean_keyword, all_names, scorer=fuzz.partial_ratio, limit=limit*3)
-            
-            candidates = []
-            for match_name, score, _ in matches:
-                if score < 60: continue
+            # Check 2: All tokens match (word boundary enforced)
+            if regexes and all(regex.search(name) for regex in regexes):
+                token_matches.append(name)
+        
+        # 4. Rank and Combine
+        # Sort by length (shorter names usually more relevant)
+        exact_phrase_matches.sort(key=len)
+        token_matches.sort(key=len)
+        
+        # Combine unique results
+        seen = set()
+        final_results = []
+        
+        for name in exact_phrase_matches:
+            if name not in seen:
+                final_results.append(name)
+                seen.add(name)
                 
-                # Special handling when match is shorter than query
-                if len(match_name) < len(clean_keyword):
-                    # Verify with token_sort_ratio to ensure significant overlap
-                    verify_score = fuzz.token_sort_ratio(clean_keyword, match_name)
-                    if verify_score < 60:
-                        continue
+        for name in token_matches:
+            if name not in seen:
+                final_results.append(name)
+                seen.add(name)
                 
-                candidates.append(match_name)
-            
-            # Re-rank candidates
-            ranked_results = []
-            for name in candidates:
-                # Use clean_keyword for scoring
-                partial = fuzz.partial_ratio(clean_keyword, name)
-                token_sort = fuzz.token_sort_ratio(clean_keyword, name)
-                token_set = fuzz.token_set_ratio(clean_keyword, name)
-                
-                is_numeric_query = any(c.isdigit() for c in clean_keyword)
-                
-                if is_numeric_query:
-                    # For numeric, partial match is most important (e.g. "1943")
-                    final_score = partial
-                else:
-                    # For text, we want a balance.
-                    # token_sort_ratio is good for exact word matches (Age of Heroes vs Age of Heroes)
-                    # token_set_ratio is good for subsets (Age of Heroes vs Age of Heroes - Silkroad)
-                    # We take the max of sort/set to handle both short and long titles
-                    # But we add a small bonus if partial_ratio is very high (exact substring)
-                    
-                    base_score = max(token_sort, token_set)
-                    if partial >= 90:
-                        base_score += 5
-                    
-                    final_score = base_score
-                
-                ranked_results.append((name, final_score))
-            
-            # Sort by score descending
-            ranked_results.sort(key=lambda x: x[1], reverse=True)
-            
-            return [x[0] for x in ranked_results[:limit]]
-            
-        except ImportError:
-            print("rapidfuzz not installed, falling back to simple search")
-            # Simple substring search fallback
-            results = []
-            keyword_lower = keyword.lower()
-            for name in all_names:
-                if keyword_lower in name.lower():
-                    results.append(name)
-                    if len(results) >= limit:
-                        break
-            return results
+        return final_results[:limit]
