@@ -112,7 +112,9 @@ class LibretroDB:
         """Loads a single DAT file for the system, downloading it if necessary."""
         dat_path = self.get_dat_path(system_name)
         
+        # Check if DAT exists (either bundled or previously downloaded)
         if not os.path.exists(dat_path):
+            print(f"DAT file not found at {dat_path}, attempting download...")
             if not self.download_dat(system_name):
                 return False
                 
@@ -280,25 +282,27 @@ class LibretroDB:
         try:
             from rapidfuzz import fuzz, process
             
-            # Use partial_ratio for all queries to find substring matches
-            # This allows "age" to match "The Legend of Kage"
-            # and "The Age of Heroes" to match exact phrases
-            matches = process.extract(keyword, all_names, scorer=fuzz.partial_ratio, limit=limit*2)
+            # Use word boundary matching for accurate word-level search
+            # "age" should match "The Age of Heroes" but NOT "Kage" or "Teenage"
+            keyword_pattern = r'\b' + re.escape(keyword) + r'\b'
+            keyword_regex = re.compile(keyword_pattern, re.IGNORECASE)
             
-            results = []
-            for match_name, score, _ in matches:
-                # Use threshold of 85 for better relevance
-                # Lower threshold for very short queries (3 chars or less)
-                threshold = 70 if len(keyword) <= 3 else 85
-                
-                if score < threshold:
-                    continue
-                        
-                results.append(match_name)
-                if len(results) >= limit:
-                    break
-                    
-            return results
+            # First filter by regex to get exact word matches
+            word_matches = []
+            for name in all_names:
+                if keyword_regex.search(name):
+                    word_matches.append(name)
+            
+            # If we have exact word matches, return them ranked by fuzzy score
+            if word_matches:
+                matches = process.extract(keyword, word_matches, scorer=fuzz.ratio, limit=limit)
+                results = [match[0] for match in matches if match[1] >= 60]
+                return results
+            else:
+                # Fallback to fuzzy search if no exact word matches
+                matches = process.extract(keyword, all_names, scorer=fuzz.partial_ratio, limit=limit)
+                results = [match[0] for match in matches if match[1] >= 85]
+                return results
             
         except ImportError:
             print("rapidfuzz not installed, falling back to simple search")
