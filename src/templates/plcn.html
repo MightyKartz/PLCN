@@ -1056,9 +1056,12 @@
                     const labelInput = row.querySelector('.new-label-input');
                     const thumbInput = row.querySelector('.thumb-source-input');
 
+                    // Use Chinese name if available, otherwise use English name
+                    const newLabel = chineseName || englishName;
+
                     if (labelInput) {
-                        labelInput.value = chineseName;
-                        currentChanges[currentSearchRowIndex].new_label = chineseName; // Update currentChanges array
+                        labelInput.value = newLabel;
+                        currentChanges[currentSearchRowIndex].new_label = newLabel; // Update currentChanges array
                     }
                     if (thumbInput) {
                         thumbInput.value = englishName;
