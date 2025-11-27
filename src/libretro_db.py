@@ -275,13 +275,14 @@ class LibretroDB:
 
         # Strict Token Search Logic
         # 1. Parse Query
-        stop_words = {"the", "of", "and", "a", "an", "in", "on", "at", "to", "for", "is", "are", "with", "by", "-"}
+        # User requested NO stop word removal (e.g. "king of" -> "king" AND "of")
+        # stop_words = {"the", "of", "and", "a", "an", "in", "on", "at", "to", "for", "is", "are", "with", "by", "-"}
         
         # Normalize query: remove special chars (except spaces) for tokenization?
         # Actually, let's just split by whitespace and handle non-alphanumeric in regex
         raw_tokens = keyword.lower().split()
-        tokens = [t for t in raw_tokens if t not in stop_words]
-        if not tokens: tokens = raw_tokens
+        tokens = raw_tokens # No filtering
+        if not tokens: return []
         
         # 2. Build Regexes for each token (enforce word boundary)
         try:
