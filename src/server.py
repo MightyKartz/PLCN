@@ -261,11 +261,16 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
             print(f"DEBUG search_db: Searching LibretroDB for keyword='{keyword}', system='{system}'")
             
             try:
+                # Create LibretroDB instance
+                from libretro_db import LibretroDB
+                storage_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
+                libretro_db = LibretroDB(storage_path)
+                
                 # Load DAT file for the specified system
                 print(f"DEBUG search_db: Loading DAT for system '{system}'...")
-                if self.translator.libretro_db.load_system_dat(system):
+                if libretro_db.load_system_dat(system):
                     print(f"DEBUG search_db: DAT loaded successfully, searching...")
-                    libretro_results = self.translator.libretro_db.search(keyword, limit=50)
+                    libretro_results = libretro_db.search(keyword, limit=50)
                     
                     print(f"DEBUG search_db: Found {len(libretro_results)} matches in LibretroDB")
                     
