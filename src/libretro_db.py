@@ -244,18 +244,75 @@ class LibretroDB:
             return candidates[0]
             
         # Try to match region
+        # If no region match, or no region in input, prefer USA -> Europe -> Japan -> World
+        # Or just return the first one (which is usually the first one found in DAT)
+        # Let's try to be smart: if input has no region, maybe default to World or USA?
+        # For now, just return the first one if no region match found.
         # Extract region from input name if possible
         # Look for (Japan), (USA), (Europe), etc.
         regions = re.findall(r'\((.*?)\)', name)
         
         if regions:
-            for region in regions:
-                for candidate in candidates:
-                    if f"({region})" in candidate:
-                        return candidate
-                        
-        # If no region match, or no region in input, prefer USA -> Europe -> Japan -> World
-        # Or just return the first one (which is usually the first one found in DAT)
-        # Let's try to be smart: if input has no region, maybe default to World or USA?
-        # For now, just return the first one if no region match found.
+            region = regions[-1] # Use last region found
+            # Filter candidates by region
+            region_candidates = [c for c in candidates if region in c]
+            if region_candidates:
+                return region_candidates[0]
+                
+        # Default to first candidate
         return candidates[0]
+
+    def search(self, keyword, limit=20):
+        """
+        Searches for standard names matching the keyword.
+        Returns a list of matching names.
+        """
+        if not self.standard_names:
+            return []
+            
+        # Collect all unique standard names
+        all_names = set()
+        for names in self.standard_names.values():
+            all_names.update(names)
+        all_names = list(all_names)
+        
+        # Use rapidfuzz for searching
+        try:
+            from rapidfuzz import process, fuzz
+            
+            # Hybrid search similar to database.py
+            is_short_query = len(keyword) < 5
+            
+            if is_short_query:
+                # Partial match for short queries
+                matches = process.extract(keyword, all_names, scorer=fuzz.partial_ratio, limit=limit*2)
+                keyword_regex = re.compile(r'\b' + re.escape(keyword), re.IGNORECASE)
+            else:
+                # Token sort for long queries
+                matches = process.extract(keyword, all_names, scorer=fuzz.token_sort_ratio, limit=limit*2)
+            
+            results = []
+            for match_name, score, _ in matches:
+                if score < 60: continue
+                
+                if is_short_query:
+                    if not keyword_regex.search(match_name):
+                        continue
+                        
+                results.append(match_name)
+                if len(results) >= limit:
+                    break
+                    
+            return results
+            
+        except ImportError:
+            print("rapidfuzz not installed, falling back to simple search")
+            # Simple substring search fallback
+            results = []
+            keyword_lower = keyword.lower()
+            for name in all_names:
+                if keyword_lower in name.lower():
+                    results.append(name)
+                    if len(results) >= limit:
+                        break
+            return results

@@ -277,6 +277,56 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
             results = db.search_by_keyword(keyword, system=system)
             db.close()
             
+            # If few results found in local DB, try searching LibretroDB
+            if len(results) < 5 and system:
+                print(f"DEBUG search_db: Few results ({len(results)}) in local DB, searching LibretroDB...")
+                try:
+                    # Ensure DAT is loaded for the system
+                    # Note: load_system_dat might take time if not already loaded
+                    # But Translator usually loads it.
+                    # We can access the translator's libretro_db instance
+                    
+                    # Check if we need to load/reload
+                    # We don't want to reload if already loaded, but LibretroDB doesn't expose "current system"
+                    # However, load_system_dat is relatively fast if DAT is already downloaded and parsed?
+                    # No, parsing 50MB DAT takes time.
+                    # But we are in a server request handler.
+                    # Let's assume Translator has loaded it if we are in a session?
+                    # Actually, Translator loads on demand in translate().
+                    # If user hasn't run translate() yet, it might be empty.
+                    
+                    # Let's try to load it. It handles caching/checking internally?
+                    # No, load_system_dat clears standard_names.
+                    # So if we call it, we wipe previous data.
+                    # This is fine for search, but might affect concurrent translate?
+                    # For now, let's assume single user.
+                    
+                    self.translator.libretro_db.load_system_dat(system)
+                    libretro_results = self.translator.libretro_db.search(keyword)
+                    
+                    print(f"DEBUG search_db: Found {len(libretro_results)} matches in LibretroDB")
+                    
+                    # Merge results
+                    # Libretro results are just English names.
+                    # We need to format them as {english_name, chinese_name, system}
+                    # We'll use English name for Chinese name (or leave empty?)
+                    # User wants to assign it, so showing English name is fine.
+                    
+                    existing_names = {r['english_name'] for r in results}
+                    
+                    for name in libretro_results:
+                        if name not in existing_names:
+                            results.append({
+                                'english_name': name,
+                                'chinese_name': name, # Use English name as fallback
+                                'system': system
+                            })
+                            if len(results) >= 50: # Limit total results
+                                break
+                                
+                except Exception as e:
+                    print(f"Error searching LibretroDB: {e}")
+            
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
