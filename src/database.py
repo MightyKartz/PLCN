@@ -3,6 +3,7 @@ import os
 import csv
 import glob
 import json
+import re
 
 class DatabaseManager:
     DB_FILE = "plcn.db"
@@ -10,6 +11,7 @@ class DatabaseManager:
     # System mapping: maps virtual system names to multiple actual CSV system names
     SYSTEM_MAPPINGS = {
         "FBNeo - Arcade Games": [
+            "FBNeo - Arcade Games",
             "Arcade - CPS1",
             "Arcade - CPS2",
             "Arcade - CPS3",
