@@ -469,10 +469,32 @@ def apply_changes(playlist_path, changes, thumbnails_dir, backup=True, progress_
         new_label = change['new_label']
         thumbnail_source = change['thumbnail_source']
         system = change['system']
+        target_path = change.get('path')
         
         # Update label
         if new_label:
-            playlist_manager.update_label(index, new_label)
+            updated = False
+            # Try to find by path first (more robust)
+            if target_path:
+                for item in playlist_manager.items:
+                    if item.get('path') == target_path:
+                        item['label'] = new_label
+                        updated = True
+                        print(f"Updated label for {os.path.basename(target_path)} to '{new_label}'")
+                        break
+            
+            # Fallback to index if path not found or not provided
+            if not updated:
+                if 0 <= index < len(playlist_manager.items):
+                    # Verify path matches if possible
+                    current_item = playlist_manager.items[index]
+                    if target_path and current_item.get('path') != target_path:
+                        print(f"Warning: Index {index} path mismatch. Expected {target_path}, got {current_item.get('path')}. Skipping update.")
+                    else:
+                        playlist_manager.update_label(index, new_label)
+                        print(f"Updated label at index {index} to '{new_label}'")
+                else:
+                    print(f"Error: Index {index} out of bounds. Skipping update.")
             
         # Collect download task
         if thumbnail_source and new_label:
