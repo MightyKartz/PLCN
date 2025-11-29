@@ -113,46 +113,60 @@ class LibretroDB:
                 
         try:
             # Parse clrmamepro format (text-based)
-            # We can use regex or simple line parsing
             # Format:
             # game (
             #   name "Game Name"
+            #   description "Full Game Title"
             #   ...
             # )
             
             with open(dat_path, 'r', encoding='utf-8', errors='ignore') as f:
                 content = f.read()
                 
-            # Regex to find all game entries
-            # We look for 'game (' then capture content until ')'
-            # But nested parenthesis might be an issue? 
-            # Usually clrmamepro doesn't nest ')' inside game block except in strings.
-            # Let's just regex for 'name "..."' inside the file, assuming 'name' property belongs to a game.
-            # This is a heuristic but usually works for these DATs.
-            
-            # Regex to match: name "Value"
-            # We need to be careful not to match header name.
-            # But header is 'clrmamepro ( name ... )'
-            # Games are 'game ( name ... )'
-            
-            # Let's iterate line by line for better control
+            # Iterate line by line
             current_block = None
+            current_name = None
+            current_desc = None
+            
             for line in content.splitlines():
                 line = line.strip()
                 if line.startswith('game ('):
                     current_block = 'game'
+                    current_name = None
+                    current_desc = None
                 elif line.startswith(')'):
-                    current_block = None
-                elif current_block == 'game' and line.startswith('name'):
-                    # Extract name: name "Game Name"
-                    match = re.search(r'name\s+"(.*?)"', line)
-                    if match:
-                        name = match.group(1)
-                        # Store mapping: normalized -> list of standard names
-                        norm_name = self.normalize_name(name)
+                    if current_block == 'game' and current_name:
+                        # If we have a description, use it as the standard name (common for Arcade)
+                        # Otherwise use the name
+                        standard_name = current_desc if current_desc else current_name
+                        
+                        # Store mapping: normalized(name) -> standard_name
+                        # This allows looking up by zip name ("aof3") to get "Art of Fighting 3"
+                        norm_name = self.normalize_name(current_name)
                         if norm_name not in self.standard_names:
                             self.standard_names[norm_name] = []
-                        self.standard_names[norm_name].append(name)
+                        if standard_name not in self.standard_names[norm_name]:
+                            self.standard_names[norm_name].append(standard_name)
+                            
+                        # ALSO store mapping: normalized(description) -> standard_name
+                        # This allows looking up by full title ("Art of Fighting 3") to get "Art of Fighting 3"
+                        if current_desc:
+                            norm_desc = self.normalize_name(current_desc)
+                            if norm_desc not in self.standard_names:
+                                self.standard_names[norm_desc] = []
+                            if standard_name not in self.standard_names[norm_desc]:
+                                self.standard_names[norm_desc].append(standard_name)
+                                
+                    current_block = None
+                elif current_block == 'game':
+                    if line.startswith('name'):
+                        match = re.search(r'name\s+"(.*?)"', line)
+                        if match:
+                            current_name = match.group(1)
+                    elif line.startswith('description'):
+                        match = re.search(r'description\s+"(.*?)"', line)
+                        if match:
+                            current_desc = match.group(1)
             
             print(f"Loaded {len(self.standard_names)} normalized entries from {system_name}.dat")
             return True

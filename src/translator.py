@@ -5,13 +5,13 @@ from libretro_db import LibretroDB
 from database import DatabaseManager
 
 class Translator:
-    def __init__(self, rom_name_cn_path, system_name=None, llm_client=None):
+    def __init__(self, rom_name_cn_path, system_name=None, llm_client=None, db_path=None):
         self.rom_name_cn_path = rom_name_cn_path
         self.system_name = system_name
         self.llm_client = llm_client
         
         # Initialize Database
-        self.db = DatabaseManager()
+        self.db = DatabaseManager(db_path=db_path)
         
         # Check if we need to import data
         # For simplicity, we can check if the translations table is empty
@@ -107,9 +107,14 @@ class Translator:
         if self.libretro_db:
             standard_name = self.libretro_db.get_standard_name(text)
             if standard_name and standard_name != text:
-                # Found standard English name in LibretroDB
-                # No Chinese translation available, use standard English as both label and thumbnail source
                 print(f"LibretroDB standard name: '{text}' -> '{standard_name}'")
+                
+                # Try to find Chinese translation for this standard English name
+                chinese = self.db.search_by_english(standard_name, system=self.system_name)
+                if chinese:
+                    return chinese, standard_name
+                
+                # No Chinese translation available, use standard English as both label and thumbnail source
                 return standard_name, standard_name
 
         # 6. For Arcade/FBNeo games, clean the ROM name for better presentation

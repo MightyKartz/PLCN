@@ -28,3 +28,4 @@ server.log
 
 # Data
 data/libretro-db/dat/*.dat
+plcn.db
