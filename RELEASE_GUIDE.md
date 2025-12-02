@@ -1,8 +1,8 @@
-# GitHub Release v2.0.1 创建指南
+# GitHub Release v2.0.2 创建指南
 
 ## ✅ 已完成步骤
 
-1. ✅ Git tag `v2.0.1` 待创建
+1. ✅ Git tag `v2.0.2` 待创建
 2. ✅ 所有代码更改已提交到 main 分支
 
 ## 📋 手动创建 Release 步骤
@@ -11,14 +11,14 @@
 
 1. 打开浏览器，访问：
    ```
-   https://github.com/MightyKartz/PLCN/releases/new?tag=v2.0.1
+   https://github.com/MightyKartz/PLCN/releases/new?tag=v2.0.2
    ```
 
 2. 填写以下信息：
 
 **Release Title（标题）：**
 ```
-v2.0.1 - PC-98 完美支持修复版
+v2.0.2 - PC-98 完美支持修复版
 ```
 
 **Release Notes（发布说明）：**
@@ -35,7 +35,7 @@ v2.0.1 - PC-98 完美支持修复版
 
 ---
 
-**完整更新日志**: https://github.com/MightyKartz/PLCN/compare/v2.0.0...v2.0.1
+**完整更新日志**: https://github.com/MightyKartz/PLCN/compare/v2.0.0...v2.0.2
 ```
 
 3. 确保勾选 **"Set as the latest release"**
@@ -54,11 +54,11 @@ brew install gh
 gh auth login
 
 # 创建 release
-gh release create v2.0.1 --title "v2.0.1 - PC-98 完美支持修复版" --notes-file release-notes.md
+gh release create v2.0.2 --title "v2.0.2 - PC-98 完美支持修复版" --notes-file release-notes.md
 ```
 
 ## 🎉 完成
 
 创建 release 后，用户可以在以下位置查看：
 - Release 页面: https://github.com/MightyKartz/PLCN/releases
-- 具体版本: https://github.com/MightyKartz/PLCN/releases/tag/v2.0.1
+- 具体版本: https://github.com/MightyKartz/PLCN/releases/tag/v2.0.2
