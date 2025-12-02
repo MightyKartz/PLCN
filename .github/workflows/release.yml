@@ -56,6 +56,15 @@ jobs:
         # Copy FBNeo split DATs (critical for Arcade)
         cp temp_db/metadat/fbneo-split/*.dat "data/libretro-db/dat/"
         
+        echo "Copying Extended DATs (TOSEC, Redump, No-Intro)..."
+        # Copy TOSEC (needed for PC-98 FDD)
+        cp temp_db/metadat/tosec/*.dat "data/libretro-db/dat/"
+        # Copy Redump (needed for PC-98 CD)
+        cp temp_db/metadat/redump/*.dat "data/libretro-db/dat/"
+        # Copy No-Intro & Libretro-DATs (for other systems)
+        cp temp_db/metadat/no-intro/*.dat "data/libretro-db/dat/"
+        cp temp_db/metadat/libretro-dats/*.dat "data/libretro-db/dat/"
+        
         echo "Cleaning up..."
         rm -rf temp_db
         

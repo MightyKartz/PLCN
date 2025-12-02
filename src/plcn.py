@@ -197,6 +197,14 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path):
         original_label = item.get('label')
         path = item.get('path')
         
+        # Extract ROM name for display (filename without extension)
+        display_label = original_label
+        if path:
+            basename = os.path.basename(path)
+            if '#' in basename:
+                basename = basename.split('#')[0]
+            display_label = os.path.splitext(basename)[0]
+        
         new_label = original_label
         thumbnail_source = None
         
@@ -231,7 +239,7 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path):
             
             proposed_changes.append({
                 'index': i,
-                'original_label': original_label,
+                'original_label': display_label,
                 'path': path,
                 'new_label': new_label,
                 'thumbnail_source': thumbnail_source,
@@ -264,7 +272,7 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path):
             
             proposed_changes.append({
                 'index': i,
-                'original_label': original_label,
+                'original_label': display_label,
                 'path': path,
                 'new_label': new_label,
                 'thumbnail_source': thumbnail_source,
@@ -334,7 +342,7 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path):
                 
                 proposed_changes.append({
                     'index': i,
-                    'original_label': original_label,
+                    'original_label': display_label,
                     'path': path,
                     'new_label': new_label,
                     'thumbnail_source': thumbnail_source,
@@ -357,8 +365,13 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path):
                     thumbnail_source = english_name if english_name else parent_dir
                 elif english_name and english_name != parent_dir:
                     # No Chinese, but found standardized English name
-                    new_label = english_name
-                    thumbnail_source = english_name
+                    # If parent_dir is already Chinese, prefer it over English name
+                    if any('\u4e00' <= char <= '\u9fff' for char in parent_dir):
+                        new_label = parent_dir
+                        thumbnail_source = english_name
+                    else:
+                        new_label = english_name
+                        thumbnail_source = english_name
                 else:
                     # Try translating candidates
                     filename_no_ext = os.path.splitext(os.path.basename(path))[0] if path else None
@@ -377,7 +390,7 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path):
 
                 proposed_changes.append({
                     'index': i,
-                    'original_label': original_label,
+                    'original_label': display_label,
                     'path': path,
                     'new_label': new_label,
                     'thumbnail_source': thumbnail_source,
@@ -434,7 +447,7 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path):
         
         proposed_changes.append({
             'index': i,
-            'original_label': original_label,
+            'original_label': display_label,
             'path': path,
             'new_label': new_label,
             'thumbnail_source': thumbnail_source,
@@ -503,6 +516,18 @@ def apply_changes(playlist_path, changes, thumbnails_dir, backup=True, progress_
     # Save playlist
     playlist_manager.save(playlist_path)
     print(f"Saved updated playlist to {playlist_path}")
+    
+    # Verify save
+    try:
+        import time
+        mtime = os.path.getmtime(playlist_path)
+        print(f"File modification time: {time.ctime(mtime)}")
+        # Optional: Read back first item to verify
+        # with open(playlist_path, 'r', encoding='utf-8') as f:
+        #     data = json.load(f)
+        #     print(f"Verification - First item label: {data['items'][0].get('label')}")
+    except Exception as e:
+        print(f"Verification failed: {e}")
     
     # Batch download
     if download_tasks:

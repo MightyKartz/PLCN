@@ -27,8 +27,21 @@ class LibretroDB:
         # Check local data directory
         return os.path.join(self.dat_dir, f'{system_name}.dat')
         
-    def download_dat(self, system_name):
+    def download_dat(self, system_name, specific_url=None):
         """Downloads the DAT file for the given system from GitHub, trying multiple locations."""
+        
+        target_path = self.get_dat_path(system_name)
+        
+        if specific_url:
+            print(f"Downloading DAT for {system_name} from specific URL: {specific_url}...")
+            try:
+                urllib.request.urlretrieve(specific_url, target_path)
+                print(f"Downloaded to {target_path}")
+                return True
+            except Exception as e:
+                print(f"Failed to download from {specific_url}: {e}")
+                return False
+
         # URL encode the system name for the URL
         encoded_name = urllib.parse.quote(system_name)
         
@@ -44,15 +57,15 @@ class LibretroDB:
             base_urls.append(f"https://raw.githubusercontent.com/libretro/libretro-database/master/dat/SNK%20-%20Neo%20Geo.dat")
         
         # Standard locations
+        # Standard locations - Prioritize specific collections over generic 'dat' folder
+        # The generic 'dat' folder sometimes contains incomplete files (e.g. NEC - PC-98)
         base_urls.extend([
-            f"https://raw.githubusercontent.com/libretro/libretro-database/master/dat/{encoded_name}.dat",
-            f"https://raw.githubusercontent.com/libretro/libretro-database/master/metadat/redump/{encoded_name}.dat",
-            f"https://raw.githubusercontent.com/libretro/libretro-database/master/metadat/no-intro/{encoded_name}.dat",
             f"https://raw.githubusercontent.com/libretro/libretro-database/master/metadat/libretro-dats/{encoded_name}.dat",
+            f"https://raw.githubusercontent.com/libretro/libretro-database/master/metadat/no-intro/{encoded_name}.dat",
             f"https://raw.githubusercontent.com/libretro/libretro-database/master/metadat/tosec/{encoded_name}.dat",
+            f"https://raw.githubusercontent.com/libretro/libretro-database/master/metadat/redump/{encoded_name}.dat",
+            f"https://raw.githubusercontent.com/libretro/libretro-database/master/dat/{encoded_name}.dat",
         ])
-        
-        target_path = self.get_dat_path(system_name)
         
         for url in base_urls:
             print(f"Trying to download DAT for {system_name} from {url}...")
@@ -99,16 +112,27 @@ class LibretroDB:
             return loaded_count > 0
         else:
             # Single system
-            return self._load_single_dat(system_name)
+            success = self._load_single_dat(base_system)
+            
+            # Special handling for NEC - PC-98 to load Redump DAT as well
+            if base_system == "NEC - PC-98":
+                print(f"Loading supplemental Redump DAT for {base_system}...")
+                redump_system = f"{base_system} (Redump)"
+                redump_url = f"https://raw.githubusercontent.com/libretro/libretro-database/master/metadat/redump/{urllib.parse.quote(base_system)}.dat"
+                if self._load_single_dat(redump_system, specific_url=redump_url):
+                    success = True
+                    print(f"Loaded Redump DAT for {base_system}")
+            
+            return success
     
-    def _load_single_dat(self, system_name):
+    def _load_single_dat(self, system_name, specific_url=None):
         """Loads a single DAT file for the system, downloading it if necessary."""
         dat_path = self.get_dat_path(system_name)
         
         # Check if DAT exists (either bundled or previously downloaded)
         if not os.path.exists(dat_path):
             print(f"DAT file not found at {dat_path}, attempting download...")
-            if not self.download_dat(system_name):
+            if not self.download_dat(system_name, specific_url=specific_url):
                 return False
                 
         try:

@@ -9,8 +9,40 @@ class DatabaseManager:
     DB_FILE = "plcn.db"
     
     
-    # No system mappings needed - main DAT files contain all games
-    SYSTEM_MAPPINGS = {}
+    # System mappings for known discrepancies
+    SYSTEM_MAPPINGS = {
+        # NEC
+        "NEC - PC Engine - TurboGrafx 16": ["NEC - PC Engine - TurboGrafx-16"],
+        "NEC - PC Engine CD - TurboGrafx-CD": ["NEC - PC Engine - TurboGrafx-16"], # Map CD to standard PCE CSV
+        
+        # Sega
+        "Sega - Mega Drive - Genesis": ["Sega - Mega Drive - Genesis"],
+        "Sega - Mega-CD - Sega CD": ["Sega - Mega CD & Sega CD"],
+        "Sega - Saturn": ["Sega - Saturn"],
+        "Sega - Dreamcast": ["Sega - Dreamcast"],
+        "Sega - Game Gear": ["Sega - Game Gear"],
+        
+        # Nintendo
+        "Nintendo - Game Boy Advance": ["Nintendo - Game Boy Advance"],
+        "Nintendo - Game Boy Color": ["Nintendo - Game Boy Color"],
+        "Nintendo - Game Boy": ["Nintendo - Game Boy"],
+        "Nintendo - Nintendo Entertainment System": ["Nintendo - Nintendo Entertainment System"],
+        "Nintendo - Super Nintendo Entertainment System": ["Nintendo - Super Nintendo Entertainment System"],
+        "Nintendo - GameCube": ["Nintendo - GameCube"],
+        "Nintendo - Nintendo 64": ["Nintendo - Nintendo 64"],
+        "Nintendo - Wii": ["Nintendo - Wii"],
+        "Nintendo - Wii U": ["Nintendo - Wii U"],
+        
+        # Sony
+        "Sony - PlayStation": ["Sony - PlayStation"],
+        "Sony - PlayStation Portable": ["Sony - PlayStation Portable"],
+        
+        # Arcade
+        "Arcade": ["FBNeo - Arcade Games", "MAME", "Arcade - CPS1", "Arcade - CPS2", "Arcade - CPS3", "Arcade - NEOGEO"],
+        "FBNeo - Arcade Games": ["FBNeo - Arcade Games", "Arcade - CPS1", "Arcade - CPS2", "Arcade - CPS3", "Arcade - NEOGEO"],
+        "MAME": ["MAME", "Arcade - CPS1", "Arcade - CPS2", "Arcade - CPS3", "Arcade - NEOGEO"],
+        "SNK - Neo Geo": ["Arcade - NEOGEO"]
+    }
 
     def __init__(self, db_path=None):
         if db_path:
@@ -38,9 +70,15 @@ class DatabaseManager:
         base_system = system.split('(')[0].strip()
         
         if base_system in self.SYSTEM_MAPPINGS:
-            return self.SYSTEM_MAPPINGS[base_system]
-        
-        return [system]
+            systems = self.SYSTEM_MAPPINGS[base_system]
+        else:
+            systems = [system]
+            
+        # Always include 'missing_games' system to support manual additions
+        if 'missing_games' not in systems:
+            systems.append('missing_games')
+            
+        return systems
 
     def get_connection(self):
         if self.conn is None:
@@ -184,6 +222,10 @@ class DatabaseManager:
                     
                     # Process remaining rows
                     for row in reader:
+                        # Skip empty rows or comments
+                        if not row or not row[0] or row[0].strip().startswith('#'):
+                            continue
+
                         if is_3_column_arcade:
                             # 3-column: MAME Name, EN Name, CN Name
                             if len(row) >= 3:
@@ -550,9 +592,8 @@ class DatabaseManager:
                 matches = process.extract(keyword, english_names, scorer=fuzz.partial_ratio, limit=limit*2)
                 keyword_regex = re.compile(r'\b' + re.escape(keyword), re.IGNORECASE)
             else:
-                # Use token_sort_ratio for long queries to penalize length mismatches
-                # e.g. "The Age of Heroes" vs "Marvel Vs. Capcom..."
-                matches = process.extract(keyword, english_names, scorer=fuzz.token_sort_ratio, limit=limit*2)
+                # Use WRatio for better matching (handles partials, token sort, etc.)
+                matches = process.extract(keyword, english_names, scorer=fuzz.WRatio, limit=limit*2)
 
             print(f"DEBUG search_by_keyword: Top matches (before filtering): {[(m[0], m[1]) for m in matches[:5]]}")
             

@@ -274,13 +274,16 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                     
                     print(f"DEBUG search_db: Found {len(libretro_results)} matches in LibretroDB")
                     
-                    # Initialize DatabaseManager to look up translations
+                    # Initialize DatabaseManager
                     from database import DatabaseManager
                     db_manager = DatabaseManager()
                     conn = db_manager.get_connection()
                     cursor = conn.cursor()
                     
-                    # Format results for frontend
+                    # Track added English names to avoid duplicates
+                    added_names = set()
+                    
+                    # 1. Process LibretroDB results
                     for name in libretro_results:
                         # Look up Chinese translation
                         cursor.execute("SELECT chinese_name FROM translations WHERE english_name = ?", (name,))
@@ -289,9 +292,26 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                         
                         results.append({
                             'english_name': name,
-                            'chinese_name': chinese_name,  # Empty string if no translation found
+                            'chinese_name': chinese_name,
                             'system': system
                         })
+                        added_names.add(name)
+                        
+                    # 2. Search Local Database (includes missing_games.csv)
+                    # This allows finding games that are NOT in LibretroDB but are in our local files
+                    print(f"DEBUG search_db: Searching local DB for '{keyword}'...")
+                    local_results = db_manager.search_by_keyword(keyword, system=system, limit=20)
+                    print(f"DEBUG search_db: Found {len(local_results)} matches in local DB")
+                    
+                    for item in local_results:
+                        if item['english_name'] not in added_names:
+                            results.append({
+                                'english_name': item['english_name'],
+                                'chinese_name': item['chinese_name'],
+                                'system': system
+                            })
+                            added_names.add(item['english_name'])
+                            
                 else:
                     print(f"ERROR search_db: Failed to load DAT for system '{system}'")
                     

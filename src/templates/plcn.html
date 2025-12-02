@@ -892,6 +892,10 @@
                 inputThumb.onchange = (e) => {
                     currentChanges[index].thumbnail_source = e.target.value;
                 };
+                // Add 'input' event listener to update currentChanges array immediately
+                inputThumb.addEventListener('input', (e) => {
+                    currentChanges[index].thumbnail_source = e.target.value;
+                });
 
                 const btnSearch = document.createElement('button');
                 btnSearch.textContent = '🔍';
@@ -1057,8 +1061,21 @@
                     const thumbInput = row.querySelector('.thumb-source-input');
 
                     if (labelInput) {
-                        // Use Chinese name if available, otherwise fallback to English name
-                        const finalName = chineseName || englishName;
+                        // Determine final name
+                        let finalName = chineseName;
+
+                        if (!finalName) {
+                            // No Chinese translation from DB
+                            // Check if current input has Chinese characters (e.g. from folder name)
+                            const currentVal = labelInput.value;
+                            // Regex for Chinese characters
+                            if (currentVal && /[\u4e00-\u9fa5]/.test(currentVal)) {
+                                finalName = currentVal; // Keep existing Chinese name
+                            } else {
+                                finalName = englishName; // Fallback to English name
+                            }
+                        }
+
                         labelInput.value = finalName;
                         currentChanges[currentSearchRowIndex].new_label = finalName;
                     }
