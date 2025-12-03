@@ -49,21 +49,35 @@ jobs:
         mkdir -p "data/libretro-db/dat"
         
         echo "Copying Console DATs..."
-        # Copy all standard DATs
-        cp temp_db/dat/*.dat "data/libretro-db/dat/"
+        if ls temp_db/dat/*.dat 1> /dev/null 2>&1; then
+          cp temp_db/dat/*.dat "data/libretro-db/dat/"
+        else
+          echo "Warning: No Console DATs found in temp_db/dat/"
+        fi
         
         echo "Copying FBNeo Arcade DATs..."
-        # Copy FBNeo split DATs (critical for Arcade)
-        cp temp_db/metadat/fbneo-split/*.dat "data/libretro-db/dat/"
+        if ls temp_db/metadat/fbneo-split/*.dat 1> /dev/null 2>&1; then
+          cp temp_db/metadat/fbneo-split/*.dat "data/libretro-db/dat/"
+        else
+          echo "Warning: No FBNeo DATs found in temp_db/metadat/fbneo-split/"
+        fi
         
         echo "Copying Extended DATs (TOSEC, Redump, No-Intro)..."
-        # Copy TOSEC (needed for PC-98 FDD)
-        cp temp_db/metadat/tosec/*.dat "data/libretro-db/dat/"
-        # Copy Redump (needed for PC-98 CD)
-        cp temp_db/metadat/redump/*.dat "data/libretro-db/dat/"
-        # Copy No-Intro & Libretro-DATs (for other systems)
-        cp temp_db/metadat/no-intro/*.dat "data/libretro-db/dat/"
-        cp temp_db/metadat/libretro-dats/*.dat "data/libretro-db/dat/"
+        # Helper function to copy if exists
+        copy_dats() {
+            src_dir=$1
+            if ls "$src_dir"/*.dat 1> /dev/null 2>&1; then
+                cp "$src_dir"/*.dat "data/libretro-db/dat/"
+                echo "Copied from $src_dir"
+            else
+                echo "Warning: No DATs found in $src_dir"
+            fi
+        }
+        
+        copy_dats "temp_db/metadat/tosec"
+        copy_dats "temp_db/metadat/redump"
+        copy_dats "temp_db/metadat/no-intro"
+        copy_dats "temp_db/metadat/libretro-dats"
         
         echo "Cleaning up..."
         rm -rf temp_db
