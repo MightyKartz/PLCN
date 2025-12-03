@@ -247,7 +247,64 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path):
             })
             continue
         
-        # Priority 0: If original_label already contains Chinese and is not empty, use it
+        # Priority 0: Check if parent directory name contains Chinese characters
+        # This takes precedence over existing label because folder structure is often the "source of truth"
+        if path:
+            parent_dir = os.path.basename(os.path.dirname(path))
+            if parent_dir and any('\u4e00' <= char <= '\u9fff' for char in parent_dir):
+                new_label = parent_dir
+                
+                # Use translator.translate for fuzzy matching
+                translated_cn, english_name = translator.translate(parent_dir)
+                # Check if we found a match
+                # Check if we found a match
+                if translated_cn and translated_cn != parent_dir:
+                    # Found Chinese translation
+                    
+                    # If parent_dir is ALREADY Chinese, prefer it over the translation
+                    # This prevents bad fuzzy matches (e.g. "棉花小魔女" -> "小魔女") from overwriting user's folder name
+                    if any('\u4e00' <= char <= '\u9fff' for char in parent_dir):
+                        new_label = parent_dir
+                    else:
+                        new_label = translated_cn
+                        
+                    thumbnail_source = english_name if english_name else parent_dir
+                elif english_name and english_name != parent_dir:
+                    # No Chinese, but found standardized English name
+                    # If parent_dir is already Chinese, prefer it over English name
+                    if any('\u4e00' <= char <= '\u9fff' for char in parent_dir):
+                        new_label = parent_dir
+                        thumbnail_source = english_name
+                    else:
+                        new_label = english_name
+                        thumbnail_source = english_name
+                else:
+                    # Try translating candidates
+                    filename_no_ext = os.path.splitext(os.path.basename(path))[0] if path else None
+                    candidates = []
+                    if filename_no_ext: candidates.append(filename_no_ext)
+                    if original_label and original_label != filename_no_ext: candidates.append(original_label)
+                    
+                    for candidate in candidates:
+                        _, std_en = translator.translate(candidate)
+                        if std_en and std_en != candidate:
+                            thumbnail_source = std_en
+                            break
+                    
+                    if not thumbnail_source:
+                        thumbnail_source = filename_no_ext if filename_no_ext else original_label
+
+                proposed_changes.append({
+                    'index': i,
+                    'original_label': display_label,
+                    'path': path,
+                    'new_label': new_label,
+                    'thumbnail_source': thumbnail_source,
+                    'system': system_name
+                })
+                continue
+
+        # Priority 1: If original_label already contains Chinese and is not empty, use it
         # This preserves user's manual edits from previous runs
         if original_label and any('\u4e00' <= char <= '\u9fff' for char in original_label):
             print(f"  [{i}] Using existing Chinese label: '{original_label}'")
@@ -267,8 +324,9 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path):
             else:
                 # No match found, keep original label but still try to download thumbnails
                 print(f"  [{i}] No thumbnail source found for '{original_label}'")
-                thumbnail_source = original_label  # Try with Chinese name as fallback
-
+                # Fallback to filename for thumbnail source (better than Chinese label)
+                filename_no_ext = os.path.splitext(os.path.basename(path))[0] if path else None
+                thumbnail_source = filename_no_ext if filename_no_ext else original_label
             
             proposed_changes.append({
                 'index': i,
@@ -279,9 +337,8 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path):
                 'system': system_name
             })
             continue
-        
-        # Logic to determine new label and thumbnail source from filename
-        # Priority 1: Check if filename (without extension) contains Chinese characters
+
+        # Priority 2: Check if filename (without extension) contains Chinese characters
         if path:
             # Handle RetroArch archive paths (e.g. /path/to/Game.zip#Inner.nes)
             basename = os.path.basename(path)
@@ -340,54 +397,6 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path):
                             thumbnail_source = original_label
                             print(f"  [{i}] Using original label as fallback: '{original_label}'")
                 
-                proposed_changes.append({
-                    'index': i,
-                    'original_label': display_label,
-                    'path': path,
-                    'new_label': new_label,
-                    'thumbnail_source': thumbnail_source,
-                    'system': system_name
-                })
-                continue
-        
-        # Priority 2: Check if parent directory name contains Chinese characters
-        if path:
-            parent_dir = os.path.basename(os.path.dirname(path))
-            if parent_dir and any('\u4e00' <= char <= '\u9fff' for char in parent_dir):
-                new_label = parent_dir
-                
-                # Use translator.translate for fuzzy matching
-                translated_cn, english_name = translator.translate(parent_dir)
-                # Check if we found a match
-                if translated_cn and translated_cn != parent_dir:
-                    # Found Chinese translation
-                    new_label = translated_cn
-                    thumbnail_source = english_name if english_name else parent_dir
-                elif english_name and english_name != parent_dir:
-                    # No Chinese, but found standardized English name
-                    # If parent_dir is already Chinese, prefer it over English name
-                    if any('\u4e00' <= char <= '\u9fff' for char in parent_dir):
-                        new_label = parent_dir
-                        thumbnail_source = english_name
-                    else:
-                        new_label = english_name
-                        thumbnail_source = english_name
-                else:
-                    # Try translating candidates
-                    filename_no_ext = os.path.splitext(os.path.basename(path))[0] if path else None
-                    candidates = []
-                    if filename_no_ext: candidates.append(filename_no_ext)
-                    if original_label and original_label != filename_no_ext: candidates.append(original_label)
-                    
-                    for candidate in candidates:
-                        _, std_en = translator.translate(candidate)
-                        if std_en and std_en != candidate:
-                            thumbnail_source = std_en
-                            break
-                    
-                    if not thumbnail_source:
-                        thumbnail_source = filename_no_ext if filename_no_ext else original_label
-
                 proposed_changes.append({
                     'index': i,
                     'original_label': display_label,

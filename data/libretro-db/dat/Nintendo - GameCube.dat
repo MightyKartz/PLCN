@@ -21424,4 +21424,4594 @@ game (
 	publisher "Ubi Soft Entertainment"
 	releaseyear 2001
 	releasemonth 11
-	release
+	releaseday 18
+	users 1
+	esrb_rating "E"
+	rom (
+		name "Tarzan Untamed (USA).iso"
+		serial "GTZE41"
+	)
+)
+
+game (
+	name "Taxi 3: Le Jeu (Europe)"
+	serial "GXQF41"
+	developer "Ubisoft Montreal"
+	publisher "Ubi Soft Entertainment"
+	releaseyear 2003
+	releasemonth 8
+	releaseday 28
+	users 1
+	rom (
+		name "Taxi 3: Le Jeu (Europe).iso"
+		serial "GXQF41"
+	)
+)
+
+game (
+	name "Taxi 3: The Game (Europe)"
+	serial "GXQP41"
+	developer "Ubisoft Montreal"
+	publisher "Ubi Soft Entertainment"
+	releaseyear 2023
+	releasemonth 8
+	releaseday 1
+	users 1
+	rom (
+		name "Taxi 3: The Game (Europe).iso"
+		serial "GXQP41"
+	)
+)
+
+game (
+	name "Taz Wanted (Europe)"
+	serial "GTWP70"
+	developer "Blitz Games"
+	publisher "Atari (Infogrames)"
+	releaseyear 2002
+	releasemonth 11
+	releaseday 8
+	users 2
+	rom (
+		name "Taz Wanted (Europe).iso"
+		serial "GTWP70"
+	)
+)
+
+game (
+	name "Taz Wanted (USA)"
+	serial "GTWE70"
+	developer "Blitz Games"
+	publisher "Atari (Infogrames)"
+	releaseyear 2002
+	releasemonth 10
+	releaseday 4
+	users 2
+	esrb_rating "E"
+	rom (
+		name "Taz Wanted (USA).iso"
+		serial "GTWE70"
+	)
+)
+
+game (
+	name "Teen Titans (Europe)"
+	serial "G6TP78"
+	publisher "THQ"
+	releaseyear 2006
+	releasemonth 5
+	releaseday 24
+	users 4
+	rom (
+		name "Teen Titans (Europe).iso"
+		serial "G6TP78"
+	)
+)
+
+game (
+	name "Teen Titans (USA)"
+	serial "G6TE5G"
+	developer "Artificial Mind & Movement"
+	publisher "THQ"
+	releaseyear 2006
+	releasemonth 5
+	releaseday 24
+	users 4
+	esrb_rating "E10+"
+	rom (
+		name "Teen Titans (USA).iso"
+		serial "G6TE5G"
+	)
+)
+
+game (
+	name "Teenage Mutant Ninja Turtles (Europe)"
+	serial "GTFPA4"
+	developer "Konami"
+	publisher "Konami"
+	releaseyear 2004
+	releasemonth 4
+	releaseday 30
+	users 2
+	rom (
+		name "Teenage Mutant Ninja Turtles (Europe).iso"
+		serial "GTFPA4"
+	)
+)
+
+game (
+	name "Teenage Mutant Ninja Turtles (USA)"
+	serial "GTFEA4"
+	developer "Konami"
+	publisher "Konami"
+	releaseyear 2003
+	releasemonth 10
+	releaseday 31
+	users 2
+	esrb_rating "E"
+	rom (
+		name "Teenage Mutant Ninja Turtles (USA).iso"
+		serial "GTFEA4"
+	)
+)
+
+game (
+	name "Teenage Mutant Ninja Turtles 2: Battle Nexus (Europe)"
+	serial "GNIPA4"
+	developer "Konami"
+	publisher "Konami"
+	releaseyear 2005
+	releasemonth 3
+	releaseday 10
+	users 4
+	rom (
+		name "Teenage Mutant Ninja Turtles 2: Battle Nexus (Europe).iso"
+		serial "GNIPA4"
+	)
+)
+
+game (
+	name "Teenage Mutant Ninja Turtles 2: Battle Nexus (USA)"
+	serial "GNIEA4"
+	developer "Konami"
+	publisher "Konami"
+	releaseyear 2004
+	releasemonth 10
+	releaseday 19
+	users 4
+	esrb_rating "T"
+	rom (
+		name "Teenage Mutant Ninja Turtles 2: Battle Nexus (USA).iso"
+		serial "GNIEA4"
+	)
+)
+
+game (
+	name "Teenage Mutant Ninja Turtles 3: Mutant Nightmare (USA)"
+	serial "G3QEA4"
+	developer "Konami"
+	publisher "Konami"
+	releaseyear 2005
+	releasemonth 11
+	releaseday 1
+	users 4
+	esrb_rating "E10+"
+	rom (
+		name "Teenage Mutant Ninja Turtles 3: Mutant Nightmare (USA).iso"
+		serial "G3QEA4"
+	)
+)
+
+game (
+	name "Tengai Makyou 2: Manji Maru (Japan)"
+	serial "GT2J18"
+	publisher "Hudson Soft"
+	releaseyear 2003
+	releasemonth 9
+	releaseday 25
+	users 1
+	rom (
+		name "Tengai Makyou 2: Manji Maru (Japan).iso"
+		serial "GT2J18"
+	)
+)
+
+game (
+	name "Terminator 3: The Redemption (Europe)"
+	serial "GT6P70"
+	developer "Paradigm Entertainment"
+	publisher "Atari (Infogrames)"
+	releaseyear 2004
+	releasemonth 9
+	releaseday 6
+	users 2
+	rom (
+		name "Terminator 3: The Redemption (Europe).iso"
+		serial "GT6P70"
+	)
+)
+
+game (
+	name "Terminator 3: The Redemption (Japan)"
+	serial "GT6J70"
+	developer "Paradigm Entertainment"
+	publisher "Atari (Infogrames)"
+	releaseyear 2005
+	releasemonth 1
+	releaseday 20
+	users 2
+	rom (
+		name "Terminator 3: The Redemption (Japan).iso"
+		serial "GT6J70"
+	)
+)
+
+game (
+	name "Terminator 3: The Redemption (USA)"
+	serial "GT6E70"
+	developer "Paradigm Entertainment"
+	publisher "Atari (Infogrames)"
+	releaseyear 2004
+	releasemonth 9
+	releaseday 6
+	users 2
+	esrb_rating "T"
+	rom (
+		name "Terminator 3: The Redemption (USA).iso"
+		serial "GT6E70"
+	)
+)
+
+game (
+	name "Tetris Worlds (Europe)"
+	serial "GTRP78"
+	developer "Radical Entertainment"
+	publisher "THQ"
+	releaseyear 2002
+	releasemonth 9
+	releaseday 27
+	users 4
+	rom (
+		name "Tetris Worlds (Europe).iso"
+		serial "GTRP78"
+	)
+)
+
+game (
+	name "Tetris Worlds (Japan)"
+	serial "GTRJ8N"
+	publisher "Success"
+	releaseyear 2002
+	releasemonth 12
+	releaseday 20
+	users 1
+	rom (
+		name "Tetris Worlds (Japan).iso"
+		serial "GTRJ8N"
+	)
+)
+
+game (
+	name "Tetris Worlds (USA)"
+	serial "GTRE78"
+	developer "Radical Entertainment"
+	publisher "THQ"
+	releaseyear 2002
+	releasemonth 6
+	releaseday 23
+	users 4
+	esrb_rating "E"
+	rom (
+		name "Tetris Worlds (USA).iso"
+		serial "GTRE78"
+	)
+)
+
+game (
+	name "The Ant Bully (USA)"
+	serial "GAXE5D"
+	developer "Artificial Mind & Movement"
+	publisher "Midway / Tradewest"
+	releaseyear 2006
+	releasemonth 7
+	releaseday 24
+	users 1
+	esrb_rating "E10+"
+	rom (
+		name "The Ant Bully (USA).iso"
+		serial "GAXE5D"
+	)
+)
+
+game (
+	name "The Baseball 2003 - Battle Ball Park Sengen Perfect Play Pro Yakyuu (Japan)"
+	serial "GBPJCM"
+	publisher "Konami Computer Entertainment Osaka"
+	releaseyear 2003
+	releasemonth 3
+	releaseday 20
+	users 1
+	rom (
+		name "The Baseball 2003 - Battle Ball Park Sengen Perfect Play Pro Yakyuu (Japan).iso"
+		serial "GBPJCM"
+	)
+)
+
+game (
+	name "The Chronicles of Narnia: The Lion Witch and the Wardrobe (Europe)"
+	serial "GLVD4Q"
+	developer "Traveller's Tales"
+	publisher "Buena Vista Games"
+	releaseyear 2006
+	releasemonth 3
+	releaseday 31
+	users 1
+	rom (
+		name "The Chronicles of Narnia: The Lion Witch and the Wardrobe (Europe).iso"
+		serial "GLVD4Q"
+	)
+)
+
+game (
+	name "The Chronicles of Narnia: The Lion Witch and the Wardrobe (Europe)"
+	serial "GLVF4Q"
+	developer "Traveller's Tales"
+	publisher "Buena Vista Games"
+	releaseyear 2006
+	releasemonth 3
+	releaseday 31
+	users 1
+	rom (
+		name "The Chronicles of Narnia: The Lion Witch and the Wardrobe (Europe).iso"
+		serial "GLVF4Q"
+	)
+)
+
+game (
+	name "The Chronicles of Narnia: The Lion, the Witch and the Wardrobe (Europe)"
+	serial "GLVP4Q"
+	developer "Traveller's Tales"
+	publisher "Buena Vista Games"
+	releaseyear 2006
+	releasemonth 3
+	releaseday 31
+	users 1
+	rom (
+		name "The Chronicles of Narnia: The Lion, the Witch and the Wardrobe (Europe).iso"
+		serial "GLVP4Q"
+	)
+)
+
+game (
+	name "The Chronicles of Narnia: The Lion, the Witch and the Wardrobe (USA)"
+	serial "GLVE4Q"
+	developer "Traveller's Tales"
+	publisher "Buena Vista Games"
+	releaseyear 2005
+	releasemonth 11
+	releaseday 14
+	users 1
+	esrb_rating "T"
+	rom (
+		name "The Chronicles of Narnia: The Lion, the Witch and the Wardrobe (USA).iso"
+		serial "GLVE4Q"
+	)
+)
+
+game (
+	name "The Fairly OddParents - Shadow Showdown (USA)"
+	serial "GFOE78"
+	developer "Blitz Games"
+	publisher "THQ"
+	releaseyear 2004
+	releasemonth 5
+	releaseday 15
+	users 2
+	esrb_rating "E"
+	rom (
+		name "The Fairly OddParents - Shadow Showdown (USA).iso"
+		serial "GFOE78"
+	)
+)
+
+game (
+	name "The Fairly OddParents: Breakin' Da Rules (USA)"
+	serial "GFWE78"
+	developer "Blitz Games"
+	publisher "THQ"
+	releaseyear 2003
+	releasemonth 3
+	releaseday 11
+	users 1
+	esrb_rating "E"
+	rom (
+		name "The Fairly OddParents: Breakin' Da Rules (USA).iso"
+		serial "GFWE78"
+	)
+)
+
+game (
+	name "The Grim Adventures of Billy and Mandy (USA)"
+	serial "GGNE5D"
+	developer "Midway"
+	publisher "Midway / Tradewest"
+	releaseyear 2006
+	releasemonth 9
+	releaseday 25
+	users 4
+	esrb_rating "E10+"
+	rom (
+		name "The Grim Adventures of Billy and Mandy (USA).iso"
+		serial "GGNE5D"
+	)
+)
+
+game (
+	name "The Haunted Mansion (USA)"
+	serial "GHYE6S"
+	developer "High Voltage Software"
+	publisher "TDK Mediactive"
+	releaseyear 2003
+	releasemonth 10
+	releaseday 14
+	users 1
+	esrb_rating "T"
+	rom (
+		name "The Haunted Mansion (USA).iso"
+		serial "GHYE6S"
+	)
+)
+
+game (
+	name "The Hobbit (Europe)"
+	serial "GHBP7D"
+	developer "Inevitable Entertainment"
+	publisher "Vivendi Universal Games"
+	releaseyear 2003
+	releasemonth 11
+	releaseday 20
+	users 1
+	rom (
+		name "The Hobbit (Europe).iso"
+		serial "GHBP7D"
+	)
+)
+
+game (
+	name "The Hobbit (USA)"
+	serial "GHBE7D"
+	developer "Inevitable Entertainment"
+	publisher "Sierra / Universal Interactive"
+	releaseyear 2003
+	releasemonth 11
+	releaseday 11
+	users 1
+	esrb_rating "E"
+	rom (
+		name "The Hobbit (USA).iso"
+		serial "GHBE7D"
+	)
+)
+
+game (
+	name "The Incredible Hulk Ultimate Destruction (Europe)"
+	serial "GHUF7D"
+	developer "Radical Entertainment"
+	publisher "Sierra / Universal Interactive"
+	releaseyear 2005
+	releasemonth 9
+	releaseday 9
+	users 1
+	rom (
+		name "The Incredible Hulk Ultimate Destruction (Europe).iso"
+		serial "GHUF7D"
+	)
+)
+
+game (
+	name "The Incredible Hulk Ultimate Destruction (Europe)"
+	serial "GHUP7D"
+	developer "Radical Entertainment"
+	publisher "Sierra / Universal Interactive"
+	releaseyear 2005
+	releasemonth 9
+	releaseday 9
+	users 1
+	rom (
+		name "The Incredible Hulk Ultimate Destruction (Europe).iso"
+		serial "GHUP7D"
+	)
+)
+
+game (
+	name "The Incredible Hulk: Ultimate Destruction (USA)"
+	serial "GHUE7D"
+	developer "Radical Entertainment"
+	publisher "Sierra / Universal Interactive"
+	releaseyear 2005
+	releasemonth 8
+	releaseday 23
+	users 1
+	esrb_rating "T"
+	rom (
+		name "The Incredible Hulk: Ultimate Destruction (USA).iso"
+		serial "GHUE7D"
+	)
+)
+
+game (
+	name "The Incredibles (Europe)"
+	serial "GICD78"
+	developer "Heavy Iron Studios"
+	publisher "THQ"
+	releaseyear 2004
+	releasemonth 11
+	releaseday 12
+	users 1
+	rom (
+		name "The Incredibles (Europe).iso"
+		serial "GICD78"
+	)
+)
+
+game (
+	name "The Incredibles (Europe)"
+	serial "GICF78"
+	developer "Heavy Iron Studios"
+	publisher "THQ"
+	releaseyear 2004
+	releasemonth 11
+	releaseday 12
+	users 1
+	rom (
+		name "The Incredibles (Europe).iso"
+		serial "GICF78"
+	)
+)
+
+game (
+	name "The Incredibles (Europe)"
+	serial "GICH78"
+	developer "Heavy Iron Studios"
+	publisher "THQ"
+	releaseyear 2004
+	releasemonth 11
+	releaseday 12
+	users 1
+	rom (
+		name "The Incredibles (Europe).iso"
+		serial "GICH78"
+	)
+)
+
+game (
+	name "The Incredibles (Europe)"
+	serial "GICP78"
+	developer "Heavy Iron Studios"
+	publisher "THQ"
+	releaseyear 2004
+	releasemonth 11
+	releaseday 12
+	users 1
+	rom (
+		name "The Incredibles (Europe).iso"
+		serial "GICP78"
+	)
+)
+
+game (
+	name "The Incredibles (USA)"
+	serial "GICE78"
+	developer "Heavy Iron Studios"
+	publisher "THQ"
+	releaseyear 2004
+	releasemonth 11
+	releaseday 1
+	users 1
+	esrb_rating "T"
+	rom (
+		name "The Incredibles (USA).iso"
+		serial "GICE78"
+	)
+)
+
+game (
+	name "The Incredibles: Rise of the Underminer (Europe)"
+	serial "GIQX78"
+	developer "Heavy Iron Studios"
+	publisher "THQ"
+	releaseyear 2005
+	releasemonth 11
+	releaseday 18
+	users 2
+	rom (
+		name "The Incredibles: Rise of the Underminer (Europe).iso"
+		serial "GIQX78"
+	)
+)
+
+game (
+	name "The Incredibles: Rise of the Underminer (Europe)"
+	serial "GIQY78"
+	developer "Heavy Iron Studios"
+	publisher "THQ"
+	releaseyear 2005
+	releasemonth 11
+	releaseday 18
+	users 2
+	rom (
+		name "The Incredibles: Rise of the Underminer (Europe).iso"
+		serial "GIQY78"
+	)
+)
+
+game (
+	name "The Incredibles: Rise of the Underminer (Japan)"
+	serial "GIQJ8P"
+	developer "Heavy Iron Studios"
+	publisher "Sega"
+	releaseyear 2006
+	releasemonth 2
+	releaseday 9
+	users 2
+	rom (
+		name "The Incredibles: Rise of the Underminer (Japan).iso"
+		serial "GIQJ8P"
+	)
+)
+
+game (
+	name "The Incredibles: Rise of the Underminer (USA)"
+	serial "GIQE78"
+	developer "Heavy Iron Studios"
+	publisher "THQ"
+	releaseyear 2005
+	releasemonth 11
+	releaseday 1
+	users 2
+	esrb_rating "E10+"
+	rom (
+		name "The Incredibles: Rise of the Underminer (USA).iso"
+		serial "GIQE78"
+	)
+)
+
+game (
+	name "The Italian Job (Europe)"
+	serial "GIBP4F"
+	developer "Climax Group "
+	publisher "Eidos"
+	releaseyear 2003
+	releasemonth 9
+	releaseday 12
+	users 2
+	rom (
+		name "The Italian Job (Europe).iso"
+		serial "GIBP4F"
+	)
+)
+
+game (
+	name "The Italian Job (USA)"
+	serial "GIBE4F"
+	developer "Climax Group"
+	publisher "Eidos"
+	releaseyear 2003
+	releasemonth 7
+	releaseday 17
+	users 2
+	esrb_rating "T"
+	rom (
+		name "The Italian Job (USA).iso"
+		serial "GIBE4F"
+	)
+)
+
+game (
+	name "The Legend of Spyro: A New Beginning (Europe)"
+	serial "G6SP7D"
+	developer "Krome Studios"
+	publisher "Sierra / Universal Interactive"
+	releaseyear 2006
+	releasemonth 10
+	releaseday 27
+	users 1
+	rom (
+		name "The Legend of Spyro: A New Beginning (Europe).iso"
+		serial "G6SP7D"
+	)
+)
+
+game (
+	name "The Legend of Spyro: A New Beginning (USA)"
+	serial "G6SE7D"
+	developer "Krome Studios"
+	publisher "Sierra / Universal Interactive"
+	releaseyear 2006
+	releasemonth 10
+	releaseday 10
+	users 1
+	esrb_rating "E10+"
+	rom (
+		name "The Legend of Spyro: A New Beginning (USA).iso"
+		serial "G6SE7D"
+	)
+)
+
+game (
+	name "The Legend of Zelda: Collector's Edition (Europe)"
+	serial "PZLP01"
+	developer "Nintendo"
+	publisher "Nintendo"
+	releaseyear 2003
+	releasemonth 11
+	releaseday 14
+	users 1
+	rom (
+		name "The Legend of Zelda: Collector's Edition (Europe).iso"
+		serial "PZLP01"
+	)
+)
+
+game (
+	name "The Legend of Zelda: Collector's Edition (Japan)"
+	serial "PZLJ01"
+	developer "Nintendo"
+	publisher "Nintendo"
+	releaseyear 2003
+	releasemonth 11
+	releaseday 14
+	users 1
+	rom (
+		name "The Legend of Zelda: Collector's Edition (Japan).iso"
+		serial "PZLJ01"
+	)
+)
+
+game (
+	name "The Legend of Zelda: Collector's Edition (USA)"
+	serial "PZLE01"
+	developer "Nintendo"
+	publisher "Nintendo"
+	releaseyear 2003
+	releasemonth 11
+	releaseday 24
+	users 1
+	esrb_rating "E"
+	rom (
+		name "The Legend of Zelda: Collector's Edition (USA).iso"
+		serial "PZLE01"
+	)
+)
+
+game (
+	name "The Legend of Zelda: Four Swords + (Japan)"
+	serial "G4SJ01"
+	developer "Nintendo / Capcom Production Studio 2"
+	publisher "Nintendo"
+	releaseyear 2004
+	releasemonth 3
+	releaseday 18
+	users 4
+	rom (
+		name "The Legend of Zelda: Four Swords + (Japan).iso"
+		serial "G4SJ01"
+	)
+)
+
+game (
+	name "The Legend of Zelda: Four Swords Adventures (Europe)"
+	serial "G4SP01"
+	developer "Nintendo / Capcom Production Studio 2"
+	publisher "Nintendo"
+	releaseyear 2005
+	releasemonth 1
+	releaseday 7
+	users 4
+	rom (
+		name "The Legend of Zelda: Four Swords Adventures (Europe).iso"
+		serial "G4SP01"
+	)
+)
+
+game (
+	name "The Legend of Zelda: Four Swords Adventures (USA)"
+	serial "G4SE01"
+	developer "Nintendo / Capcom Production Studio 2"
+	publisher "Nintendo"
+	releaseyear 2004
+	releasemonth 6
+	releaseday 7
+	users 4
+	esrb_rating "E"
+	rom (
+		name "The Legend of Zelda: Four Swords Adventures (USA).iso"
+		serial "G4SE01"
+	)
+)
+
+game (
+	name "The Legend of Zelda: Ocarina of Time (Bonus Disc) (Europe)"
+	serial "D43U01"
+	developer "Nintendo"
+	publisher "Nintendo"
+	releaseyear 2003
+	releasemonth 3
+	releaseday 5
+	users 1
+	rom (
+		name "The Legend of Zelda: Ocarina of Time (Bonus Disc) (Europe).iso"
+		serial "D43U01"
+	)
+)
+
+game (
+	name "The Legend of Zelda: Ocarina of Time / Master Quest"
+	serial "D43W01"
+	developer "Nintendo EAD"
+	publisher "Nintendo"
+	releaseyear 2003
+	releasemonth 2
+	releaseday 18
+	users 1
+	rom (
+		name "The Legend of Zelda: Ocarina of Time / Master Quest.iso"
+		serial "D43W01"
+	)
+)
+
+game (
+	name "The Legend of Zelda: Ocarina of Time / Master Quest (Europe)"
+	serial "D43P01"
+	developer "Nintendo"
+	publisher "Nintendo"
+	releaseyear 2003
+	releasemonth 3
+	releaseday 5
+	users 1
+	rom (
+		name "The Legend of Zelda: Ocarina of Time / Master Quest (Europe).iso"
+		serial "D43P01"
+	)
+)
+
+game (
+	name "The Legend of Zelda: Ocarina of Time / Master Quest (USA)"
+	serial "D43E01"
+	developer "Nintendo EAD"
+	publisher "Nintendo"
+	releaseyear 2003
+	releasemonth 2
+	releaseday 18
+	users 1
+	esrb_rating "E"
+	rom (
+		name "The Legend of Zelda: Ocarina of Time / Master Quest (USA).iso"
+		serial "D43E01"
+	)
+)
+
+game (
+	name "The Legend of Zelda: The Wind Waker (Europe)"
+	serial "GZLP01"
+	developer "Nintendo"
+	publisher "Nintendo"
+	releaseyear 2003
+	releasemonth 5
+	releaseday 3
+	users 2
+	rom (
+		name "The Legend of Zelda: The Wind Waker (Europe).iso"
+		serial "GZLP01"
+	)
+)
+
+game (
+	name "The Legend of Zelda: The Wind Waker (USA)"
+	serial "GZLE01"
+	developer "Nintendo EAD"
+	publisher "Nintendo"
+	releaseyear 2003
+	releasemonth 3
+	releaseday 24
+	users 2
+	esrb_rating "E"
+	rom (
+		name "The Legend of Zelda: The Wind Waker (USA).iso"
+		serial "GZLE01"
+	)
+)
+
+game (
+	name "The Legend of Zelda: Twilight Princess (Europe)"
+	serial "GZ2P01"
+	developer "Nintendo EAD"
+	publisher "Nintendo"
+	releaseyear 2006
+	releasemonth 12
+	releaseday 15
+	users 1
+	rom (
+		name "The Legend of Zelda: Twilight Princess (Europe).iso"
+		serial "GZ2P01"
+	)
+)
+
+game (
+	name "The Legend of Zelda: Twilight Princess (USA)"
+	serial "GZ2E01"
+	developer "Nintendo EAD"
+	publisher "Nintendo"
+	releaseyear 2006
+	releasemonth 12
+	releaseday 11
+	users 1
+	esrb_rating "T"
+	rom (
+		name "The Legend of Zelda: Twilight Princess (USA).iso"
+		serial "GZ2E01"
+	)
+)
+
+game (
+	name "The Lord of the Rings: The Return of the King (Europe)"
+	serial "GKLD69"
+	developer "EA Games"
+	publisher "Electronic Arts"
+	releaseyear 2003
+	releasemonth 11
+	releaseday 14
+	users 2
+	rom (
+		name "The Lord of the Rings: The Return of the King (Europe).iso"
+		serial "GKLD69"
+	)
+)
+
+game (
+	name "The Lord of the Rings: The Return of the King (Europe)"
+	serial "GKLF69"
+	developer "EA Games"
+	publisher "Electronic Arts"
+	releaseyear 2003
+	releasemonth 11
+	releaseday 14
+	users 2
+	rom (
+		name "The Lord of the Rings: The Return of the King (Europe).iso"
+		serial "GKLF69"
+	)
+)
+
+game (
+	name "The Lord of the Rings: The Return of the King (Europe)"
+	serial "GKLI69"
+	developer "EA Games"
+	publisher "Electronic Arts"
+	releaseyear 2003
+	releasemonth 11
+	releaseday 14
+	users 2
+	rom (
+		name "The Lord of the Rings: The Return of the King (Europe).iso"
+		serial "GKLI69"
+	)
+)
+
+game (
+	name "The Lord of the Rings: The Return of the King (Europe)"
+	serial "GKLP69"
+	developer "EA Games"
+	publisher "Electronic Arts"
+	releaseyear 2003
+	releasemonth 11
+	releaseday 14
+	users 2
+	rom (
+		name "The Lord of the Rings: The Return of the King (Europe).iso"
+		serial "GKLP69"
+	)
+)
+
+game (
+	name "The Lord of the Rings: The Return of the King (Europe)"
+	serial "GKLS69"
+	developer "EA Games"
+	publisher "Electronic Arts"
+	releaseyear 2003
+	releasemonth 11
+	releaseday 14
+	users 2
+	rom (
+		name "The Lord of the Rings: The Return of the King (Europe).iso"
+		serial "GKLS69"
+	)
+)
+
+game (
+	name "The Lord of the Rings: The Return of the King (Japan)"
+	serial "GKLJ13"
+	developer "EA Games"
+	publisher "Electronic Arts"
+	releaseyear 2004
+	releasemonth 1
+	releaseday 8
+	users 2
+	rom (
+		name "The Lord of the Rings: The Return of the King (Japan).iso"
+		serial "GKLJ13"
+	)
+)
+
+game (
+	name "The Lord of the Rings: The Return of the King (USA)"
+	serial "GKLE69"
+	developer "EA Games"
+	publisher "Electronic Arts"
+	releaseyear 2003
+	releasemonth 11
+	releaseday 5
+	users 2
+	esrb_rating "T"
+	rom (
+		name "The Lord of the Rings: The Return of the King (USA).iso"
+		serial "GKLE69"
+	)
+)
+
+game (
+	name "The Lord of the Rings: The Third Age (Europe)"
+	serial "G3AD69"
+	developer "EA Games"
+	publisher "Electronic Arts"
+	releaseyear 2004
+	releasemonth 11
+	releaseday 5
+	users 2
+	rom (
+		name "The Lord of the Rings: The Third Age (Europe).iso"
+		serial "G3AD69"
+	)
+)
+
+game (
+	name "The Lord of the Rings: The Third Age (Europe)"
+	serial "G3AF69"
+	developer "EA Games"
+	publisher "Electronic Arts"
+	releaseyear 2004
+	releasemonth 11
+	releaseday 5
+	users 2
+	rom (
+		name "The Lord of the Rings: The Third Age (Europe).iso"
+		serial "G3AF69"
+	)
+)
+
+game (
+	name "The Lord of the Rings: The Third Age (Europe)"
+	serial "G3AP69"
+	developer "EA Games"
+	publisher "Electronic Arts"
+	releaseyear 2004
+	releasemonth 11
+	releaseday 5
+	users 2
+	rom (
+		name "The Lord of the Rings: The Third Age (Europe).iso"
+		serial "G3AP69"
+	)
+)
+
+game (
+	name "The Lord of the Rings: The Third Age (Europe)"
+	serial "G3AS69"
+	developer "Electronic Arts"
+	publisher "Electronic Arts"
+	releaseyear 2004
+	releasemonth 11
+	releaseday 5
+	users 2
+	rom (
+		name "The Lord of the Rings: The Third Age (Europe).iso"
+		serial "G3AS69"
+	)
+)
+
+game (
+	name "The Lord of the Rings: The Third Age (USA)"
+	serial "G3AE69"
+	developer "EA Games"
+	publisher "Electronic Arts"
+	releaseyear 2004
+	releasemonth 11
+	releaseday 2
+	users 2
+	esrb_rating "T"
+	rom (
+		name "The Lord of the Rings: The Third Age (USA).iso"
+		serial "G3AE69"
+	)
+)
+
+game (
+	name "The Lord of the Rings: The Two Towers (Europe)"
+	serial "GLOD69"
+	developer "Stormfront Studios"
+	publisher "Electronic Arts"
+	releaseyear 2003
+	releasemonth 3
+	releaseday 13
+	users 1
+	rom (
+		name "The Lord of the Rings: The Two Towers (Europe).iso"
+		serial "GLOD69"
+	)
+)
+
+game (
+	name "The Lord of the Rings: The Two Towers (Europe)"
+	serial "GLOF69"
+	developer "Stormfront Studios"
+	publisher "Electronic Arts"
+	releaseyear 2003
+	releasemonth 3
+	releaseday 13
+	users 1
+	rom (
+		name "The Lord of the Rings: The Two Towers (Europe).iso"
+		serial "GLOF69"
+	)
+)
+
+game (
+	name "The Lord of the Rings: The Two Towers (Europe)"
+	serial "GLOI69"
+	developer "Stormfront Studios"
+	publisher "Electronic Arts"
+	releaseyear 2003
+	releasemonth 3
+	releaseday 13
+	users 1
+	rom (
+		name "The Lord of the Rings: The Two Towers (Europe).iso"
+		serial "GLOI69"
+	)
+)
+
+game (
+	name "The Lord of the Rings: The Two Towers (Europe)"
+	serial "GLOP69"
+	developer "Stormfront Studios"
+	publisher "Electronic Arts"
+	releaseyear 2003
+	releasemonth 3
+	releaseday 13
+	users 1
+	rom (
+		name "The Lord of the Rings: The Two Towers (Europe).iso"
+		serial "GLOP69"
+	)
+)
+
+game (
+	name "The Lord of the Rings: The Two Towers (Europe)"
+	serial "GLOS69"
+	developer "Stormfront Studios"
+	publisher "Electronic Arts"
+	releaseyear 2003
+	releasemonth 3
+	releaseday 13
+	users 1
+	rom (
+		name "The Lord of the Rings: The Two Towers (Europe).iso"
+		serial "GLOS69"
+	)
+)
+
+game (
+	name "The Lord of the Rings: The Two Towers (USA)"
+	serial "GLOE69"
+	developer "Stormfront Studios"
+	publisher "Electronic Arts"
+	releaseyear 2002
+	releasemonth 12
+	releaseday 30
+	users 1
+	esrb_rating "T"
+	rom (
+		name "The Lord of the Rings: The Two Towers (USA).iso"
+		serial "GLOE69"
+	)
+)
+
+game (
+	name "The Polar Express (Europe)"
+	serial "GP3P78"
+	developer "Blue Tongue Entertainment"
+	publisher "THQ"
+	releaseyear 2004
+	releasemonth 11
+	releaseday 19
+	users 1
+	rom (
+		name "The Polar Express (Europe).iso"
+		serial "GP3P78"
+	)
+)
+
+game (
+	name "The Polar Express (USA)"
+	serial "GP3E78"
+	developer "Blue Tongue Entertainment"
+	publisher "THQ"
+	releaseyear 2004
+	releasemonth 11
+	releaseday 2
+	users 1
+	esrb_rating "E"
+	rom (
+		name "The Polar Express (USA).iso"
+		serial "GP3E78"
+	)
+)
+
+game (
+	name "The Powerpuff Girls: Relish Rampage (Europe)"
+	serial "GPQP6L"
+	developer "VIS Entertainment"
+	publisher "BAM! Entertainment"
+	releaseyear 2002
+	releasemonth 12
+	releaseday 13
+	users 1
+	rom (
+		name "The Powerpuff Girls: Relish Rampage (Europe).iso"
+		serial "GPQP6L"
+	)
+)
+
+game (
+	name "The Powerpuff Girls: Relish Rampage (USA)"
+	serial "GPQE6L"
+	developer "VIS Entertainment"
+	publisher "BAM! Entertainment"
+	releaseyear 2003
+	releasemonth 12
+	releaseday 15
+	users 1
+	esrb_rating "E"
+	rom (
+		name "The Powerpuff Girls: Relish Rampage (USA).iso"
+		serial "GPQE6L"
+	)
+)
+
+game (
+	name "The Scorpion King: Rise of the Akkadian (Europe)"
+	serial "GSKP7D"
+	developer "Point of View"
+	publisher "Sierra / Universal Interactive"
+	releaseyear 2002
+	releasemonth 11
+	releaseday 29
+	users 1
+	rom (
+		name "The Scorpion King: Rise of the Akkadian (Europe).iso"
+		serial "GSKP7D"
+	)
+)
+
+game (
+	name "The Scorpion King: Rise of the Akkadian (USA)"
+	serial "GSKE7D"
+	developer "Point of View"
+	publisher "Sierra / Universal Interactive"
+	releaseyear 2002
+	releasemonth 9
+	releaseday 11
+	users 1
+	esrb_rating "T"
+	rom (
+		name "The Scorpion King: Rise of the Akkadian (USA).iso"
+		serial "GSKE7D"
+	)
+)
+
+game (
+	name "The Simpsons: Hit & Run (Europe)"
+	serial "GHQP7D"
+	developer "Radical Entertainment"
+	publisher "Sierra / Universal Interactive"
+	releaseyear 2003
+	releasemonth 11
+	releaseday 7
+	users 4
+	rom (
+		name "The Simpsons: Hit & Run (Europe).iso"
+		serial "GHQP7D"
+	)
+)
+
+game (
+	name "The Simpsons: Hit & Run (USA)"
+	serial "GHQE7D"
+	developer "Radical Entertainment"
+	publisher "Sierra / Universal Interactive"
+	releaseyear 2003
+	releasemonth 9
+	releaseday 16
+	users 4
+	esrb_rating "T"
+	rom (
+		name "The Simpsons: Hit & Run (USA).iso"
+		serial "GHQE7D"
+	)
+)
+
+game (
+	name "The Simpsons: Road Rage (Europe)"
+	serial "GSPP69"
+	developer "Fox Interactive, Radical Entertainment"
+	publisher "Electronic Arts"
+	releaseyear 2002
+	releasemonth 5
+	releaseday 17
+	users 2
+	rom (
+		name "The Simpsons: Road Rage (Europe).iso"
+		serial "GSPP69"
+	)
+)
+
+game (
+	name "The Simpsons: Road Rage (USA)"
+	serial "GSPE69"
+	developer "Radical Entertainment"
+	publisher "Electronic Arts"
+	releaseyear 2001
+	releasemonth 12
+	releaseday 17
+	users 2
+	esrb_rating "T"
+	rom (
+		name "The Simpsons: Road Rage (USA).iso"
+		serial "GSPE69"
+	)
+)
+
+game (
+	name "The Sims (Europe)"
+	serial "GCIP69"
+	developer "Maxis"
+	publisher "Electronic Arts"
+	releaseyear 2003
+	releasemonth 4
+	releaseday 3
+	users 2
+	rom (
+		name "The Sims (Europe).iso"
+		serial "GCIP69"
+	)
+)
+
+game (
+	name "The Sims (Japan)"
+	serial "G4PJ13"
+	publisher "Electronic Arts Japan"
+	releaseyear 2004
+	releasemonth 1
+	releaseday 22
+	users 1
+	rom (
+		name "The Sims (Japan).iso"
+		serial "G4PJ13"
+	)
+)
+
+game (
+	name "The Sims (USA)"
+	serial "GCIE69"
+	developer "Maxis"
+	publisher "Electronic Arts"
+	releaseyear 2003
+	releasemonth 3
+	releaseday 25
+	users 2
+	esrb_rating "T"
+	rom (
+		name "The Sims (USA).iso"
+		serial "GCIE69"
+	)
+)
+
+game (
+	name "The Sims 2 (Europe)"
+	serial "G4ZP69"
+	developer "Maxis"
+	publisher "Electronic Arts"
+	releaseyear 2005
+	releasemonth 11
+	releaseday 4
+	users 2
+	rom (
+		name "The Sims 2 (Europe).iso"
+		serial "G4ZP69"
+	)
+)
+
+game (
+	name "The Sims 2 (USA)"
+	serial "G4ZE69"
+	developer "Maxis"
+	publisher "Electronic Arts"
+	releaseyear 2005
+	releasemonth 10
+	releaseday 24
+	users 2
+	esrb_rating "T"
+	rom (
+		name "The Sims 2 (USA).iso"
+		serial "G4ZE69"
+	)
+)
+
+game (
+	name "The Sims 2: Pets (Europe)"
+	serial "G4OP69"
+	developer "Maxis"
+	publisher "Electronic Arts"
+	releaseyear 2006
+	releasemonth 10
+	releaseday 19
+	users 1
+	rom (
+		name "The Sims 2: Pets (Europe).iso"
+		serial "G4OP69"
+	)
+)
+
+game (
+	name "The Sims 2: Pets (USA)"
+	serial "G4OE69"
+	developer "Maxis"
+	publisher "Electronic Arts"
+	releaseyear 2006
+	releasemonth 10
+	releaseday 17
+	users 1
+	esrb_rating "T"
+	rom (
+		name "The Sims 2: Pets (USA).iso"
+		serial "G4OE69"
+	)
+)
+
+game (
+	name "The Sims Bustin' Out (USA)"
+	serial "G4ME69"
+	developer "Maxis"
+	publisher "Electronic Arts"
+	releaseyear 2003
+	releasemonth 12
+	releaseday 15
+	users 2
+	esrb_rating "T"
+	rom (
+		name "The Sims Bustin' Out (USA).iso"
+		serial "G4ME69"
+	)
+)
+
+game (
+	name "The Sims: Bustin' Out (Europe)"
+	serial "G4MP69"
+	developer "Maxis"
+	publisher "Electronic Arts"
+	releaseyear 2003
+	releasemonth 12
+	releaseday 17
+	users 2
+	rom (
+		name "The Sims: Bustin' Out (Europe).iso"
+		serial "G4MP69"
+	)
+)
+
+game (
+	name "The Sum of All Fears (Europe)"
+	serial "G3MP41"
+	developer "Red Storm Entertainment"
+	publisher "Ubi Soft Entertainment"
+	releaseyear 2003
+	releasemonth 3
+	releaseday 21
+	users 1
+	rom (
+		name "The Sum of All Fears (Europe).iso"
+		serial "G3MP41"
+	)
+)
+
+game (
+	name "The Tower of Druaga (Japan)"
+	serial "PKBJ01"
+	developer "Namco"
+	publisher "Namco"
+	releaseyear 2003
+	releasemonth 12
+	releaseday 5
+	users 1
+	rom (
+		name "The Tower of Druaga (Japan).iso"
+		serial "PKBJ01"
+	)
+)
+
+game (
+	name "The Urbz: Sims In The City (Japan)"
+	serial "GUBJ13"
+	developer "Maxis"
+	publisher "Electronic Arts Japan"
+	releaseyear 2005
+	releasemonth 1
+	releaseday 13
+	users 2
+	rom (
+		name "The Urbz: Sims In The City (Japan).iso"
+		serial "GUBJ13"
+	)
+)
+
+game (
+	name "The Urbz: Sims in the City (Europe)"
+	serial "GUBP69"
+	developer "Maxis"
+	publisher "Electronic Arts"
+	releaseyear 2004
+	releasemonth 11
+	releaseday 18
+	users 2
+	rom (
+		name "The Urbz: Sims in the City (Europe).iso"
+		serial "GUBP69"
+	)
+)
+
+game (
+	name "The Urbz: Sims in the City (USA)"
+	serial "GUBE69"
+	developer "Maxis"
+	publisher "Electronic Arts"
+	releaseyear 2004
+	releasemonth 11
+	releaseday 9
+	users 2
+	esrb_rating "T"
+	rom (
+		name "The Urbz: Sims in the City (USA).iso"
+		serial "GUBE69"
+	)
+)
+
+game (
+	name "Tiger Woods PGA Tour 06 (Europe)"
+	serial "G6WP69"
+	developer "EA Sports"
+	publisher "Electronic Arts"
+	releaseyear 2005
+	releasemonth 10
+	releaseday 13
+	users 4
+	rom (
+		name "Tiger Woods PGA Tour 06 (Europe).iso"
+		serial "G6WP69"
+	)
+)
+
+game (
+	name "Tiger Woods PGA Tour 06 (USA)"
+	serial "G6WE69"
+	developer "EA Sports"
+	publisher "Electronic Arts"
+	releaseyear 2005
+	releasemonth 9
+	releaseday 20
+	users 4
+	esrb_rating "E"
+	rom (
+		name "Tiger Woods PGA Tour 06 (USA).iso"
+		serial "G6WE69"
+	)
+)
+
+game (
+	name "Tiger Woods PGA Tour 2003 (Europe)"
+	serial "GTIP69"
+	developer "EA Sports"
+	publisher "Electronic Arts"
+	releaseyear 2002
+	releasemonth 10
+	releaseday 27
+	users 4
+	rom (
+		name "Tiger Woods PGA Tour 2003 (Europe).iso"
+		serial "GTIP69"
+	)
+)
+
+game (
+	name "Tiger Woods PGA Tour 2003 (USA)"
+	serial "GTIE69"
+	developer "EA Sports"
+	publisher "Electronic Arts"
+	releaseyear 2002
+	releasemonth 10
+	releaseday 27
+	users 4
+	esrb_rating "E"
+	rom (
+		name "Tiger Woods PGA Tour 2003 (USA).iso"
+		serial "GTIE69"
+	)
+)
+
+game (
+	name "Tiger Woods PGA Tour 2004 (Europe)"
+	serial "GW4P69"
+	developer "EA Sports"
+	publisher "Electronic Arts"
+	releaseyear 2003
+	releasemonth 9
+	releaseday 26
+	users 2
+	rom (
+		name "Tiger Woods PGA Tour 2004 (Europe).iso"
+		serial "GW4P69"
+	)
+)
+
+game (
+	name "Tiger Woods PGA Tour 2004 (USA)"
+	serial "GW4E69"
+	developer "EA Sports"
+	publisher "Electronic Arts"
+	releaseyear 2003
+	releasemonth 9
+	releaseday 22
+	users 4
+	esrb_rating "E"
+	rom (
+		name "Tiger Woods PGA Tour 2004 (USA).iso"
+		serial "GW4E69"
+	)
+)
+
+game (
+	name "Tiger Woods PGA Tour 2005 (Europe)"
+	serial "G5TP69"
+	developer "EA Sports"
+	publisher "Electronic Arts"
+	releaseyear 2004
+	releasemonth 9
+	releaseday 24
+	users 4
+	rom (
+		name "Tiger Woods PGA Tour 2005 (Europe).iso"
+		serial "G5TP69"
+	)
+)
+
+game (
+	name "Tiger Woods PGA Tour 2005 (USA)"
+	serial "G5TE69"
+	developer "EA Sports"
+	publisher "Electronic Arts"
+	releaseyear 2004
+	releasemonth 9
+	releaseday 20
+	users 4
+	esrb_rating "E"
+	rom (
+		name "Tiger Woods PGA Tour 2005 (USA).iso"
+		serial "G5TE69"
+	)
+)
+
+game (
+	name "TimeSplitters 2 (Europe)"
+	serial "GTSP4F"
+	developer "Free Radical Design"
+	publisher "Eidos"
+	releaseyear 2002
+	releasemonth 10
+	releaseday 31
+	users 4
+	rom (
+		name "TimeSplitters 2 (Europe).iso"
+		serial "GTSP4F"
+	)
+)
+
+game (
+	name "TimeSplitters 2 (USA)"
+	serial "GTSE4F"
+	developer "Free Radical Design"
+	publisher "Eidos"
+	releaseyear 2002
+	releasemonth 10
+	releaseday 16
+	users 4
+	esrb_rating "T"
+	rom (
+		name "TimeSplitters 2 (USA).iso"
+		serial "GTSE4F"
+	)
+)
+
+game (
+	name "TimeSplitters: Future Perfect (Europe)"
+	serial "G3FD69"
+	developer "Free Radical Design"
+	publisher "Electronic Arts"
+	releaseyear 2005
+	releasemonth 3
+	releaseday 25
+	users 4
+	rom (
+		name "TimeSplitters: Future Perfect (Europe).iso"
+		serial "G3FD69"
+	)
+)
+
+game (
+	name "TimeSplitters: Future Perfect (Europe)"
+	serial "G3FF69"
+	developer "Free Radical Design"
+	publisher "Electronic Arts"
+	releaseyear 2005
+	releasemonth 3
+	releaseday 25
+	users 4
+	rom (
+		name "TimeSplitters: Future Perfect (Europe).iso"
+		serial "G3FF69"
+	)
+)
+
+game (
+	name "TimeSplitters: Future Perfect (Europe)"
+	serial "G3FP69"
+	developer "Free Radical Design"
+	publisher "Electronic Arts"
+	releaseyear 2005
+	releasemonth 3
+	releaseday 25
+	users 4
+	rom (
+		name "TimeSplitters: Future Perfect (Europe).iso"
+		serial "G3FP69"
+	)
+)
+
+game (
+	name "TimeSplitters: Future Perfect (Europe)"
+	serial "G3FS69"
+	developer "Free Radical Design"
+	publisher "Electronic Arts"
+	releaseyear 2005
+	releasemonth 3
+	releaseday 25
+	users 4
+	rom (
+		name "TimeSplitters: Future Perfect (Europe).iso"
+		serial "G3FS69"
+	)
+)
+
+game (
+	name "TimeSplitters: Future Perfect (USA)"
+	serial "G3FE69"
+	developer "Free Radical Design"
+	publisher "Electronic Arts"
+	releaseyear 2005
+	releasemonth 3
+	releaseday 21
+	users 4
+	esrb_rating "M"
+	rom (
+		name "TimeSplitters: Future Perfect (USA).iso"
+		serial "G3FE69"
+	)
+)
+
+game (
+	name "Tom & Jerry in War of the Whiskers (USA)"
+	serial "GTJE5L"
+	developer "VIS Entertainment"
+	publisher "NewKidCo"
+	releaseyear 2003
+	releasemonth 1
+	releaseday 4
+	users 4
+	esrb_rating "T"
+	rom (
+		name "Tom & Jerry in War of the Whiskers (USA).iso"
+		serial "GTJE5L"
+	)
+)
+
+game (
+	name "Tom Clancy's Ghost Recon (Europe)"
+	serial "GGRD41"
+	developer "Red Storm"
+	publisher "Ubi Soft Entertainment"
+	releaseyear 2003
+	releasemonth 3
+	releaseday 27
+	users 2
+	rom (
+		name "Tom Clancy's Ghost Recon (Europe).iso"
+		serial "GGRD41"
+	)
+)
+
+game (
+	name "Tom Clancy's Ghost Recon (Europe)"
+	serial "GGRP41"
+	developer "Red Storm"
+	publisher "Ubi Soft Entertainment"
+	releaseyear 2003
+	releasemonth 3
+	releaseday 27
+	users 2
+	rom (
+		name "Tom Clancy's Ghost Recon (Europe).iso"
+		serial "GGRP41"
+	)
+)
+
+game (
+	name "Tom Clancy's Ghost Recon (USA)"
+	serial "GGRE41"
+	developer "Red Storm Entertainment"
+	publisher "Ubi Soft Entertainment"
+	releaseyear 2003
+	releasemonth 2
+	releaseday 9
+	users 2
+	esrb_rating "M"
+	rom (
+		name "Tom Clancy's Ghost Recon (USA).iso"
+		serial "GGRE41"
+	)
+)
+
+game (
+	name "Tom Clancy's Ghost Recon 2 (Europe)"
+	serial "GGYP41"
+	developer "Red Storm Entertainment"
+	publisher "Ubi Soft Entertainment"
+	releaseyear 2005
+	releasemonth 3
+	releaseday 24
+	users 1
+	rom (
+		name "Tom Clancy's Ghost Recon 2 (Europe).iso"
+		serial "GGYP41"
+	)
+)
+
+game (
+	name "Tom Clancy's Ghost Recon 2 (USA)"
+	serial "GGYE41"
+	developer "Red Storm Entertainment"
+	publisher "Ubi Soft Entertainment"
+	releaseyear 2005
+	releasemonth 3
+	releaseday 15
+	users 1
+	esrb_rating "T"
+	rom (
+		name "Tom Clancy's Ghost Recon 2 (USA).iso"
+		serial "GGYE41"
+	)
+)
+
+game (
+	name "Tom Clancy's Rainbow Six 3 (Europe)"
+	serial "G63P41"
+	developer "Ubisoft Shanghai"
+	publisher "Ubi Soft Entertainment"
+	releaseyear 2004
+	releasemonth 6
+	releaseday 24
+	users 2
+	rom (
+		name "Tom Clancy's Rainbow Six 3 (Europe).iso"
+		serial "G63P41"
+	)
+)
+
+game (
+	name "Tom Clancy's Rainbow Six 3 (USA)"
+	serial "G63E41"
+	developer "Ubisoft Shanghai"
+	publisher "Ubi Soft Entertainment"
+	releaseyear 2004
+	releasemonth 6
+	releaseday 17
+	users 2
+	esrb_rating "M"
+	rom (
+		name "Tom Clancy's Rainbow Six 3 (USA).iso"
+		serial "G63E41"
+	)
+)
+
+game (
+	name "Tom Clancy's Rainbow Six: Lockdown (Europe)"
+	serial "GLQP41"
+	developer "Red Storm Entertainment"
+	publisher "Ubi Soft Entertainment"
+	releaseyear 2005
+	releasemonth 10
+	releaseday 7
+	users 2
+	rom (
+		name "Tom Clancy's Rainbow Six: Lockdown (Europe).iso"
+		serial "GLQP41"
+	)
+)
+
+game (
+	name "Tom Clancy's Rainbow Six: Lockdown (USA)"
+	serial "GLQE41"
+	developer "Red Storm Entertainment"
+	publisher "Ubi Soft Entertainment"
+	releaseyear 2005
+	releasemonth 6
+	releaseday 9
+	users 2
+	esrb_rating "M"
+	rom (
+		name "Tom Clancy's Rainbow Six: Lockdown (USA).iso"
+		serial "GLQE41"
+	)
+)
+
+game (
+	name "Tom Clancy's Splinter Cell (Demo) (Europe)"
+	serial "DCEP41"
+	developer "Ubi Soft Entertainment"
+	publisher "Ubi Soft Entertainment"
+	users 1
+	rom (
+		name "Tom Clancy's Splinter Cell (Demo) (Europe).iso"
+		serial "DCEP41"
+	)
+)
+
+game (
+	name "Tom Clancy's Splinter Cell (Europe)"
+	serial "GCEP41"
+	developer "Ubi Soft Entertainment"
+	publisher "Ubi Soft Entertainment"
+	releaseyear 2003
+	releasemonth 6
+	releaseday 5
+	users 1
+	rom (
+		name "Tom Clancy's Splinter Cell (Europe).iso"
+		serial "GCEP41"
+	)
+)
+
+game (
+	name "Tom Clancy's Splinter Cell (USA)"
+	serial "GCEE41"
+	developer "Ubisoft Shanghai"
+	publisher "Ubi Soft Entertainment"
+	releaseyear 2003
+	releasemonth 4
+	releaseday 10
+	users 1
+	esrb_rating "T"
+	rom (
+		name "Tom Clancy's Splinter Cell (USA).iso"
+		serial "GCEE41"
+	)
+)
+
+game (
+	name "Tom Clancy's Splinter Cell: Chaos Theory (Europe)"
+	serial "GCJP41"
+	developer "Ubisoft Montreal"
+	publisher "Ubi Soft Entertainment"
+	releaseyear 2005
+	releasemonth 3
+	releaseday 31
+	users 2
+	rom (
+		name "Tom Clancy's Splinter Cell: Chaos Theory (Europe).iso"
+		serial "GCJP41"
+	)
+)
+
+game (
+	name "Tom Clancy's Splinter Cell: Chaos Theory (USA)"
+	serial "GCJE41"
+	developer "Ubisoft Montreal"
+	publisher "Ubi Soft Entertainment"
+	releaseyear 2005
+	releasemonth 3
+	releaseday 31
+	users 2
+	esrb_rating "M"
+	rom (
+		name "Tom Clancy's Splinter Cell: Chaos Theory (USA).iso"
+		serial "GCJE41"
+	)
+)
+
+game (
+	name "Tom Clancy's Splinter Cell: Double Agent (Europe)"
+	serial "GWYX41"
+	developer "Ubisoft Montreal"
+	publisher "Ubi Soft Entertainment"
+	releaseyear 2006
+	releasemonth 10
+	releaseday 26
+	users 2
+	rom (
+		name "Tom Clancy's Splinter Cell: Double Agent (Europe).iso"
+		serial "GWYX41"
+	)
+)
+
+game (
+	name "Tom Clancy's Splinter Cell: Double Agent (USA)"
+	serial "GWYE41"
+	developer "Ubisoft Montreal"
+	publisher "Ubi Soft Entertainment"
+	releaseyear 2006
+	releasemonth 10
+	releaseday 26
+	users 2
+	esrb_rating "M"
+	rom (
+		name "Tom Clancy's Splinter Cell: Double Agent (USA).iso"
+		serial "GWYE41"
+	)
+)
+
+game (
+	name "Tom Clancy's Splinter Cell: Pandora Tomorrow (Europe)"
+	serial "GT7P41"
+	developer "Ubisoft"
+	publisher "Ubi Soft Entertainment"
+	releaseyear 2004
+	releasemonth 7
+	releaseday 29
+	users 1
+	rom (
+		name "Tom Clancy's Splinter Cell: Pandora Tomorrow (Europe).iso"
+		serial "GT7P41"
+	)
+)
+
+game (
+	name "Tom Clancy's Splinter Cell: Pandora Tomorrow (Europe)"
+	serial "GT7X41"
+	developer "Ubisoft"
+	publisher "Ubi Soft Entertainment"
+	releaseyear 2004
+	releasemonth 7
+	releaseday 29
+	users 1
+	rom (
+		name "Tom Clancy's Splinter Cell: Pandora Tomorrow (Europe).iso"
+		serial "GT7X41"
+	)
+)
+
+game (
+	name "Tom Clancy's Splinter Cell: Pandora Tomorrow (USA)"
+	serial "GT7E41"
+	developer "Ubisoft Annecy"
+	publisher "Ubi Soft Entertainment"
+	releaseyear 2004
+	releasemonth 7
+	releaseday 20
+	users 1
+	esrb_rating "T"
+	rom (
+		name "Tom Clancy's Splinter Cell: Pandora Tomorrow (USA).iso"
+		serial "GT7E41"
+	)
+)
+
+game (
+	name "Tom Clancy's The Sum of All Fears (USA)"
+	serial "G3ME41"
+	developer "Red Storm Entertainment"
+	publisher "Ubi Soft Entertainment"
+	releaseyear 2003
+	releasemonth 1
+	releaseday 9
+	users 1
+	esrb_rating "T"
+	rom (
+		name "Tom Clancy's The Sum of All Fears (USA).iso"
+		serial "G3ME41"
+	)
+)
+
+game (
+	name "Tonka: Rescue Patrol (USA)"
+	serial "GTQE6S"
+	developer "TDK Mediactive"
+	publisher "TDK Mediactive"
+	releaseyear 2003
+	releasemonth 11
+	releaseday 18
+	users 1
+	esrb_rating "E"
+	rom (
+		name "Tonka: Rescue Patrol (USA).iso"
+		serial "GTQE6S"
+	)
+)
+
+game (
+	name "Tony Hawk's American Wasteland (Europe)"
+	serial "GH9P52"
+	developer "Neversoft Entertainment"
+	publisher "Activision"
+	releaseyear 2005
+	releasemonth 10
+	releaseday 28
+	users 2
+	rom (
+		name "Tony Hawk's American Wasteland (Europe).iso"
+		serial "GH9P52"
+	)
+)
+
+game (
+	name "Tony Hawk's American Wasteland (USA)"
+	serial "GWJE52"
+	developer "Neversoft Entertainment"
+	publisher "Activision"
+	releaseyear 2005
+	releasemonth 10
+	releaseday 18
+	users 2
+	esrb_rating "T"
+	rom (
+		name "Tony Hawk's American Wasteland (USA).iso"
+		serial "GWJE52"
+	)
+)
+
+game (
+	name "Tony Hawk's Pro Skater 3 (Europe)"
+	serial "GT3D52"
+	developer "Neversoft Entertainment"
+	publisher "Activision"
+	releaseyear 2002
+	releasemonth 5
+	releaseday 3
+	users 2
+	rom (
+		name "Tony Hawk's Pro Skater 3 (Europe).iso"
+		serial "GT3D52"
+	)
+)
+
+game (
+	name "Tony Hawk's Pro Skater 3 (Europe)"
+	serial "GT3F52"
+	developer "Neversoft Entertainment"
+	publisher "Activision"
+	releaseyear 2002
+	releasemonth 5
+	releaseday 3
+	users 2
+	rom (
+		name "Tony Hawk's Pro Skater 3 (Europe).iso"
+		serial "GT3F52"
+	)
+)
+
+game (
+	name "Tony Hawk's Pro Skater 3 (Europe)"
+	serial "GT3P52"
+	developer "Neversoft Entertainment"
+	publisher "Activision"
+	releaseyear 2002
+	releasemonth 5
+	releaseday 3
+	users 2
+	rom (
+		name "Tony Hawk's Pro Skater 3 (Europe).iso"
+		serial "GT3P52"
+	)
+)
+
+game (
+	name "Tony Hawk's Pro Skater 3 (Japan)"
+	serial "GT3J52"
+	developer "Neversoft Entertainment"
+	publisher "Activision"
+	releaseyear 2003
+	releasemonth 6
+	releaseday 27
+	users 2
+	rom (
+		name "Tony Hawk's Pro Skater 3 (Japan).iso"
+		serial "GT3J52"
+	)
+)
+
+game (
+	name "Tony Hawk's Pro Skater 3 (USA)"
+	serial "GT3E52"
+	developer "Neversoft Entertainment"
+	publisher "Activision"
+	releaseyear 2001
+	releasemonth 11
+	releaseday 13
+	users 2
+	esrb_rating "T"
+	rom (
+		name "Tony Hawk's Pro Skater 3 (USA).iso"
+		serial "GT3E52"
+	)
+)
+
+game (
+	name "Tony Hawk's Pro Skater 4 (Europe)"
+	serial "GT4D52"
+	developer "Neversoft Entertainment"
+	publisher "Activision"
+	releaseyear 2002
+	releasemonth 11
+	releaseday 22
+	users 2
+	rom (
+		name "Tony Hawk's Pro Skater 4 (Europe).iso"
+		serial "GT4D52"
+	)
+)
+
+game (
+	name "Tony Hawk's Pro Skater 4 (Europe)"
+	serial "GT4F52"
+	developer "Neversoft Entertainment"
+	publisher "Activision"
+	releaseyear 2002
+	releasemonth 11
+	releaseday 22
+	users 2
+	rom (
+		name "Tony Hawk's Pro Skater 4 (Europe).iso"
+		serial "GT4F52"
+	)
+)
+
+game (
+	name "Tony Hawk's Pro Skater 4 (Europe)"
+	serial "GT4P52"
+	developer "Neversoft Entertainment"
+	publisher "Activision"
+	releaseyear 2002
+	releasemonth 11
+	releaseday 22
+	users 2
+	rom (
+		name "Tony Hawk's Pro Skater 4 (Europe).iso"
+		serial "GT4P52"
+	)
+)
+
+game (
+	name "Tony Hawk's Pro Skater 4 (USA)"
+	serial "GT4E52"
+	developer "Neversoft Entertainment"
+	publisher "Activision"
+	releaseyear 2002
+	releasemonth 10
+	releaseday 23
+	users 2
+	esrb_rating "T"
+	rom (
+		name "Tony Hawk's Pro Skater 4 (USA).iso"
+		serial "GT4E52"
+	)
+)
+
+game (
+	name "Tony Hawk's Underground (Europe)"
+	serial "GTDP52"
+	developer "Neversoft Entertainment"
+	publisher "Activision"
+	releaseyear 2003
+	releasemonth 11
+	releaseday 21
+	users 2
+	rom (
+		name "Tony Hawk's Underground (Europe).iso"
+		serial "GTDP52"
+	)
+)
+
+game (
+	name "Tony Hawk's Underground (USA)"
+	serial "GTDE52"
+	developer "Neversoft Entertainment"
+	publisher "Activision"
+	releaseyear 2003
+	releasemonth 10
+	releaseday 31
+	users 2
+	esrb_rating "T"
+	rom (
+		name "Tony Hawk's Underground (USA).iso"
+		serial "GTDE52"
+	)
+)
+
+game (
+	name "Tony Hawk's Underground 2 (Europe)"
+	serial "G2TP52"
+	developer "Neversoft Entertainment"
+	publisher "Activision"
+	releaseyear 2004
+	releasemonth 10
+	releaseday 8
+	users 2
+	rom (
+		name "Tony Hawk's Underground 2 (Europe).iso"
+		serial "G2TP52"
+	)
+)
+
+game (
+	name "Tony Hawk's Underground 2 (USA)"
+	serial "G2TE52"
+	developer "Neversoft Entertainment"
+	publisher "Activision"
+	releaseyear 2004
+	releasemonth 10
+	releaseday 4
+	users 2
+	esrb_rating "T"
+	rom (
+		name "Tony Hawk's Underground 2 (USA).iso"
+		serial "G2TE52"
+	)
+)
+
+game (
+	name "Top Angler: Real Bass Fishing (Europe)"
+	serial "GTAP5S"
+	developer "Xicat Interactive"
+	publisher "Xicat Interactive"
+	releaseyear 2004
+	releasemonth 2
+	releaseday 13
+	users 1
+	rom (
+		name "Top Angler: Real Bass Fishing (Europe).iso"
+		serial "GTAP5S"
+	)
+)
+
+game (
+	name "Top Angler: Real Bass Fishing (USA)"
+	serial "GTAE5S"
+	developer "Xicat Interactive"
+	publisher "Xicat Interactive"
+	releaseyear 2003
+	releasemonth 1
+	releaseday 1
+	users 1
+	esrb_rating "E"
+	rom (
+		name "Top Angler: Real Bass Fishing (USA).iso"
+		serial "GTAE5S"
+	)
+)
+
+game (
+	name "Top Gun - Ace of the Sky (Japan)"
+	serial "GTGJ1K"
+	developer "Titus Software"
+	publisher "Titus Software"
+	releaseyear 2002
+	releasemonth 12
+	releaseday 26
+	users 1
+	rom (
+		name "Top Gun - Ace of the Sky (Japan).iso"
+		serial "GTGJ1K"
+	)
+)
+
+game (
+	name "Top Gun: Combat Zones (Europe)"
+	serial "GTGP60"
+	developer "Titus Software"
+	publisher "Titus"
+	releaseyear 2002
+	releasemonth 11
+	releaseday 8
+	users 1
+	rom (
+		name "Top Gun: Combat Zones (Europe).iso"
+		serial "GTGP60"
+	)
+)
+
+game (
+	name "Top Gun: Combat Zones (USA)"
+	serial "GTGE60"
+	developer "Titus Software"
+	publisher "Titus"
+	releaseyear 2002
+	releasemonth 10
+	releaseday 24
+	users 1
+	esrb_rating "E"
+	rom (
+		name "Top Gun: Combat Zones (USA).iso"
+		serial "GTGE60"
+	)
+)
+
+game (
+	name "Totsugeki!! Famicom Wars (Japan)"
+	serial "G8WJ01"
+	developer "Kuju Entertainment"
+	publisher "Nintendo"
+	releaseyear 2005
+	releasemonth 10
+	releaseday 27
+	users 1
+	rom (
+		name "Totsugeki!! Famicom Wars (Japan).iso"
+		serial "G8WJ01"
+	)
+)
+
+game (
+	name "Transworld Surf: Next Wave (USA)"
+	serial "GTVE70"
+	developer "Rockstar San Diego"
+	publisher "Atari (Infogrames)"
+	releaseyear 2003
+	releasemonth 3
+	releaseday 18
+	users 4
+	esrb_rating "T"
+	rom (
+		name "Transworld Surf: Next Wave (USA).iso"
+		serial "GTVE70"
+	)
+)
+
+game (
+	name "Trigger Man (USA)"
+	serial "GG2E4Z"
+	developer "Point of View"
+	publisher "Crave Entertainment"
+	releaseyear 2004
+	releasemonth 10
+	releaseday 5
+	users 1
+	esrb_rating "T"
+	rom (
+		name "Trigger Man (USA).iso"
+		serial "GG2E4Z"
+	)
+)
+
+game (
+	name "True Crime: New York City (Europe)"
+	serial "G2CD52"
+	developer "Exakt"
+	publisher "Activision"
+	releaseyear 2005
+	releasemonth 11
+	releaseday 25
+	users 1
+	rom (
+		name "True Crime: New York City (Europe).iso"
+		serial "G2CD52"
+	)
+)
+
+game (
+	name "True Crime: New York City (Europe)"
+	serial "G2CP52"
+	developer "Exakt"
+	publisher "Activision"
+	releaseyear 2005
+	releasemonth 11
+	releaseday 25
+	users 1
+	rom (
+		name "True Crime: New York City (Europe).iso"
+		serial "G2CP52"
+	)
+)
+
+game (
+	name "True Crime: New York City (Europe)"
+	serial "G2CX52"
+	developer "Exakt"
+	publisher "Activision"
+	releaseyear 2005
+	releasemonth 11
+	releaseday 25
+	users 1
+	rom (
+		name "True Crime: New York City (Europe).iso"
+		serial "G2CX52"
+	)
+)
+
+game (
+	name "True Crime: New York City (USA)"
+	serial "G2CE52"
+	developer "Exakt"
+	publisher "Activision"
+	releaseyear 2005
+	releasemonth 11
+	releaseday 15
+	users 1
+	esrb_rating "M"
+	rom (
+		name "True Crime: New York City (USA).iso"
+		serial "G2CE52"
+	)
+)
+
+game (
+	name "True Crime: Streets of LA (Europe)"
+	serial "GTLP52"
+	developer "Luxoflux"
+	publisher "Activision"
+	releaseyear 2003
+	releasemonth 11
+	releaseday 21
+	users 1
+	rom (
+		name "True Crime: Streets of LA (Europe).iso"
+		serial "GTLP52"
+	)
+)
+
+game (
+	name "True Crime: Streets of LA (Europe)"
+	serial "GTLX52"
+	developer "Luxoflux"
+	publisher "Activision"
+	releaseyear 2003
+	releasemonth 11
+	releaseday 21
+	users 1
+	rom (
+		name "True Crime: Streets of LA (Europe).iso"
+		serial "GTLX52"
+	)
+)
+
+game (
+	name "True Crime: Streets of LA (USA)"
+	serial "GTLE52"
+	developer "Exakt"
+	publisher "Activision"
+	releaseyear 2003
+	releasemonth 11
+	releaseday 3
+	users 1
+	esrb_rating "M"
+	rom (
+		name "True Crime: Streets of LA (USA).iso"
+		serial "GTLE52"
+	)
+)
+
+game (
+	name "Tsukande! Mawashite! Dossun Puzzle EggMania (Japan)"
+	serial "GEMJ28"
+	publisher "Kemco Japan"
+	releaseyear 2002
+	releasemonth 9
+	releaseday 27
+	users 1
+	rom (
+		name "Tsukande! Mawashite! Dossun Puzzle EggMania (Japan).iso"
+		serial "GEMJ28"
+	)
+)
+
+game (
+	name "Tube Slider - The Championship of Future Formula (USA)"
+	serial "GTUE8G"
+	developer "NEC Interchannel"
+	publisher "Saurus"
+	releaseyear 2003
+	releasemonth 4
+	releaseday 17
+	users 4
+	esrb_rating "E"
+	rom (
+		name "Tube Slider - The Championship of Future Formula (USA).iso"
+		serial "GTUE8G"
+	)
+)
+
+game (
+	name "Turok Evolution (Europe)"
+	serial "GTKD51"
+	developer "Acclaim Studios Austin"
+	publisher "Acclaim"
+	releaseyear 2002
+	releasemonth 9
+	releaseday 27
+	users 4
+	rom (
+		name "Turok Evolution (Europe).iso"
+		serial "GTKD51"
+	)
+)
+
+game (
+	name "Turok Evolution (Europe)"
+	serial "GTKP51"
+	developer "Acclaim Studios Austin"
+	publisher "Acclaim"
+	releaseyear 2002
+	releasemonth 9
+	releaseday 27
+	users 4
+	rom (
+		name "Turok Evolution (Europe).iso"
+		serial "GTKP51"
+	)
+)
+
+game (
+	name "Turok Evolution (USA)"
+	serial "GTKE51"
+	developer "Acclaim Studios Austin"
+	publisher "Acclaim"
+	releaseyear 2002
+	releasemonth 8
+	releaseday 31
+	users 4
+	esrb_rating "M"
+	rom (
+		name "Turok Evolution (USA).iso"
+		serial "GTKE51"
+	)
+)
+
+game (
+	name "Ty the Tasmanian Tiger (Europe)"
+	serial "GTYP69"
+	developer "Krome Studios"
+	publisher "Electronic Arts"
+	releaseyear 2002
+	releasemonth 11
+	releaseday 21
+	users 1
+	rom (
+		name "Ty the Tasmanian Tiger (Europe).iso"
+		serial "GTYP69"
+	)
+)
+
+game (
+	name "Ty the Tasmanian Tiger (USA)"
+	serial "GTYE69"
+	developer "Krome Studios"
+	publisher "Electronic Arts"
+	releaseyear 2002
+	releasemonth 9
+	releaseday 10
+	users 1
+	esrb_rating "E"
+	rom (
+		name "Ty the Tasmanian Tiger (USA).iso"
+		serial "GTYE69"
+	)
+)
+
+game (
+	name "Ty the Tasmanian Tiger 2: Bush Rescue (Europe)"
+	serial "GYTP69"
+	developer "Krome Studios"
+	publisher "Electronic Arts"
+	releaseyear 2004
+	releasemonth 10
+	releaseday 12
+	users 2
+	rom (
+		name "Ty the Tasmanian Tiger 2: Bush Rescue (Europe).iso"
+		serial "GYTP69"
+	)
+)
+
+game (
+	name "Ty the Tasmanian Tiger 2: Bush Rescue (USA)"
+	serial "GYTE69"
+	developer "Krome Studios"
+	publisher "Electronic Arts"
+	releaseyear 2004
+	releasemonth 10
+	releaseday 12
+	users 2
+	esrb_rating "E"
+	rom (
+		name "Ty the Tasmanian Tiger 2: Bush Rescue (USA).iso"
+		serial "GYTE69"
+	)
+)
+
+game (
+	name "Ty the Tasmanian Tiger 3: Night of the Quinkan (USA)"
+	serial "GIZE52"
+	developer "Krome Studios"
+	publisher "Activision"
+	releaseyear 2005
+	releasemonth 10
+	releaseday 12
+	users 2
+	esrb_rating "E10+"
+	rom (
+		name "Ty the Tasmanian Tiger 3: Night of the Quinkan (USA).iso"
+		serial "GIZE52"
+	)
+)
+
+game (
+	name "UEFA Champions League 2004-2005 (Europe)"
+	serial "GUCD69"
+	developer "EA Sports"
+	publisher "Electronic Arts"
+	releaseyear 2005
+	releasemonth 2
+	releaseday 3
+	users 4
+	rom (
+		name "UEFA Champions League 2004-2005 (Europe).iso"
+		serial "GUCD69"
+	)
+)
+
+game (
+	name "UEFA Champions League 2004-2005 (Europe)"
+	serial "GUCF69"
+	developer "EA Sports"
+	publisher "Electronic Arts"
+	releaseyear 2005
+	releasemonth 2
+	releaseday 3
+	users 4
+	rom (
+		name "UEFA Champions League 2004-2005 (Europe).iso"
+		serial "GUCF69"
+	)
+)
+
+game (
+	name "UEFA Champions League 2004-2005 (Europe)"
+	serial "GUCP69"
+	developer "EA Sports"
+	publisher "Electronic Arts"
+	releaseyear 2005
+	releasemonth 2
+	releaseday 3
+	users 4
+	rom (
+		name "UEFA Champions League 2004-2005 (Europe).iso"
+		serial "GUCP69"
+	)
+)
+
+game (
+	name "UFC2 Tapout Final Spec (Japan)"
+	serial "GUFJ08"
+	publisher "Capcom"
+	releaseyear 2002
+	releasemonth 9
+	releaseday 5
+	users 1
+	rom (
+		name "UFC2 Tapout Final Spec (Japan).iso"
+		serial "GUFJ08"
+	)
+)
+
+game (
+	name "UFC: Throwdown (Europe)"
+	serial "GUFP4Z"
+	developer "Crave"
+	publisher "Crave Entertainment"
+	releaseyear 2002
+	releasemonth 9
+	releaseday 20
+	users 2
+	rom (
+		name "UFC: Throwdown (Europe).iso"
+		serial "GUFP4Z"
+	)
+)
+
+game (
+	name "Ultimate Fighting Championship Throwdown (USA)"
+	serial "GUFE4Z"
+	developer "Crave"
+	publisher "Crave Entertainment"
+	releaseyear 2002
+	releasemonth 7
+	releaseday 29
+	users 2
+	esrb_rating "T"
+	rom (
+		name "Ultimate Fighting Championship Throwdown (USA).iso"
+		serial "GUFE4Z"
+	)
+)
+
+game (
+	name "Ultimate Muscle: Legends vs. New Generation (USA)"
+	serial "GKNEB2"
+	developer "Aki Corp."
+	publisher "Bandai"
+	releaseyear 2003
+	releasemonth 6
+	releaseday 5
+	users 4
+	esrb_rating "T"
+	rom (
+		name "Ultimate Muscle: Legends vs. New Generation (USA).iso"
+		serial "GKNEB2"
+	)
+)
+
+game (
+	name "Ultimate Spider-Man (Europe)"
+	serial "GUTD52"
+	developer "Treyarch"
+	publisher "Activision"
+	releaseyear 2005
+	releasemonth 10
+	releaseday 14
+	users 1
+	rom (
+		name "Ultimate Spider-Man (Europe).iso"
+		serial "GUTD52"
+	)
+)
+
+game (
+	name "Ultimate Spider-Man (Europe)"
+	serial "GUTF52"
+	developer "Treyarch"
+	publisher "Activision"
+	releaseyear 2005
+	releasemonth 10
+	releaseday 14
+	users 1
+	rom (
+		name "Ultimate Spider-Man (Europe).iso"
+		serial "GUTF52"
+	)
+)
+
+game (
+	name "Ultimate Spider-Man (Europe)"
+	serial "GUTI52"
+	developer "Treyarch"
+	publisher "Activision"
+	releaseyear 2005
+	releasemonth 10
+	releaseday 14
+	users 1
+	rom (
+		name "Ultimate Spider-Man (Europe).iso"
+		serial "GUTI52"
+	)
+)
+
+game (
+	name "Ultimate Spider-Man (Europe)"
+	serial "GUTP52"
+	developer "Treyarch"
+	publisher "Activision"
+	releaseyear 2005
+	releasemonth 10
+	releaseday 14
+	users 1
+	rom (
+		name "Ultimate Spider-Man (Europe).iso"
+		serial "GUTP52"
+	)
+)
+
+game (
+	name "Ultimate Spider-Man (Europe)"
+	serial "GUTS52"
+	developer "Treyarch"
+	publisher "Activision"
+	releaseyear 2005
+	releasemonth 10
+	releaseday 14
+	users 1
+	rom (
+		name "Ultimate Spider-Man (Europe).iso"
+		serial "GUTS52"
+	)
+)
+
+game (
+	name "Ultimate Spider-Man (Japan)"
+	serial "GUTJC0"
+	developer "Treyarch"
+	publisher "Taito"
+	releaseyear 2006
+	releasemonth 6
+	releaseday 29
+	users 1
+	rom (
+		name "Ultimate Spider-Man (Japan).iso"
+		serial "GUTJC0"
+	)
+)
+
+game (
+	name "Ultimate Spider-Man (USA)"
+	serial "GUTE52"
+	developer "Treyarch"
+	publisher "Activision"
+	releaseyear 2005
+	releasemonth 9
+	releaseday 21
+	users 1
+	esrb_rating "T"
+	rom (
+		name "Ultimate Spider-Man (USA).iso"
+		serial "GUTE52"
+	)
+)
+
+game (
+	name "Universal Studios Japan Adventure (Japan)"
+	serial "GUSJ28"
+	publisher "Kemco Japan"
+	releaseyear 2001
+	releasemonth 12
+	releaseday 7
+	users 1
+	rom (
+		name "Universal Studios Japan Adventure (Japan).iso"
+		serial "GUSJ28"
+	)
+)
+
+game (
+	name "Universal Studios Theme Park Adventure (Europe)"
+	serial "GUSP7F"
+	developer "Kemco"
+	publisher "Kemco"
+	releaseyear 2002
+	releasemonth 5
+	releaseday 18
+	users 4
+	rom (
+		name "Universal Studios Theme Park Adventure (Europe).iso"
+		serial "GUSP7F"
+	)
+)
+
+game (
+	name "Universal Studios Theme Park Adventure (USA)"
+	serial "GUSE7F"
+	developer "Kemco"
+	publisher "Kemco"
+	releaseyear 2001
+	releasemonth 12
+	releaseday 18
+	users 4
+	esrb_rating "T"
+	rom (
+		name "Universal Studios Theme Park Adventure (USA).iso"
+		serial "GUSE7F"
+	)
+)
+
+game (
+	name "Urban Freestyle Soccer (Europe)"
+	serial "GUVP51"
+	developer "Gusto Games"
+	publisher "Acclaim"
+	releaseyear 2004
+	releasemonth 3
+	releaseday 5
+	users 4
+	rom (
+		name "Urban Freestyle Soccer (Europe).iso"
+		serial "GUVP51"
+	)
+)
+
+game (
+	name "V-Rally 3 (Europe)"
+	serial "GV3P70"
+	developer "Eden Studios"
+	publisher "Atari"
+	releaseyear 2003
+	releasemonth 6
+	releaseday 26
+	users 1
+	rom (
+		name "V-Rally 3 (Europe).iso"
+		serial "GV3P70"
+	)
+)
+
+game (
+	name "V-Rally 3 (Japan)"
+	serial "GV3J70"
+	developer "Eden Studios"
+	publisher "Atari"
+	releaseyear 2003
+	releasemonth 7
+	releaseday 10
+	users 1
+	rom (
+		name "V-Rally 3 (Japan).iso"
+		serial "GV3J70"
+	)
+)
+
+game (
+	name "VIRTUA STRIKER 3 ver.2002 (Japan)"
+	serial "GVSJ8P"
+	developer "Amusement Vision"
+	publisher "Sega Japan"
+	releaseyear 2002
+	releasemonth 2
+	releaseday 14
+	users 2
+	rom (
+		name "VIRTUA STRIKER 3 ver.2002 (Japan).iso"
+		serial "GVSJ8P"
+	)
+)
+
+game (
+	name "Vexx (Europe)"
+	serial "GJXP51"
+	developer "Acclaim"
+	publisher "Acclaim"
+	releaseyear 2003
+	releasemonth 4
+	releaseday 4
+	users 1
+	rom (
+		name "Vexx (Europe).iso"
+		serial "GJXP51"
+	)
+)
+
+game (
+	name "Vexx (USA)"
+	serial "GJXE51"
+	developer "Acclaim"
+	publisher "Acclaim"
+	releaseyear 2003
+	releasemonth 2
+	releaseday 10
+	users 1
+	esrb_rating "T"
+	rom (
+		name "Vexx (USA).iso"
+		serial "GJXE51"
+	)
+)
+
+game (
+	name "Viewtiful Joe (Europe)"
+	serial "GVJP08"
+	developer "Capcom Production Studio 4"
+	publisher "Capcom"
+	releaseyear 2003
+	releasemonth 10
+	releaseday 23
+	users 1
+	rom (
+		name "Viewtiful Joe (Europe).iso"
+		serial "GVJP08"
+	)
+)
+
+game (
+	name "Viewtiful Joe (Japan)"
+	serial "GVJJ08"
+	developer "Capcom Production Studio 4 "
+	publisher "Capcom"
+	releaseyear 2003
+	releasemonth 6
+	releaseday 26
+	users 1
+	rom (
+		name "Viewtiful Joe (Japan).iso"
+		serial "GVJJ08"
+	)
+)
+
+game (
+	name "Viewtiful Joe (Promotional demo) (Europe)"
+	serial "DVJP08"
+	developer "Capcom Production Studio 4"
+	publisher "Capcom"
+	releaseyear 2003
+	releasemonth 10
+	releaseday 23
+	users 1
+	rom (
+		name "Viewtiful Joe (Promotional demo) (Europe).iso"
+		serial "DVJP08"
+	)
+)
+
+game (
+	name "Viewtiful Joe (USA)"
+	serial "GVJE08"
+	developer "Capcom Production Studio 4"
+	publisher "Capcom"
+	releaseyear 2003
+	releasemonth 10
+	releaseday 7
+	users 1
+	esrb_rating "T"
+	rom (
+		name "Viewtiful Joe (USA).iso"
+		serial "GVJE08"
+	)
+)
+
+game (
+	name "Viewtiful Joe 2 (Europe)"
+	serial "G2VP08"
+	developer "Clover Studio"
+	publisher "Capcom"
+	releaseyear 2005
+	releasemonth 3
+	releaseday 25
+	users 1
+	rom (
+		name "Viewtiful Joe 2 (Europe).iso"
+		serial "G2VP08"
+	)
+)
+
+game (
+	name "Viewtiful Joe 2 (USA)"
+	serial "G2VE08"
+	developer "Clover Studio"
+	publisher "Capcom"
+	releaseyear 2004
+	releasemonth 11
+	releaseday 18
+	users 1
+	esrb_rating "T"
+	rom (
+		name "Viewtiful Joe 2 (USA).iso"
+		serial "G2VE08"
+	)
+)
+
+game (
+	name "Viewtiful Joe 2: Blackfilm no Nazo (Japan)"
+	serial "G2VJ08"
+	developer "Clover Studio"
+	publisher "Capcom"
+	releaseyear 2004
+	releasemonth 12
+	releaseday 16
+	users 1
+	rom (
+		name "Viewtiful Joe 2: Blackfilm no Nazo (Japan).iso"
+		serial "G2VJ08"
+	)
+)
+
+game (
+	name "Viewtiful Joe Revival (Japan)"
+	serial "GVFJ08"
+	publisher "Capcom"
+	releaseyear 2003
+	releasemonth 12
+	releaseday 18
+	users 1
+	rom (
+		name "Viewtiful Joe Revival (Japan).iso"
+		serial "GVFJ08"
+	)
+)
+
+game (
+	name "Viewtiful Joe: Battle Carnival (Japan)"
+	serial "GVCJ08"
+	developer "Clover Studio"
+	publisher "Capcom"
+	releaseyear 2005
+	releasemonth 9
+	releaseday 29
+	users 4
+	rom (
+		name "Viewtiful Joe: Battle Carnival (Japan).iso"
+		serial "GVCJ08"
+	)
+)
+
+game (
+	name "Viewtiful Joe: Red Hot Rumble (Europe)"
+	serial "GVCP08"
+	developer "Clover Studio"
+	publisher "Capcom"
+	releaseyear 2006
+	releasemonth 3
+	releaseday 10
+	users 4
+	rom (
+		name "Viewtiful Joe: Red Hot Rumble (Europe).iso"
+		serial "GVCP08"
+	)
+)
+
+game (
+	name "Viewtiful Joe: Red Hot Rumble (USA)"
+	serial "GVCE08"
+	developer "Clover Studio"
+	publisher "Capcom"
+	releaseyear 2005
+	releasemonth 11
+	releaseday 8
+	users 4
+	esrb_rating "T"
+	rom (
+		name "Viewtiful Joe: Red Hot Rumble (USA).iso"
+		serial "GVCE08"
+	)
+)
+
+game (
+	name "Virtua Fighter Cyber Generation (Japan)"
+	serial "G8FJ8P"
+	developer "Sega-AM2"
+	publisher "Sega Japan"
+	releaseyear 2004
+	releasemonth 8
+	releaseday 26
+	users 1
+	rom (
+		name "Virtua Fighter Cyber Generation (Japan).iso"
+		serial "G8FJ8P"
+	)
+)
+
+game (
+	name "Virtua Quest (USA)"
+	serial "G8FE8P"
+	developer "Sega-AM2"
+	publisher "Sega Japan"
+	releaseyear 2005
+	releasemonth 1
+	releaseday 18
+	users 1
+	esrb_rating "T"
+	rom (
+		name "Virtua Quest (USA).iso"
+		serial "G8FE8P"
+	)
+)
+
+game (
+	name "Virtua Striker 2002 (USA)"
+	serial "GVSE8P"
+	developer "Amusement Vision"
+	publisher "Sega Japan"
+	releaseyear 2002
+	releasemonth 5
+	releaseday 20
+	users 2
+	esrb_rating "E"
+	rom (
+		name "Virtua Striker 2002 (USA).iso"
+		serial "GVSE8P"
+	)
+)
+
+game (
+	name "Virtua Striker 3 Ver. 2002 (Europe)"
+	serial "GVSP8P"
+	developer "Amusement Vision"
+	publisher "Sega Japan"
+	releaseyear 2002
+	releasemonth 5
+	releaseday 31
+	users 2
+	rom (
+		name "Virtua Striker 3 Ver. 2002 (Europe).iso"
+		serial "GVSP8P"
+	)
+)
+
+game (
+	name "Virtua Striker 4"
+	serial "GVS45E"
+	developer "Sega"
+	publisher "Sega"
+	releaseyear 2004
+	releasemonth 1
+	releaseday 1
+	users 2
+	rom (
+		name "Virtua Striker 4.iso"
+		serial "GVS45E"
+	)
+)
+
+game (
+	name "WTA Tour Tennis (Japan)"
+	serial "GWTJA4"
+	developer "Konami"
+	publisher "Konami"
+	releaseyear 2002
+	releasemonth 8
+	releaseday 29
+	users 4
+	rom (
+		name "WTA Tour Tennis (Japan).iso"
+		serial "GWTJA4"
+	)
+)
+
+game (
+	name "WTA Tour Tennis (USA)"
+	serial "GWTEA4"
+	developer "Konami"
+	publisher "Konami"
+	releaseyear 2002
+	releasemonth 9
+	releaseday 24
+	users 4
+	esrb_rating "E"
+	rom (
+		name "WTA Tour Tennis (USA).iso"
+		serial "GWTEA4"
+	)
+)
+
+game (
+	name "WWE Crush Hour (Europe)"
+	serial "GCHP78"
+	developer "Pacific Coast Power & Light"
+	publisher "THQ"
+	releaseyear 2003
+	releasemonth 5
+	releaseday 15
+	users 2
+	rom (
+		name "WWE Crush Hour (Europe).iso"
+		serial "GCHP78"
+	)
+)
+
+game (
+	name "WWE Crush Hour (USA)"
+	serial "GCHE78"
+	developer "Pacific Coast Power & Light"
+	publisher "THQ"
+	releaseyear 2003
+	releasemonth 3
+	releaseday 17
+	users 2
+	esrb_rating "T"
+	rom (
+		name "WWE Crush Hour (USA).iso"
+		serial "GCHE78"
+	)
+)
+
+game (
+	name "WWE Day of Reckoning (Europe)"
+	serial "GWPP78"
+	developer "Yuke's"
+	publisher "THQ"
+	releaseyear 2004
+	releasemonth 9
+	releaseday 30
+	users 4
+	rom (
+		name "WWE Day of Reckoning (Europe).iso"
+		serial "GWPP78"
+	)
+)
+
+game (
+	name "WWE Day of Reckoning (Japan)"
+	serial "GWPJG2"
+	developer "Yuke's"
+	publisher "Yuke's Media Creations"
+	releaseyear 2005
+	releasemonth 1
+	releaseday 13
+	users 4
+	rom (
+		name "WWE Day of Reckoning (Japan).iso"
+		serial "GWPJG2"
+	)
+)
+
+game (
+	name "WWE Day of Reckoning (USA)"
+	serial "GWPE78"
+	developer "Yuke's"
+	publisher "THQ"
+	releaseyear 2004
+	releasemonth 8
+	releaseday 30
+	users 4
+	esrb_rating "T"
+	rom (
+		name "WWE Day of Reckoning (USA).iso"
+		serial "GWPE78"
+	)
+)
+
+game (
+	name "WWE Day of Reckoning 2 (Europe)"
+	serial "GW2P78"
+	developer "YUKE's Future Media Creators"
+	publisher "THQ"
+	releaseyear 2005
+	releasemonth 9
+	releaseday 30
+	users 4
+	rom (
+		name "WWE Day of Reckoning 2 (Europe).iso"
+		serial "GW2P78"
+	)
+)
+
+game (
+	name "WWE Day of Reckoning 2 (USA)"
+	serial "GW2E78"
+	developer "YUKE's Future Media Creators"
+	publisher "THQ"
+	releaseyear 2005
+	releasemonth 8
+	releaseday 29
+	users 4
+	esrb_rating "T"
+	rom (
+		name "WWE Day of Reckoning 2 (USA).iso"
+		serial "GW2E78"
+	)
+)
+
+game (
+	name "WWE WrestleMania X8 (Japan)"
+	serial "GW3JG2"
+	developer "Yuke's"
+	publisher "Yuke's Media Creations"
+	releaseyear 2002
+	releasemonth 9
+	releaseday 6
+	users 4
+	rom (
+		name "WWE WrestleMania X8 (Japan).iso"
+		serial "GW3JG2"
+	)
+)
+
+game (
+	name "WWE WrestleMania X8 (USA)"
+	serial "GW3E78"
+	developer "Yuke's"
+	publisher "THQ"
+	releaseyear 2002
+	releasemonth 6
+	releaseday 9
+	users 4
+	esrb_rating "T"
+	rom (
+		name "WWE WrestleMania X8 (USA).iso"
+		serial "GW3E78"
+	)
+)
+
+game (
+	name "WWE WrestleMania XIX (Europe)"
+	serial "GW9P78"
+	developer "Yuke's Media Creation"
+	publisher "THQ"
+	releaseyear 2003
+	releasemonth 9
+	releaseday 26
+	users 4
+	rom (
+		name "WWE WrestleMania XIX (Europe).iso"
+		serial "GW9P78"
+	)
+)
+
+game (
+	name "WWE WrestleMania XIX (Japan)"
+	serial "GW9JG2"
+	developer "Yuke's Media Creation"
+	publisher "THQ"
+	releaseyear 2003
+	releasemonth 11
+	releaseday 7
+	users 4
+	rom (
+		name "WWE WrestleMania XIX (Japan).iso"
+		serial "GW9JG2"
+	)
+)
+
+game (
+	name "WWE WrestleMania XIX (USA)"
+	serial "GW9E78"
+	developer "Yuke's Media Creation"
+	publisher "THQ"
+	releaseyear 2003
+	releasemonth 9
+	releaseday 8
+	users 4
+	esrb_rating "T"
+	rom (
+		name "WWE WrestleMania XIX (USA).iso"
+		serial "GW9E78"
+	)
+)
+
+game (
+	name "WWE Wrestlemania X8 (Europe)"
+	serial "GW3P78"
+	developer "Yuke's"
+	publisher "THQ"
+	releaseyear 2002
+	releasemonth 9
+	releaseday 27
+	users 4
+	rom (
+		name "WWE Wrestlemania X8 (Europe).iso"
+		serial "GW3P78"
+	)
+)
+
+game (
+	name "Wai Wai Golf (Japan)"
+	serial "GWGJ4F"
+	developer "Telenet"
+	publisher "Eidos"
+	releaseyear 2002
+	releasemonth 11
+	releaseday 28
+	users 4
+	rom (
+		name "Wai Wai Golf (Japan).iso"
+		serial "GWGJ4F"
+	)
+)
+
+game (
+	name "Wallace & Gromit in Project Zoo (Europe)"
+	serial "GWLX6L"
+	developer "Frontier Developments"
+	publisher "BAM! Entertainment"
+	releaseyear 2003
+	releasemonth 10
+	releaseday 14
+	users 1
+	rom (
+		name "Wallace & Gromit in Project Zoo (Europe).iso"
+		serial "GWLX6L"
+	)
+)
+
+game (
+	name "Wallace & Gromit in Project Zoo (USA)"
+	serial "GWLE6L"
+	developer "Frontier Developments"
+	publisher "BAM! Entertainment"
+	releaseyear 2003
+	releasemonth 10
+	releaseday 14
+	users 1
+	esrb_rating "E"
+	rom (
+		name "Wallace & Gromit in Project Zoo (USA).iso"
+		serial "GWLE6L"
+	)
+)
+
+game (
+	name "Wallace & Gromit: Project Zoo (Europe)"
+	serial "GWLP6L"
+	developer "Frontier Developments"
+	publisher "BAM! Entertainment"
+	releaseyear 2012
+	releasemonth 1
+	releaseday 1
+	users 1
+	rom (
+		name "Wallace & Gromit: Project Zoo (Europe).iso"
+		serial "GWLP6L"
+	)
+)
+
+game (
+	name "Wario World (Europe)"
+	serial "GWWP01"
+	developer "Nintendo"
+	publisher "Nintendo"
+	releaseyear 2003
+	releasemonth 6
+	releaseday 20
+	users 1
+	rom (
+		name "Wario World (Europe).iso"
+		serial "GWWP01"
+	)
+)
+
+game (
+	name "Wario World (Japan)"
+	serial "GWWJ01"
+	developer "Treasure"
+	publisher "Nintendo"
+	releaseyear 2004
+	releasemonth 5
+	releaseday 27
+	users 1
+	rom (
+		name "Wario World (Japan).iso"
+		serial "GWWJ01"
+	)
+)
+
+game (
+	name "Wario World (USA)"
+	serial "GWWE01"
+	developer "Treasure"
+	publisher "Nintendo"
+	releaseyear 2003
+	releasemonth 6
+	releaseday 23
+	users 1
+	esrb_rating "E"
+	rom (
+		name "Wario World (USA).iso"
+		serial "GWWE01"
+	)
+)
+
+game (
+	name "WarioWare, Inc.: Mega Party Game$! (Europe)"
+	serial "GZWP01"
+	developer "Nintendo"
+	publisher "Nintendo"
+	releaseyear 2004
+	releasemonth 9
+	releaseday 3
+	users 4
+	rom (
+		name "WarioWare, Inc.: Mega Party Game$! (Europe).iso"
+		serial "GZWP01"
+	)
+)
+
+game (
+	name "WarioWare, Inc.: Mega Party Game$! (USA)"
+	serial "GZWE01"
+	developer "Nintendo"
+	publisher "Nintendo"
+	releaseyear 2004
+	releasemonth 4
+	releaseday 5
+	users 4
+	esrb_rating "E"
+	rom (
+		name "WarioWare, Inc.: Mega Party Game$! (USA).iso"
+		serial "GZWE01"
+	)
+)
+
+game (
+	name "Warrior Blade: Rastan vs. Barbarian (Japan)"
+	serial "GBNJC0"
+	developer "Saffire / Titus Software"
+	publisher "Taito"
+	releaseyear 2003
+	releasemonth 3
+	releaseday 27
+	users 4
+	rom (
+		name "Warrior Blade: Rastan vs. Barbarian (Japan).iso"
+		serial "GBNJC0"
+	)
+)
+
+game (
+	name "Wave Race: Blue Storm (Europe)"
+	serial "GWRP01"
+	developer "Nintendo"
+	publisher "Nintendo"
+	releaseyear 2002
+	releasemonth 5
+	releaseday 3
+	users 4
+	rom (
+		name "Wave Race: Blue Storm (Europe).iso"
+		serial "GWRP01"
+	)
+)
+
+game (
+	name "Wave Race: Blue Storm (Japan)"
+	serial "GWRJ01"
+	developer "Nintendo"
+	publisher "Nintendo"
+	releaseyear 2001
+	releasemonth 9
+	releaseday 14
+	users 4
+	rom (
+		name "Wave Race: Blue Storm (Japan).iso"
+		serial "GWRJ01"
+	)
+)
+
+game (
+	name "Wave Race: Blue Storm (USA)"
+	serial "GWRE01"
+	developer "Nintendo"
+	publisher "Nintendo"
+	releaseyear 2001
+	releasemonth 11
+	releaseday 18
+	users 4
+	esrb_rating "E"
+	rom (
+		name "Wave Race: Blue Storm (USA).iso"
+		serial "GWRE01"
+	)
+)
+
+game (
+	name "Whirl Tour (Europe)"
+	serial "GWUP7D"
+	developer "Papaya Studio"
+	publisher "Universal Interactive"
+	releaseyear 2003
+	releasemonth 3
+	releaseday 21
+	users 2
+	rom (
+		name "Whirl Tour (Europe).iso"
+		serial "GWUP7D"
+	)
+)
+
+game (
+	name "Whirl Tour (USA)"
+	serial "GWUE7D"
+	developer "Papaya Studios"
+	publisher "Sierra / Universal Interactive"
+	releaseyear 2002
+	releasemonth 11
+	releaseday 12
+	users 2
+	esrb_rating "E"
+	rom (
+		name "Whirl Tour (USA).iso"
+		serial "GWUE7D"
+	)
+)
+
+game (
+	name "Winnie The Pooh Rumbly Tumbly Adventures (USA)"
+	serial "GWHE41"
+	developer "Phoenix Games Studio"
+	publisher "Ubi Soft Entertainment"
+	releaseyear 2005
+	releasemonth 2
+	releaseday 8
+	users 2
+	esrb_rating "E"
+	rom (
+		name "Winnie The Pooh Rumbly Tumbly Adventures (USA).iso"
+		serial "GWHE41"
+	)
+)
+
+game (
+	name "Winnie the Pooh's Rumbly Tumbly Adventure (Europe)"
+	serial "GWHP41"
+	developer "Phoenix Interactive"
+	publisher "Ubi Soft Entertainment"
+	releaseyear 2005
+	releasemonth 3
+	releaseday 10
+	users 2
+	rom (
+		name "Winnie the Pooh's Rumbly Tumbly Adventure (Europe).iso"
+		serial "GWHP41"
+	)
+)
+
+game (
+	name "Winning Eleven 6 Final Evolution (Japan)"
+	serial "GW6JEM"
+	developer "Konami"
+	publisher "Konami Computer Entertainment Tokyo"
+	releaseyear 2003
+	releasemonth 1
+	releaseday 30
+	users 1
+	rom (
+		name "Winning Eleven 6 Final Evolution (Japan).iso"
+		serial "GW6JEM"
+	)
+)
+
+game (
+	name "World Racing (Europe)"
+	serial "GWDP6S"
+	developer "Synetic"
+	publisher "TDK Mediactive"
+	releaseyear 2004
+	releasemonth 4
+	releaseday 8
+	users 2
+	rom (
+		name "World Racing (Europe).iso"
+		serial "GWDP6S"
+	)
+)
+
+game (
+	name "World Series of Poker (USA)"
+	serial "GW8E52"
+	developer "Activision"
+	publisher "Activision"
+	releaseyear 2005
+	releasemonth 9
+	releaseday 14
+	users 1
+	esrb_rating "E10+"
+	rom (
+		name "World Series of Poker (USA).iso"
+		serial "GW8E52"
+	)
+)
+
+game (
+	name "Worms 3D (Europe)"
+	serial "GWMP8P"
+	developer "Team 17"
+	publisher "Sega Japan"
+	releaseyear 2003
+	releasemonth 10
+	releaseday 31
+	users 4
+	rom (
+		name "Worms 3D (Europe).iso"
+		serial "GWMP8P"
+	)
+)
+
+game (
+	name "Worms 3D (USA)"
+	serial "GWME51"
+	developer "Team17"
+	publisher "Acclaim"
+	releaseyear 2004
+	releasemonth 3
+	releaseday 11
+	users 1
+	esrb_rating "T"
+	rom (
+		name "Worms 3D (USA).iso"
+		serial "GWME51"
+	)
+)
+
+game (
+	name "Worms Blast (Europe)"
+	serial "GWBP41"
+	developer "Team 17"
+	publisher "Ubi Soft Entertainment"
+	releaseyear 2010
+	releasemonth 1
+	releaseday 1
+	users 2
+	rom (
+		name "Worms Blast (Europe).iso"
+		serial "GWBP41"
+	)
+)
+
+game (
+	name "Worms Blast (USA)"
+	serial "GWBE41"
+	developer "Team 17"
+	publisher "Ubi Soft Entertainment"
+	releaseyear 2002
+	releasemonth 10
+	releaseday 24
+	users 2
+	esrb_rating "E"
+	rom (
+		name "Worms Blast (USA).iso"
+		serial "GWBE41"
+	)
+)
+
+game (
+	name "Wreckless: The Yakuza Missions (Europe)"
+	serial "GWQP52"
+	developer "Stealth Studios "
+	publisher "Activision"
+	releaseyear 2002
+	releasemonth 11
+	releaseday 25
+	users 2
+	rom (
+		name "Wreckless: The Yakuza Missions (Europe).iso"
+		serial "GWQP52"
+	)
+)
+
+game (
+	name "Wreckless: The Yakuza Missions (USA)"
+	serial "GWQE52"
+	developer "Stealth Studios"
+	publisher "Activision"
+	releaseyear 2002
+	releasemonth 11
+	releaseday 13
+	users 2
+	esrb_rating "T"
+	rom (
+		name "Wreckless: The Yakuza Missions (USA).iso"
+		serial "GWQE52"
+	)
+)
+
+game (
+	name "X-Men 2: Wolverine's Revenge (Europe)"
+	serial "GWVP52"
+	developer "GenePool"
+	publisher "Activision"
+	releaseyear 2003
+	releasemonth 4
+	releaseday 17
+	users 1
+	rom (
+		name "X-Men 2: Wolverine's Revenge (Europe).iso"
+		serial "GWVP52"
+	)
+)
+
+game (
+	name "X-Men 2: Wolverine's Revenge (Europe)"
+	serial "GWVX52"
+	developer "GenePool"
+	publisher "Activision"
+	releaseyear 2003
+	releasemonth 4
+	releaseday 17
+	users 1
+	rom (
+		name "X-Men 2: Wolverine's Revenge (Europe).iso"
+		serial "GWVX52"
+	)
+)
+
+game (
+	name "X-Men Legends (Europe)"
+	serial "GXLP52"
+	developer "Raven Software"
+	publisher "Activision"
+	releaseyear 2004
+	releasemonth 10
+	releaseday 22
+	users 4
+	rom (
+		name "X-Men Legends (Europe).iso"
+		serial "GXLP52"
+	)
+)
+
+game (
+	name "X-Men Legends (Europe)"
+	serial "GXLX52"
+	developer "Raven Software"
+	publisher "Activision"
+	releaseyear 2004
+	releasemonth 10
+	releaseday 22
+	users 4
+	rom (
+		name "X-Men Legends (Europe).iso"
+		serial "GXLX52"
+	)
+)
+
+game (
+	name "X-Men Legends (USA)"
+	serial "GXLE52"
+	developer "Raven Software"
+	publisher "Activision"
+	releaseyear 2004
+	releasemonth 9
+	releaseday 21
+	users 4
+	esrb_rating "T"
+	rom (
+		name "X-Men Legends (USA).iso"
+		serial "GXLE52"
+	)
+)
+
+game (
+	name "X-Men Legends II: Rise of Apocalypse (Europe)"
+	serial "GX2D52"
+	developer "Raven Software"
+	publisher "Activision"
+	releaseyear 2005
+	releasemonth 10
+	releaseday 14
+	users 4
+	rom (
+		name "X-Men Legends II: Rise of Apocalypse (Europe).iso"
+		serial "GX2D52"
+	)
+)
+
+game (
+	name "X-Men Legends II: Rise of Apocalypse (Europe)"
+	serial "GX2P52"
+	developer "Raven Software"
+	publisher "Activision"
+	releaseyear 2005
+	releasemonth 10
+	releaseday 14
+	users 4
+	rom (
+		name "X-Men Legends II: Rise of Apocalypse (Europe).iso"
+		serial "GX2P52"
+	)
+)
+
+game (
+	name "X-Men Legends II: Rise of Apocalypse (Europe)"
+	serial "GX2S52"
+	developer "Raven Software"
+	publisher "Activision"
+	releaseyear 2005
+	releasemonth 10
+	releaseday 14
+	users 4
+	rom (
+		name "X-Men Legends II: Rise of Apocalypse (Europe).iso"
+		serial "GX2S52"
+	)
+)
+
+game (
+	name "X-Men Legends II: Rise of Apocalypse (USA)"
+	serial "GX2E52"
+	developer "Raven Software"
+	publisher "Activision"
+	releaseyear 2005
+	releasemonth 9
+	releaseday 20
+	users 4
+	esrb_rating "T"
+	rom (
+		name "X-Men Legends II: Rise of Apocalypse (USA).iso"
+		serial "GX2E52"
+	)
+)
+
+game (
+	name "X-Men: Next Dimension (Europe)"
+	serial "GXMP52"
+	developer "Exakt"
+	publisher "Activision"
+	releaseyear 2002
+	releasemonth 11
+	releaseday 29
+	users 2
+	rom (
+		name "X-Men: Next Dimension (Europe).iso"
+		serial "GXMP52"
+	)
+)
+
+game (
+	name "X-Men: Next Dimension (USA)"
+	serial "GXME52"
+	developer "Exakt"
+	publisher "Activision"
+	releaseyear 2002
+	releasemonth 10
+	releaseday 15
+	users 2
+	esrb_rating "T"
+	rom (
+		name "X-Men: Next Dimension (USA).iso"
+		serial "GXME52"
+	)
+)
+
+game (
+	name "X-Men: The Official Game (Europe)"
+	serial "G3XP52"
+	developer "Hypnos"
+	publisher "Activision"
+	releaseyear 2006
+	releasemonth 5
+	releaseday 19
+	users 1
+	rom (
+		name "X-Men: The Official Game (Europe).iso"
+		serial "G3XP52"
+	)
+)
+
+game (
+	name "X-Men: The Official Game (USA)"
+	serial "G3XE52"
+	developer "Hypnos"
+	publisher "Activision"
+	releaseyear 2006
+	releasemonth 5
+	releaseday 16
+	users 1
+	esrb_rating "T"
+	rom (
+		name "X-Men: The Official Game (USA).iso"
+		serial "G3XE52"
+	)
+)
+
+game (
+	name "X2: Wolverine's Revenge (USA)"
+	serial "GWVE52"
+	developer "GenePool"
+	publisher "Activision"
+	releaseyear 2003
+	releasemonth 4
+	releaseday 14
+	users 1
+	esrb_rating "T"
+	rom (
+		name "X2: Wolverine's Revenge (USA).iso"
+		serial "GWVE52"
+	)
+)
+
+game (
+	name "XGIII: Extreme G Racing (Europe)"
+	serial "G3EP51"
+	developer "Acclaim Entertainment"
+	publisher "Acclaim"
+	releaseyear 2002
+	releasemonth 5
+	releaseday 3
+	users 4
+	rom (
+		name "XGIII: Extreme G Racing (Europe).iso"
+		serial "G3EP51"
+	)
+)
+
+game (
+	name "XGIII: Extreme G Racing (Japan)"
+	serial "G3EJB0"
+	developer "Acclaim"
+	publisher "Acclaim Japan "
+	releaseyear 2002
+	releasemonth 5
+	releaseday 15
+	users 4
+	rom (
+		name "XGIII: Extreme G Racing (Japan).iso"
+		serial "G3EJB0"
+	)
+)
+
+game (
+	name "XGIII: Extreme G Racing (USA)"
+	serial "G3EE51"
+	developer "Acclaim Entertainment"
+	publisher "Acclaim"
+	releaseyear 2001
+	releasemonth 11
+	releaseday 27
+	users 4
+	esrb_rating "E"
+	rom (
+		name "XGIII: Extreme G Racing (USA).iso"
+		serial "G3EE51"
+	)
+)
+
+game (
+	name "XGRA Extreme G Racing Association (Europe)"
+	serial "GXAP51"
+	developer "Acclaim Studios Cheltenham"
+	publisher "Acclaim"
+	releaseyear 2004
+	releasemonth 3
+	releaseday 5
+	users 4
+	rom (
+		name "XGRA Extreme G Racing Association (Europe).iso"
+		serial "GXAP51"
+	)
+)
+
+game (
+	name "XGRA Extreme G Racing Association (USA)"
+	serial "GXAE51"
+	developer "Acclaim Studios Cheltenham"
+	publisher "Acclaim"
+	releaseyear 2003
+	releasemonth 11
+	releaseday 24
+	users 4
+	esrb_rating "T"
+	rom (
+		name "XGRA Extreme G Racing Association (USA).iso"
+		serial "GXAE51"
+	)
+)
+
+game (
+	name "XIII (Europe)"
+	serial "GX3P41"
+	developer "Ubisoft Paris"
+	publisher "Ubi Soft Entertainment"
+	releaseyear 2003
+	releasemonth 11
+	releaseday 24
+	users 4
+	rom (
+		name "XIII (Europe).iso"
+		serial "GX3P41"
+	)
+)
+
+game (
+	name "XIII (Europe)"
+	serial "GX3X41"
+	developer "Ubisoft Paris"
+	publisher "Ubi Soft Entertainment"
+	releaseyear 2003
+	releasemonth 11
+	releaseday 27
+	users 4
+	rom (
+		name "XIII (Europe).iso"
+		serial "GX3X41"
+	)
+)
+
+game (
+	name "XIII (USA)"
+	serial "GX3E41"
+	developer "Ubisoft Paris"
+	publisher "Ubi Soft Entertainment"
+	releaseyear 2003
+	releasemonth 11
+	releaseday 24
+	users 4
+	esrb_rating "M"
+	rom (
+		name "XIII (USA).iso"
+		serial "GX3E41"
+	)
+)
+
+game (
+	name "Yu-Gi-Oh! The Falsebound Kingdom (Europe)"
+	serial "GYFPA4"
+	developer "Konami"
+	publisher "Konami"
+	releaseyear 2004
+	releasemonth 11
+	releaseday 19
+	users 1
+	rom (
+		name "Yu-Gi-Oh! The Falsebound Kingdom (Europe).iso"
+		serial "GYFPA4"
+	)
+)
+
+game (
+	name "Yu-Gi-Oh! The Falsebound Kingdom (Japan)"
+	serial "GYFJA4"
+	developer "Konami"
+	publisher "Konami"
+	releaseyear 2002
+	releasemonth 12
+	releaseday 5
+	users 1
+	rom (
+		name "Yu-Gi-Oh! The Falsebound Kingdom (Japan).iso"
+		serial "GYFJA4"
+	)
+)
+
+game (
+	name "Yu-Gi-Oh! The Falsebound Kingdom (USA)"
+	serial "GYFEA4"
+	developer "Konami"
+	publisher "Konami"
+	releaseyear 2003
+	releasemonth 11
+	releaseday 4
+	users 1
+	esrb_rating "E"
+	rom (
+		name "Yu-Gi-Oh! The Falsebound Kingdom (USA).iso"
+		serial "GYFEA4"
+	)
+)
+
+game (
+	name "Zapper - One Wicked Cricket! (USA)"
+	serial "GZPE70"
+	developer "Blitz Games"
+	publisher "Atari (Infogrames)"
+	releaseyear 2002
+	releasemonth 11
+	releaseday 6
+	users 4
+	esrb_rating "E"
+	rom (
+		name "Zapper - One Wicked Cricket! (USA).iso"
+		serial "GZPE70"
+	)
+)
+
+game (
+	name "Zapper: One Wicked Cricket! (Europe)"
+	serial "GZPP70"
+	developer "Blitz Games"
+	publisher "Infogrames"
+	releaseyear 2003
+	releasemonth 3
+	releaseday 14
+	users 4
+	rom (
+		name "Zapper: One Wicked Cricket! (Europe).iso"
+		serial "GZPP70"
+	)
+)
+
+game (
+	name "Zatch Bell! Mamodo Battles (USA)"
+	serial "GYKEB2"
+	developer "Eighting"
+	publisher "Bandai"
+	releaseyear 2005
+	releasemonth 10
+	releaseday 19
+	users 2
+	esrb_rating "T"
+	rom (
+		name "Zatch Bell! Mamodo Battles (USA).iso"
+		serial "GYKEB2"
+	)
+)
+
+game (
+	name "Zatch Bell! Mamodo Fury (USA)"
+	serial "GABEAF"
+	developer "Mechanic Arms"
+	publisher "Namco"
+	releaseyear 2006
+	releasemonth 12
+	releaseday 12
+	users 4
+	esrb_rating "T"
+	rom (
+		name "Zatch Bell! Mamodo Fury (USA).iso"
+		serial "GABEAF"
+	)
+)
+
+game (
+	name "Zelda no Densetsu: Kaze no Takuto (Japan)"
+	serial "GZLJ01"
+	developer "Nintendo"
+	publisher "Nintendo"
+	releaseyear 2002
+	releasemonth 12
+	releaseday 13
+	users 2
+	rom (
+		name "Zelda no Densetsu: Kaze no Takuto (Japan).iso"
+		serial "GZLJ01"
+	)
+)
+
+game (
+	name "Zelda no Densetsu: Toki no Ocarina GC / Ura Zelda (Japan)"
+	serial "D43J01"
+	developer "Nintendo EAD"
+	publisher "Nintendo"
+	releaseyear 2002
+	releasemonth 11
+	releaseday 28
+	users 1
+	rom (
+		name "Zelda no Densetsu: Toki no Ocarina GC / Ura Zelda (Japan).iso"
+		serial "D43J01"
+	)
+)
+
+game (
+	name "Zelda no Densetsu: Twilight Princess (Japan)"
+	serial "GZ2J01"
+	developer "Nintendo"
+	publisher "Nintendo"
+	releaseyear 2006
+	releasemonth 12
+	releaseday 2
+	users 1
+	rom (
+		name "Zelda no Densetsu: Twilight Princess (Japan).iso"
+		serial "GZ2J01"
+	)
+)
+
+game (
+	name "Zoids Battle Legends (USA)"
+	serial "GZSE70"
+	developer "Tomy Corporation"
+	publisher "Atari (Infogrames)"
+	releaseyear 2004
+	releasemonth 9
+	releaseday 4
+	users 2
+	esrb_rating "T"
+	rom (
+		name "Zoids Battle Legends (USA).iso"
+		serial "GZSE70"
+	)
+)
+
+game (
+	name "Zoids Full Metal Crash (Japan)"
+	serial "GZHJDA"
+	developer "RenderWare"
+	publisher "Tomy"
+	releaseyear 2005
+	releasemonth 10
+	releaseday 27
+	users 2
+	rom (
+		name "Zoids Full Metal Crash (Japan).iso"
+		serial "GZHJDA"
+	)
+)
+
+game (
+	name "Zoids VS. II (Japan)"
+	serial "GZSJDA"
+	developer "Tomy Corporation"
+	publisher "Tomy"
+	releaseyear 2003
+	releasemonth 9
+	releaseday 5
+	users 2
+	rom (
+		name "Zoids VS. II (Japan).iso"
+		serial "GZSJDA"
+	)
+)
+
+game (
+	name "Zoids vs. (Japan)"
+	serial "GZOJDA"
+	developer "Tomy"
+	publisher "Tomy"
+	releaseyear 2002
+	releasemonth 9
+	releaseday 6
+	users 2
+	rom (
+		name "Zoids vs. (Japan).iso"
+		serial "GZOJDA"
+	)
+)
+
+game (
+	name "Zoids vs. III (Japan)"
+	serial "GZVJDA"
+	developer "Tomy"
+	publisher "Tomy"
+	releaseyear 2004
+	releasemonth 9
+	releaseday 30
+	users 4
+	rom (
+		name "Zoids vs. III (Japan).iso"
+		serial "GZVJDA"
+	)
+)
+
+game (
+	name "ZooCube (Japan)"
+	serial "GZCJB0"
+	developer "PuzzleKings"
+	publisher "Acclaim"
+	releaseyear 2002
+	releasemonth 10
+	releaseday 25
+	users 4
+	rom (
+		name "ZooCube (Japan).iso"
+		serial "GZCJB0"
+	)
+)
+
+game (
+	name "ZooCube (USA)"
+	serial "GZCE51"
+	developer "PuzzleKings"
+	publisher "Acclaim"
+	releaseyear 2002
+	releasemonth 5
+	releaseday 5
+	users 4
+	esrb_rating "E"
+	rom (
+		name "ZooCube (USA).iso"
+		serial "GZCE51"
+	)
+)
+
+game (
+	name "Zoocube (Europe)"
+	serial "GZCP51"
+	developer "PuzzleKings "
+	publisher "Acclaim"
+	releaseyear 2010
+	releasemonth 1
+	releaseday 1
+	users 4
+	rom (
+		name "Zoocube (Europe).iso"
+		serial "GZCP51"
+	)
+)
