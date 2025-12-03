@@ -1,8 +1,8 @@
-# GitHub Release v2.6.4 创建指南
+# GitHub Release v2.6.5 创建指南
 
 ## ✅ 已完成步骤
 
-1. ✅ Git tag `v2.6.4` 待创建
+1. ✅ Git tag `v2.6.5` 待创建
 2. ✅ 所有代码更改已提交到 main 分支
 
 ## 📋 手动创建 Release 步骤
@@ -11,14 +11,14 @@
 
 1. 打开浏览器，访问：
    ```
-   https://github.com/MightyKartz/PLCN/releases/new?tag=v2.6.4
+   https://github.com/MightyKartz/PLCN/releases/new?tag=v2.6.5
    ```
 
 2. 填写以下信息：
 
 **Release Title（标题）：**
 ```
-v2.6.4 - 预览逻辑优化与构建修复 (Final)
+v2.6.5 - 预览逻辑优化与构建修复 (Python Script)
 ```
 
 **Release Notes（发布说明）：**
@@ -30,14 +30,14 @@ v2.6.4 - 预览逻辑优化与构建修复 (Final)
 - ✅ **封面源回退逻辑优化**：当无法找到匹配的英文名时，封面源现在会回退使用文件名（而非中文名），大大提高了封面下载的成功率（例如 "天外魔境：自来也"）。
 
 ### 构建修复
-- ✅ **修复 GitHub Actions 构建失败**：进一步优化了 DAT 文件复制逻辑，使用 `find` 命令替代 `cp` 通配符，彻底解决了构建过程中的文件未找到错误。
+- ✅ **修复 GitHub Actions 构建失败**：引入了专门的 Python 脚本 `scripts/copy_dats.py` 来处理 DAT 文件的复制。这彻底消除了 Shell 脚本在不同操作系统（Ubuntu/macOS/Windows）上的兼容性问题，确保构建过程稳定可靠。
 
 ### 其他
 - 包含 v2.6.1 的所有 PC-98 修复和数据库打包改进。
 
 ---
 
-**完整更新日志**: https://github.com/MightyKartz/PLCN/compare/v2.6.3...v2.6.4
+**完整更新日志**: https://github.com/MightyKartz/PLCN/compare/v2.6.4...v2.6.5
 ```
 
 3. 确保勾选 **"Set as the latest release"**
@@ -56,11 +56,11 @@ brew install gh
 gh auth login
 
 # 创建 release
-gh release create v2.6.4 --title "v2.6.4 - 预览逻辑优化与构建修复 (Final)" --notes-file release-notes.md
+gh release create v2.6.5 --title "v2.6.5 - 预览逻辑优化与构建修复 (Python Script)" --notes-file release-notes.md
 ```
 
 ## 🎉 完成
 
 创建 release 后，用户可以在以下位置查看：
 - Release 页面: https://github.com/MightyKartz/PLCN/releases
-- 具体版本: https://github.com/MightyKartz/PLCN/releases/tag/v2.6.4
+- 具体版本: https://github.com/MightyKartz/PLCN/releases/tag/v2.6.5

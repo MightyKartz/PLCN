@@ -45,41 +45,8 @@ jobs:
         echo "Cloning libretro-database..."
         git clone --depth 1 https://github.com/libretro/libretro-database.git temp_db
         
-        echo "Creating data directories..."
-        mkdir -p "data/libretro-db/dat"
-        
-        echo "Copying Console DATs..."
-        if [ -d "temp_db/dat" ]; then
-          find temp_db/dat -name "*.dat" -exec cp {} "data/libretro-db/dat/" \;
-        fi
-        
-        echo "Copying FBNeo Arcade DATs..."
-        if [ -d "temp_db/metadat/fbneo-split" ]; then
-          find temp_db/metadat/fbneo-split -name "*.dat" -exec cp {} "data/libretro-db/dat/" \;
-        fi
-        
-        echo "Copying Extended DATs..."
-        copy_dats() {
-            src_dir=$1
-            if [ -d "$src_dir" ]; then
-                find "$src_dir" -name "*.dat" -exec cp {} "data/libretro-db/dat/" \;
-                echo "Processed $src_dir"
-            else
-                echo "Warning: Directory not found: $src_dir"
-            fi
-        }
-        
-        copy_dats "temp_db/metadat/tosec"
-        copy_dats "temp_db/metadat/redump"
-        copy_dats "temp_db/metadat/no-intro"
-        copy_dats "temp_db/metadat/libretro-dats"
-        
-        echo "Cleaning up..."
-        rm -rf temp_db
-        
-        echo "Verifying DAT files..."
-        ls -lh "data/libretro-db/dat/" | head -n 10
-        echo "Total DAT files: $(ls "data/libretro-db/dat/" | wc -l)"
+        echo "Copying DAT files using Python script..."
+        python scripts/copy_dats.py
 
 
     - name: Build with PyInstaller
