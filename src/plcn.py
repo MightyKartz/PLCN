@@ -498,8 +498,11 @@ def apply_changes(playlist_path, changes, thumbnails_dir, backup=True, progress_
             updated = False
             # Try to find by path first (more robust)
             if target_path:
+                import unicodedata
+                norm_target = unicodedata.normalize('NFC', target_path)
                 for item in playlist_manager.items:
-                    if item.get('path') == target_path:
+                    item_path = item.get('path')
+                    if item_path and unicodedata.normalize('NFC', item_path) == norm_target:
                         item['label'] = new_label
                         updated = True
                         print(f"Updated label for {os.path.basename(target_path)} to '{new_label}'")

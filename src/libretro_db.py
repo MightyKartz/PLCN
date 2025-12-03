@@ -278,21 +278,29 @@ class LibretroDB:
             
         # Try to match region
         # If no region match, or no region in input, prefer USA -> Europe -> Japan -> World
-        # Or just return the first one (which is usually the first one found in DAT)
-        # Let's try to be smart: if input has no region, maybe default to World or USA?
-        # For now, just return the first one if no region match found.
+        # Also prefer names WITHOUT "Anniversary Collection", "Mini", etc.
+        
         # Extract region from input name if possible
         # Look for (Japan), (USA), (Europe), etc.
         regions = re.findall(r'\((.*?)\)', name)
+        region = regions[-1] if regions else None
         
-        if regions:
-            region = regions[-1] # Use last region found
-            # Filter candidates by region
-            region_candidates = [c for c in candidates if region in c]
-            if region_candidates:
-                return region_candidates[0]
-                
-        # Default to first candidate
+        def score_candidate(c):
+            score = 0
+            if region and region in c:
+                score += 100
+            if "USA" in c: score += 50
+            elif "Europe" in c: score += 40
+            elif "Japan" in c: score += 30
+            
+            # Penalize collections/minis as they usually don't have individual thumbnails
+            if "Anniversary Collection" in c: score -= 500
+            if "Mini" in c: score -= 500
+            if "Virtual Console" in c: score -= 500
+            
+            return score
+            
+        candidates.sort(key=score_candidate, reverse=True)
         return candidates[0]
 
     def search(self, keyword, limit=20):
