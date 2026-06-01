@@ -5,6 +5,7 @@ import os
 import sys
 import glob
 import subprocess
+import sqlite3
 
 PORT = 7777
 CONFIG_FILE = "config.json"
@@ -88,6 +89,8 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
             else:
                 self.wfile.write(b"{}")
             return
+        elif path == "/api/stats":
+            self.get_stats()
         elif path == "/api/fs/list":
             target_path = query_params.get('path', ['.'])[0]
             self.list_files(target_path)
@@ -155,6 +158,63 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(json.dumps(response).encode())
         except Exception as e:
             self.send_response(500)
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": str(e)}).encode())
+
+    def get_stats(self):
+        try:
+            config = {}
+            if os.path.exists(CONFIG_FILE):
+                with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+
+            base_path = os.getcwd()
+            rom_db_path = config.get("rom_name_cn_path") or config.get("single_rom_name_cn_path") or "data/rom-name-cn"
+            if getattr(sys, 'frozen', False) and not os.path.isabs(rom_db_path):
+                rom_db_path = os.path.join(sys._MEIPASS, rom_db_path)
+
+            db_path = os.path.join(base_path, "plcn.db")
+            database_count = 0
+            database_ready = os.path.exists(db_path)
+            database_error = None
+            if database_ready:
+                try:
+                    conn = sqlite3.connect(db_path)
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT COUNT(*) FROM translations")
+                    database_count = cursor.fetchone()[0]
+                    conn.close()
+                except Exception as e:
+                    database_error = str(e)
+
+            dat_dir = os.path.join(base_path, "data", "libretro-db", "dat")
+            if getattr(sys, 'frozen', False):
+                dat_dir = os.path.join(sys._MEIPASS, "data", "libretro-db", "dat")
+            dat_count = len(glob.glob(os.path.join(dat_dir, "*.dat"))) if os.path.exists(dat_dir) else 0
+            csv_count = len(glob.glob(os.path.join(rom_db_path, "*.csv"))) if os.path.exists(rom_db_path) else 0
+            offline_available = (database_count > 0 or csv_count > 0) and dat_count > 0
+
+            response = {
+                "database_count": database_count,
+                "database_ready": database_ready and not database_error,
+                "database_error": database_error,
+                "dat_count": dat_count,
+                "csv_count": csv_count,
+                "offline_available": offline_available,
+                "paths": {
+                    "database": db_path,
+                    "dat_dir": dat_dir,
+                    "rom_name_cn": rom_db_path
+                }
+            }
+
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(response).encode())
+        except Exception as e:
+            self.send_response(500)
+            self.send_header("Content-type", "application/json")
             self.end_headers()
             self.wfile.write(json.dumps({"error": str(e)}).encode())
 
@@ -365,6 +425,48 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
             time.sleep(0.5)
 
     def do_POST(self):
+        if self.path == "/api/fs/open":
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+
+            try:
+                data = json.loads(post_data)
+                target_path = data.get("path")
+                if not target_path:
+                    self.send_response(400)
+                    self.send_header("Content-type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": "Path is required"}).encode())
+                    return
+
+                target_path = os.path.abspath(target_path)
+                if not os.path.exists(target_path):
+                    self.send_response(404)
+                    self.send_header("Content-type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": "Path does not exist"}).encode())
+                    return
+                if not os.path.isdir(target_path):
+                    target_path = os.path.dirname(target_path)
+
+                if sys.platform == "darwin":
+                    subprocess.Popen(["open", target_path])
+                elif os.name == "nt":
+                    os.startfile(target_path)
+                else:
+                    subprocess.Popen(["xdg-open", target_path])
+
+                self.send_response(200)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "success", "path": target_path}).encode())
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode())
+            return
+
         if self.path == "/api/config":
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
@@ -424,25 +526,36 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                 playlist_path = data.get('playlist_path')
                 changes = data.get('changes')
                 thumbnails_dir = data.get('thumbnails_dir')
+                options = data.get('options') or {}
+                download_thumbnails = options.get('download_thumbnails', True)
                 
                 # Create Job
                 job_id = job_manager.create_job()
                 
-                def run_job(jid, p_path, chgs, t_dir):
+                def run_job(jid, p_path, chgs, t_dir, should_download):
                     try:
                         import plcn
                         def progress_cb(curr, tot, msg):
                             job_manager.update_job(jid, curr, tot, msg)
                             
-                        plcn.apply_changes(p_path, chgs, t_dir, progress_callback=progress_cb)
-                        job_manager.complete_job(jid)
+                        summary = plcn.apply_changes(
+                            p_path,
+                            chgs,
+                            t_dir,
+                            progress_callback=progress_cb,
+                            download_thumbnails=should_download
+                        )
+                        job_manager.complete_job(jid, {
+                            "applied_count": len(chgs or []),
+                            "download_summary": summary
+                        })
                     except Exception as e:
                         import traceback
                         traceback.print_exc()
                         job_manager.fail_job(jid, str(e))
 
                 # Start background thread
-                thread = threading.Thread(target=run_job, args=(job_id, playlist_path, changes, thumbnails_dir))
+                thread = threading.Thread(target=run_job, args=(job_id, playlist_path, changes, thumbnails_dir, download_thumbnails))
                 thread.start()
                 
                 self.send_response(200)
@@ -465,7 +578,11 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                 data = json.loads(post_data)
                 batch_dir = data.get('batch_dir')
                 thumbnails_dir = data.get('thumbnails_dir')
-                rom_name_cn_path = data.get('rom_name_cn_path')
+                rom_name_cn_path = data.get('rom_name_cn_path') or "data/rom-name-cn"
+                options = data.get('options') or {}
+                backup = options.get('backup', True)
+                continue_on_error = options.get('continue_on_error', True)
+                download_thumbnails = options.get('download_thumbnails', True)
                 
                 # Handle PyInstaller path for rom_name_cn_path
                 if getattr(sys, 'frozen', False) and not os.path.isabs(rom_name_cn_path):
@@ -474,10 +591,11 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                 # Create Job
                 job_id = job_manager.create_job()
                 
-                def run_batch_job(jid, b_dir, t_dir, r_path):
+                def run_batch_job(jid, b_dir, t_dir, r_path, use_backup, keep_going, should_download):
                     try:
                         import plcn
                         import glob
+                        from thumbnail_downloader import ThumbnailDownloader
                         
                         # Find all .lpl files
                         playlist_files = glob.glob(os.path.join(b_dir, "*.lpl"))
@@ -489,6 +607,9 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
 
                         job_manager.update_job(jid, 0, total_files, f"Found {total_files} playlists.")
                         
+                        summaries = []
+                        errors = []
+
                         for i, playlist_path in enumerate(playlist_files):
                             filename = os.path.basename(playlist_path)
                             job_manager.update_job(jid, i, total_files, f"Processing {filename}...")
@@ -502,19 +623,37 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                                 # 2. Apply (with backup)
                                 # We pass a dummy progress callback or None, as we track file-level progress here.
                                 # Or we could aggregate progress? For simplicity, just file-level.
-                                plcn.apply_changes(playlist_path, changes, t_dir, backup=True)
+                                summary = plcn.apply_changes(
+                                    playlist_path,
+                                    changes,
+                                    t_dir,
+                                    backup=use_backup,
+                                    download_thumbnails=should_download
+                                )
+                                summaries.append(summary)
                                 
                             except Exception as e:
                                 print(f"Error processing {filename}: {e}")
+                                errors.append(f"{filename}: {e}")
+                                if not keep_going:
+                                    raise
                                 
-                        job_manager.complete_job(jid, f"Processed {total_files} playlists.")
+                        merged_summary = ThumbnailDownloader.merge_summaries(summaries)
+                        job_manager.complete_job(jid, {
+                            "processed_count": total_files,
+                            "errors": errors,
+                            "download_summary": merged_summary
+                        })
                     except Exception as e:
                         import traceback
                         traceback.print_exc()
                         job_manager.fail_job(jid, str(e))
 
                 # Start background thread
-                thread = threading.Thread(target=run_batch_job, args=(job_id, batch_dir, thumbnails_dir, rom_name_cn_path))
+                thread = threading.Thread(
+                    target=run_batch_job,
+                    args=(job_id, batch_dir, thumbnails_dir, rom_name_cn_path, backup, continue_on_error, download_thumbnails)
+                )
                 thread.start()
                 
                 self.send_response(200)

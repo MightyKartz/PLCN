@@ -7,67 +7,394 @@
     <title>PLCN</title>
     <style>
         :root {
-            --primary-color: #4a90e2;
-            --bg-color: #f5f7fa;
-            --card-bg: #ffffff;
-            --text-color: #333333;
-            --border-radius: 12px;
+            --bg: #f6f8fc;
+            --surface: #ffffff;
+            --surface-soft: #f8fafc;
+            --surface-tint: #eef5ff;
+            --border: #d7e0ec;
+            --border-strong: #c4d0df;
+            --text: #172033;
+            --muted: #65738a;
+            --quiet: #8996aa;
+            --primary: #1769e8;
+            --primary-strong: #0f57c9;
+            --primary-soft: #e9f1ff;
+            --green: #078a45;
+            --green-soft: #e8f8ef;
+            --amber: #c76800;
+            --amber-soft: #fff4df;
+            --red: #bd2525;
+            --red-soft: #ffebeb;
+            --violet: #6f42d8;
+            --violet-soft: #f0eaff;
+            --shadow: 0 10px 28px rgba(30, 42, 70, 0.07);
+            --radius: 6px;
+            --font: Inter, "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+            --fs-xs: 0.75rem;
+            --fs-sm: 0.8125rem;
+            --fs-body: 0.875rem;
+            --fs-title: 1.0625rem;
+            --fs-heading: 1.25rem;
+            --fs-brand: 1.75rem;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            min-height: 100%;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
             margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font);
+            font-size: var(--fs-body);
+            letter-spacing: 0;
+            overflow: hidden;
         }
 
-        .container {
-            background-color: var(--card-bg);
-            padding: 2rem;
-            border-radius: var(--border-radius);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
-            width: 100%;
-            max-width: 700px;
+        button,
+        input,
+        select {
+            font: inherit;
         }
 
-        h1 {
-            text-align: center;
-            color: var(--primary-color);
-            margin-bottom: 1.5rem;
-            font-size: 1.8rem;
+        button {
+            border: 0;
         }
 
-        /* Tab styles */
-        .tabs {
+        .app-shell {
+            height: 100vh;
+            min-height: 100vh;
+            display: grid;
+            grid-template-rows: 60px minmax(0, 1fr) 214px;
+            overflow: hidden;
+        }
+
+        .topbar {
             display: flex;
-            margin-bottom: 1.5rem;
-            border-bottom: 2px solid #e1e4e8;
+            align-items: center;
+            gap: 14px;
+            padding: 0 20px;
+            background: rgba(255, 255, 255, 0.92);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(16px);
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            min-width: 206px;
+        }
+
+        .brand-mark {
+            width: 35px;
+            height: 35px;
+            display: block;
+            color: var(--primary);
+        }
+
+        .brand-mark svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .brand-name {
+            font-size: var(--fs-brand);
+            font-weight: 800;
+            color: var(--primary-strong);
+            line-height: 1;
+        }
+
+        .mode-switch {
+            display: inline-flex;
+            padding: 3px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--surface-soft);
         }
 
         .tab {
-            flex: 1;
-            padding: 1rem;
-            background: none;
-            border: none;
+            min-width: 92px;
+            min-height: 34px;
+            padding: 7px 15px;
+            border-radius: 6px;
+            color: var(--muted);
+            background: transparent;
             cursor: pointer;
-            font-size: 1rem;
-            font-weight: 600;
-            color: #666;
-            border-bottom: 3px solid transparent;
-            transition: all 0.3s;
+            font-size: var(--fs-body);
+            font-weight: 700;
+            transition: background-color 0.18s, color 0.18s, box-shadow 0.18s;
         }
 
         .tab:hover {
-            color: var(--primary-color);
+            color: var(--primary);
         }
 
         .tab.active {
-            color: var(--primary-color);
-            border-bottom-color: var(--primary-color);
+            color: #fff;
+            background: var(--primary);
+            box-shadow: 0 6px 16px rgba(23, 105, 232, 0.24);
+        }
+
+        .top-spacer {
+            flex: 1;
+        }
+
+        .status-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 38px;
+            padding: 0 14px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--surface);
+            color: var(--muted);
+            white-space: nowrap;
+            font-size: var(--fs-sm);
+            font-weight: 700;
+        }
+
+        .status-chip strong {
+            color: var(--green);
+            font-weight: 800;
+        }
+
+        .status-chip.dat strong {
+            color: var(--primary);
+        }
+
+        .status-chip.offline {
+            color: var(--green);
+            border-color: #ccebd7;
+            background: #fbfffd;
+        }
+
+        .status-chip.loading strong {
+            color: var(--quiet);
+        }
+
+        .status-chip.unavailable {
+            color: var(--red);
+            border-color: #ffc6c6;
+            background: var(--red-soft);
+        }
+
+        .status-chip.unavailable strong {
+            color: var(--red);
+        }
+
+        .icon-square {
+            width: 22px;
+            height: 22px;
+            display: inline-grid;
+            place-items: center;
+            border-radius: 6px;
+            background: transparent;
+            color: var(--primary);
+        }
+
+        .icon-square svg,
+        .icon-btn svg,
+        .mini-btn svg,
+        .link-preview svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .utility-group,
+        .window-controls {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .top-divider {
+            width: 1px;
+            height: 28px;
+            background: var(--border);
+            margin-inline: 2px;
+        }
+
+        .icon-btn {
+            width: 34px;
+            height: 34px;
+            display: inline-grid;
+            place-items: center;
+            border-radius: var(--radius);
+            color: #253551;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        .icon-btn:hover {
+            color: var(--primary);
+            background: var(--primary-soft);
+        }
+
+        .icon-btn[aria-pressed="true"] {
+            color: var(--primary);
+            background: var(--primary-soft);
+        }
+
+        .workspace {
+            display: grid;
+            grid-template-columns: 260px minmax(640px, 1fr) 365px;
+            min-height: 0;
+            gap: 8px;
+            padding: 6px;
+        }
+
+        .sidebar,
+        .main-panel,
+        .inspector,
+        .bottom-dock {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .sidebar-scroll {
+            min-height: 0;
+            overflow: auto;
+            padding: 14px;
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin: 0 0 14px;
+            color: var(--text);
+            font-size: 16px;
+            font-weight: 800;
+        }
+
+        .workflow {
+            padding-bottom: 18px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .step-list {
+            display: grid;
+            gap: 0;
+        }
+
+        .step {
+            display: grid;
+            grid-template-columns: 28px 1fr auto;
+            gap: 10px;
+            min-height: 56px;
+            position: relative;
+        }
+
+        .step.active {
+            margin: -4px -8px 4px;
+            padding: 8px;
+            border: 1px solid #c8dafc;
+            border-radius: var(--radius);
+            background: #f2f7ff;
+        }
+
+        .step:not(:last-child)::after {
+            content: "";
+            position: absolute;
+            left: 13px;
+            top: 31px;
+            bottom: -18px;
+            width: 2px;
+            background: #d7e0ed;
+        }
+
+        .step-number {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            background: #8b96a8;
+            color: #fff;
+            font-weight: 800;
+            z-index: 1;
+        }
+
+        .step.done .step-number,
+        .step.active .step-number {
+            background: var(--primary);
+        }
+
+        .step-title {
+            margin: 2px 0 3px;
+            font-size: var(--fs-body);
+            font-weight: 800;
+        }
+
+        .step-note {
+            color: var(--muted);
+            font-size: var(--fs-xs);
+            line-height: 1.35;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .step-state {
+            align-self: start;
+            margin-top: 5px;
+            color: var(--green);
+            font-weight: 800;
+            font-size: var(--fs-xs);
+        }
+
+        .step.done .step-state {
+            width: 18px;
+            height: 18px;
+            margin-top: 4px;
+            display: grid;
+            place-items: center;
+            border-radius: 50%;
+            background: #48b56b;
+            color: #fff;
+            font-size: 0;
+        }
+
+        .step.done .step-state::after {
+            content: "✓";
+            font-size: 12px;
+            line-height: 1;
+        }
+
+        .step.active .step-state,
+        .step:not(.done):not(.active) .step-state {
+            display: none;
+        }
+
+        .config-panel {
+            padding-top: 14px;
         }
 
         .tab-content {
@@ -78,148 +405,1043 @@
             display: block;
         }
 
-        .section-title {
-            font-size: 1.3rem;
-            color: var(--primary-color);
-            margin-bottom: 1rem;
-            font-weight: 600;
-        }
-
         .form-group {
-            margin-bottom: 1.2rem;
+            margin-bottom: 10px;
         }
 
         label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            color: #263349;
+            margin-bottom: 6px;
+            font-size: var(--fs-xs);
+            font-weight: 800;
         }
 
         .input-group {
-            display: flex;
-            gap: 10px;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 38px;
+            gap: 8px;
         }
 
-        input[type="text"] {
-            flex: 1;
+        input[type="text"],
+        select {
             width: 100%;
-            padding: 0.8rem;
-            border: 1px solid #e1e4e8;
-            border-radius: 8px;
-            font-size: 1rem;
-            box-sizing: border-box;
-            transition: border-color 0.3s;
+            height: 32px;
+            padding: 0 11px;
+            color: var(--text);
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            outline: none;
+            transition: border-color 0.16s, box-shadow 0.16s;
+            min-width: 0;
+        }
+
+        select {
+            padding-right: 32px;
+            appearance: none;
+            background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+            background-position: calc(100% - 17px) 16px, calc(100% - 12px) 16px;
+            background-size: 5px 5px, 5px 5px;
+            background-repeat: no-repeat;
         }
 
         input[type="text"]:focus,
         select:focus {
-            border-color: var(--primary-color);
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
-        }
-
-        select {
-            flex: 1;
-            width: 100%;
-            padding: 0.8rem;
-            padding-right: 0.8rem;
-            /* Same as input */
-            border: 1px solid #e1e4e8;
-            border-radius: 8px;
-            font-size: 1rem;
-            box-sizing: border-box;
-            transition: border-color 0.3s;
-            appearance: none;
-            background-color: #fff;
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-            background-repeat: no-repeat;
-            background-position: calc(100% - 0.8rem) center;
-            background-size: 1em;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(23, 105, 232, 0.12);
         }
 
         .btn {
-            padding: 1rem;
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            min-height: 34px;
+            padding: 0 15px;
+            border-radius: var(--radius);
+            background: var(--primary);
+            color: #fff;
             cursor: pointer;
-            transition: background-color 0.3s, transform 0.1s;
-        }
-
-        .btn-small {
-            padding: 0.8rem 1rem;
-            font-size: 0.9rem;
+            font-size: var(--fs-body);
+            font-weight: 800;
             white-space: nowrap;
+            transition: transform 0.12s, background-color 0.16s, border-color 0.16s, color 0.16s;
         }
 
         .btn:hover {
-            background-color: #357abd;
+            background: var(--primary-strong);
         }
 
         .btn:active {
-            transform: scale(0.98);
+            transform: translateY(1px);
         }
 
-        .btn-block {
+        .btn:disabled,
+        .icon-btn:disabled,
+        .mini-btn:disabled,
+        .filter-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.56;
+            transform: none;
+        }
+
+        .btn-small {
+            width: 34px;
+            min-width: 34px;
+            padding: 0;
+        }
+
+        .btn-ghost {
+            color: var(--primary);
+            background: var(--primary-soft);
+            border: 1px solid #cddfff;
+        }
+
+        .btn-ghost:hover {
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+        .btn-success {
+            background: var(--green);
+        }
+
+        .btn-success:hover {
+            background: #066e39;
+        }
+
+        .btn-muted {
+            color: var(--text);
+            background: var(--surface-soft);
+            border: 1px solid var(--border);
+        }
+
+        .btn-muted:hover {
+            color: var(--primary);
+            background: #fff;
+        }
+
+        .sidebar-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 18px;
+        }
+
+        .sidebar-actions .btn {
+            min-width: 0;
+            padding-inline: 10px;
+        }
+
+        .option-list {
+            display: grid;
+            gap: 7px;
+            padding-top: 6px;
+        }
+
+        #single-tab .sidebar-actions {
+            display: none;
+        }
+
+        .option-list label {
+            justify-content: flex-start;
+            color: var(--muted);
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .option-list label.option-disabled {
+            color: var(--quiet);
+            cursor: not-allowed;
+        }
+
+        .option-list label.option-disabled input {
+            cursor: not-allowed;
+        }
+
+        input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--primary);
+        }
+
+        .row-check {
+            width: 17px;
+            height: 17px;
+            display: inline-grid;
+            place-items: center;
+            border: 1px solid var(--border-strong);
+            border-radius: 4px;
+            background: #fff;
+            color: #fff;
+            cursor: pointer;
+            font-size: 0.6875rem;
+            font-weight: 900;
+            line-height: 1;
+        }
+
+        .row-check[aria-checked="true"] {
+            border-color: var(--primary);
+            background: var(--primary);
+        }
+
+        .main-panel {
+            display: grid;
+            grid-template-rows: auto auto minmax(0, 1fr);
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-height: 58px;
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .panel-title {
+            margin: 0;
+            font-size: var(--fs-title);
+            font-weight: 800;
+        }
+
+        .summary-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-left: auto;
+        }
+
+        .panel-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .summary-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 30px;
+            padding: 0 12px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            background: var(--surface-soft);
+            color: var(--muted);
+            font-size: var(--fs-sm);
+            font-weight: 800;
+        }
+
+        .summary-chip strong {
+            color: var(--text);
+        }
+
+        .summary-chip.success {
+            background: var(--green-soft);
+            border-color: #bce8cc;
+            color: var(--green);
+        }
+
+        .summary-chip.warning {
+            background: var(--amber-soft);
+            border-color: #ffd59a;
+            color: var(--amber);
+        }
+
+        .summary-chip.danger {
+            background: var(--red-soft);
+            border-color: #ffc6c6;
+            color: var(--red);
+        }
+
+        .table-toolbar {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 12px;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .filter-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .filter-btn {
+            min-height: 34px;
+            padding: 0 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: #fff;
+            color: var(--muted);
+            cursor: pointer;
+            font-size: var(--fs-sm);
+            font-weight: 800;
+        }
+
+        .main-panel.filters-compact .filter-group .filter-btn:not(.active) {
+            display: none;
+        }
+
+        .filter-btn.active {
+            color: var(--primary);
+            border-color: #bfd3ff;
+            background: var(--primary-soft);
+        }
+
+        .search-field {
+            position: relative;
+            width: min(292px, 100%);
+        }
+
+        .search-field input {
+            padding-right: 36px;
+        }
+
+        .search-symbol {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--quiet);
+            font-weight: 800;
+        }
+
+        .toolbar-tools {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .preview-area {
+            min-height: 0;
+            overflow: auto;
+            background: linear-gradient(#fff, #fff) padding-box, linear-gradient(180deg, rgba(23, 105, 232, 0.08), rgba(23, 105, 232, 0)) border-box;
+        }
+
+        .empty-state {
+            min-height: 360px;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+            color: var(--muted);
+            text-align: center;
+        }
+
+        .empty-state h2 {
+            margin: 0 0 8px;
+            color: var(--text);
+            font-size: var(--fs-heading);
+        }
+
+        #preview-container {
+            display: none;
+            min-width: 760px;
+        }
+
+        .preview-table {
             width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            font-size: var(--fs-sm);
+        }
+
+        .preview-table th {
+            height: 44px;
+            padding: 0 10px;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            color: var(--muted);
+            background: #fbfdff;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+            font-size: var(--fs-xs);
+            font-weight: 800;
+        }
+
+        .preview-table td {
+            height: 48px;
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        .preview-table tr {
+            background: #fff;
+            cursor: pointer;
+        }
+
+        .preview-table tr:hover {
+            background: #f7fbff;
+        }
+
+        .preview-table tr.selected {
+            background: #edf5ff;
+            box-shadow: inset 3px 0 0 var(--primary);
+        }
+
+        .preview-table tr.row-warning {
+            background: #fffaf1;
+        }
+
+        .preview-table tr.row-danger {
+            background: #fff5f5;
+        }
+
+        .select-cell {
+            width: 42px;
+        }
+
+        .name-cell {
+            overflow: hidden;
+        }
+
+        .name-primary {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--text);
+            font-weight: 700;
+        }
+
+        .name-secondary {
+            margin-top: 3px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--quiet);
+            font-size: var(--fs-xs);
+        }
+
+        .preview-table input[type="text"] {
+            height: 30px;
+            padding: 0 9px;
+            font-size: var(--fs-sm);
+        }
+
+        .thumb-cell {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            min-width: 0;
+        }
+
+        .thumb-cell input {
+            min-width: 0;
+        }
+
+        .mini-btn,
+        .link-preview {
+            width: 30px;
+            min-width: 30px;
+            height: 30px;
+            display: inline-grid;
+            place-items: center;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            background: #fff;
+            color: var(--primary);
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 900;
+        }
+
+        .mini-btn:hover,
+        .link-preview:hover {
+            background: var(--primary-soft);
+            border-color: #bfd3ff;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 26px;
+            padding: 0 9px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--surface-soft);
+            color: var(--muted);
+            font-size: var(--fs-xs);
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .badge.success {
+            color: var(--green);
+            border-color: #b9e8c8;
+            background: var(--green-soft);
+        }
+
+        .badge.warning {
+            color: var(--amber);
+            border-color: #ffd18a;
+            background: var(--amber-soft);
+        }
+
+        .badge.danger {
+            color: var(--red);
+            border-color: #ffc2c2;
+            background: var(--red-soft);
+        }
+
+        .badge.violet {
+            color: var(--violet);
+            border-color: #d7c8ff;
+            background: var(--violet-soft);
+        }
+
+        .status-text {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: var(--fs-sm);
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .status-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .inspector {
+            display: grid;
+            grid-template-rows: auto minmax(0, 1fr);
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .inspector-header {
+            min-height: 58px;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .inspector-title {
+            margin: 0;
+            font-size: var(--fs-title);
+            font-weight: 800;
+        }
+
+        .inspector-body {
+            min-height: 0;
+            overflow: auto;
+            padding: 12px;
+        }
+
+        .cover-preview {
+            aspect-ratio: 16 / 9;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            background:
+                linear-gradient(135deg, rgba(23, 105, 232, 0.18), rgba(7, 138, 69, 0.16)),
+                radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.88), transparent 35%),
+                #0b1730;
+            display: grid;
+            place-items: center;
+            color: #fff;
+            text-align: center;
+            overflow: hidden;
+            max-height: 160px;
+        }
+
+        .cover-preview strong {
+            display: block;
+            max-width: 78%;
+            font-size: 1.1875rem;
+            line-height: 1.15;
+        }
+
+        .cover-preview span {
+            display: block;
+            margin-top: 8px;
+            color: rgba(255, 255, 255, 0.72);
+            font-size: var(--fs-xs);
+        }
+
+        .cover-preview img {
+            width: 100%;
+            height: 100%;
+            display: none;
+            object-fit: cover;
+        }
+
+        .cover-preview.has-image {
+            background: #0b1730;
+        }
+
+        .cover-preview.has-image img {
+            display: block;
+        }
+
+        .cover-preview.has-image .cover-placeholder {
+            display: none;
+        }
+
+        .inspector-caption {
+            margin: 8px 0 10px;
+            text-align: center;
+            color: var(--muted);
+            font-size: var(--fs-sm);
+            font-weight: 700;
+            overflow-wrap: anywhere;
+        }
+
+        .inspector-tabs {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 10px;
+        }
+
+        .inspector-tab {
+            padding: 9px 4px;
+            text-align: center;
+            color: var(--muted);
+            border-bottom: 2px solid transparent;
+            font-size: var(--fs-sm);
+            font-weight: 800;
+        }
+
+        .inspector-tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .timeline {
+            display: grid;
+            gap: 0;
+            margin: 4px 0 16px;
+        }
+
+        .timeline-item {
+            display: grid;
+            grid-template-columns: 30px 1fr auto;
+            gap: 10px;
+            min-height: 48px;
+            position: relative;
+        }
+
+        .timeline-item:not(:last-child)::after {
+            content: "";
+            position: absolute;
+            left: 14px;
+            top: 31px;
+            bottom: -18px;
+            width: 2px;
+            background: var(--border);
+        }
+
+        .timeline-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            color: var(--primary);
+            background: var(--primary-soft);
+            font-size: var(--fs-xs);
+            font-weight: 900;
+            z-index: 1;
+        }
+
+        .timeline-label {
+            margin-top: 1px;
+            color: var(--text);
+            font-size: var(--fs-sm);
+            font-weight: 800;
+        }
+
+        .timeline-value {
+            margin-top: 3px;
+            color: var(--muted);
+            font-size: var(--fs-xs);
+            line-height: 1.35;
+            overflow-wrap: anywhere;
+        }
+
+        .timeline-time {
+            margin-top: 3px;
+            color: var(--quiet);
+            font-size: var(--fs-xs);
+            white-space: nowrap;
+        }
+
+        .inspector-fields {
+            display: grid;
+            gap: 8px;
+            padding-top: 2px;
+        }
+
+        .source-control {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 34px;
+            gap: 8px;
+        }
+
+        .confidence-line {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            color: var(--muted);
+            font-size: var(--fs-xs);
+        }
+
+        .confidence-line strong {
+            color: var(--green);
+        }
+
+        #open-thumb-folder {
+            min-height: 30px;
+        }
+
+        .bottom-dock {
+            display: grid;
+            grid-template-columns: minmax(380px, 0.9fr) minmax(420px, 1fr) minmax(330px, 0.82fr);
+            gap: 0;
+            margin: 0 6px 6px;
+            overflow: hidden;
+        }
+
+        .app-shell.dock-collapsed {
+            grid-template-rows: 60px minmax(0, 1fr) 0;
+        }
+
+        .app-shell.dock-collapsed .bottom-dock {
+            display: none;
+        }
+
+        .app-shell.inspector-hidden .workspace {
+            grid-template-columns: 260px minmax(640px, 1fr);
+        }
+
+        .app-shell.inspector-hidden .inspector {
+            display: none;
+        }
+
+        .app-shell.focus-mode .workspace {
+            grid-template-columns: minmax(0, 1fr) 365px;
+        }
+
+        .app-shell.focus-mode .sidebar {
+            display: none;
+        }
+
+        .dock-section {
+            min-width: 0;
+            padding: 12px 14px;
+        }
+
+        .dock-section:not(:last-child) {
+            border-right: 1px solid var(--border);
+        }
+
+        .dock-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin: 0 0 10px;
+            font-size: 15px;
+            font-weight: 800;
+        }
+
+        .inline-progress {
+            height: 12px;
+            border-radius: 99px;
+            background: #e6ebf3;
+            overflow: hidden;
+            margin-bottom: 9px;
+        }
+
+        .inline-progress span {
+            display: block;
+            width: 0;
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), #39a46b);
+            border-radius: inherit;
+        }
+
+        .progress-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            color: var(--muted);
+            font-size: var(--fs-xs);
+            line-height: 1.45;
+        }
+
+        .progress-cards {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .progress-card {
+            min-width: 0;
+            padding: 10px 11px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: linear-gradient(180deg, #f9fbff, #f4f8ff);
+            color: var(--muted);
+        }
+
+        .progress-card:nth-child(2) {
+            background: linear-gradient(180deg, #fbf9ff, #f7f3ff);
+        }
+
+        .progress-card:nth-child(3) {
+            background: linear-gradient(180deg, #f6fffb, #effbf5);
+        }
+
+        .progress-card span,
+        .progress-card em {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: var(--fs-xs);
+            font-style: normal;
+        }
+
+        .progress-card strong {
+            display: block;
+            margin: 4px 0 2px;
+            color: var(--primary);
+            font-size: 1.125rem;
+            line-height: 1.1;
+        }
+
+        .progress-card:nth-child(2) strong {
+            color: var(--violet);
+        }
+
+        .progress-card:nth-child(3) strong {
+            color: var(--green);
+        }
+
+        #single-log-container,
+        #batch-log-container {
+            display: none;
+        }
+
+        .log-view {
+            height: 108px;
+            overflow-y: auto;
+            padding: 7px 8px;
+            color: var(--muted);
+            background: #fff;
+            border-radius: var(--radius);
+            border: 1px solid #edf1f7;
+            font-family: var(--font);
+            font-size: var(--fs-xs);
+            line-height: 1.45;
+            white-space: pre-wrap;
+        }
+
+        .log-placeholder {
+            color: var(--quiet);
+        }
+
+        .download-grid {
+            display: grid;
+            gap: 8px;
+        }
+
+        .download-row {
+            display: grid;
+            grid-template-columns: 1fr auto auto auto;
+            gap: 10px;
+            color: var(--muted);
+            font-size: var(--fs-xs);
+        }
+
+        .download-row strong {
+            color: var(--text);
+        }
+
+        .download-row .ok {
+            color: var(--green);
+            font-weight: 800;
+        }
+
+        .download-row .fail {
+            color: var(--red);
+            font-weight: 800;
+        }
+
+        .download-row.total {
+            margin-top: 4px;
+            padding-top: 10px;
+            border-top: 1px solid var(--border);
+            font-weight: 800;
+        }
+
+        .download-detail-list {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+            display: grid;
+            gap: 7px;
+        }
+
+        .download-detail-item {
+            display: grid;
+            grid-template-columns: 96px 1fr auto;
+            gap: 10px;
+            align-items: start;
+            color: var(--muted);
+            font-size: var(--fs-xs);
+        }
+
+        .download-detail-item strong {
+            color: var(--text);
+            overflow-wrap: anywhere;
+        }
+
+        .download-detail-item .ok {
+            color: var(--green);
+            font-weight: 800;
+        }
+
+        .download-detail-item .fail {
+            color: var(--red);
+            font-weight: 800;
         }
 
         .status {
-            margin-top: 1rem;
-            text-align: center;
-            font-size: 0.9rem;
-            min-height: 1.2em;
+            position: fixed;
+            left: 50%;
+            bottom: 22px;
+            transform: translateX(-50%);
+            min-height: 0;
+            max-width: min(520px, calc(100vw - 32px));
+            padding: 11px 16px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            background: #172033;
+            color: #fff;
+            font-weight: 800;
+            z-index: 80;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.18s, transform 0.18s;
+        }
+
+        .status.success,
+        .status.error,
+        .status.info {
+            opacity: 1;
+            transform: translateX(-50%) translateY(-4px);
         }
 
         .status.success {
-            color: #2ecc71;
+            background: var(--green);
         }
 
         .status.error {
-            color: #e74c3c;
+            background: var(--red);
         }
 
-        /* Modal */
+        .status.info {
+            background: #253551;
+        }
+
         .modal {
             display: none;
             position: fixed;
+            inset: 0;
             z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.4);
+            background: rgba(15, 24, 38, 0.45);
+            padding: 24px;
         }
 
         .modal-content {
-            background-color: #fefefe;
-            margin: 10% auto;
-            padding: 20px;
-            border: 1px solid #888;
-            width: 80%;
-            max-width: 600px;
-            border-radius: var(--border-radius);
-            max-height: 70vh;
+            width: min(720px, calc(100vw - 48px));
+            max-height: min(760px, calc(100vh - 48px));
+            margin: 4vh auto;
             display: flex;
             flex-direction: column;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: 0 24px 72px rgba(20, 30, 52, 0.22);
+            overflow: hidden;
         }
 
         .modal-header {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 1rem;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 16px 18px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-header h3,
+        .modal-content h2 {
+            margin: 0;
+            font-size: 18px;
+        }
+
+        .close,
+        .close-modal {
+            width: 34px;
+            height: 34px;
+            display: grid;
+            place-items: center;
+            border-radius: var(--radius);
+            color: var(--muted);
+            cursor: pointer;
+            font-size: 24px;
+            line-height: 1;
+        }
+
+        .close:hover,
+        .close-modal:hover {
+            color: var(--red);
+            background: var(--red-soft);
         }
 
         .modal-body {
             flex: 1;
-            overflow-y: auto;
-            border: 1px solid #eee;
-            border-radius: 4px;
+            min-height: 0;
+            overflow: auto;
+            padding: 14px 18px;
+        }
+
+        .modal-footer {
+            padding: 14px 18px;
+            border-top: 1px solid var(--border);
+            text-align: right;
+        }
+
+        #currentPath {
+            margin: 12px 18px 0;
+            padding: 9px 11px;
+            color: var(--muted);
+            background: var(--surface-soft);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow-wrap: anywhere;
         }
 
         .file-list {
@@ -229,237 +1451,583 @@
         }
 
         .file-item {
+            min-height: 42px;
             padding: 10px;
-            cursor: pointer;
-            border-bottom: 1px solid #f0f0f0;
             display: flex;
             align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
         }
 
         .file-item:hover {
-            background-color: #f5f7fa;
-        }
-
-        .file-item.selected {
-            background-color: #e3f2fd;
+            background: var(--primary-soft);
         }
 
         .file-icon {
-            margin-right: 10px;
-            width: 20px;
+            min-width: 42px;
+            color: var(--primary);
+            font-size: 11px;
+            font-weight: 900;
+        }
+
+        #progress-modal .modal-content {
+            width: min(420px, calc(100vw - 48px));
+            padding: 22px;
             text-align: center;
         }
 
-        .close {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .close:hover {
-            color: black;
-        }
-
-        .modal-footer {
-            margin-top: 1rem;
-            text-align: right;
-        }
-
-        /* Table Styles */
-        .preview-table {
+        #progress-modal progress {
             width: 100%;
-            border-collapse: collapse;
-            margin-top: 1rem;
-            font-size: 0.9rem;
+            height: 18px;
+            accent-color: var(--primary);
         }
 
-        .preview-table th,
-        .preview-table td {
-            border: 1px solid #e1e4e8;
-            padding: 8px;
-            text-align: left;
+        @media (max-width: 1180px) {
+            .workspace {
+                grid-template-columns: 280px minmax(0, 1fr);
+                grid-template-rows: minmax(260px, 1fr) minmax(220px, 0.7fr);
+            }
+
+            .inspector {
+                grid-column: 1 / -1;
+                min-height: 0;
+            }
+
+            .bottom-dock {
+                grid-template-columns: 1fr;
+            }
+
+            .dock-section:not(:last-child) {
+                border-right: 0;
+                border-bottom: 1px solid var(--border);
+            }
         }
 
-        .preview-table th {
-            background-color: #f5f7fa;
-            font-weight: 600;
-        }
+        @media (max-width: 820px) {
+            body {
+                overflow: auto;
+            }
 
-        .preview-table input {
-            width: 100%;
-            padding: 4px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            .app-shell {
+                height: auto;
+                grid-template-rows: auto minmax(0, 1fr) auto;
+                overflow: visible;
+            }
+
+            .topbar {
+                flex-wrap: wrap;
+                padding: 12px;
+            }
+
+            .brand {
+                min-width: 0;
+            }
+
+            .top-spacer {
+                display: none;
+            }
+
+            .workspace {
+                grid-template-columns: 1fr;
+                padding: 8px;
+            }
+
+            .table-toolbar {
+                grid-template-columns: 1fr;
+            }
+
+            .search-field {
+                width: 100%;
+            }
+
+            .sidebar-actions {
+                grid-template-columns: 1fr;
+            }
+
+            .bottom-dock {
+                margin: 0 8px 8px;
+            }
         }
     </style>
 </head>
 
 <body>
-    <div class="container">
-        <h1>PLCN</h1>
+    <div class="app-shell">
+        <header class="topbar">
+            <div class="brand">
+                <div class="brand-mark" aria-hidden="true">
+                    <svg viewBox="0 0 48 48" role="img">
+                        <path d="M24 4h10c5 0 8 3 8 8v8c0 5-3 8-8 8H20c-4 0-6 2-6 6v2H8c-3 0-5-2-5-5v-3c0-5 4-9 9-9h12c2 0 4-2 4-4v-3h-8V4h4z" fill="#1769e8"></path>
+                        <path d="M24 44H14c-5 0-8-3-8-8v-8c0-5 3-8 8-8h14c4 0 6-2 6-6v-2h6c3 0 5 2 5 5v3c0 5-4 9-9 9H24c-2 0-4 2-4 4v3h8v8h-4z" fill="#0fb16b"></path>
+                        <circle cx="16" cy="12" r="2.2" fill="#fff"></circle>
+                        <circle cx="32" cy="36" r="2.2" fill="#fff"></circle>
+                    </svg>
+                </div>
+                <div class="brand-name">PLCN</div>
+            </div>
 
-        <!-- Tabs -->
-        <div class="tabs">
-            <button class="tab active" onclick="switchTab('single')">单个处理</button>
-            <button class="tab" onclick="switchTab('batch')">批量处理</button>
-        </div>
+            <div class="mode-switch" role="tablist" aria-label="处理模式">
+                <button class="tab active" onclick="switchTab('single', this)" type="button">单个处理</button>
+                <button class="tab" onclick="switchTab('batch', this)" type="button">批量处理</button>
+            </div>
 
-        <!-- Single Processing Tab -->
-        <div id="single-tab" class="tab-content active">
+            <div class="top-spacer"></div>
 
-            <div class="form-group">
-                <label for="playlist_path">播放列表路径 (.lpl)</label>
-                <div class="input-group">
-                    <input type="text" id="playlist_path" placeholder="/path/to/playlist.lpl">
-                    <button class="btn btn-small" onclick="openFilePicker('playlist_path', false)">选择文件</button>
+            <div class="status-chip database loading" id="database-status-chip">
+                <span class="icon-square" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="7" ry="3"></ellipse><path d="M5 5v6c0 1.7 3.1 3 7 3s7-1.3 7-3V5"></path><path d="M5 11v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"></path></svg>
+                </span>
+                本地数据库 <strong id="stat-db-count">加载中</strong>
+            </div>
+            <div class="status-chip dat loading" id="dat-status-chip">
+                <span class="icon-square" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"></rect><path d="M8 8h8M8 12h8M8 16h5"></path></svg>
+                </span>
+                DAT <strong id="stat-dat-count">加载中</strong>
+            </div>
+            <div class="status-chip offline loading" id="offline-status-chip">
+                <span class="icon-square" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M5 13a10 10 0 0 1 14 0"></path><path d="M8.5 16.5a5 5 0 0 1 7 0"></path><path d="M12 20h.01"></path></svg>
+                </span>
+                <strong id="stat-offline-label">检测中</strong>
+            </div>
+            <div class="top-divider"></div>
+            <div class="utility-group" aria-label="工具">
+                <button class="icon-btn" type="button" title="打开项目说明" onclick="openProjectDocs()">
+                    <svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z"></path><path d="M4 5.5v16"></path><path d="M8 7h8"></path></svg>
+                </button>
+                <button class="icon-btn" type="button" title="定位到配置" onclick="focusConfigPanel()">
+                    <svg viewBox="0 0 24 24"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"></path><path d="M3 12h2m14 0h2M12 3v2m0 14v2M5.6 5.6 7 7m10 10 1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"></path></svg>
+                </button>
+            </div>
+            <div class="top-divider"></div>
+            <div class="window-controls" aria-label="视图控制">
+                <button class="icon-btn" id="toggle-dock-btn" type="button" title="收起/展开底栏" onclick="toggleBottomDock()" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M6 12h12"></path></svg></button>
+                <button class="icon-btn" id="fullscreen-btn" type="button" title="切换专注模式" onclick="toggleFullscreen()" aria-pressed="false"><svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="1"></rect></svg></button>
+                <button class="icon-btn" id="toggle-inspector-btn" type="button" title="隐藏/显示详情栏" onclick="toggleInspector()" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"></path></svg></button>
+            </div>
+        </header>
+
+        <main class="workspace">
+            <aside class="sidebar">
+                <div class="sidebar-scroll">
+                    <section class="workflow">
+                        <h2 class="section-title">工作流程</h2>
+                        <div class="step-list">
+                            <div class="step done">
+                                <div class="step-number">1</div>
+                                <div>
+                                    <div class="step-title">选择播放列表</div>
+                                    <div class="step-note" id="step-playlist">等待选择 .lpl 文件</div>
+                                </div>
+                                <div class="step-state">就绪</div>
+                            </div>
+                            <div class="step done">
+                                <div class="step-number">2</div>
+                                <div>
+                                    <div class="step-title">系统识别</div>
+                                    <div class="step-note" id="step-system">自动读取 db_name</div>
+                                </div>
+                                <div class="step-state">就绪</div>
+                            </div>
+                            <div class="step active">
+                                <div class="step-number">3</div>
+                                <div>
+                                    <div class="step-title">预览校对</div>
+                                    <div class="step-note" id="step-preview">先确认低置信匹配</div>
+                                </div>
+                                <div class="step-state">当前</div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">4</div>
+                                <div>
+                                    <div class="step-title">应用并下载</div>
+                                    <div class="step-note">写入 playlist，下载三类缩略图</div>
+                                </div>
+                                <div class="step-state" style="color: var(--quiet);">等待</div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="config-panel">
+                        <div id="single-tab" class="tab-content active">
+                            <h2 class="section-title">配置</h2>
+                            <div class="form-group">
+                                <label for="playlist_path">播放列表路径</label>
+                                <div class="input-group">
+                                    <input type="text" id="playlist_path" placeholder="/path/to/playlist.lpl">
+                                    <button class="btn btn-small btn-muted" onclick="openFilePicker('playlist_path', false)" title="选择文件" type="button">...</button>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="system_name">系统名称</label>
+                                <select id="system_name">
+                                    <option value="">加载中...</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="thumbnails_dir">缩略图保存路径</label>
+                                <div class="input-group">
+                                    <input type="text" id="thumbnails_dir" placeholder="/path/to/retroarch/thumbnails">
+                                    <button class="btn btn-small btn-muted" onclick="openFilePicker('thumbnails_dir', true)" title="选择目录" type="button">...</button>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="rom_name_cn_path">rom-name-cn 路径</label>
+                                <div class="input-group">
+                                    <input type="text" id="rom_name_cn_path" placeholder="data/rom-name-cn">
+                                    <button class="btn btn-small btn-muted" onclick="openFilePicker('rom_name_cn_path', true)" title="选择目录" type="button">...</button>
+                                </div>
+                            </div>
+
+                            <div class="option-list">
+                                <label class="option-disabled" title="当前匹配策略由后端统一决定"><input id="option-auto-high-confidence" type="checkbox" checked disabled> 自动使用高置信度结果</label>
+                                <label><input id="option-download-thumbnails" type="checkbox" checked> 下载缺失的封面和截图</label>
+                                <label class="option-disabled" title="当前后端默认优先使用本地缓存和 rom-name-cn 数据"><input id="option-prefer-local-db" type="checkbox" checked disabled> 优先使用本地数据库</label>
+                                <label class="option-disabled" title="重复项处理仍由播放列表去重逻辑决定，自动重命名将在后续版本实现"><input id="option-auto-rename-duplicates" type="checkbox" disabled> 处理重复项时自动重命名</label>
+                            </div>
+
+                            <div class="sidebar-actions">
+                                <button class="btn btn-ghost" onclick="previewTask()" type="button">预览校对</button>
+                                <button class="btn btn-success" onclick="executeTask('single')" type="button">直接运行</button>
+                            </div>
+                        </div>
+
+                        <div id="batch-tab" class="tab-content">
+                            <h2 class="section-title">批量配置</h2>
+                            <div class="form-group">
+                                <label for="batch_dir">播放列表目录</label>
+                                <div class="input-group">
+                                    <input type="text" id="batch_dir" placeholder="/path/to/retroarch/playlists">
+                                    <button class="btn btn-small btn-muted" onclick="openFilePicker('batch_dir', true)" title="选择目录" type="button">...</button>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="batch_thumbnails_dir">缩略图目录</label>
+                                <div class="input-group">
+                                    <input type="text" id="batch_thumbnails_dir" placeholder="/path/to/retroarch/thumbnails">
+                                    <button class="btn btn-small btn-muted" onclick="openFilePicker('batch_thumbnails_dir', true)" title="选择目录" type="button">...</button>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="batch_rom_name_cn_path">rom-name-cn 路径</label>
+                                <div class="input-group">
+                                    <input type="text" id="batch_rom_name_cn_path" placeholder="data/rom-name-cn">
+                                    <button class="btn btn-small btn-muted" onclick="openFilePicker('batch_rom_name_cn_path', true)" title="选择目录" type="button">...</button>
+                                </div>
+                            </div>
+
+                            <div class="option-list">
+                                <label><input id="batch-option-backup" type="checkbox" checked> 每个 playlist 自动备份</label>
+                                <label><input id="batch-option-continue" type="checkbox" checked> 遇到错误继续处理下一个</label>
+                                <label><input id="batch-option-download-thumbnails" type="checkbox" checked> 批量下载三类缩略图</label>
+                            </div>
+
+                            <div class="sidebar-actions" style="grid-template-columns: 1fr;">
+                                <button class="btn btn-success" onclick="executeTask('batch')" type="button">开始批量处理</button>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </aside>
+
+            <section class="main-panel">
+                <div class="panel-header">
+                    <h1 class="panel-title">预览校对</h1>
+                    <div class="summary-chips">
+                        <div class="summary-chip">全部 <strong id="summary-total">0</strong></div>
+                        <div class="summary-chip success">已匹配 <strong id="summary-matched">0</strong></div>
+                        <div class="summary-chip warning">需确认 <strong id="summary-review">0</strong></div>
+                        <div class="summary-chip danger">重复项 <strong id="summary-duplicate">0</strong></div>
+                    </div>
+                    <div class="panel-actions">
+                        <button class="btn btn-ghost" onclick="previewTask()" type="button">重新预览</button>
+                        <button class="btn btn-success" onclick="applyChanges()" type="button">应用更改</button>
+                    </div>
+                </div>
+
+                <div class="table-toolbar">
+                    <div class="filter-group">
+                        <button class="filter-btn active" type="button" data-filter="all" onclick="setPreviewFilter('all', this)">全部</button>
+                        <button class="filter-btn" type="button" data-filter="review" onclick="setPreviewFilter('review', this)">仅显示需确认</button>
+                        <button class="filter-btn" type="button" data-filter="duplicate" onclick="setPreviewFilter('duplicate', this)">仅显示重复</button>
+                        <button class="filter-btn" type="button" data-filter="matched" onclick="setPreviewFilter('matched', this)">仅显示已匹配</button>
+                    </div>
+                    <div class="toolbar-tools">
+                        <button class="btn btn-muted" id="filter-toggle-btn" type="button" title="收起/展开筛选项" onclick="toggleFilterBar()" aria-pressed="false">
+                            <svg viewBox="0 0 24 24" style="width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 2;"><path d="M4 5h16l-6 7v5l-4 2v-7z"></path></svg>
+                            筛选
+                        </button>
+                        <div class="search-field">
+                            <input type="text" id="preview-search" placeholder="搜索文件名 / 中文名" oninput="renderPreviewTable(currentChanges)">
+                            <span class="search-symbol">⌕</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="preview-area">
+                    <div class="empty-state" id="preview-empty">
+                        <div>
+                            <h2>选择播放列表后开始预览</h2>
+                            <p>PLCN 会先展示建议显示名、封面源和匹配置信度，低置信结果可在右侧手动校对。</p>
+                        </div>
+                    </div>
+
+                    <div id="preview-container">
+                        <table class="preview-table">
+                            <thead>
+                                <tr>
+                                    <th class="select-cell"></th>
+                                    <th style="width: 25%;">原始文件名</th>
+                                    <th style="width: 23%;">建议中文名</th>
+                                    <th style="width: 28%;">封面源（英文名）</th>
+                                    <th style="width: 10%;">置信度</th>
+                                    <th style="width: 12%;">状态</th>
+                                </tr>
+                            </thead>
+                            <tbody id="preview-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <aside class="inspector">
+                <div class="inspector-header">
+                    <h2 class="inspector-title">详细信息</h2>
+                    <button class="btn btn-small btn-muted" type="button" onclick="clearInspector()" title="清空选择">×</button>
+                </div>
+                <div class="inspector-body">
+                    <div class="cover-preview" id="cover-preview">
+                        <img id="cover-image" alt="">
+                        <div class="cover-placeholder">
+                            <strong id="cover-title">等待选择</strong>
+                            <span id="cover-subtitle">预览行会显示匹配链路</span>
+                        </div>
+                    </div>
+                    <div class="inspector-caption" id="inspector-caption">未选择游戏</div>
+
+                    <div class="inspector-tabs">
+                        <div class="inspector-tab active">匹配详情</div>
+                        <div class="inspector-tab">元数据</div>
+                        <div class="inspector-tab">文件信息</div>
+                    </div>
+
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-icon">F</div>
+                            <div>
+                                <div class="timeline-label">文件名</div>
+                                <div class="timeline-value" id="inspector-original">尚未分析</div>
+                            </div>
+                            <div class="timeline-time">本地</div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-icon">DB</div>
+                            <div>
+                                <div class="timeline-label">中文库（rom-name-cn）</div>
+                                <div class="timeline-value" id="inspector-cn">等待匹配</div>
+                            </div>
+                            <div class="timeline-time">SQLite</div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-icon">✓</div>
+                            <div>
+                                <div class="timeline-label">DAT（Libretro）</div>
+                                <div class="timeline-value" id="inspector-dat">等待标准名</div>
+                            </div>
+                            <div class="timeline-time">DAT</div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-icon">URL</div>
+                            <div>
+                                <div class="timeline-label">缩略图 URL</div>
+                                <div class="timeline-value" id="inspector-url">等待封面源</div>
+                            </div>
+                            <div class="timeline-time">Libretro</div>
+                        </div>
+                    </div>
+
+                    <div class="inspector-fields">
+                        <div class="form-group">
+                            <label for="inspector-label">显示名称（将写入播放列表）</label>
+                            <input type="text" id="inspector-label" oninput="updateSelectedFromInspector('new_label', this.value)">
+                        </div>
+                        <div class="form-group">
+                            <label for="inspector-thumb">封面源</label>
+                            <div class="source-control">
+                                <input type="text" id="inspector-thumb" oninput="updateSelectedFromInspector('thumbnail_source', this.value)">
+                                <button class="mini-btn" type="button" onclick="refreshCoverPreview()" title="刷新封面预览">
+                                    <svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4.7L4 8"></path><path d="M4 4v4h4"></path><path d="M4 13a8 8 0 0 0 14.5 4.7L20 16"></path><path d="M20 20v-4h-4"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="confidence-line">
+                            <span>匹配置信度</span>
+                            <strong id="inspector-confidence">--</strong>
+                        </div>
+                        <button class="btn btn-ghost" id="open-thumb-folder" onclick="openThumbnailFolder()" type="button">打开封面文件夹</button>
+                    </div>
+                </div>
+            </aside>
+        </main>
+
+        <section class="bottom-dock">
+            <div class="dock-section">
+                <h2 class="dock-title">任务进度 <span id="inline-progress-label">待处理</span></h2>
+                <div class="inline-progress"><span id="inline-progress-fill"></span></div>
+                <div class="progress-meta">
+                    <span id="inline-progress-main">等待预览校对</span>
+                    <span id="inline-progress-current">当前：未开始</span>
+                </div>
+                <div class="progress-cards">
+                    <div class="progress-card">
+                        <span>Boxarts</span>
+                        <strong id="progress-box-count">0 / 0</strong>
+                        <em id="progress-box-percent">(0%)</em>
+                    </div>
+                    <div class="progress-card">
+                        <span>Snaps</span>
+                        <strong id="progress-snap-count">0 / 0</strong>
+                        <em id="progress-snap-percent">(0%)</em>
+                    </div>
+                    <div class="progress-card">
+                        <span>Titles</span>
+                        <strong id="progress-title-count">0 / 0</strong>
+                        <em id="progress-title-percent">(0%)</em>
+                    </div>
                 </div>
             </div>
 
-            <div class="form-group">
-                <label for="system_name">系统名称 (System Name)</label>
-                <div class="input-group">
-                    <select id="system_name">
-                        <option value="">加载中...</option>
-                    </select>
-                    <button class="btn btn-small" style="visibility: hidden; pointer-events: none;">占位</button>
+            <div class="dock-section">
+                <h2 class="dock-title">
+                    任务日志
+                    <button class="btn btn-muted" type="button" onclick="clearLogs()" style="min-height: 30px; padding: 0 10px;">清空日志</button>
+                </h2>
+                <div id="single-log-container">
+                    <div id="single-log-view" class="log-view"></div>
                 </div>
-                <small style="color: #666; display: block; margin-top: 5px;">选择播放列表后会自动识别，也可手动选择</small>
+                <div id="batch-log-container">
+                    <div id="batch-log-view" class="log-view"></div>
+                </div>
+                <div id="log-placeholder" class="log-view log-placeholder">等待任务开始，处理日志会显示在这里。</div>
             </div>
 
-            <div class="form-group">
-                <label for="thumbnails_dir">缩略图目录 (Thumbnails Dir)</label>
-                <div class="input-group">
-                    <input type="text" id="thumbnails_dir" placeholder="/path/to/retroarch/thumbnails">
-                    <button class="btn btn-small" onclick="openFilePicker('thumbnails_dir', true)">选择目录</button>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label for="rom_name_cn_path">ROM中文名称库路径</label>
-                <div class="input-group">
-                    <input type="text" id="rom_name_cn_path" placeholder="data/rom-name-cn">
-                    <button class="btn btn-small" onclick="openFilePicker('rom_name_cn_path', true)">选择目录</button>
+            <div class="dock-section">
+                <h2 class="dock-title">下载汇总 <button class="btn btn-muted" type="button" onclick="showDownloadDetails()" style="min-height: 30px; padding: 0 10px;">详情</button></h2>
+                <div class="download-grid">
+                    <div class="download-row"><strong>Boxarts（封面）</strong><span class="ok" id="sum-box-ok">0 成功</span><span class="fail" id="sum-box-fail">0 失败</span><span id="sum-box-skip">0 跳过</span></div>
+                    <div class="download-row"><strong>Snaps（截图）</strong><span class="ok" id="sum-snap-ok">0 成功</span><span class="fail" id="sum-snap-fail">0 失败</span><span id="sum-snap-skip">0 跳过</span></div>
+                    <div class="download-row"><strong>Titles（标题）</strong><span class="ok" id="sum-title-ok">0 成功</span><span class="fail" id="sum-title-fail">0 失败</span><span id="sum-title-skip">0 跳过</span></div>
+                    <div class="download-row total"><strong>总计</strong><span class="ok" id="sum-total-ok">0 成功</span><span class="fail" id="sum-total-fail">0 失败</span><span id="sum-total-skip">0 跳过</span></div>
                 </div>
             </div>
-
-            <div class="form-group" style="margin-top: 2rem; text-align: center;">
-                <button class="btn"
-                    style="background-color: #3498db; font-size: 1.1rem; padding: 0.8rem 2rem; margin-right: 1rem;"
-                    onclick="previewTask()">预览 & 校对</button>
-                <button class="btn" style="background-color: #2ecc71; font-size: 1.1rem; padding: 0.8rem 2rem;"
-                    onclick="executeTask('single')">直接运行</button>
-            </div>
-
-            <!-- Preview Container -->
-            <div id="preview-container" style="margin-top: 2rem; display: none;">
-                <h3 class="section-title">预览更改</h3>
-                <div style="max-height: 400px; overflow-y: auto; border: 1px solid #e1e4e8; border-radius: 8px;">
-                    <table class="preview-table">
-                        <thead>
-                            <tr>
-                                <th>原名 (Label)</th>
-                                <th>新名 (New Label)</th>
-                                <th>封面源 (Thumbnail Source)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="preview-table-body">
-                            <!-- Rows will be populated here -->
-                        </tbody>
-                    </table>
-                </div>
-                <div style="margin-top: 1rem; text-align: right;">
-                    <button class="btn" onclick="applyChanges()">应用更改</button>
-                </div>
-            </div>
-
-            <!-- Single mode log container -->
-            <div id="single-log-container" style="margin-top: 2rem; display: none;">
-                <label>运行日志</label>
-                <div id="single-log-view" style="
-                    background-color: #1e1e1e; 
-                    color: #d4d4d4; 
-                    padding: 1rem; 
-                    border-radius: 8px; 
-                    height: 300px; 
-                    overflow-y: auto; 
-                    font-family: 'Consolas', 'Monaco', monospace; 
-                    font-size: 0.9rem;
-                    white-space: pre-wrap;
-                "></div>
-            </div>
-        </div>
-
-        <!-- Batch Processing Tab -->
-        <div id="batch-tab" class="tab-content">
-
-            <div class="form-group">
-                <label for="batch_dir">播放列表目录</label>
-                <div class="input-group">
-                    <input type="text" id="batch_dir" placeholder="/path/to/retroarch/playlists">
-                    <button class="btn btn-small" onclick="openFilePicker('batch_dir', true)">选择目录</button>
-                </div>
-                <small style="color: #666; display: block; margin-top: 5px;">选择包含多个 .lpl 文件的文件夹，将一次性处理所有文件</small>
-            </div>
-
-            <div class="form-group">
-                <label for="batch_thumbnails_dir">缩略图目录 (Thumbnails Dir)</label>
-                <div class="input-group">
-                    <input type="text" id="batch_thumbnails_dir" placeholder="/path/to/retroarch/thumbnails">
-                    <button class="btn btn-small" onclick="openFilePicker('batch_thumbnails_dir', true)">选择目录</button>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label for="batch_rom_name_cn_path">ROM中文名称库路径</label>
-                <div class="input-group">
-                    <input type="text" id="batch_rom_name_cn_path" placeholder="data/rom-name-cn">
-                    <button class="btn btn-small" onclick="openFilePicker('batch_rom_name_cn_path', true)">选择目录</button>
-                </div>
-            </div>
-
-            <div class="form-group" style="margin-top: 2rem; text-align: center;">
-                <button class="btn" style="background-color: #2ecc71; font-size: 1.1rem; padding: 0.8rem 2rem;"
-                    onclick="executeTask('batch')">开始处理</button>
-            </div>
-
-            <!-- Batch mode log container -->
-            <div id="batch-log-container" style="margin-top: 2rem; display: none;">
-                <label>运行日志</label>
-                <div id="batch-log-view" style="
-                    background-color: #1e1e1e; 
-                    color: #d4d4d4; 
-                    padding: 1rem; 
-                    border-radius: 8px; 
-                    height: 300px; 
-                    overflow-y: auto; 
-                    font-family: 'Consolas', 'Monaco', monospace; 
-                    font-size: 0.9rem;
-                    white-space: pre-wrap;
-                "></div>
-            </div>
-        </div>
+        </section>
 
         <div id="status" class="status"></div>
     </div>
 
-    <!-- File Picker Modal -->
     <div id="fileModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="modalTitle">选择文件</h3>
                 <span class="close" onclick="closeModal()">&times;</span>
             </div>
-            <div style="margin-bottom: 10px; font-weight: bold;" id="currentPath"></div>
+            <div id="currentPath"></div>
             <div class="modal-body">
                 <ul id="fileList" class="file-list"></ul>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-small" onclick="selectCurrentDir()" id="selectDirBtn"
-                    style="display: none;">选择当前目录</button>
-                <button class="btn btn-small" onclick="closeModal()" style="background-color: #999;">取消</button>
+                <button class="btn btn-ghost" onclick="selectCurrentDir()" id="selectDirBtn" style="display: none;" type="button">选择当前目录</button>
+                <button class="btn btn-muted" onclick="closeModal()" type="button">取消</button>
             </div>
+        </div>
+    </div>
+
+    <div id="docs-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>项目说明</h2>
+                <span class="close-modal" onclick="closeProjectDocs()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-icon">UI</div>
+                        <div>
+                            <div class="timeline-label">PLCN 工作台</div>
+                            <div class="timeline-value">本地 Web UI 用于预览、校对、写回 RetroArch 播放列表并下载三类缩略图。</div>
+                        </div>
+                        <div class="timeline-time">当前</div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-icon">DOC</div>
+                        <div>
+                            <div class="timeline-label">README</div>
+                            <div class="timeline-value"><a href="/README.md" target="_blank" rel="noopener">打开 README.md</a></div>
+                        </div>
+                        <div class="timeline-time">文档</div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-icon">PLAN</div>
+                        <div>
+                            <div class="timeline-label">后续优化方案</div>
+                            <div class="timeline-value"><a href="/DOC/OPTIMIZATION_PLAN.md" target="_blank" rel="noopener">打开 OPTIMIZATION_PLAN.md</a></div>
+                        </div>
+                        <div class="timeline-time">路线</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-muted" onclick="closeProjectDocs()" type="button">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="search-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>搜索数据库</h2>
+                <span class="close-modal" onclick="closeSearchModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; margin-bottom: 15px;">
+                    <input type="text" id="search-input" placeholder="输入游戏名（中/英）">
+                    <button onclick="performSearch()" class="btn" type="button">搜索</button>
+                </div>
+                <div id="search-results" style="max-height: 360px; overflow-y: auto;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="download-details-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>下载详情</h2>
+                <span class="close-modal" onclick="closeDownloadDetails()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="download-grid" id="download-details-content"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-muted" onclick="closeDownloadDetails()" type="button">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="progress-modal" class="modal">
+        <div class="modal-content">
+            <h2>正在处理...</h2>
+            <div style="margin: 20px 0;">
+                <progress id="task-progress" value="0" max="100"></progress>
+            </div>
+            <p id="progress-message">准备中...</p>
+            <p id="progress-stats">0 / 0</p>
         </div>
     </div>
 
@@ -467,15 +2035,20 @@
         let currentTargetInputId = '';
         let isDirectoryMode = false;
         let currentPath = '.';
+        let currentChanges = [];
+        let currentPreviewFilter = 'all';
+        let selectedChangeIndex = -1;
+        let lastDownloadSummary = null;
 
-        function switchTab(tab) {
-            // Update tab buttons
+        function switchTab(tab, target) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            event.target.classList.add('active');
+            if (target) target.classList.add('active');
 
-            // Update tab contents
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.getElementById(tab + '-tab').classList.add('active');
+
+            const logPlaceholder = document.getElementById('log-placeholder');
+            if (logPlaceholder) logPlaceholder.style.display = currentChanges.length ? 'none' : 'block';
         }
 
         async function loadConfig() {
@@ -483,18 +2056,52 @@
                 const response = await fetch('/api/config');
                 const config = await response.json();
 
-                // Single mode fields - use single_* keys
                 document.getElementById('playlist_path').value = config.single_playlist_path || '';
                 document.getElementById('system_name').value = config.single_system_name || '';
                 document.getElementById('thumbnails_dir').value = config.single_thumbnails_dir || '';
                 document.getElementById('rom_name_cn_path').value = config.single_rom_name_cn_path || 'data/rom-name-cn';
 
-                // Batch mode fields - use batch_* keys
                 document.getElementById('batch_dir').value = config.batch_dir || '';
                 document.getElementById('batch_thumbnails_dir').value = config.batch_thumbnails_dir || '';
                 document.getElementById('batch_rom_name_cn_path').value = config.batch_rom_name_cn_path || 'data/rom-name-cn';
+
+                updateWorkflowLabels();
+                loadStats();
             } catch (error) {
                 showStatus('加载配置失败', 'error');
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const stats = await response.json();
+                if (!response.ok || stats.error) throw new Error(stats.error || '统计接口不可用');
+
+                const databaseChip = document.getElementById('database-status-chip');
+                const datChip = document.getElementById('dat-status-chip');
+                const offlineChip = document.getElementById('offline-status-chip');
+
+                databaseChip.classList.remove('loading', 'unavailable');
+                datChip.classList.remove('loading', 'unavailable');
+                offlineChip.classList.remove('loading', 'unavailable');
+
+                const databaseReady = stats.database_ready && Number(stats.database_count) > 0;
+                const datReady = Number(stats.dat_count) > 0;
+                databaseChip.classList.toggle('unavailable', !databaseReady);
+                datChip.classList.toggle('unavailable', !datReady);
+                offlineChip.classList.toggle('unavailable', !stats.offline_available);
+
+                document.getElementById('stat-db-count').textContent = databaseReady ? `${formatNumber(stats.database_count)} 条` : '未就绪';
+                document.getElementById('stat-dat-count').textContent = datReady ? `${formatNumber(stats.dat_count)} 个` : '0 个';
+                document.getElementById('stat-offline-label').textContent = stats.offline_available ? '离线可用' : '需联网补全';
+            } catch (error) {
+                document.getElementById('stat-db-count').textContent = '读取失败';
+                document.getElementById('stat-dat-count').textContent = '读取失败';
+                document.getElementById('stat-offline-label').textContent = '状态未知';
+                document.getElementById('database-status-chip').classList.add('unavailable');
+                document.getElementById('dat-status-chip').classList.add('unavailable');
+                document.getElementById('offline-status-chip').classList.add('unavailable');
             }
         }
 
@@ -503,25 +2110,21 @@
 
             if (mode === 'single') {
                 config = {
-                    // Save single mode config with single_* keys
                     single_playlist_path: document.getElementById('playlist_path').value,
                     single_system_name: document.getElementById('system_name').value,
                     single_thumbnails_dir: document.getElementById('thumbnails_dir').value,
                     single_rom_name_cn_path: document.getElementById('rom_name_cn_path').value,
-                    // Use config for actual execution
                     playlist_path: document.getElementById('playlist_path').value,
                     system_name: document.getElementById('system_name').value,
                     thumbnails_dir: document.getElementById('thumbnails_dir').value,
                     rom_name_cn_path: document.getElementById('rom_name_cn_path').value,
-                    batch_dir: '' // Clear batch mode
+                    batch_dir: ''
                 };
             } else if (mode === 'batch') {
                 config = {
-                    // Save batch mode config with batch_* keys
                     batch_dir: document.getElementById('batch_dir').value,
                     batch_thumbnails_dir: document.getElementById('batch_thumbnails_dir').value,
                     batch_rom_name_cn_path: document.getElementById('batch_rom_name_cn_path').value,
-                    // Use config for actual execution
                     playlist_path: '',
                     system_name: '',
                     thumbnails_dir: document.getElementById('batch_thumbnails_dir').value,
@@ -532,15 +2135,12 @@
             try {
                 const response = await fetch('/api/config', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(config)
                 });
 
-                if (!response.ok) {
-                    throw new Error('保存配置失败');
-                }
+                if (!response.ok) throw new Error('保存配置失败');
+                loadStats();
                 return true;
             } catch (error) {
                 showStatus('保存出错: ' + error.message, 'error');
@@ -548,7 +2148,32 @@
             }
         }
 
-        function showStatus(message, type) {
+        function preparePreviewChanges(changes) {
+            return (changes || []).map(change => ({
+                ...change,
+                enabled: change.enabled !== false
+            }));
+        }
+
+        function getIncludedChanges() {
+            return currentChanges.filter(change => change.enabled !== false);
+        }
+
+        function getProcessingOptions() {
+            return {
+                download_thumbnails: document.getElementById('option-download-thumbnails')?.checked !== false
+            };
+        }
+
+        function getBatchOptions() {
+            return {
+                backup: document.getElementById('batch-option-backup')?.checked !== false,
+                continue_on_error: document.getElementById('batch-option-continue')?.checked !== false,
+                download_thumbnails: document.getElementById('batch-option-download-thumbnails')?.checked !== false
+            };
+        }
+
+        function showStatus(message, type = 'info') {
             const el = document.getElementById('status');
             el.textContent = message;
             el.className = 'status ' + type;
@@ -558,16 +2183,67 @@
             }, 3000);
         }
 
-        // File Picker Logic
+        function openProjectDocs() {
+            document.getElementById('docs-modal').style.display = 'block';
+            showStatus('已打开项目说明', 'success');
+        }
+
+        function closeProjectDocs() {
+            document.getElementById('docs-modal').style.display = 'none';
+        }
+
+        function focusConfigPanel() {
+            const panel = document.querySelector('.config-panel');
+            const activeInput = document.querySelector('.tab-content.active input, .tab-content.active select');
+            if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            if (activeInput) setTimeout(() => activeInput.focus(), 220);
+            showStatus('已定位到配置区域', 'info');
+        }
+
+        function toggleBottomDock() {
+            const shell = document.querySelector('.app-shell');
+            const button = document.getElementById('toggle-dock-btn');
+            const collapsed = shell.classList.toggle('dock-collapsed');
+            button.setAttribute('aria-pressed', String(collapsed));
+            button.title = collapsed ? '展开底栏' : '收起底栏';
+            showStatus(collapsed ? '已收起底部进度区' : '已展开底部进度区', 'info');
+        }
+
+        async function toggleFullscreen() {
+            const shell = document.querySelector('.app-shell');
+            const button = document.getElementById('fullscreen-btn');
+            const focused = shell.classList.toggle('focus-mode');
+            button.setAttribute('aria-pressed', String(focused));
+            button.title = focused ? '退出专注模式' : '切换专注模式';
+            showStatus(focused ? '已进入专注模式' : '已退出专注模式', 'info');
+        }
+
+        function toggleInspector() {
+            const shell = document.querySelector('.app-shell');
+            const button = document.getElementById('toggle-inspector-btn');
+            const hidden = shell.classList.toggle('inspector-hidden');
+            button.setAttribute('aria-pressed', String(hidden));
+            button.title = hidden ? '显示详情栏' : '隐藏详情栏';
+            showStatus(hidden ? '已隐藏详情栏' : '已显示详情栏', 'info');
+        }
+
+        function toggleFilterBar() {
+            const panel = document.querySelector('.main-panel');
+            const button = document.getElementById('filter-toggle-btn');
+            const compact = panel.classList.toggle('filters-compact');
+            button.setAttribute('aria-pressed', String(compact));
+            button.title = compact ? '展开筛选项' : '收起筛选项';
+            showStatus(compact ? '已收起非当前筛选项' : '已展开全部筛选项', 'info');
+        }
+
         function openFilePicker(inputId, directoryMode) {
             currentTargetInputId = inputId;
             isDirectoryMode = directoryMode;
 
             document.getElementById('modalTitle').textContent = directoryMode ? '选择目录' : '选择文件';
-            document.getElementById('selectDirBtn').style.display = directoryMode ? 'inline-block' : 'none';
+            document.getElementById('selectDirBtn').style.display = directoryMode ? 'inline-flex' : 'none';
             document.getElementById('fileModal').style.display = 'block';
 
-            // Start from current value if valid path, else current dir
             const currentVal = document.getElementById(inputId).value;
             loadFileList(currentVal || '.');
         }
@@ -582,7 +2258,6 @@
                 const data = await response.json();
 
                 if (data.error) {
-                    // If path invalid, try root or current
                     if (path !== '.') loadFileList('.');
                     return;
                 }
@@ -596,8 +2271,8 @@
                 data.items.forEach(item => {
                     const li = document.createElement('li');
                     li.className = 'file-item';
-                    const icon = item.is_dir ? '📁' : '📄';
-                    li.innerHTML = `<span class="file-icon">${icon}</span> ${item.name}`;
+                    const icon = item.is_dir ? 'DIR' : 'FILE';
+                    li.innerHTML = `<span class="file-icon">${icon}</span> <span>${escapeHtml(item.name)}</span>`;
 
                     li.onclick = () => {
                         if (item.is_dir) {
@@ -618,119 +2293,122 @@
             document.getElementById(currentTargetInputId).value = path;
             closeModal();
 
-            // Auto-detect system name if playlist selected
             if (currentTargetInputId === 'playlist_path') {
                 detectSystemName(path);
             }
+            updateWorkflowLabels();
         }
 
         function selectCurrentDir() {
             document.getElementById(currentTargetInputId).value = currentPath;
             closeModal();
+            updateWorkflowLabels();
         }
 
         async function executeTask(mode) {
-            // Validate required fields
             if (mode === 'single') {
                 const playlistPath = document.getElementById('playlist_path').value;
                 const systemName = document.getElementById('system_name').value;
                 const thumbnailsDir = document.getElementById('thumbnails_dir').value;
+                const options = getProcessingOptions();
 
-                if (!playlistPath || !systemName || !thumbnailsDir) {
-                    showStatus('请填写所有必要信息', 'error');
+                if (!playlistPath || !systemName || (options.download_thumbnails && !thumbnailsDir)) {
+                    showStatus(options.download_thumbnails ? '请填写播放列表、系统和缩略图目录' : '请填写播放列表和系统', 'error');
                     return;
                 }
 
-                // 1. Save Config
                 const saved = await saveConfig(mode);
                 if (!saved) return;
 
-                // 2. Direct Run: Preview -> Apply
                 showStatus('正在直接运行...', 'success');
+                showLogPanel('single');
+                setInlineProgress(5, '分析中', '正在分析播放列表', '当前：读取 playlist');
 
-                // Show progress modal AND log container
                 document.getElementById('progress-modal').style.display = 'block';
                 document.getElementById('progress-message').textContent = '正在分析播放列表...';
                 document.getElementById('progress-stats').textContent = '步骤 1/2';
                 document.getElementById('task-progress').value = 0;
 
-                // Also show log for detailed info
-                document.getElementById('single-log-container').style.display = 'block';
                 const logView = document.getElementById('single-log-view');
-                logView.innerHTML = '<strong>运行日志：</strong><br>';
-                logView.innerHTML += '开始直接运行...<br>';
+                logView.innerHTML = '<strong>运行日志：</strong><br>开始直接运行...<br>';
 
                 try {
-                    // Step 1: Preview to get changes
                     logView.innerHTML += '正在分析播放列表...<br>';
                     const previewResponse = await fetch('/api/playlist/preview', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            playlist_path: playlistPath,
-                            system_name: systemName
-                        })
+                        body: JSON.stringify({ playlist_path: playlistPath, system_name: systemName })
                     });
                     const previewData = await previewResponse.json();
                     if (previewData.error) throw new Error(previewData.error);
 
-                    logView.innerHTML += `分析完成，共 ${previewData.changes.length} 个游戏需要处理<br>`;
+                    currentChanges = preparePreviewChanges(previewData.changes || []);
+                    updateSummary(currentChanges);
+                    renderPreviewTable(currentChanges);
 
-                    // Update progress
-                    document.getElementById('progress-message').textContent = '分析完成，正在应用更改并下载封面...';
+                    const includedChanges = getIncludedChanges();
+                    if (!includedChanges.length) throw new Error('没有勾选任何项目');
+
+                    const applyMessage = options.download_thumbnails ? '正在应用更改并下载封面' : '正在应用更改（跳过下载）';
+                    logView.innerHTML += `分析完成，共 ${currentChanges.length} 个游戏，已勾选 ${includedChanges.length} 项<br>`;
+                    setInlineProgress(50, '应用中', applyMessage, `当前：${includedChanges.length} 项待处理`);
+
+                    document.getElementById('progress-message').textContent = `分析完成，${applyMessage}...`;
                     document.getElementById('progress-stats').textContent = '步骤 2/2';
                     document.getElementById('task-progress').value = 50;
 
-                    // Step 2: Apply changes
-                    logView.innerHTML += '正在应用更改并下载封面...<br>';
                     const applyResponse = await fetch('/api/playlist/apply', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             playlist_path: playlistPath,
-                            changes: previewData.changes,
-                            thumbnails_dir: thumbnailsDir
+                            changes: includedChanges,
+                            thumbnails_dir: thumbnailsDir,
+                            options
                         })
                     });
                     const applyData = await applyResponse.json();
                     if (applyData.error) throw new Error(applyData.error);
 
                     if (applyData.job_id) {
-                        logView.innerHTML += '后台任务已启动，正在下载封面...<br>';
+                        logView.innerHTML += options.download_thumbnails ? '后台任务已启动，正在下载封面...<br>' : '后台任务已启动，将跳过缩略图下载...<br>';
                         trackProgress(applyData.job_id);
                     } else {
                         alert('Error starting job: ' + (applyData.error || 'Unknown error'));
                         document.getElementById('progress-modal').style.display = 'none';
                     }
-
                 } catch (error) {
                     showStatus('运行失败: ' + error.message, 'error');
-                    logView.innerHTML += `<br><span style="color:red">错误: ${error.message}</span><br>`;
+                    logView.innerHTML += `<br><span style="color:red">错误: ${escapeHtml(error.message)}</span><br>`;
                     alert('错误: ' + error.message);
                     document.getElementById('progress-modal').style.display = 'none';
                 }
                 return;
-            } else if (mode === 'batch') {
+            }
+
+            if (mode === 'batch') {
                 const batchDir = document.getElementById('batch_dir').value;
                 const thumbnailsDir = document.getElementById('batch_thumbnails_dir').value;
                 const romNameCnPath = document.getElementById('batch_rom_name_cn_path').value;
+                const options = getBatchOptions();
 
                 if (!batchDir) {
                     showStatus('请选择播放列表目录', 'error');
                     return;
                 }
-                if (!thumbnailsDir) {
+                if (options.download_thumbnails && !thumbnailsDir) {
                     showStatus('请选择缩略图目录', 'error');
                     return;
                 }
 
-                // 1. Save Config
                 const saved = await saveConfig(mode);
                 if (!saved) return;
 
-                // 2. Start Batch Job
+                showLogPanel('batch');
+                setInlineProgress(2, '启动中', '正在启动批量处理', '当前：扫描播放列表目录');
+                document.getElementById('batch-log-view').innerHTML = '<strong>批量运行日志：</strong><br>正在启动批量处理...<br>';
                 document.getElementById('progress-modal').style.display = 'block';
-                document.getElementById('progress-message').textContent = "正在启动批量处理...";
+                document.getElementById('progress-message').textContent = '正在启动批量处理...';
 
                 try {
                     const response = await fetch('/api/batch/apply', {
@@ -739,13 +2417,14 @@
                         body: JSON.stringify({
                             batch_dir: batchDir,
                             thumbnails_dir: thumbnailsDir,
-                            rom_name_cn_path: romNameCnPath
+                            rom_name_cn_path: romNameCnPath,
+                            options
                         })
                     });
 
                     const data = await response.json();
                     if (data.job_id) {
-                        trackProgress(data.job_id);
+                        trackProgress(data.job_id, 'batch');
                     } else {
                         alert('Error starting batch job: ' + (data.error || 'Unknown error'));
                         document.getElementById('progress-modal').style.display = 'none';
@@ -757,7 +2436,6 @@
             }
         }
 
-        // Load config on startup
         loadSystems().then(() => {
             loadConfig();
         });
@@ -792,20 +2470,15 @@
                 if (data.system_name) {
                     const select = document.getElementById('system_name');
                     select.value = data.system_name;
-                    // If the detected system is not in the list (e.g. custom), we might want to add it or warn
-                    // For now, if it's not in the list, the value won't be set visually if strict, 
-                    // but standard select behavior allows setting value if option exists.
-                    // If option doesn't exist, we could add it dynamically?
-                    // Let's check if it exists.
                     if (select.value !== data.system_name) {
-                        // Option doesn't exist, maybe add it as a temporary option?
                         const option = document.createElement('option');
                         option.value = data.system_name;
-                        option.textContent = data.system_name + " (未找到匹配的翻译库)";
+                        option.textContent = data.system_name + '（未找到匹配的翻译库）';
                         select.appendChild(option);
                         select.value = data.system_name;
                     }
                     showStatus(`已自动识别系统: ${data.system_name}`, 'success');
+                    updateWorkflowLabels();
                 } else {
                     showStatus('无法自动识别系统，请手动选择', 'error');
                 }
@@ -813,8 +2486,6 @@
                 console.error('Error detecting system:', error);
             }
         }
-
-        let currentChanges = [];
 
         async function previewTask() {
             const playlistPath = document.getElementById('playlist_path').value;
@@ -826,120 +2497,203 @@
             }
 
             showStatus('正在分析播放列表...', 'success');
+            setInlineProgress(8, '分析中', '正在分析播放列表', '当前：生成预览');
 
             try {
                 const response = await fetch('/api/playlist/preview', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        playlist_path: playlistPath,
-                        system_name: systemName
-                    })
+                    body: JSON.stringify({ playlist_path: playlistPath, system_name: systemName })
                 });
 
                 const data = await response.json();
                 if (data.error) throw new Error(data.error);
 
-                currentChanges = data.changes;
+                currentChanges = preparePreviewChanges(data.changes || []);
+                selectedChangeIndex = currentChanges.length ? 0 : -1;
+                document.getElementById('preview-empty').style.display = currentChanges.length ? 'none' : 'grid';
+                document.getElementById('preview-container').style.display = currentChanges.length ? 'block' : 'none';
+                updateSummary(currentChanges);
                 renderPreviewTable(currentChanges);
-                document.getElementById('preview-container').style.display = 'block';
-                document.getElementById('single-log-container').style.display = 'none'; // Hide log
+                if (currentChanges.length) selectPreviewRow(0);
+                showLogPanel(null);
+                setInlineProgress(20, '待校对', `已分析 ${currentChanges.length} 项`, '当前：等待人工确认');
                 showStatus('分析完成，请校对', 'success');
-
             } catch (error) {
                 showStatus('预览失败: ' + error.message, 'error');
+                setInlineProgress(0, '失败', '预览失败', '当前：请检查路径和系统');
             }
         }
 
         function renderPreviewTable(changes) {
             const tbody = document.getElementById('preview-table-body');
             tbody.innerHTML = '';
+            const query = (document.getElementById('preview-search').value || '').trim().toLowerCase();
 
-            changes.forEach((change, index) => {
+            const visibleChanges = changes
+                .map((change, index) => ({ change, index }))
+                .filter(({ change }) => matchesFilter(change, query));
+
+            visibleChanges.forEach(({ change, index }) => {
+                const info = getMatchInfo(change);
                 const tr = document.createElement('tr');
-                tr.dataset.index = index; // Store index for search modal
+                tr.dataset.index = index;
+                tr.className = info.rowClass;
+                if (index === selectedChangeIndex) tr.classList.add('selected');
+                tr.onclick = () => selectPreviewRow(index);
 
-                // Original Label
+                const tdSelect = document.createElement('td');
+                tdSelect.className = 'select-cell';
+                const rowCheck = document.createElement('button');
+                rowCheck.type = 'button';
+                rowCheck.className = 'row-check';
+                rowCheck.textContent = change.enabled !== false ? '✓' : '';
+                rowCheck.setAttribute('role', 'checkbox');
+                rowCheck.setAttribute('aria-checked', String(change.enabled !== false));
+                rowCheck.setAttribute('aria-label', `选择 ${change.original_label || '当前项目'}`);
+                rowCheck.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    toggleChangeEnabled(index, event.currentTarget);
+                });
+                tdSelect.appendChild(rowCheck);
+                tdSelect.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    toggleChangeEnabled(index, rowCheck);
+                });
+                tr.appendChild(tdSelect);
+
                 const tdOriginal = document.createElement('td');
-                tdOriginal.textContent = change.original_label;
+                tdOriginal.className = 'name-cell';
+                const originalName = document.createElement('div');
+                originalName.className = 'name-primary';
+                originalName.textContent = change.original_label || '未命名';
+                const originalPath = document.createElement('div');
+                originalPath.className = 'name-secondary';
+                originalPath.textContent = change.path || '';
+                tdOriginal.appendChild(originalName);
+                tdOriginal.appendChild(originalPath);
                 tr.appendChild(tdOriginal);
 
-                // New Label (Editable)
                 const tdNew = document.createElement('td');
                 const inputNew = document.createElement('input');
                 inputNew.type = 'text';
-                inputNew.className = 'new-label-input'; // Add class for selection
+                inputNew.className = 'new-label-input';
                 inputNew.value = change.new_label || '';
-                inputNew.style.width = '100%';
-                inputNew.onchange = (e) => {
+                inputNew.oninput = (e) => {
                     currentChanges[index].new_label = e.target.value;
+                    markChangeEdited(index, '手动编辑显示名称');
+                    if (selectedChangeIndex === index) updateInspector(currentChanges[index]);
+                    updateSummary(currentChanges);
                 };
+                inputNew.onclick = (event) => event.stopPropagation();
                 tdNew.appendChild(inputNew);
                 tr.appendChild(tdNew);
 
-                // Thumbnail Source (Editable + Search + Preview)
                 const tdThumb = document.createElement('td');
-                tdThumb.style.display = 'flex';
-                tdThumb.style.alignItems = 'center';
-                tdThumb.style.gap = '5px';
-
+                const thumbWrap = document.createElement('div');
+                thumbWrap.className = 'thumb-cell';
                 const inputThumb = document.createElement('input');
                 inputThumb.type = 'text';
-                inputThumb.className = 'thumb-source-input'; // Add class for selection
+                inputThumb.className = 'thumb-source-input';
                 inputThumb.value = change.thumbnail_source || '';
                 inputThumb.placeholder = '留空则不下载';
-                inputThumb.style.flex = '1';
-                inputThumb.onchange = (e) => {
+                inputThumb.oninput = (e) => {
                     currentChanges[index].thumbnail_source = e.target.value;
+                    markChangeEdited(index, '手动编辑封面源');
+                    if (selectedChangeIndex === index) updateInspector(currentChanges[index]);
+                    updateSummary(currentChanges);
                 };
-                // Add 'input' event listener to update currentChanges array immediately
-                inputThumb.addEventListener('input', (e) => {
-                    currentChanges[index].thumbnail_source = e.target.value;
-                });
+                inputThumb.onclick = (event) => event.stopPropagation();
 
                 const btnSearch = document.createElement('button');
-                btnSearch.textContent = '🔍';
+                btnSearch.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path></svg>';
                 btnSearch.title = '搜索数据库';
-                btnSearch.className = 'btn small';
-                btnSearch.onclick = () => openSearchModal(index);
+                btnSearch.className = 'mini-btn';
+                btnSearch.type = 'button';
+                btnSearch.onclick = (event) => {
+                    event.stopPropagation();
+                    openSearchModal(index);
+                };
 
-                tdThumb.appendChild(inputThumb);
-                tdThumb.appendChild(btnSearch);
+                thumbWrap.appendChild(inputThumb);
+                thumbWrap.appendChild(btnSearch);
 
-                // Preview Link (if source exists)
                 if (change.thumbnail_source) {
                     const linkPreview = document.createElement('a');
-                    // Construct Libretro URL (Named_Boxarts)
-                    const system = document.getElementById('system_name').value;
-                    const filename = change.thumbnail_source.replace(/[&*/:`<>?\|]/g, '_') + '.png';
-                    linkPreview.href = `https://thumbnails.libretro.com/${encodeURIComponent(system)}/Named_Boxarts/${encodeURIComponent(filename)}`;
+                    const system = document.getElementById('system_name').value || change.system || '';
+                    linkPreview.href = buildThumbnailUrl(system, change.thumbnail_source);
                     linkPreview.target = '_blank';
-                    linkPreview.textContent = '👁️';
-                    linkPreview.title = '预览封面 (Libretro)';
-                    linkPreview.style.textDecoration = 'none';
-                    tdThumb.appendChild(linkPreview);
+                    linkPreview.innerHTML = '<svg viewBox="0 0 24 24"><path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"></path><circle cx="12" cy="12" r="2.5"></circle></svg>';
+                    linkPreview.title = '预览封面（Libretro）';
+                    linkPreview.className = 'link-preview';
+                    linkPreview.onclick = (event) => event.stopPropagation();
+                    thumbWrap.appendChild(linkPreview);
                 }
 
+                tdThumb.appendChild(thumbWrap);
                 tr.appendChild(tdThumb);
+
+                const tdConfidence = document.createElement('td');
+                const confidence = document.createElement('span');
+                confidence.className = 'badge ' + info.badgeClass;
+                confidence.textContent = `${info.confidence}%`;
+                tdConfidence.appendChild(confidence);
+                tr.appendChild(tdConfidence);
+
+                const tdStatus = document.createElement('td');
+                const status = document.createElement('span');
+                status.className = 'status-text';
+                status.style.color = info.color;
+                status.innerHTML = `<span class="status-dot"></span>${info.label}`;
+                tdStatus.appendChild(status);
+                tr.appendChild(tdStatus);
 
                 tbody.appendChild(tr);
             });
+
+            if (!visibleChanges.length && changes.length) {
+                const tr = document.createElement('tr');
+                const td = document.createElement('td');
+                td.colSpan = 6;
+                td.style.textAlign = 'center';
+                td.style.color = 'var(--muted)';
+                td.style.padding = '28px';
+                td.textContent = '没有符合当前筛选条件的项目。';
+                tr.appendChild(td);
+                tbody.appendChild(tr);
+            }
         }
 
         async function applyChanges() {
             const playlistPath = document.getElementById('playlist_path').value;
             const thumbnailsDir = document.getElementById('thumbnails_dir').value;
 
-            if (!thumbnailsDir) {
+            if (!currentChanges.length) {
+                showStatus('请先生成预览，再应用更改', 'error');
+                return;
+            }
+
+            const includedChanges = getIncludedChanges();
+            if (!includedChanges.length) {
+                showStatus('请至少勾选一个项目', 'error');
+                return;
+            }
+
+            const options = getProcessingOptions();
+
+            if (options.download_thumbnails && !thumbnailsDir) {
                 showStatus('请选择缩略图目录', 'error');
                 return;
             }
 
-            showStatus('正在应用更改并下载封面...', 'success');
-            document.getElementById('preview-container').style.display = 'none';
-            document.getElementById('single-log-container').style.display = 'block';
-            const logView = document.getElementById('single-log-view');
-            logView.innerHTML = '正在后台处理，请稍候...<br>(由于是并发下载，日志可能不会实时显示详细进度)<br>';
+            const applyMessage = options.download_thumbnails ? '正在应用更改并下载封面' : '正在应用更改（跳过下载）';
+            showStatus(applyMessage + '...', 'success');
+            showLogPanel('single');
+            setInlineProgress(45, '应用中', '正在后台处理', options.download_thumbnails ? '当前：写入 playlist 并准备下载' : '当前：写入 playlist，跳过下载');
+            document.getElementById('single-log-view').innerHTML = options.download_thumbnails
+                ? '正在后台处理，请稍候...<br>并发下载期间日志会持续更新。<br>'
+                : '正在后台处理，请稍候...<br>当前已选择跳过缩略图下载。<br>';
+            document.getElementById('progress-modal').style.display = 'block';
 
             try {
                 const response = await fetch('/api/playlist/apply', {
@@ -947,8 +2701,9 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         playlist_path: playlistPath,
-                        changes: currentChanges,
-                        thumbnails_dir: thumbnailsDir
+                        changes: includedChanges,
+                        thumbnails_dir: thumbnailsDir,
+                        options
                     })
                 });
 
@@ -966,39 +2721,6 @@
                 document.getElementById('progress-modal').style.display = 'none';
             }
         }
-    </script>
-    <!-- Search Modal -->
-    <div id="search-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-modal" onclick="closeSearchModal()">&times;</span>
-            <h2>搜索数据库</h2>
-            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                <input type="text" id="search-input" placeholder="输入游戏名 (中/英)" style="flex: 1; padding: 8px;">
-                <button onclick="performSearch()" class="btn primary">搜索</button>
-            </div>
-            <div id="search-results" style="max-height: 300px; overflow-y: auto;">
-                <!-- Results will be populated here -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Progress Modal -->
-    <div id="progress-modal" class="modal" style="display: none;">
-        <div class="modal-content" style="text-align: center;">
-            <h2>正在处理...</h2>
-            <div style="margin: 20px 0;">
-                <progress id="task-progress" value="0" max="100" style="width: 100%; height: 20px;"></progress>
-            </div>
-            <p id="progress-message">准备中...</p>
-            <p id="progress-stats">0 / 0</p>
-        </div>
-    </div>
-
-    <script>
-        // ... (Existing JS) ...
-
-        // Search Modal Logic
-        let currentSearchRowIndex = -1;
 
         function openSearchModal(rowIndex) {
             currentSearchRowIndex = rowIndex;
@@ -1012,21 +2734,73 @@
             document.getElementById('search-modal').style.display = 'none';
         }
 
+        function showDownloadDetails() {
+            const content = document.getElementById('download-details-content');
+            const rows = [
+                ['Boxarts（封面）', 'sum-box-ok', 'sum-box-fail', 'sum-box-skip', 'progress-box-count', 'progress-box-percent'],
+                ['Snaps（截图）', 'sum-snap-ok', 'sum-snap-fail', 'sum-snap-skip', 'progress-snap-count', 'progress-snap-percent'],
+                ['Titles（标题）', 'sum-title-ok', 'sum-title-fail', 'sum-title-skip', 'progress-title-count', 'progress-title-percent'],
+                ['总计', 'sum-total-ok', 'sum-total-fail', 'sum-total-skip', null, null]
+            ];
+
+            const summaryHtml = rows.map(([label, okId, failId, skipId, countId, percentId]) => {
+                const progress = countId ? `${document.getElementById(countId).textContent} ${document.getElementById(percentId).textContent}` : '汇总';
+                return `
+                    <div class="download-row total">
+                        <strong>${escapeHtml(label)}</strong>
+                        <span class="ok">${escapeHtml(document.getElementById(okId).textContent)}</span>
+                        <span class="fail">${escapeHtml(document.getElementById(failId).textContent)}</span>
+                        <span>${escapeHtml(document.getElementById(skipId).textContent)}</span>
+                    </div>
+                    <div class="timeline-value" style="margin: -4px 0 6px 0;">进度：${escapeHtml(progress)}</div>
+                `;
+            }).join('');
+
+            const details = lastDownloadSummary?.details || [];
+            const detailHtml = details.length
+                ? `
+                    <div class="download-detail-list">
+                        ${details.slice(-80).map(item => {
+                            const statusLabel = item.status === 'success' ? '成功' : item.status === 'skipped' ? '跳过' : '失败';
+                            const statusClass = item.status === 'failed' ? 'fail' : 'ok';
+                            return `
+                                <div class="download-detail-item">
+                                    <span>${escapeHtml(shortThumbnailType(item.type))}</span>
+                                    <strong>${escapeHtml(item.game || item.source || '-')}</strong>
+                                    <span class="${statusClass}">${escapeHtml(statusLabel)}</span>
+                                    <span></span>
+                                    <span>${escapeHtml(item.message || '')}</span>
+                                    <span></span>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `
+                : '<div class="timeline-value" style="margin-top: 12px;">暂无下载明细。完成一次应用后会显示真实结果。</div>';
+
+            content.innerHTML = summaryHtml + detailHtml;
+
+            document.getElementById('download-details-modal').style.display = 'block';
+        }
+
+        function closeDownloadDetails() {
+            document.getElementById('download-details-modal').style.display = 'none';
+        }
+
+        let currentSearchRowIndex = -1;
+
         async function performSearch() {
             const query = document.getElementById('search-input').value;
             if (!query) return;
 
-            // Get current system
             const system = document.getElementById('system_name').value;
-
             const resultsDiv = document.getElementById('search-results');
             resultsDiv.innerHTML = '<p>搜索中...</p>';
 
             try {
                 let url = `/api/search?query=${encodeURIComponent(query)}`;
-                if (system) {
-                    url += `&system=${encodeURIComponent(system)}`;
-                }
+                if (system) url += `&system=${encodeURIComponent(system)}`;
+
                 const response = await fetch(url);
                 const data = await response.json();
 
@@ -1035,10 +2809,10 @@
                     data.results.forEach(item => {
                         html += `
                             <tr>
-                                <td>${item.english_name}</td>
-                                <td>${item.chinese_name}</td>
-                                <td>${item.system || '-'}</td>
-                                <td><button class="btn small" onclick="selectSearchResult('${item.english_name.replace(/'/g, "\\'")}', '${item.chinese_name.replace(/'/g, "\\'")}')">选择</button></td>
+                                <td>${escapeHtml(item.english_name)}</td>
+                                <td>${escapeHtml(item.chinese_name || '')}</td>
+                                <td>${escapeHtml(item.system || '-')}</td>
+                                <td><button class="btn btn-ghost" type="button" onclick="selectSearchResult('${escapeAttr(item.english_name)}', '${escapeAttr(item.chinese_name || '')}')">选择</button></td>
                             </tr>
                         `;
                     });
@@ -1048,71 +2822,53 @@
                     resultsDiv.innerHTML = '<p>未找到结果。</p>';
                 }
             } catch (error) {
-                resultsDiv.innerHTML = `<p style="color: red;">搜索出错: ${error.message}</p>`;
+                resultsDiv.innerHTML = `<p style="color: red;">搜索出错: ${escapeHtml(error.message)}</p>`;
             }
         }
 
         function selectSearchResult(englishName, chineseName) {
             if (currentSearchRowIndex !== -1) {
-                // Update the row
                 const row = document.querySelector(`#preview-table-body tr[data-index="${currentSearchRowIndex}"]`);
+                let finalName = chineseName;
+
+                if (!finalName) {
+                    const currentVal = currentChanges[currentSearchRowIndex]?.new_label || '';
+                    finalName = currentVal && /[\u4e00-\u9fa5]/.test(currentVal) ? currentVal : englishName;
+                }
+
+                currentChanges[currentSearchRowIndex].new_label = finalName;
+                currentChanges[currentSearchRowIndex].thumbnail_source = englishName;
+                markChangeEdited(currentSearchRowIndex, '手动从数据库搜索结果选择');
+
                 if (row) {
                     const labelInput = row.querySelector('.new-label-input');
                     const thumbInput = row.querySelector('.thumb-source-input');
-
-                    if (labelInput) {
-                        // Determine final name
-                        let finalName = chineseName;
-
-                        if (!finalName) {
-                            // No Chinese translation from DB
-                            // Check if current input has Chinese characters (e.g. from folder name)
-                            const currentVal = labelInput.value;
-                            // Regex for Chinese characters
-                            if (currentVal && /[\u4e00-\u9fa5]/.test(currentVal)) {
-                                finalName = currentVal; // Keep existing Chinese name
-                            } else {
-                                finalName = englishName; // Fallback to English name
-                            }
-                        }
-
-                        labelInput.value = finalName;
-                        currentChanges[currentSearchRowIndex].new_label = finalName;
-                    }
-                    if (thumbInput) {
-                        thumbInput.value = englishName;
-                        currentChanges[currentSearchRowIndex].thumbnail_source = englishName; // Update currentChanges array
-                    }
-
-                    // Highlight change
+                    if (labelInput) labelInput.value = finalName;
+                    if (thumbInput) thumbInput.value = englishName;
                     row.style.backgroundColor = '#e6fffa';
                 }
+
+                selectPreviewRow(currentSearchRowIndex);
+                updateSummary(currentChanges);
+                renderPreviewTable(currentChanges);
             }
             closeSearchModal();
         }
 
-        // Apply Changes with Progress
-        // The applyChanges function was already replaced above.
-        // This section is for the trackProgress function and other related logic.
-
-        function trackProgress(jobId) {
+        function trackProgress(jobId, mode = 'single') {
             const eventSource = new EventSource(`/api/progress?job_id=${jobId}`);
             const progressBar = document.getElementById('task-progress');
             const progressMsg = document.getElementById('progress-message');
             const progressStats = document.getElementById('progress-stats');
-
-            // Get log view if it exists (for Direct Run)
-            const logView = document.getElementById('single-log-view');
+            const logView = document.getElementById(mode === 'batch' ? 'batch-log-view' : 'single-log-view');
 
             eventSource.onmessage = function (event) {
                 const data = JSON.parse(event.data);
 
                 if (data.error) {
-                    progressMsg.textContent = "Error: " + data.error;
-                    progressMsg.style.color = "red";
-                    if (logView) {
-                        logView.innerHTML += `<span style="color:red">错误: ${data.error}</span><br>`;
-                    }
+                    progressMsg.textContent = 'Error: ' + data.error;
+                    progressMsg.style.color = 'red';
+                    if (logView) logView.innerHTML += `<span style="color:red">错误: ${escapeHtml(data.error)}</span><br>`;
                     eventSource.close();
                     setTimeout(() => { document.getElementById('progress-modal').style.display = 'none'; }, 3000);
                     return;
@@ -1122,49 +2878,394 @@
                     progressBar.max = data.total;
                     progressBar.value = data.progress;
                     progressStats.textContent = `${data.progress} / ${data.total}`;
+                    const percent = Math.round((data.progress / data.total) * 100);
+                    setInlineProgress(percent, data.status === 'completed' ? '完成' : '处理中', `${data.progress} / ${data.total}`, data.message || '正在处理');
                 }
 
                 if (data.message) {
                     progressMsg.textContent = data.message;
-                    // Append detailed log
                     if (logView) {
                         const timestamp = new Date().toLocaleTimeString();
-                        logView.innerHTML += `[${timestamp}] ${data.message}<br>`;
-                        // Auto-scroll to bottom
+                        logView.innerHTML += `[${timestamp}] ${escapeHtml(data.message)}<br>`;
                         logView.scrollTop = logView.scrollHeight;
                     }
                 }
 
                 if (data.status === 'completed') {
-                    progressMsg.textContent = "完成！";
-                    if (logView) {
-                        logView.innerHTML += `<span style="color:green">✓ 所有操作完成！</span><br>`;
-                    }
+                    progressMsg.textContent = '完成！';
+                    if (logView) logView.innerHTML += `<span style="color:#58d68d">所有操作完成！</span><br>`;
                     eventSource.close();
+                    setInlineProgress(100, '完成', '所有操作完成', '当前：可检查输出文件');
+                    lastDownloadSummary = data.result?.download_summary || null;
+                    setDownloadSummary(lastDownloadSummary);
                     setTimeout(() => {
                         document.getElementById('progress-modal').style.display = 'none';
                         alert('应用更改完成！');
-                        document.getElementById('preview-container').style.display = 'none'; // Hide preview section
                     }, 1000);
                 } else if (data.status === 'failed') {
-                    progressMsg.textContent = "失败: " + data.error;
-                    if (logView) {
-                        logView.innerHTML += `<span style="color:red">✗ 失败: ${data.error}</span><br>`;
-                    }
+                    progressMsg.textContent = '失败: ' + data.error;
+                    if (logView) logView.innerHTML += `<span style="color:red">失败: ${escapeHtml(data.error)}</span><br>`;
                     eventSource.close();
+                    setInlineProgress(0, '失败', '任务失败', data.error || '未知错误');
                 }
             };
 
             eventSource.onerror = function () {
                 console.error('EventSource failed for progress tracking.');
                 eventSource.close();
-                progressMsg.textContent = "连接断开，无法追踪进度。";
-                progressMsg.style.color = "orange";
-                if (logView) {
-                    logView.innerHTML += `<span style="color:orange">⚠ 连接断开，无法追踪进度。</span><br>`;
-                }
+                progressMsg.textContent = '连接断开，无法追踪进度。';
+                progressMsg.style.color = 'orange';
+                if (logView) logView.innerHTML += `<span style="color:orange">连接断开，无法追踪进度。</span><br>`;
             };
         }
+
+        function setPreviewFilter(filter, target) {
+            currentPreviewFilter = filter;
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            if (target) target.classList.add('active');
+            renderPreviewTable(currentChanges);
+        }
+
+        function matchesFilter(change, query) {
+            const info = getMatchInfo(change);
+            const matchesQuery = !query || [
+                change.original_label,
+                change.new_label,
+                change.thumbnail_source,
+                change.path
+            ].some(value => (value || '').toLowerCase().includes(query));
+
+            if (!matchesQuery) return false;
+            if (currentPreviewFilter === 'review') return info.kind === 'review';
+            if (currentPreviewFilter === 'duplicate') return info.kind === 'duplicate';
+            if (currentPreviewFilter === 'matched') return info.kind === 'matched';
+            return true;
+        }
+
+        function toggleChangeEnabled(index, control) {
+            if (!currentChanges[index]) return;
+            const nextEnabled = currentChanges[index].enabled === false;
+            currentChanges[index].enabled = nextEnabled;
+            if (control) {
+                if (control.matches('button')) {
+                    control.setAttribute('aria-checked', String(nextEnabled));
+                    control.textContent = nextEnabled ? '✓' : '';
+                } else {
+                    control.checked = nextEnabled;
+                }
+            }
+            updateSummary(currentChanges);
+        }
+
+        function markChangeEdited(index, reason) {
+            const change = currentChanges[index];
+            if (!change) return;
+            const label = change.new_label || '';
+            const thumb = change.thumbnail_source || '';
+            const labelHasChinese = /[\u4e00-\u9fa5]/.test(label);
+            const ready = Boolean(label && thumb && labelHasChinese);
+            change.match_status = ready ? 'matched' : 'review';
+            change.match_score = ready ? 100 : 70;
+            change.match_source = 'manual';
+            change.match_reason = reason;
+            change.needs_review = !ready;
+        }
+
+        function getMatchInfo(change) {
+            if (change.match_status) {
+                const statusMap = {
+                    matched: { label: '已匹配', badgeClass: 'success', rowClass: '', color: 'var(--green)', fallbackScore: 96 },
+                    review: { label: '需确认', badgeClass: 'warning', rowClass: 'row-warning', color: 'var(--amber)', fallbackScore: 72 },
+                    duplicate: { label: '重复项', badgeClass: 'danger', rowClass: 'row-danger', color: 'var(--red)', fallbackScore: 99 }
+                };
+                const status = statusMap[change.match_status] || statusMap.review;
+                const score = Number(change.match_score);
+                return {
+                    kind: change.match_status in statusMap ? change.match_status : 'review',
+                    confidence: Number.isFinite(score) ? Math.max(0, Math.min(100, Math.round(score))) : status.fallbackScore,
+                    label: status.label,
+                    badgeClass: status.badgeClass,
+                    rowClass: status.rowClass,
+                    color: status.color,
+                    reason: change.match_reason || status.label,
+                    source: change.match_source || 'backend'
+                };
+            }
+
+            const original = change.original_label || '';
+            const label = change.new_label || '';
+            const thumb = change.thumbnail_source || '';
+            const hasChinese = /[\u4e00-\u9fa5]/.test(label);
+            const duplicate = /\(\d+\)$/.test(original.trim()) || /\(\d+\)$/.test(label.trim());
+            const unchanged = original && label && original === label;
+            const missingThumb = !thumb;
+
+            if (duplicate) {
+                return { kind: 'duplicate', confidence: 99, label: '重复项', badgeClass: 'danger', rowClass: 'row-danger', color: 'var(--red)', reason: '检测到重复项标记', source: 'frontend-fallback' };
+            }
+            if (missingThumb || unchanged || !hasChinese) {
+                return { kind: 'review', confidence: hasChinese ? 72 : 64, label: '需确认', badgeClass: 'warning', rowClass: 'row-warning', color: 'var(--amber)', reason: '前端兼容判断：缺少中文名或封面源', source: 'frontend-fallback' };
+            }
+            return { kind: 'matched', confidence: thumb !== original ? 96 : 90, label: '已匹配', badgeClass: 'success', rowClass: '', color: 'var(--green)', reason: '前端兼容判断：中文名和封面源均存在', source: 'frontend-fallback' };
+        }
+
+        function updateSummary(changes) {
+            let matched = 0;
+            let review = 0;
+            let duplicate = 0;
+            let enabled = 0;
+            changes.forEach(change => {
+                const info = getMatchInfo(change);
+                if (change.enabled !== false) enabled += 1;
+                if (info.kind === 'matched') matched += 1;
+                if (info.kind === 'review') review += 1;
+                if (info.kind === 'duplicate') duplicate += 1;
+            });
+
+            document.getElementById('summary-total').textContent = changes.length;
+            document.getElementById('summary-matched').textContent = matched;
+            document.getElementById('summary-review').textContent = review;
+            document.getElementById('summary-duplicate').textContent = duplicate;
+            document.getElementById('step-preview').textContent = `${changes.length || 0} 项，${enabled} 项已勾选，${review} 项需确认`;
+            setProgressCardTotals(changes.length || 0, 0);
+        }
+
+        function selectPreviewRow(index) {
+            selectedChangeIndex = index;
+            document.querySelectorAll('#preview-table-body tr').forEach(row => {
+                row.classList.toggle('selected', Number(row.dataset.index) === index);
+            });
+            updateInspector(currentChanges[index]);
+        }
+
+        function updateInspector(change) {
+            if (!change) {
+                clearInspector();
+                return;
+            }
+            const info = getMatchInfo(change);
+            const system = document.getElementById('system_name').value || change.system || '';
+            const thumbUrl = change.thumbnail_source ? buildThumbnailUrl(system, change.thumbnail_source) : '等待封面源';
+            const cover = document.getElementById('cover-preview');
+            const coverImage = document.getElementById('cover-image');
+
+            document.getElementById('cover-title').textContent = change.new_label || change.original_label || '未命名';
+            document.getElementById('cover-subtitle').textContent = change.thumbnail_source || '未设置封面源';
+            document.getElementById('inspector-caption').textContent = change.original_label || '未选择游戏';
+            document.getElementById('inspector-original').textContent = change.path || change.original_label || '无路径';
+            document.getElementById('inspector-cn').textContent = change.new_label || '未匹配中文名';
+            document.getElementById('inspector-dat').textContent = change.thumbnail_source || '未匹配标准英文名';
+            document.getElementById('inspector-url').textContent = thumbUrl;
+            document.getElementById('inspector-label').value = change.new_label || '';
+            document.getElementById('inspector-thumb').value = change.thumbnail_source || '';
+            document.getElementById('inspector-confidence').textContent = `${info.confidence}%（${info.label}） · ${info.reason}`;
+
+            cover.classList.remove('has-image');
+            coverImage.removeAttribute('src');
+            coverImage.alt = change.original_label || '';
+            if (change.thumbnail_source) {
+                coverImage.onload = () => cover.classList.add('has-image');
+                coverImage.onerror = () => cover.classList.remove('has-image');
+                coverImage.src = thumbUrl;
+            }
+        }
+
+        function clearInspector() {
+            selectedChangeIndex = -1;
+            const cover = document.getElementById('cover-preview');
+            const coverImage = document.getElementById('cover-image');
+            document.querySelectorAll('#preview-table-body tr').forEach(row => row.classList.remove('selected'));
+            cover.classList.remove('has-image');
+            coverImage.removeAttribute('src');
+            coverImage.alt = '';
+            document.getElementById('cover-title').textContent = '等待选择';
+            document.getElementById('cover-subtitle').textContent = '预览行会显示匹配链路';
+            document.getElementById('inspector-caption').textContent = '未选择游戏';
+            document.getElementById('inspector-original').textContent = '尚未分析';
+            document.getElementById('inspector-cn').textContent = '等待匹配';
+            document.getElementById('inspector-dat').textContent = '等待标准名';
+            document.getElementById('inspector-url').textContent = '等待封面源';
+            document.getElementById('inspector-label').value = '';
+            document.getElementById('inspector-thumb').value = '';
+            document.getElementById('inspector-confidence').textContent = '--';
+        }
+
+        function updateSelectedFromInspector(key, value) {
+            if (selectedChangeIndex < 0 || !currentChanges[selectedChangeIndex]) return;
+            currentChanges[selectedChangeIndex][key] = value;
+            renderPreviewTable(currentChanges);
+            selectPreviewRow(selectedChangeIndex);
+            updateSummary(currentChanges);
+        }
+
+        function refreshCoverPreview() {
+            if (selectedChangeIndex < 0 || !currentChanges[selectedChangeIndex]) return;
+            updateInspector(currentChanges[selectedChangeIndex]);
+        }
+
+        async function openThumbnailFolder() {
+            const batchMode = document.getElementById('batch-tab').classList.contains('active');
+            const inputId = batchMode ? 'batch_thumbnails_dir' : 'thumbnails_dir';
+            const dir = document.getElementById(inputId).value;
+
+            if (!dir) {
+                showStatus('请先设置缩略图保存路径', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/fs/open', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: dir })
+                });
+                const data = await response.json();
+                if (!response.ok || data.error) throw new Error(data.error || '打开目录失败');
+                showStatus('已在系统文件管理器打开缩略图目录', 'success');
+            } catch (error) {
+                showStatus('打开目录失败: ' + error.message, 'error');
+            }
+        }
+
+        function buildThumbnailUrl(system, source) {
+            const filename = sanitizeFilename(source) + '.png';
+            return `https://thumbnails.libretro.com/${encodeURIComponent(system)}/Named_Boxarts/${encodeURIComponent(filename)}`;
+        }
+
+        function sanitizeFilename(name) {
+            return (name || '').replace(/[&*/:`<>?\\|]/g, '_');
+        }
+
+        function showLogPanel(mode) {
+            document.getElementById('single-log-container').style.display = mode === 'single' ? 'block' : 'none';
+            document.getElementById('batch-log-container').style.display = mode === 'batch' ? 'block' : 'none';
+            document.getElementById('log-placeholder').style.display = mode ? 'none' : 'block';
+        }
+
+        function clearLogs() {
+            document.getElementById('single-log-view').innerHTML = '';
+            document.getElementById('batch-log-view').innerHTML = '';
+            showLogPanel(null);
+        }
+
+        function setInlineProgress(percent, label, main, current) {
+            const safePercent = Math.max(0, Math.min(100, percent));
+            document.getElementById('inline-progress-fill').style.width = safePercent + '%';
+            document.getElementById('inline-progress-label').textContent = label;
+            document.getElementById('inline-progress-main').textContent = main;
+            document.getElementById('inline-progress-current').textContent = current;
+        }
+
+        function setProgressCardTotals(total, completed) {
+            const safeTotal = Math.max(0, Number(total) || 0);
+            const safeCompleted = Math.max(0, Math.min(safeTotal, Number(completed) || 0));
+            const percent = safeTotal ? Math.round((safeCompleted / safeTotal) * 100) : 0;
+            ['box', 'snap', 'title'].forEach((key) => {
+                document.getElementById(`progress-${key}-count`).textContent = `${safeCompleted} / ${safeTotal}`;
+                document.getElementById(`progress-${key}-percent`).textContent = `(${percent}%)`;
+            });
+        }
+
+        function setDownloadSummary(summary) {
+            const typeMap = [
+                ['Named_Boxarts', 'box'],
+                ['Named_Snaps', 'snap'],
+                ['Named_Titles', 'title']
+            ];
+
+            let totalSuccess = 0;
+            let totalFailed = 0;
+            let totalSkipped = 0;
+
+            typeMap.forEach(([typeName, key]) => {
+                const stats = summary?.types?.[typeName] || { success: 0, failed: 0, skipped: 0 };
+                const success = Number(stats.success) || 0;
+                const failed = Number(stats.failed) || 0;
+                const skipped = Number(stats.skipped) || 0;
+                const total = success + failed + skipped;
+                const completed = success + skipped;
+                const percent = total ? Math.round((completed / total) * 100) : 0;
+
+                document.getElementById(`sum-${key}-ok`).textContent = `${success} 成功`;
+                document.getElementById(`sum-${key}-fail`).textContent = `${failed} 失败`;
+                document.getElementById(`sum-${key}-skip`).textContent = `${skipped} 跳过`;
+                document.getElementById(`progress-${key}-count`).textContent = `${completed} / ${total}`;
+                document.getElementById(`progress-${key}-percent`).textContent = `(${percent}%)`;
+
+                totalSuccess += success;
+                totalFailed += failed;
+                totalSkipped += skipped;
+            });
+
+            document.getElementById('sum-total-ok').textContent = `${totalSuccess} 成功`;
+            document.getElementById('sum-total-fail').textContent = `${totalFailed} 失败`;
+            document.getElementById('sum-total-skip').textContent = `${totalSkipped} 跳过`;
+        }
+
+        function updateWorkflowLabels() {
+            const playlist = document.getElementById('playlist_path').value;
+            const system = document.getElementById('system_name').value;
+            document.getElementById('step-playlist').textContent = playlist ? shortPath(playlist) : '等待选择 .lpl 文件';
+            document.getElementById('step-system').textContent = system || '自动读取 db_name';
+        }
+
+        function shortPath(path) {
+            if (!path) return '';
+            const normalized = path.replace(/\\/g, '/');
+            const parts = normalized.split('/');
+            return parts.length > 2 ? `${parts[parts.length - 2]}/${parts[parts.length - 1]}` : path;
+        }
+
+        function formatNumber(value) {
+            return new Intl.NumberFormat('zh-CN').format(Number(value) || 0);
+        }
+
+        function shortThumbnailType(typeName) {
+            if (typeName === 'Named_Boxarts') return 'Boxarts';
+            if (typeName === 'Named_Snaps') return 'Snaps';
+            if (typeName === 'Named_Titles') return 'Titles';
+            return typeName || '-';
+        }
+
+        function escapeHtml(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function escapeAttr(value) {
+            return String(value || '')
+                .replace(/\\/g, '\\\\')
+                .replace(/'/g, "\\'")
+                .replace(/"/g, '&quot;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
+        document.addEventListener('input', (event) => {
+            if (['playlist_path', 'system_name', 'thumbnails_dir', 'rom_name_cn_path'].includes(event.target.id)) {
+                updateWorkflowLabels();
+            }
+        });
+
+        document.addEventListener('change', (event) => {
+            if (['playlist_path', 'system_name', 'thumbnails_dir', 'rom_name_cn_path'].includes(event.target.id)) {
+                updateWorkflowLabels();
+            }
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                closeModal();
+                closeSearchModal();
+                closeProjectDocs();
+                closeDownloadDetails();
+                document.getElementById('progress-modal').style.display = 'none';
+            }
+        });
     </script>
 </body>
 

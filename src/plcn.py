@@ -1,8 +1,11 @@
 import argparse
+import hashlib
 import json
 import os
+import re
 import sys
 import glob
+import unicodedata
 from playlist_manager import PlaylistManager
 from translator import Translator
 from thumbnail_downloader import ThumbnailDownloader
@@ -138,6 +141,85 @@ def detect_system(playlist_path):
         print(f"Error detecting system for {playlist_path}: {e}")
     return None
 
+def has_chinese(text):
+    return any('\u4e00' <= char <= '\u9fff' for char in (text or ''))
+
+def normalize_value(value):
+    return unicodedata.normalize('NFC', value or '')
+
+def build_proposal_id(system_name, index, path, original_item_label, original_db_name):
+    raw = "\n".join([
+        normalize_value(system_name),
+        str(index),
+        normalize_value(path),
+        normalize_value(original_item_label),
+        normalize_value(original_db_name),
+    ])
+    return hashlib.sha1(raw.encode('utf-8')).hexdigest()[:16]
+
+def classify_match(display_label, new_label, thumbnail_source):
+    duplicate = bool(re.search(r'\(\d+\)$', (display_label or '').strip()) or re.search(r'\(\d+\)$', (new_label or '').strip()))
+    unchanged = bool(display_label and new_label and display_label == new_label)
+    missing_thumb = not thumbnail_source
+    label_has_chinese = has_chinese(new_label)
+
+    if duplicate:
+        return {
+            "match_status": "duplicate",
+            "match_score": 99,
+            "needs_review": True,
+            "default_reason": "检测到重复项标记，需要确认是否保留或重命名",
+        }
+    if missing_thumb or unchanged or not label_has_chinese:
+        return {
+            "match_status": "review",
+            "match_score": 72 if label_has_chinese else 64,
+            "needs_review": True,
+            "default_reason": "缺少中文名或封面标准名，需要人工确认",
+        }
+    return {
+        "match_status": "matched",
+        "match_score": 96 if thumbnail_source != display_label else 90,
+        "needs_review": False,
+        "default_reason": "已匹配中文名和缩略图标准名",
+    }
+
+def build_change_proposal(index, item, display_label, new_label, thumbnail_source, system_name, match_source="heuristic", match_reason=None):
+    original_item_label = item.get('label') or ''
+    original_db_name = item.get('db_name') or ''
+    path = item.get('path') or ''
+    match_info = classify_match(display_label, new_label, thumbnail_source)
+
+    return {
+        'proposal_id': build_proposal_id(system_name, index, path, original_item_label, original_db_name),
+        'index': index,
+        'original_label': display_label,
+        'original_item_label': original_item_label,
+        'original_db_name': original_db_name,
+        'path': path,
+        'new_label': new_label,
+        'thumbnail_source': thumbnail_source,
+        'system': system_name,
+        'match_score': match_info["match_score"],
+        'match_status': match_info["match_status"],
+        'match_source': match_source,
+        'match_reason': match_reason or match_info["default_reason"],
+        'needs_review': match_info["needs_review"],
+    }
+
+def proposal_matches_item(change, item):
+    expected_label = change.get('original_item_label')
+    expected_db_name = change.get('original_db_name')
+    expected_path = change.get('path')
+
+    if expected_path and normalize_value(item.get('path')) != normalize_value(expected_path):
+        return False
+    if expected_label is not None and normalize_value(item.get('label')) != normalize_value(expected_label):
+        return False
+    if expected_db_name and normalize_value(item.get('db_name')) != normalize_value(expected_db_name):
+        return False
+    return True
+
 def analyze_playlist(playlist_path, system_name, rom_name_cn_path):
     """
     Analyzes the playlist and returns a list of proposed changes.
@@ -193,6 +275,18 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path):
     items = playlist_manager.get_items()
     proposed_changes = []
 
+    def add_proposal(index, item, display_label, new_label, thumbnail_source, match_source, match_reason):
+        proposed_changes.append(build_change_proposal(
+            index=index,
+            item=item,
+            display_label=display_label,
+            new_label=new_label,
+            thumbnail_source=thumbnail_source,
+            system_name=system_name,
+            match_source=match_source,
+            match_reason=match_reason,
+        ))
+
     for i, item in enumerate(items):
         original_label = item.get('label')
         path = item.get('path')
@@ -237,14 +331,8 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path):
                 thumbnail_source = cleaned_name
                 print(f"  [{i}] No match found, using cleaned name")
             
-            proposed_changes.append({
-                'index': i,
-                'original_label': display_label,
-                'path': path,
-                'new_label': new_label,
-                'thumbnail_source': thumbnail_source,
-                'system': system_name
-            })
+            match_source = "rom-name-cn" if has_chinese(new_label) else "arcade-cleanup"
+            add_proposal(i, item, display_label, new_label, thumbnail_source, match_source, "街机名称清理后生成建议")
             continue
         
         # Priority 0: Check if parent directory name contains Chinese characters
@@ -294,14 +382,7 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path):
                     if not thumbnail_source:
                         thumbnail_source = filename_no_ext if filename_no_ext else original_label
 
-                proposed_changes.append({
-                    'index': i,
-                    'original_label': display_label,
-                    'path': path,
-                    'new_label': new_label,
-                    'thumbnail_source': thumbnail_source,
-                    'system': system_name
-                })
+                add_proposal(i, item, display_label, new_label, thumbnail_source, "folder", "优先使用中文父目录，并反查缩略图标准名")
                 continue
 
         # Priority 1: If original_label already contains Chinese and is not empty, use it
@@ -328,14 +409,7 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path):
                 filename_no_ext = os.path.splitext(os.path.basename(path))[0] if path else None
                 thumbnail_source = filename_no_ext if filename_no_ext else original_label
             
-            proposed_changes.append({
-                'index': i,
-                'original_label': display_label,
-                'path': path,
-                'new_label': new_label,
-                'thumbnail_source': thumbnail_source,
-                'system': system_name
-            })
+            add_proposal(i, item, display_label, new_label, thumbnail_source, "playlist", "播放列表已有中文标签，保留并补齐封面源")
             continue
 
         # Priority 2: Check if filename (without extension) contains Chinese characters
@@ -397,14 +471,7 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path):
                             thumbnail_source = original_label
                             print(f"  [{i}] Using original label as fallback: '{original_label}'")
                 
-                proposed_changes.append({
-                    'index': i,
-                    'original_label': display_label,
-                    'path': path,
-                    'new_label': new_label,
-                    'thumbnail_source': thumbnail_source,
-                    'system': system_name
-                })
+                add_proposal(i, item, display_label, new_label, thumbnail_source, "filename", "中文文件名解析后生成建议")
                 continue
 
         # Priority 3: Translation
@@ -454,18 +521,21 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path):
             new_label = original_label
             thumbnail_source = original_label
         
-        proposed_changes.append({
-            'index': i,
-            'original_label': display_label,
-            'path': path,
-            'new_label': new_label,
-            'thumbnail_source': thumbnail_source,
-            'system': system_name
-        })
+        if translated_label and has_chinese(translated_label):
+            match_source = "rom-name-cn"
+            match_reason = "中文库匹配"
+        elif standard_english_name:
+            match_source = "libretro-dat"
+            match_reason = "Libretro DAT 标准名匹配"
+        else:
+            match_source = "fallback"
+            match_reason = "未找到中文或标准英文匹配，保留原始名称"
+
+        add_proposal(i, item, display_label, new_label, thumbnail_source, match_source, match_reason)
 
     return proposed_changes
 
-def apply_changes(playlist_path, changes, thumbnails_dir, backup=True, progress_callback=None):
+def apply_changes(playlist_path, changes, thumbnails_dir, backup=True, progress_callback=None, download_thumbnails=True):
     """
     Applies the changes to the playlist and downloads thumbnails.
     """
@@ -492,37 +562,43 @@ def apply_changes(playlist_path, changes, thumbnails_dir, backup=True, progress_
         thumbnail_source = change['thumbnail_source']
         system = change['system']
         target_path = change.get('path')
+        applied = False
         
         # Update label
         if new_label:
-            updated = False
             # Try to find by path first (more robust)
             if target_path:
-                import unicodedata
-                norm_target = unicodedata.normalize('NFC', target_path)
+                norm_target = normalize_value(target_path)
                 for item in playlist_manager.items:
                     item_path = item.get('path')
-                    if item_path and unicodedata.normalize('NFC', item_path) == norm_target:
+                    if item_path and normalize_value(item_path) == norm_target:
+                        if not proposal_matches_item(change, item):
+                            print(f"Warning: Proposal {change.get('proposal_id', index)} is stale for {os.path.basename(target_path)}. Skipping update.")
+                            applied = False
+                            break
                         item['label'] = new_label
-                        updated = True
+                        applied = True
                         print(f"Updated label for {os.path.basename(target_path)} to '{new_label}'")
                         break
             
             # Fallback to index if path not found or not provided
-            if not updated:
+            if not applied:
                 if 0 <= index < len(playlist_manager.items):
                     # Verify path matches if possible
                     current_item = playlist_manager.items[index]
-                    if target_path and current_item.get('path') != target_path:
+                    if target_path and normalize_value(current_item.get('path')) != normalize_value(target_path):
                         print(f"Warning: Index {index} path mismatch. Expected {target_path}, got {current_item.get('path')}. Skipping update.")
+                    elif not proposal_matches_item(change, current_item):
+                        print(f"Warning: Proposal {change.get('proposal_id', index)} no longer matches playlist item at index {index}. Skipping update.")
                     else:
                         playlist_manager.update_label(index, new_label)
+                        applied = True
                         print(f"Updated label at index {index} to '{new_label}'")
                 else:
                     print(f"Error: Index {index} out of bounds. Skipping update.")
             
         # Collect download task
-        if thumbnail_source and new_label:
+        if applied and thumbnail_source and new_label:
             download_tasks.append((system, thumbnail_source, new_label))
             
     # Save playlist
@@ -540,10 +616,15 @@ def apply_changes(playlist_path, changes, thumbnails_dir, backup=True, progress_
         #     print(f"Verification - First item label: {data['items'][0].get('label')}")
     except Exception as e:
         print(f"Verification failed: {e}")
-    
+
+    if not download_tasks:
+        return downloader.empty_summary(0)
+
+    if not download_thumbnails:
+        return downloader.skipped_summary(download_tasks, "已按用户选项跳过下载")
+
     # Batch download
-    if download_tasks:
-        downloader.download_batch(download_tasks, progress_callback=progress_callback)
+    return downloader.download_batch(download_tasks, progress_callback=progress_callback)
 
 def process_playlist(playlist_path, system_name, thumbnails_dir, rom_name_cn_path):
     print(f"Analyzing playlist: {playlist_path}")
