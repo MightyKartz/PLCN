@@ -18,6 +18,9 @@ thumbnails/
 config.json
 *.log
 server.log
+output/
+.plcn_runtime/
+.pytest_cache/
 
 # IDE
 .vscode/

@@ -1,65 +1,47 @@
-# GitHub Release v2.6.6 创建指南
+# GitHub Release 发布指南
 
-## ✅ 已完成步骤
+## 当前发布版本
 
-1. ✅ Git tag `v2.6.6` 待创建
-2. ✅ 所有代码更改已提交到 main 分支
+- 版本：`v3.0.0`
+- Release 标题：`v3.0.0 - PLCN 设备库工作台`
+- Release Notes：使用 [RELEASE_NOTES.md](RELEASE_NOTES.md)
 
-## 📋 手动创建 Release 步骤
-
-### 方法一：通过 GitHub 网页（推荐）
-
-1. 打开浏览器，访问：
-   ```
-   https://github.com/MightyKartz/PLCN/releases/new?tag=v2.6.6
-   ```
-
-2. 填写以下信息：
-
-**Release Title（标题）：**
-```
-v2.6.6 - 修复 LPL 更新与封面匹配问题
-```
-
-**Release Notes（发布说明）：**
-```markdown
-## 🛠️ 修复与优化
-
-### 核心功能修复
-- ✅ **修复 macOS 下 LPL 文件无法更新的问题**：引入了 Unicode (NFC) 标准化处理，解决了因文件路径编码差异（NFC vs NFD）导致无法正确匹配和更新播放列表条目的问题（例如 "太空战士"）。
-
-### 封面匹配优化
-- ✅ **优化标准名称匹配逻辑**：在搜索 Libretro 数据库时，现在会主动降低 "Anniversary Collection"、"Mini" 等后缀版本的权重。这修复了像 "魂斗罗4" 被错误匹配到 "Contra Anniversary Collection"（无独立封面）导致封面下载失败的问题，确保匹配到有封面的标准版本（如 "Contra - Hard Corps (USA)"）。
-
-### 其他
-- 包含 v2.6.5 的所有构建修复（Python 脚本替代 Shell 命令）。
-
----
-
-**完整更新日志**: https://github.com/MightyKartz/PLCN/compare/v2.6.5...v2.6.6
-```
-
-3. 确保勾选 **"Set as the latest release"**
-
-4. 点击 **"Publish release"** 按钮
-
-### 方法二：安装 GitHub CLI（可选）
-
-如果希望后续使用命令行创建 release，可以安装 GitHub CLI：
+## 命令行发布流程
 
 ```bash
-# macOS
-brew install gh
+python3 -m pytest -q
 
-# 认证
-gh auth login
+git add <需要发布的文件>
+git commit -m "feat: release PLCN v3.0.0"
+git push origin HEAD:main
 
-# 创建 release
-gh release create v2.6.6 --title "v2.6.6 - 修复 LPL 更新与封面匹配问题" --notes-file release-notes.md
+git tag -a v3.0.0 -m "v3.0.0 - PLCN 设备库工作台"
+git push origin v3.0.0
+
+gh release create v3.0.0 \
+  --repo MightyKartz/PLCN \
+  --title "v3.0.0 - PLCN 设备库工作台" \
+  --notes-file RELEASE_NOTES.md \
+  --latest
 ```
 
-## 🎉 完成
+推送 tag 后，GitHub Actions 会自动构建并上传：
 
-创建 release 后，用户可以在以下位置查看：
-- Release 页面: https://github.com/MightyKartz/PLCN/releases
-- 具体版本: https://github.com/MightyKartz/PLCN/releases/tag/v2.6.6
+- `PLCN-Linux-x64.tar.gz`
+- `PLCN-macOS-x64.tar.gz`
+- `PLCN-Windows-x64.exe`
+
+## GitHub 仓库介绍格式
+
+中文在前，英文在后，例如：
+
+```text
+扫描 RetroArch 游戏列表，一键生成中文名并下载官方封面。 Scans RetroArch game lists, localizes names to Chinese, and downloads official artwork.
+```
+
+## 验证
+
+```bash
+gh release view v3.0.0 --repo MightyKartz/PLCN
+gh run list --repo MightyKartz/PLCN --workflow release.yml --limit 3
+```

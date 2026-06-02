@@ -409,7 +409,7 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path):
                 filename_no_ext = os.path.splitext(os.path.basename(path))[0] if path else None
                 thumbnail_source = filename_no_ext if filename_no_ext else original_label
             
-            add_proposal(i, item, display_label, new_label, thumbnail_source, "playlist", "播放列表已有中文标签，保留并补齐封面源")
+            add_proposal(i, item, display_label, new_label, thumbnail_source, "playlist", "游戏列表已有中文标签，保留并补齐封面源")
             continue
 
         # Priority 2: Check if filename (without extension) contains Chinese characters

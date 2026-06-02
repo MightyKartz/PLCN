@@ -6,6 +6,7 @@ import sys
 import glob
 import subprocess
 import sqlite3
+import tempfile
 
 PORT = 7777
 CONFIG_FILE = "config.json"
@@ -91,6 +92,9 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
             return
         elif path == "/api/stats":
             self.get_stats()
+        elif path == "/api/device/scan":
+            target_path = query_params.get('path', [''])[0]
+            self.scan_device(target_path)
         elif path == "/api/fs/list":
             target_path = query_params.get('path', ['.'])[0]
             self.list_files(target_path)
@@ -217,6 +221,21 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
             self.send_header("Content-type", "application/json")
             self.end_headers()
             self.wfile.write(json.dumps({"error": str(e)}).encode())
+
+    def scan_device(self, target_path):
+        try:
+            from retroarch_scanner import scan_retroarch_target
+            scan = scan_retroarch_target(target_path or None)
+
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(scan, ensure_ascii=False).encode("utf-8"))
+        except Exception as e:
+            self.send_response(500)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": str(e)}, ensure_ascii=False).encode("utf-8"))
 
     def list_systems(self):
         # List available systems from rom-name-cn directory
@@ -501,14 +520,24 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                 rom_name_cn_path = config.get("rom_name_cn_path", "data/rom-name-cn")
                 if getattr(sys, 'frozen', False) and not os.path.isabs(rom_name_cn_path):
                      rom_name_cn_path = os.path.join(sys._MEIPASS, rom_name_cn_path)
-                
+
+                from retroarch_scanner import is_adb_uri, materialize_adb_file
+                effective_playlist_path = materialize_adb_file(playlist_path) if is_adb_uri(playlist_path) else playlist_path
+
                 import plcn
-                changes = plcn.analyze_playlist(playlist_path, system_name, rom_name_cn_path)
+                changes = plcn.analyze_playlist(effective_playlist_path, system_name, rom_name_cn_path)
                 
                 self.send_response(200)
                 self.send_header("Content-type", "application/json")
                 self.end_headers()
-                self.wfile.write(json.dumps({"changes": changes}).encode())
+                self.wfile.write(json.dumps({
+                    "changes": changes,
+                    "source": {
+                        "playlist_path": playlist_path,
+                        "local_playlist_path": effective_playlist_path if is_adb_uri(playlist_path) else None,
+                        "transport": "adb" if is_adb_uri(playlist_path) else "local"
+                    }
+                }).encode())
             except Exception as e:
                 import traceback
                 traceback.print_exc()
@@ -535,19 +564,51 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                 def run_job(jid, p_path, chgs, t_dir, should_download):
                     try:
                         import plcn
+                        from retroarch_scanner import (
+                            backup_adb_file,
+                            is_adb_uri,
+                            materialize_adb_file,
+                            push_adb_directory,
+                            push_adb_file,
+                        )
                         def progress_cb(curr, tot, msg):
                             job_manager.update_job(jid, curr, tot, msg)
-                            
+
+                        remote_playlist = is_adb_uri(p_path)
+                        remote_thumbnails = is_adb_uri(t_dir)
+                        effective_playlist_path = p_path
+                        effective_thumbnails_dir = t_dir
+
+                        if remote_playlist:
+                            job_manager.update_job(jid, 0, len(chgs or []), "正在读取实机游戏列表...")
+                            effective_playlist_path = materialize_adb_file(p_path)
+
+                        if remote_playlist and remote_thumbnails:
+                            effective_thumbnails_dir = tempfile.mkdtemp(prefix="plcn-adb-thumbnails-")
+
                         summary = plcn.apply_changes(
-                            p_path,
+                            effective_playlist_path,
                             chgs,
-                            t_dir,
+                            effective_thumbnails_dir,
                             progress_callback=progress_cb,
                             download_thumbnails=should_download
                         )
+
+                        remote_backup = None
+                        if remote_playlist:
+                            job_manager.update_job(jid, len(chgs or []), len(chgs or []), "正在备份并写回实机游戏列表...")
+                            remote_backup = backup_adb_file(p_path)
+                            push_adb_file(effective_playlist_path, p_path)
+
+                        if remote_playlist and remote_thumbnails and should_download:
+                            job_manager.update_job(jid, len(chgs or []), len(chgs or []), "正在推送缩略图到实机...")
+                            push_adb_directory(effective_thumbnails_dir, t_dir)
+
                         job_manager.complete_job(jid, {
                             "applied_count": len(chgs or []),
-                            "download_summary": summary
+                            "download_summary": summary,
+                            "transport": "adb" if remote_playlist else "local",
+                            "remote_backup": remote_backup
                         })
                     except Exception as e:
                         import traceback

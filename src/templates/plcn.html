@@ -38,6 +38,40 @@
             --fs-brand: 1.75rem;
         }
 
+        body[data-theme="dark"] {
+            --bg: #0e131d;
+            --surface: #151c29;
+            --surface-soft: #101722;
+            --surface-tint: #17253a;
+            --border: #2a3547;
+            --border-strong: #3a485c;
+            --text: #e6edf7;
+            --muted: #a8b3c5;
+            --quiet: #7f8ba0;
+            --primary: #75a2e8;
+            --primary-strong: #91b7f0;
+            --primary-soft: #16243a;
+            --green: #45bf78;
+            --green-soft: #123321;
+            --amber: #d79a45;
+            --amber-soft: #352411;
+            --red: #e87979;
+            --red-soft: #3a171a;
+            --violet: #a99ced;
+            --violet-soft: #271d3c;
+            --shadow: 0 12px 32px rgba(0, 0, 0, 0.34);
+            --dark-active-bg: #18263a;
+            --dark-active-bg-strong: #20324b;
+            --dark-active-border: #2f486a;
+            --dark-active-border-strong: #3f608a;
+            --dark-selected-bg: #172536;
+            --dark-selected-border: #345274;
+            --dark-selected-rail: #5f8fd4;
+            --dark-focus-ring: rgba(95, 143, 212, 0.2);
+            --dark-green-fill: #24724f;
+            --dark-green-fill-hover: #2b835b;
+        }
+
         * {
             box-sizing: border-box;
         }
@@ -45,6 +79,7 @@
         html,
         body {
             min-height: 100%;
+            min-width: 0;
         }
 
         body {
@@ -67,12 +102,25 @@
             border: 0;
         }
 
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
         .app-shell {
             height: 100vh;
             min-height: 100vh;
             display: grid;
-            grid-template-rows: 60px minmax(0, 1fr) 214px;
+            grid-template-rows: 60px minmax(0, 1fr) 156px;
             overflow: hidden;
+            min-width: 0;
         }
 
         .topbar {
@@ -86,13 +134,18 @@
             position: sticky;
             top: 0;
             z-index: 20;
+            min-width: 0;
+        }
+
+        body[data-theme="dark"] .topbar {
+            background: rgba(21, 28, 41, 0.94);
         }
 
         .brand {
             display: flex;
             align-items: center;
             gap: 11px;
-            min-width: 206px;
+            min-width: 260px;
         }
 
         .brand-mark {
@@ -113,6 +166,25 @@
             font-weight: 800;
             color: var(--primary-strong);
             line-height: 1;
+        }
+
+        .brand-line {
+            display: flex;
+            align-items: baseline;
+            gap: 9px;
+        }
+
+        .brand-version {
+            color: var(--muted);
+            font-size: var(--fs-sm);
+            font-weight: 800;
+        }
+
+        .brand-product {
+            margin-top: 2px;
+            color: var(--text);
+            font-size: var(--fs-sm);
+            font-weight: 800;
         }
 
         .mode-switch {
@@ -146,19 +218,26 @@
             box-shadow: 0 6px 16px rgba(23, 105, 232, 0.24);
         }
 
+        body[data-theme="dark"] .tab.active {
+            background: #2f5f99;
+            box-shadow: 0 4px 12px rgba(4, 10, 22, 0.26);
+        }
+
         .top-spacer {
             flex: 1;
+            min-width: 12px;
         }
 
         .status-chip {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            min-height: 38px;
-            padding: 0 14px;
-            border: 1px solid var(--border);
+            gap: 5px;
+            min-height: 34px;
+            min-width: 0;
+            padding: 0 6px;
+            border: 0;
             border-radius: var(--radius);
-            background: var(--surface);
+            background: transparent;
             color: var(--muted);
             white-space: nowrap;
             font-size: var(--fs-sm);
@@ -168,6 +247,8 @@
         .status-chip strong {
             color: var(--green);
             font-weight: 800;
+            min-width: 0;
+            text-align: left;
         }
 
         .status-chip.dat strong {
@@ -186,8 +267,8 @@
 
         .status-chip.unavailable {
             color: var(--red);
-            border-color: #ffc6c6;
-            background: var(--red-soft);
+            border-color: transparent;
+            background: transparent;
         }
 
         .status-chip.unavailable strong {
@@ -195,8 +276,8 @@
         }
 
         .icon-square {
-            width: 22px;
-            height: 22px;
+            width: 20px;
+            height: 20px;
             display: inline-grid;
             place-items: center;
             border-radius: 6px;
@@ -217,11 +298,59 @@
             stroke-linejoin: round;
         }
 
-        .utility-group,
-        .window-controls {
+        .utility-group {
             display: inline-flex;
             align-items: center;
             gap: 8px;
+        }
+
+        .top-toggle {
+            width: 30px;
+            min-width: 30px;
+            height: 34px;
+            min-height: 34px;
+            flex: 0 0 30px;
+            padding: 0;
+            border: 0 !important;
+            box-shadow: none !important;
+            background: transparent !important;
+            display: inline-grid;
+            place-items: center;
+            font-size: var(--fs-xs);
+            font-weight: 900;
+            white-space: nowrap;
+        }
+
+        .top-toggle svg {
+            inline-size: 20px !important;
+            block-size: 20px !important;
+            aspect-ratio: 1 / 1;
+            display: block;
+            flex: 0 0 20px;
+            stroke: currentColor;
+            stroke-width: 1.75;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            overflow: visible;
+            shape-rendering: geometricPrecision;
+        }
+
+        .top-toggle svg * {
+            vector-effect: non-scaling-stroke;
+        }
+
+        .top-toggle:hover,
+        .top-toggle:focus,
+        .top-toggle[aria-pressed="true"] {
+            border: 0 !important;
+            box-shadow: none !important;
+            background: transparent !important;
+        }
+
+        .top-toggle[aria-pressed="true"] {
+            color: var(--primary);
+            background: transparent !important;
         }
 
         .top-divider {
@@ -254,8 +383,9 @@
 
         .workspace {
             display: grid;
-            grid-template-columns: 260px minmax(640px, 1fr) 365px;
+            grid-template-columns: minmax(260px, 286px) minmax(0, 1fr);
             min-height: 0;
+            min-width: 0;
             gap: 8px;
             padding: 6px;
         }
@@ -297,6 +427,188 @@
         .workflow {
             padding-bottom: 18px;
             border-bottom: 1px solid var(--border);
+        }
+
+        .device-panel {
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .device-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin: 10px 0 12px;
+        }
+
+        .device-summary {
+            min-height: 34px;
+            padding: 9px 10px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--surface-soft);
+            color: var(--muted);
+            font-size: var(--fs-xs);
+            font-weight: 700;
+            line-height: 1.35;
+        }
+
+        .directory-details {
+            margin: 10px 0 12px;
+        }
+
+        .directory-details summary {
+            min-height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 0 10px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--surface-soft);
+            color: var(--muted);
+            cursor: pointer;
+            font-size: var(--fs-xs);
+            font-weight: 900;
+            list-style: none;
+        }
+
+        .directory-details summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .directory-details summary::after {
+            content: "+";
+            color: var(--primary);
+            font-weight: 900;
+        }
+
+        .directory-details[open] summary::after {
+            content: "-";
+        }
+
+        .device-summary.ready {
+            border-color: #bce8cc;
+            background: var(--green-soft);
+            color: var(--green);
+        }
+
+        .detected-list {
+            display: grid;
+            gap: 8px;
+            margin: 8px 0 0;
+        }
+
+        .detected-row {
+            display: grid;
+            grid-template-columns: 28px minmax(0, 1fr);
+            gap: 8px;
+            align-items: center;
+            padding: 9px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: #fff;
+        }
+
+        .detected-icon {
+            width: 26px;
+            height: 26px;
+            display: grid;
+            place-items: center;
+            border-radius: 6px;
+            background: var(--primary-soft);
+            color: var(--primary);
+            font-size: var(--fs-xs);
+            font-weight: 900;
+        }
+
+        .detected-label {
+            color: var(--text);
+            font-size: var(--fs-xs);
+            font-weight: 800;
+        }
+
+        .detected-path {
+            margin-top: 2px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--quiet);
+            font-size: var(--fs-xs);
+        }
+
+        .playlist-library-title {
+            margin: 14px 0 8px;
+            color: var(--text);
+            font-size: var(--fs-xs);
+            font-weight: 900;
+        }
+
+        .playlist-list {
+            display: grid;
+            gap: 8px;
+        }
+
+        .playlist-empty {
+            padding: 12px;
+            border: 1px dashed var(--border-strong);
+            border-radius: var(--radius);
+            color: var(--quiet);
+            font-size: var(--fs-xs);
+            line-height: 1.45;
+        }
+
+        .playlist-card {
+            width: 100%;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 8px;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: #fff;
+            color: var(--text);
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .playlist-card:hover,
+        .playlist-card.active {
+            border-color: #bcd2ff;
+            background: #f3f7ff;
+        }
+
+        .playlist-card.invalid {
+            color: var(--red);
+            background: var(--red-soft);
+            border-color: #ffc6c6;
+        }
+
+        .playlist-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: var(--fs-sm);
+            font-weight: 800;
+        }
+
+        .playlist-meta {
+            margin-top: 4px;
+            color: var(--muted);
+            font-size: var(--fs-xs);
+            line-height: 1.35;
+        }
+
+        .playlist-count {
+            align-self: start;
+            padding: 3px 7px;
+            border-radius: 999px;
+            background: var(--surface-soft);
+            color: var(--primary);
+            font-size: var(--fs-xs);
+            font-weight: 900;
+            white-space: nowrap;
         }
 
         .step-list {
@@ -455,6 +767,12 @@
             box-shadow: 0 0 0 3px rgba(23, 105, 232, 0.12);
         }
 
+        body[data-theme="dark"] input[type="text"]:focus,
+        body[data-theme="dark"] select:focus {
+            border-color: var(--dark-active-border-strong);
+            box-shadow: 0 0 0 2px var(--dark-focus-ring);
+        }
+
         .btn {
             display: inline-flex;
             align-items: center;
@@ -525,6 +843,58 @@
             background: #fff;
         }
 
+        body[data-theme="dark"] .btn {
+            background: #2f669f;
+        }
+
+        body[data-theme="dark"] .btn:hover {
+            background: #3a73ad;
+        }
+
+        body[data-theme="dark"] .btn-ghost {
+            color: var(--primary);
+            background: var(--dark-active-bg);
+            border-color: var(--dark-active-border);
+        }
+
+        body[data-theme="dark"] .btn-ghost:hover {
+            color: var(--text);
+            background: var(--dark-active-bg-strong);
+            border-color: var(--dark-active-border-strong);
+        }
+
+        body[data-theme="dark"] .btn-success {
+            color: #f3fff8;
+            background: var(--dark-green-fill);
+        }
+
+        body[data-theme="dark"] .btn-success:hover {
+            background: var(--dark-green-fill-hover);
+        }
+
+        body[data-theme="dark"] input[type="text"],
+        body[data-theme="dark"] select,
+        body[data-theme="dark"] .btn-muted,
+        body[data-theme="dark"] .filter-btn,
+        body[data-theme="dark"] .mini-btn,
+        body[data-theme="dark"] .link-preview,
+        body[data-theme="dark"] .detected-row,
+        body[data-theme="dark"] .playlist-card,
+        body[data-theme="dark"] .dock-stage,
+        body[data-theme="dark"] .log-view {
+            color: var(--text);
+            background-color: var(--surface-soft);
+            border-color: var(--border);
+        }
+
+        body[data-theme="dark"] .btn-muted:hover,
+        body[data-theme="dark"] .filter-btn:hover,
+        body[data-theme="dark"] .playlist-card:hover,
+        body[data-theme="dark"] .playlist-card.active {
+            background-color: var(--dark-active-bg);
+            border-color: var(--dark-active-border);
+        }
+
         .sidebar-actions {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -591,14 +961,16 @@
 
         .main-panel {
             display: grid;
-            grid-template-rows: auto auto minmax(0, 1fr);
+            grid-template-rows: auto auto auto auto minmax(0, 1fr);
             min-height: 0;
+            min-width: 0;
             overflow: hidden;
         }
 
         .panel-header {
             display: flex;
             align-items: center;
+            flex-wrap: wrap;
             gap: 12px;
             min-height: 58px;
             padding: 12px 14px;
@@ -616,10 +988,12 @@
             flex-wrap: wrap;
             gap: 8px;
             margin-left: auto;
+            min-width: 0;
         }
 
         .panel-actions {
             display: flex;
+            flex-wrap: wrap;
             gap: 8px;
             align-items: center;
         }
@@ -663,28 +1037,37 @@
         .table-toolbar {
             display: grid;
             grid-template-columns: minmax(0, 1fr) auto;
-            gap: 12px;
+            gap: 10px;
             align-items: center;
-            padding: 12px 16px;
+            padding: 10px 14px;
             border-bottom: 1px solid var(--border);
         }
 
         .filter-group {
             display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
+            flex-wrap: nowrap;
+            gap: 6px;
+            min-width: 0;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        .filter-group::-webkit-scrollbar {
+            display: none;
         }
 
         .filter-btn {
-            min-height: 34px;
-            padding: 0 12px;
+            flex: 0 0 auto;
+            min-height: 32px;
+            padding: 0 10px;
             border: 1px solid var(--border);
             border-radius: var(--radius);
             background: #fff;
             color: var(--muted);
             cursor: pointer;
-            font-size: var(--fs-sm);
+            font-size: var(--fs-xs);
             font-weight: 800;
+            white-space: nowrap;
         }
 
         .main-panel.filters-compact .filter-group .filter-btn:not(.active) {
@@ -697,9 +1080,15 @@
             background: var(--primary-soft);
         }
 
+        body[data-theme="dark"] .filter-btn.active {
+            color: var(--primary-strong);
+            border-color: var(--dark-active-border);
+            background: var(--dark-active-bg);
+        }
+
         .search-field {
             position: relative;
-            width: min(292px, 100%);
+            width: min(252px, 100%);
         }
 
         .search-field input {
@@ -717,15 +1106,245 @@
 
         .toolbar-tools {
             display: flex;
+            flex-wrap: nowrap;
             align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .apply-summary-panel {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 12px;
+            align-items: center;
+            padding: 10px 16px;
+            border-bottom: 1px solid #bdd4ff;
+            background: #f4f8ff;
+        }
+
+        .apply-summary-panel[hidden] {
+            display: none;
+        }
+
+        body[data-theme="dark"] .apply-summary-panel {
+            border-bottom-color: #35527c;
+            background: #132238;
+        }
+
+        .apply-summary-copy {
+            min-width: 0;
+            display: grid;
+            gap: 3px;
+        }
+
+        .apply-summary-title {
+            color: var(--text);
+            font-size: var(--fs-sm);
+            font-weight: 900;
+        }
+
+        .apply-summary-text {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--muted);
+            font-size: var(--fs-xs);
+            line-height: 1.35;
+        }
+
+        .apply-summary-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .library-browser {
+            min-height: 0;
+            display: grid;
+            grid-template-rows: auto minmax(0, 1fr);
+            gap: 8px;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface);
+        }
+
+        .library-browser.has-preview {
+            max-height: 132px;
+        }
+
+        .library-browser[hidden] {
+            display: none;
+        }
+
+        .library-browser-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .library-browser-header h2 {
+            margin: 0;
+            color: var(--text);
+            font-size: var(--fs-title);
+            font-weight: 900;
+        }
+
+        .library-browser-summary {
+            margin: 3px 0 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--muted);
+            font-size: var(--fs-xs);
+            line-height: 1.35;
+        }
+
+        .playlist-system-list {
+            min-height: 0;
+            display: grid;
+            grid-template-rows: auto auto;
+            gap: 7px;
+            overflow: visible;
+            align-content: start;
+            padding-right: 2px;
+        }
+
+        .playlist-system-tabs {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 6px;
+            min-width: 0;
+            overflow-x: auto;
+            padding: 1px 0 4px;
+            scrollbar-width: thin;
+        }
+
+        .playlist-system-tab {
+            flex: 0 0 auto;
+            max-width: 190px;
+            min-height: 30px;
+            padding: 0 10px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: #fff;
+            color: var(--muted);
+            cursor: pointer;
+            font-size: var(--fs-xs);
+            font-weight: 900;
+        }
+
+        .playlist-system-tab:hover,
+        .playlist-system-tab.active {
+            color: var(--primary);
+            border-color: #bfd3ff;
+            background: var(--primary-soft);
+            box-shadow: inset 0 0 0 1px #bfd3ff;
+        }
+
+        body[data-theme="dark"] .playlist-system-tab:hover,
+        body[data-theme="dark"] .playlist-system-tab.active {
+            color: var(--primary-strong);
+            border-color: var(--dark-active-border);
+            background: var(--dark-active-bg);
+            box-shadow: none;
+        }
+
+        .playlist-list-panel {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 8px;
+            min-height: 0;
+            overflow-x: auto;
+            padding-bottom: 2px;
+            scrollbar-width: thin;
+        }
+
+        .playlist-list-panel .playlist-card {
+            flex: 0 0 240px;
+        }
+
+        .playlist-list-caption {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            min-width: 0;
+            color: var(--muted);
+            font-size: var(--fs-xs);
+            font-weight: 800;
+        }
+
+        .playlist-list-caption strong {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--text);
+            font-size: var(--fs-sm);
+            font-weight: 900;
+        }
+
+        .playlist-system-group {
+            display: grid;
+            gap: 8px;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--surface-soft);
+        }
+
+        .playlist-system-group + .playlist-system-group {
+            margin-top: 8px;
+        }
+
+        .playlist-system-heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             gap: 10px;
             min-width: 0;
         }
 
+        .playlist-system-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--text);
+            font-size: var(--fs-sm);
+            font-weight: 900;
+        }
+
+        .playlist-system-count {
+            flex: 0 0 auto;
+            color: var(--muted);
+            font-size: var(--fs-xs);
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .playlist-system-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 8px;
+        }
+
         .preview-area {
             min-height: 0;
-            overflow: auto;
+            overflow: hidden;
             background: linear-gradient(#fff, #fff) padding-box, linear-gradient(180deg, rgba(23, 105, 232, 0.08), rgba(23, 105, 232, 0)) border-box;
+        }
+
+        .preview-area[hidden] {
+            display: none;
+        }
+
+        body[data-theme="dark"] .preview-area {
+            background: linear-gradient(var(--surface), var(--surface)) padding-box, linear-gradient(180deg, rgba(100, 160, 255, 0.16), rgba(100, 160, 255, 0)) border-box;
         }
 
         .empty-state {
@@ -745,14 +1364,43 @@
 
         #preview-container {
             display: none;
-            min-width: 760px;
+            height: 100%;
+            min-width: 0;
+            overflow-x: auto;
+            overflow-y: auto;
+            scrollbar-width: thin;
         }
 
         .preview-table {
             width: 100%;
+            min-width: 960px;
             border-collapse: collapse;
             table-layout: fixed;
             font-size: var(--fs-sm);
+        }
+
+        .preview-table .col-select {
+            width: 44px;
+        }
+
+        .preview-table .col-current {
+            width: 220px;
+        }
+
+        .preview-table .col-status {
+            width: 180px;
+        }
+
+        .preview-table .col-cn {
+            width: 210px;
+        }
+
+        .preview-table .col-en {
+            width: 216px;
+        }
+
+        .preview-table .col-cover {
+            width: 90px;
         }
 
         .preview-table th {
@@ -769,11 +1417,19 @@
             font-weight: 800;
         }
 
+        body[data-theme="dark"] .preview-table th,
+        body[data-theme="dark"] .modal-header,
+        body[data-theme="dark"] .modal-footer,
+        body[data-theme="dark"] .file-item {
+            background: var(--surface-soft);
+        }
+
         .preview-table td {
-            height: 48px;
+            height: 64px;
             padding: 8px 10px;
             border-bottom: 1px solid var(--border);
             vertical-align: middle;
+            overflow: hidden;
         }
 
         .preview-table tr {
@@ -786,8 +1442,8 @@
         }
 
         .preview-table tr.selected {
-            background: #edf5ff;
-            box-shadow: inset 3px 0 0 var(--primary);
+            background: #dceaff;
+            box-shadow: inset 5px 0 0 var(--primary), inset 0 0 0 2px #8eb8ff;
         }
 
         .preview-table tr.row-warning {
@@ -798,12 +1454,110 @@
             background: #fff5f5;
         }
 
+        .preview-table tr.row-warning.selected {
+            background: linear-gradient(90deg, #dceaff 0, #eaf2ff 26%, #fff6e6 100%);
+        }
+
+        .preview-table tr.row-danger.selected {
+            background: linear-gradient(90deg, #dceaff 0, #eaf2ff 26%, #fff0f0 100%);
+        }
+
+        .preview-table tr.selected td {
+            border-bottom-color: #8eb8ff;
+        }
+
+        body[data-theme="dark"] .preview-table tr {
+            background: var(--surface);
+        }
+
+        body[data-theme="dark"] .preview-table tr:hover {
+            background: var(--surface-tint);
+        }
+
+        body[data-theme="dark"] .preview-table tr.selected {
+            background: var(--dark-selected-bg);
+            box-shadow: inset 3px 0 0 var(--dark-selected-rail), inset 0 0 0 1px var(--dark-selected-border);
+        }
+
+        body[data-theme="dark"] .preview-table tr.row-warning {
+            background: #241b0d;
+        }
+
+        body[data-theme="dark"] .preview-table tr.row-danger {
+            background: #251315;
+        }
+
+        body[data-theme="dark"] .preview-table tr.row-warning.selected,
+        body[data-theme="dark"] .preview-table tr.row-danger.selected {
+            background: var(--dark-selected-bg);
+        }
+
+        body[data-theme="dark"] .preview-table tr.selected td {
+            border-bottom-color: var(--dark-selected-border);
+        }
+
         .select-cell {
             width: 42px;
+            text-align: center;
         }
 
         .name-cell {
             overflow: hidden;
+        }
+
+        .library-name-cell {
+            display: grid;
+            grid-template-columns: 58px minmax(0, 1fr);
+            gap: 10px;
+            align-items: center;
+        }
+
+        .table-thumb {
+            width: 58px;
+            height: 40px;
+            display: grid;
+            place-items: center;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: #eef2f8;
+            color: var(--quiet);
+            font-size: var(--fs-xs);
+            font-weight: 900;
+        }
+
+        .table-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .cover-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            min-height: 26px;
+            padding: 0 8px;
+            border-radius: 6px;
+            border: 1px solid #b9e8c8;
+            background: var(--green-soft);
+            color: var(--green);
+            font-size: var(--fs-xs);
+            font-weight: 900;
+            white-space: nowrap;
+        }
+
+        .cover-status.missing {
+            border-color: #ffd18a;
+            background: var(--amber-soft);
+            color: var(--amber);
+        }
+
+        .cover-status.exists {
+            border-color: #cbd5e1;
+            background: var(--surface-soft);
+            color: var(--muted);
         }
 
         .name-primary {
@@ -824,6 +1578,7 @@
         }
 
         .preview-table input[type="text"] {
+            width: 100%;
             height: 30px;
             padding: 0 9px;
             font-size: var(--fs-sm);
@@ -837,6 +1592,8 @@
         }
 
         .thumb-cell input {
+            flex: 1 1 auto;
+            width: 0;
             min-width: 0;
         }
 
@@ -860,6 +1617,13 @@
         .link-preview:hover {
             background: var(--primary-soft);
             border-color: #bfd3ff;
+        }
+
+        body[data-theme="dark"] .mini-btn:hover,
+        body[data-theme="dark"] .link-preview:hover {
+            color: var(--primary-strong);
+            background: var(--dark-active-bg);
+            border-color: var(--dark-active-border);
         }
 
         .badge {
@@ -901,6 +1665,30 @@
             background: var(--violet-soft);
         }
 
+        body[data-theme="dark"] .badge.success {
+            color: #60c98a;
+            border-color: #26553a;
+            background: #10271b;
+        }
+
+        body[data-theme="dark"] .badge.warning {
+            color: #d8a04d;
+            border-color: #684b25;
+            background: #2a2113;
+        }
+
+        body[data-theme="dark"] .badge.danger {
+            color: #e48787;
+            border-color: #613236;
+            background: #2d181b;
+        }
+
+        body[data-theme="dark"] .badge.violet {
+            color: #ad9fec;
+            border-color: #51416f;
+            background: #211b31;
+        }
+
         .status-text {
             display: inline-flex;
             align-items: center;
@@ -908,6 +1696,61 @@
             font-size: var(--fs-sm);
             font-weight: 800;
             white-space: nowrap;
+        }
+
+        .status-stack {
+            display: grid;
+            align-items: start;
+            gap: 8px;
+            max-width: 100%;
+        }
+
+        .status-mainline {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+            white-space: nowrap;
+        }
+
+        .status-reason {
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--quiet);
+            font-size: var(--fs-xs);
+            line-height: 1.15;
+        }
+
+        .confirm-row-btn {
+            flex: 0 0 auto;
+            min-height: 26px;
+            padding: 0 8px;
+            border-radius: 5px;
+            border: 1px solid var(--amber);
+            background: var(--amber-soft);
+            color: var(--amber);
+            cursor: pointer;
+            font-size: var(--fs-xs);
+            font-weight: 900;
+        }
+
+        .confirm-row-btn:hover {
+            color: #fff;
+            background: var(--amber);
+        }
+
+        body[data-theme="dark"] .confirm-row-btn {
+            color: var(--amber);
+            background: #2b2114;
+            border-color: #6a4d2a;
+        }
+
+        body[data-theme="dark"] .confirm-row-btn:hover {
+            color: #fff1dc;
+            background: #704d23;
+            border-color: #815f35;
         }
 
         .status-dot {
@@ -918,6 +1761,12 @@
         }
 
         .inspector {
+            position: fixed;
+            top: 66px;
+            right: 6px;
+            bottom: 164px;
+            z-index: 46;
+            width: min(365px, calc(100vw - 24px));
             display: grid;
             grid-template-rows: auto minmax(0, 1fr);
             min-height: 0;
@@ -1091,7 +1940,13 @@
 
         .source-control {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) 34px;
+            grid-template-columns: minmax(0, 1fr) 34px 34px;
+            gap: 8px;
+        }
+
+        .inspector-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 8px;
         }
 
@@ -1114,7 +1969,7 @@
 
         .bottom-dock {
             display: grid;
-            grid-template-columns: minmax(380px, 0.9fr) minmax(420px, 1fr) minmax(330px, 0.82fr);
+            grid-template-columns: minmax(0, 1fr);
             gap: 0;
             margin: 0 6px 6px;
             overflow: hidden;
@@ -1129,7 +1984,7 @@
         }
 
         .app-shell.inspector-hidden .workspace {
-            grid-template-columns: 260px minmax(640px, 1fr);
+            grid-template-columns: minmax(260px, 286px) minmax(0, 1fr);
         }
 
         .app-shell.inspector-hidden .inspector {
@@ -1137,7 +1992,7 @@
         }
 
         .app-shell.focus-mode .workspace {
-            grid-template-columns: minmax(0, 1fr) 365px;
+            grid-template-columns: minmax(0, 1fr);
         }
 
         .app-shell.focus-mode .sidebar {
@@ -1146,7 +2001,7 @@
 
         .dock-section {
             min-width: 0;
-            padding: 12px 14px;
+            padding: 10px 14px;
         }
 
         .dock-section:not(:last-child) {
@@ -1158,17 +2013,30 @@
             align-items: center;
             justify-content: space-between;
             gap: 10px;
-            margin: 0 0 10px;
+            margin: 0 0 8px;
             font-size: 15px;
             font-weight: 800;
         }
 
+        .dock-title-main {
+            min-width: 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dock-title-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
         .inline-progress {
-            height: 12px;
+            height: 10px;
             border-radius: 99px;
             background: #e6ebf3;
             overflow: hidden;
-            margin-bottom: 9px;
+            margin-bottom: 7px;
         }
 
         .inline-progress span {
@@ -1188,8 +2056,62 @@
             line-height: 1.45;
         }
 
-        .progress-cards {
+        .progress-meta .repair-summary-inline {
+            color: var(--text);
+            font-weight: 800;
+        }
+
+        .dock-flow {
             display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .dock-stage {
+            min-width: 0;
+            display: grid;
+            grid-template-columns: 26px minmax(0, 1fr);
+            gap: 8px;
+            align-items: center;
+            padding: 7px 8px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: #fff;
+        }
+
+        .dock-stage-number {
+            width: 26px;
+            height: 26px;
+            display: grid;
+            place-items: center;
+            border-radius: 50%;
+            background: var(--primary);
+            color: #fff;
+            font-size: var(--fs-xs);
+            font-weight: 900;
+        }
+
+        .dock-stage-label {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--text);
+            font-size: var(--fs-xs);
+            font-weight: 900;
+        }
+
+        .dock-stage-value {
+            margin-top: 2px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--muted);
+            font-size: var(--fs-xs);
+        }
+
+        .progress-cards {
+            display: none;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 10px;
             margin-top: 14px;
@@ -1325,6 +2247,102 @@
         .download-detail-item .fail {
             color: var(--red);
             font-weight: 800;
+        }
+
+        .details-drawer {
+            position: fixed;
+            left: 6px;
+            right: 6px;
+            bottom: 164px;
+            z-index: 70;
+            width: auto;
+            height: min(220px, calc(100vh - 248px));
+            max-height: 220px;
+            display: none;
+            grid-template-rows: 34px minmax(0, 1fr);
+            overflow: hidden;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--surface);
+            box-shadow: var(--shadow);
+        }
+
+        .details-drawer.open {
+            display: grid;
+        }
+
+        .details-drawer-header {
+            min-height: 34px;
+            padding: 6px 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .details-drawer-header h2 {
+            margin: 0;
+            font-size: var(--fs-body);
+            font-weight: 900;
+        }
+
+        .details-drawer-body {
+            min-height: 0;
+            overflow-y: auto;
+            padding: 8px 10px 10px;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 10px;
+        }
+
+        .details-block {
+            min-width: 0;
+            display: grid;
+            gap: 7px;
+            align-content: start;
+        }
+
+        .details-block h3 {
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            color: var(--text);
+            font-size: var(--fs-xs);
+        }
+
+        .details-drawer .log-view {
+            height: 108px;
+        }
+
+        .details-drawer .download-row {
+            grid-template-columns: minmax(120px, 1fr) auto auto auto;
+        }
+
+        .details-drawer .download-detail-list {
+            max-height: 110px;
+            overflow-y: auto;
+        }
+
+        .details-close-btn {
+            width: 30px;
+            height: 30px;
+            display: inline-grid;
+            place-items: center;
+            border: 0;
+            border-radius: var(--radius);
+            background: transparent;
+            color: var(--muted);
+            cursor: pointer;
+            font-size: 22px;
+            line-height: 1;
+        }
+
+        .details-close-btn:hover {
+            color: var(--red);
+            background: var(--red-soft);
         }
 
         .status {
@@ -1471,27 +2489,22 @@
             font-weight: 900;
         }
 
-        #progress-modal .modal-content {
-            width: min(420px, calc(100vw - 48px));
-            padding: 22px;
-            text-align: center;
-        }
-
-        #progress-modal progress {
-            width: 100%;
-            height: 18px;
-            accent-color: var(--primary);
-        }
-
         @media (max-width: 1180px) {
             .workspace {
                 grid-template-columns: 280px minmax(0, 1fr);
-                grid-template-rows: minmax(260px, 1fr) minmax(220px, 0.7fr);
+                grid-template-rows: minmax(260px, 1fr);
             }
 
             .inspector {
-                grid-column: 1 / -1;
+                position: fixed;
+                top: 72px;
+                right: 12px;
+                bottom: 12px;
+                z-index: 68;
+                width: min(390px, calc(100vw - 24px));
                 min-height: 0;
+                max-height: calc(100vh - 84px);
+                box-shadow: var(--shadow);
             }
 
             .bottom-dock {
@@ -1533,6 +2546,19 @@
                 padding: 8px;
             }
 
+            .app-shell.inspector-hidden .workspace {
+                grid-template-columns: 1fr;
+            }
+
+            .inspector {
+                top: 12px;
+                left: 12px;
+                right: 12px;
+                bottom: 12px;
+                width: auto;
+                max-height: calc(100vh - 24px);
+            }
+
             .table-toolbar {
                 grid-template-columns: 1fr;
             }
@@ -1548,12 +2574,24 @@
             .bottom-dock {
                 margin: 0 8px 8px;
             }
+
+            .details-drawer {
+                left: 8px;
+                right: 8px;
+                bottom: 178px;
+                height: min(260px, calc(100vh - 24px));
+                max-height: min(260px, calc(100vh - 220px));
+            }
+
+            .details-drawer-body {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 
 <body>
-    <div class="app-shell">
+    <div class="app-shell inspector-hidden">
         <header class="topbar">
             <div class="brand">
                 <div class="brand-mark" aria-hidden="true">
@@ -1564,97 +2602,134 @@
                         <circle cx="32" cy="36" r="2.2" fill="#fff"></circle>
                     </svg>
                 </div>
-                <div class="brand-name">PLCN</div>
+                <div>
+                    <div class="brand-line">
+                        <div class="brand-name">PLCN</div>
+                        <div class="brand-version">v3.0</div>
+                    </div>
+                    <div class="brand-product">PLCN Device Library</div>
+                </div>
             </div>
 
             <div class="mode-switch" role="tablist" aria-label="处理模式">
-                <button class="tab active" onclick="switchTab('single', this)" type="button">单个处理</button>
-                <button class="tab" onclick="switchTab('batch', this)" type="button">批量处理</button>
+                <button class="tab active" onclick="switchTab('single', this)" data-i18n="当前游戏列表" type="button">当前游戏列表</button>
+                <button class="tab" onclick="switchTab('batch', this)" data-i18n="全部游戏列表" type="button">全部游戏列表</button>
             </div>
 
             <div class="top-spacer"></div>
 
-            <div class="status-chip database loading" id="database-status-chip">
+            <div class="status-chip database loading" id="database-status-chip" aria-label="本地数据库" title="本地数据库">
                 <span class="icon-square" aria-hidden="true">
                     <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="7" ry="3"></ellipse><path d="M5 5v6c0 1.7 3.1 3 7 3s7-1.3 7-3V5"></path><path d="M5 11v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"></path></svg>
                 </span>
-                本地数据库 <strong id="stat-db-count">加载中</strong>
+                <strong id="stat-db-count">--</strong>
             </div>
-            <div class="status-chip dat loading" id="dat-status-chip">
+            <div class="status-chip dat loading" id="dat-status-chip" aria-label="DAT" title="DAT">
                 <span class="icon-square" aria-hidden="true">
                     <svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"></rect><path d="M8 8h8M8 12h8M8 16h5"></path></svg>
                 </span>
-                DAT <strong id="stat-dat-count">加载中</strong>
+                <strong id="stat-dat-count">--</strong>
             </div>
-            <div class="status-chip offline loading" id="offline-status-chip">
-                <span class="icon-square" aria-hidden="true">
-                    <svg viewBox="0 0 24 24"><path d="M5 13a10 10 0 0 1 14 0"></path><path d="M8.5 16.5a5 5 0 0 1 7 0"></path><path d="M12 20h.01"></path></svg>
-                </span>
-                <strong id="stat-offline-label">检测中</strong>
-            </div>
-            <div class="top-divider"></div>
             <div class="utility-group" aria-label="工具">
-                <button class="icon-btn" type="button" title="打开项目说明" onclick="openProjectDocs()">
-                    <svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z"></path><path d="M4 5.5v16"></path><path d="M8 7h8"></path></svg>
+                <button class="btn btn-muted top-toggle" id="language-display-btn" type="button" onclick="toggleUILanguage()" title="切换界面语言" aria-label="切换界面语言">
+                    <svg class="ui-language-icon" data-icon="ui-to-en" width="20" height="20" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 1 0 20"></path><path d="M12 2a14.5 14.5 0 0 0 0 20"></path><path d="M2 12h20"></path></svg>
                 </button>
-                <button class="icon-btn" type="button" title="定位到配置" onclick="focusConfigPanel()">
-                    <svg viewBox="0 0 24 24"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"></path><path d="M3 12h2m14 0h2M12 3v2m0 14v2M5.6 5.6 7 7m10 10 1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"></path></svg>
+                <button class="btn btn-muted top-toggle" id="theme-toggle-btn" type="button" onclick="toggleTheme()" title="切换浅色/深色主题" aria-label="切换浅色/深色主题" aria-pressed="false">
+                    <svg class="theme-toggle-icon" data-icon="theme-to-dark" width="20" height="20" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path d="M20.4 14.4A7.8 7.8 0 0 1 9.6 3.6a8.2 8.2 0 1 0 10.8 10.8Z"></path></svg>
                 </button>
-            </div>
-            <div class="top-divider"></div>
-            <div class="window-controls" aria-label="视图控制">
-                <button class="icon-btn" id="toggle-dock-btn" type="button" title="收起/展开底栏" onclick="toggleBottomDock()" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M6 12h12"></path></svg></button>
-                <button class="icon-btn" id="fullscreen-btn" type="button" title="切换专注模式" onclick="toggleFullscreen()" aria-pressed="false"><svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="1"></rect></svg></button>
-                <button class="icon-btn" id="toggle-inspector-btn" type="button" title="隐藏/显示详情栏" onclick="toggleInspector()" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"></path></svg></button>
             </div>
         </header>
 
         <main class="workspace">
             <aside class="sidebar">
                 <div class="sidebar-scroll">
+                    <section class="device-panel">
+                        <h2 class="section-title" data-i18n="设备与目录">设备与目录</h2>
+                        <div class="form-group">
+                            <label for="retroarch_root" data-i18n="连接目标">连接目标</label>
+                            <div class="input-group">
+                                <input type="text" id="retroarch_root" placeholder="/path/to/RetroArch">
+                                <button class="btn btn-small btn-muted" onclick="openFilePicker('retroarch_root', true)" title="选择 RetroArch 目录" type="button">...</button>
+                            </div>
+                        </div>
+                        <div class="device-actions">
+                            <button class="btn btn-ghost" id="scan-default-btn" onclick="scanDevice(true)" data-i18n="自动检测" type="button">自动检测</button>
+                            <button class="btn" id="scan-device-btn" onclick="scanDevice(false)" data-i18n="扫描目录" type="button">扫描目录</button>
+                        </div>
+                        <div class="device-summary" id="device-summary">等待扫描 RetroArch 目录</div>
+
+                        <details class="directory-details">
+                            <summary data-i18n="目录详情">目录详情</summary>
+                            <div class="detected-list">
+                                <div class="detected-row">
+                                    <div class="detected-icon">PL</div>
+                                    <div>
+                                        <div class="detected-label" data-i18n="游戏列表目录">游戏列表目录</div>
+                                        <div class="detected-path" id="device-playlists-dir">未检测</div>
+                                    </div>
+                                </div>
+                                <div class="detected-row">
+                                    <div class="detected-icon">IMG</div>
+                                    <div>
+                                        <div class="detected-label" data-i18n="封面缩略图目录">封面缩略图目录</div>
+                                        <div class="detected-path" id="device-thumbnails-dir">未检测</div>
+                                    </div>
+                                </div>
+                                <div class="detected-row">
+                                    <div class="detected-icon">CFG</div>
+                                    <div>
+                                        <div class="detected-label" data-i18n="配置文件">配置文件</div>
+                                        <div class="detected-path" id="device-config-file">未检测</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </details>
+
+                    </section>
+
                     <section class="workflow">
-                        <h2 class="section-title">工作流程</h2>
+                        <h2 class="section-title" data-i18n="修复流程">修复流程</h2>
                         <div class="step-list">
                             <div class="step done">
                                 <div class="step-number">1</div>
                                 <div>
-                                    <div class="step-title">选择播放列表</div>
-                                    <div class="step-note" id="step-playlist">等待选择 .lpl 文件</div>
+                                    <div class="step-title" data-i18n="扫描设备">扫描设备</div>
+                                    <div class="step-note" id="step-device">等待扫描 RetroArch 目录</div>
                                 </div>
-                                <div class="step-state">就绪</div>
+                                <div class="step-state" data-i18n="就绪">就绪</div>
                             </div>
                             <div class="step done">
                                 <div class="step-number">2</div>
                                 <div>
-                                    <div class="step-title">系统识别</div>
-                                    <div class="step-note" id="step-system">自动读取 db_name</div>
+                                    <div class="step-title" data-i18n="选择游戏列表">选择游戏列表</div>
+                                    <div class="step-note" id="step-playlist">等待选择 .lpl 文件</div>
                                 </div>
-                                <div class="step-state">就绪</div>
+                                <div class="step-state" data-i18n="就绪">就绪</div>
                             </div>
                             <div class="step active">
                                 <div class="step-number">3</div>
                                 <div>
-                                    <div class="step-title">预览校对</div>
-                                    <div class="step-note" id="step-preview">先确认低置信匹配</div>
+                                    <div class="step-title" data-i18n="生成修复计划">生成修复计划</div>
+                                    <div class="step-note" id="step-preview" data-i18n="先确认低置信匹配">先确认低置信匹配</div>
                                 </div>
-                                <div class="step-state">当前</div>
+                                <div class="step-state" data-i18n="当前">当前</div>
                             </div>
                             <div class="step">
                                 <div class="step-number">4</div>
                                 <div>
-                                    <div class="step-title">应用并下载</div>
-                                    <div class="step-note">写入 playlist，下载三类缩略图</div>
+                                    <div class="step-title" data-i18n="修复并下载">修复并下载</div>
+                                    <div class="step-note" data-i18n="写入 playlist，下载三类缩略图">写入 playlist，下载三类缩略图</div>
                                 </div>
-                                <div class="step-state" style="color: var(--quiet);">等待</div>
+                                <div class="step-state" data-i18n="等待" style="color: var(--quiet);">等待</div>
                             </div>
                         </div>
                     </section>
 
                     <section class="config-panel">
                         <div id="single-tab" class="tab-content active">
-                            <h2 class="section-title">配置</h2>
+                            <h2 class="section-title" data-i18n="单项配置">单项配置</h2>
                             <div class="form-group">
-                                <label for="playlist_path">播放列表路径</label>
+                                <label for="playlist_path" data-i18n="游戏列表路径">游戏列表路径</label>
                                 <div class="input-group">
                                     <input type="text" id="playlist_path" placeholder="/path/to/playlist.lpl">
                                     <button class="btn btn-small btn-muted" onclick="openFilePicker('playlist_path', false)" title="选择文件" type="button">...</button>
@@ -1662,14 +2737,14 @@
                             </div>
 
                             <div class="form-group">
-                                <label for="system_name">系统名称</label>
+                                <label for="system_name" data-i18n="系统名称">系统名称</label>
                                 <select id="system_name">
                                     <option value="">加载中...</option>
                                 </select>
                             </div>
 
                             <div class="form-group">
-                                <label for="thumbnails_dir">缩略图保存路径</label>
+                                <label for="thumbnails_dir" data-i18n="缩略图保存路径">缩略图保存路径</label>
                                 <div class="input-group">
                                     <input type="text" id="thumbnails_dir" placeholder="/path/to/retroarch/thumbnails">
                                     <button class="btn btn-small btn-muted" onclick="openFilePicker('thumbnails_dir', true)" title="选择目录" type="button">...</button>
@@ -1677,7 +2752,7 @@
                             </div>
 
                             <div class="form-group">
-                                <label for="rom_name_cn_path">rom-name-cn 路径</label>
+                                <label for="rom_name_cn_path" data-i18n="rom-name-cn 路径">rom-name-cn 路径</label>
                                 <div class="input-group">
                                     <input type="text" id="rom_name_cn_path" placeholder="data/rom-name-cn">
                                     <button class="btn btn-small btn-muted" onclick="openFilePicker('rom_name_cn_path', true)" title="选择目录" type="button">...</button>
@@ -1685,22 +2760,22 @@
                             </div>
 
                             <div class="option-list">
-                                <label class="option-disabled" title="当前匹配策略由后端统一决定"><input id="option-auto-high-confidence" type="checkbox" checked disabled> 自动使用高置信度结果</label>
-                                <label><input id="option-download-thumbnails" type="checkbox" checked> 下载缺失的封面和截图</label>
-                                <label class="option-disabled" title="当前后端默认优先使用本地缓存和 rom-name-cn 数据"><input id="option-prefer-local-db" type="checkbox" checked disabled> 优先使用本地数据库</label>
-                                <label class="option-disabled" title="重复项处理仍由播放列表去重逻辑决定，自动重命名将在后续版本实现"><input id="option-auto-rename-duplicates" type="checkbox" disabled> 处理重复项时自动重命名</label>
+                                <label class="option-disabled" title="当前匹配策略由后端统一决定"><input id="option-auto-high-confidence" type="checkbox" checked disabled> <span data-i18n="自动使用高置信度结果">自动使用高置信度结果</span></label>
+                                <label><input id="option-download-thumbnails" type="checkbox" checked> <span data-i18n="下载缺失的封面和截图">下载缺失的封面和截图</span></label>
+                                <label class="option-disabled" title="当前后端默认优先使用本地缓存和 rom-name-cn 数据"><input id="option-prefer-local-db" type="checkbox" checked disabled> <span data-i18n="优先使用本地数据库">优先使用本地数据库</span></label>
+                                <label class="option-disabled" title="重复条目处理仍由游戏列表去重逻辑决定，自动重命名将在后续版本实现"><input id="option-auto-rename-duplicates" type="checkbox" disabled> <span data-i18n="处理重复条目时自动重命名">处理重复条目时自动重命名</span></label>
                             </div>
 
                             <div class="sidebar-actions">
-                                <button class="btn btn-ghost" onclick="previewTask()" type="button">预览校对</button>
-                                <button class="btn btn-success" onclick="executeTask('single')" type="button">直接运行</button>
+                                <button class="btn btn-ghost" onclick="previewTask()" data-i18n="预览校对" type="button">预览校对</button>
+                                <button class="btn btn-success" onclick="executeTask('single')" data-i18n="预览后应用" type="button">预览后应用</button>
                             </div>
                         </div>
 
                         <div id="batch-tab" class="tab-content">
-                            <h2 class="section-title">批量配置</h2>
+                            <h2 class="section-title" data-i18n="批量配置">批量配置</h2>
                             <div class="form-group">
-                                <label for="batch_dir">播放列表目录</label>
+                                <label for="batch_dir" data-i18n="游戏列表目录">游戏列表目录</label>
                                 <div class="input-group">
                                     <input type="text" id="batch_dir" placeholder="/path/to/retroarch/playlists">
                                     <button class="btn btn-small btn-muted" onclick="openFilePicker('batch_dir', true)" title="选择目录" type="button">...</button>
@@ -1708,7 +2783,7 @@
                             </div>
 
                             <div class="form-group">
-                                <label for="batch_thumbnails_dir">缩略图目录</label>
+                                <label for="batch_thumbnails_dir" data-i18n="缩略图目录">缩略图目录</label>
                                 <div class="input-group">
                                     <input type="text" id="batch_thumbnails_dir" placeholder="/path/to/retroarch/thumbnails">
                                     <button class="btn btn-small btn-muted" onclick="openFilePicker('batch_thumbnails_dir', true)" title="选择目录" type="button">...</button>
@@ -1716,7 +2791,7 @@
                             </div>
 
                             <div class="form-group">
-                                <label for="batch_rom_name_cn_path">rom-name-cn 路径</label>
+                                <label for="batch_rom_name_cn_path" data-i18n="rom-name-cn 路径">rom-name-cn 路径</label>
                                 <div class="input-group">
                                     <input type="text" id="batch_rom_name_cn_path" placeholder="data/rom-name-cn">
                                     <button class="btn btn-small btn-muted" onclick="openFilePicker('batch_rom_name_cn_path', true)" title="选择目录" type="button">...</button>
@@ -1724,13 +2799,13 @@
                             </div>
 
                             <div class="option-list">
-                                <label><input id="batch-option-backup" type="checkbox" checked> 每个 playlist 自动备份</label>
-                                <label><input id="batch-option-continue" type="checkbox" checked> 遇到错误继续处理下一个</label>
-                                <label><input id="batch-option-download-thumbnails" type="checkbox" checked> 批量下载三类缩略图</label>
+                                <label><input id="batch-option-backup" type="checkbox" checked> <span data-i18n="每个 playlist 自动备份">每个 playlist 自动备份</span></label>
+                                <label><input id="batch-option-continue" type="checkbox" checked> <span data-i18n="遇到错误继续处理下一个">遇到错误继续处理下一个</span></label>
+                                <label><input id="batch-option-download-thumbnails" type="checkbox" checked> <span data-i18n="批量下载三类缩略图">批量下载三类缩略图</span></label>
                             </div>
 
                             <div class="sidebar-actions" style="grid-template-columns: 1fr;">
-                                <button class="btn btn-success" onclick="executeTask('batch')" type="button">开始批量处理</button>
+                                <button class="btn btn-success" onclick="executeTask('batch')" data-i18n="开始批量处理" type="button">开始批量处理</button>
                             </div>
                         </div>
                     </section>
@@ -1739,56 +2814,89 @@
 
             <section class="main-panel">
                 <div class="panel-header">
-                    <h1 class="panel-title">预览校对</h1>
+                    <h1 class="panel-title" data-i18n="游戏库扫描">游戏库扫描</h1>
                     <div class="summary-chips">
-                        <div class="summary-chip">全部 <strong id="summary-total">0</strong></div>
-                        <div class="summary-chip success">已匹配 <strong id="summary-matched">0</strong></div>
-                        <div class="summary-chip warning">需确认 <strong id="summary-review">0</strong></div>
-                        <div class="summary-chip danger">重复项 <strong id="summary-duplicate">0</strong></div>
+                        <div class="summary-chip"><span data-i18n="全部">全部</span> <strong id="summary-total">0</strong></div>
+                        <div class="summary-chip success"><span data-i18n="可自动修复">可自动修复</span> <strong id="summary-matched">0</strong></div>
+                        <div class="summary-chip warning"><span data-i18n="需人工确认">需人工确认</span> <strong id="summary-review">0</strong></div>
+                        <div class="summary-chip danger"><span data-i18n="重复需处理">重复需处理</span> <strong id="summary-duplicate">0</strong></div>
                     </div>
                     <div class="panel-actions">
-                        <button class="btn btn-ghost" onclick="previewTask()" type="button">重新预览</button>
-                        <button class="btn btn-success" onclick="applyChanges()" type="button">应用更改</button>
+                        <button class="btn btn-ghost" onclick="previewTask()" data-i18n="预览变更" type="button">预览变更</button>
+                        <button class="btn btn-success" onclick="applyChanges()" data-i18n="应用已选修复" type="button">应用已选修复</button>
                     </div>
                 </div>
 
                 <div class="table-toolbar">
                     <div class="filter-group">
-                        <button class="filter-btn active" type="button" data-filter="all" onclick="setPreviewFilter('all', this)">全部</button>
-                        <button class="filter-btn" type="button" data-filter="review" onclick="setPreviewFilter('review', this)">仅显示需确认</button>
-                        <button class="filter-btn" type="button" data-filter="duplicate" onclick="setPreviewFilter('duplicate', this)">仅显示重复</button>
-                        <button class="filter-btn" type="button" data-filter="matched" onclick="setPreviewFilter('matched', this)">仅显示已匹配</button>
+                        <button class="filter-btn active" type="button" data-filter="all" data-i18n="全部" onclick="setPreviewFilter('all', this)">全部</button>
+                        <button class="filter-btn" type="button" data-filter="review" data-i18n="需人工确认" onclick="setPreviewFilter('review', this)">需人工确认</button>
+                        <button class="filter-btn" type="button" data-filter="duplicate" data-i18n="重复需处理" onclick="setPreviewFilter('duplicate', this)">重复需处理</button>
+                        <button class="filter-btn" type="button" data-filter="matched" data-i18n="可自动修复" onclick="setPreviewFilter('matched', this)">可自动修复</button>
+                        <button class="filter-btn" type="button" data-filter="missing-cover" data-i18n="缺封面源" onclick="setPreviewFilter('missing-cover', this)">缺封面源</button>
+                        <button class="filter-btn" type="button" data-filter="edited" data-i18n="已手动编辑" onclick="setPreviewFilter('edited', this)">已手动编辑</button>
                     </div>
                     <div class="toolbar-tools">
                         <button class="btn btn-muted" id="filter-toggle-btn" type="button" title="收起/展开筛选项" onclick="toggleFilterBar()" aria-pressed="false">
                             <svg viewBox="0 0 24 24" style="width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 2;"><path d="M4 5h16l-6 7v5l-4 2v-7z"></path></svg>
-                            筛选
+                            <span data-i18n="筛选">筛选</span>
                         </button>
                         <div class="search-field">
-                            <input type="text" id="preview-search" placeholder="搜索文件名 / 中文名" oninput="renderPreviewTable(currentChanges)">
+                            <input type="text" id="preview-search" data-i18n-placeholder="搜索游戏名 / rom 名称" placeholder="搜索游戏名 / rom 名称" oninput="renderPreviewTable(currentChanges)">
                             <span class="search-symbol">⌕</span>
                         </div>
                     </div>
                 </div>
 
-                <div class="preview-area">
+                <div class="apply-summary-panel" id="apply-summary-panel" hidden>
+                    <div class="apply-summary-copy">
+                        <div class="apply-summary-title" id="apply-summary-title">准备应用修复</div>
+                        <div class="apply-summary-text" id="apply-summary-text"></div>
+                    </div>
+                    <div class="apply-summary-actions">
+                        <button class="btn btn-muted" type="button" onclick="cancelApplySummary()" data-i18n="取消">取消</button>
+                        <button class="btn btn-success" type="button" onclick="applyChanges(true)" data-i18n="确认应用">确认应用</button>
+                    </div>
+                </div>
+
+                <section class="library-browser" id="library-browser">
+                    <div class="library-browser-header">
+                        <div>
+                            <h2 data-i18n="检测到的游戏列表">检测到的游戏列表</h2>
+                            <p class="library-browser-summary" id="library-browser-summary" data-i18n="扫描后按主机名称显示 .lpl 游戏列表">扫描后按主机名称显示 .lpl 游戏列表</p>
+                        </div>
+                    </div>
+                    <div class="playlist-list playlist-system-list" id="scanned-playlists">
+                        <div class="playlist-empty" data-i18n="扫描后显示 .lpl 游戏列表">扫描后显示 .lpl 游戏列表</div>
+                    </div>
+                </section>
+
+                <div class="preview-area" id="preview-area" hidden>
                     <div class="empty-state" id="preview-empty">
                         <div>
-                            <h2>选择播放列表后开始预览</h2>
-                            <p>PLCN 会先展示建议显示名、封面源和匹配置信度，低置信结果可在右侧手动校对。</p>
+                            <h2 data-i18n="选择游戏列表后开始预览">选择游戏列表后开始预览</h2>
+                            <p data-i18n="PLCN 会先展示建议显示名、封面源和匹配状态，低置信结果可在右侧手动校对。">PLCN 会先展示建议显示名、封面源和匹配状态，低置信结果可在右侧手动校对。</p>
                         </div>
                     </div>
 
                     <div id="preview-container">
                         <table class="preview-table">
+                            <colgroup>
+                                <col class="col-select">
+                                <col class="col-current">
+                                <col class="col-status">
+                                <col class="col-cn">
+                                <col class="col-en">
+                                <col class="col-cover">
+                            </colgroup>
                             <thead>
                                 <tr>
                                     <th class="select-cell"></th>
-                                    <th style="width: 25%;">原始文件名</th>
-                                    <th style="width: 23%;">建议中文名</th>
-                                    <th style="width: 28%;">封面源（英文名）</th>
-                                    <th style="width: 10%;">置信度</th>
-                                    <th style="width: 12%;">状态</th>
+                                    <th data-i18n="当前名称">当前名称</th>
+                                    <th data-i18n="修复状态 / 确认">修复状态 / 确认</th>
+                                    <th class="cn-name-col" data-i18n="推荐中文名">推荐中文名</th>
+                                    <th class="en-name-col" data-i18n="官方英文名">官方英文名</th>
+                                    <th data-i18n="封面状态">封面状态</th>
                                 </tr>
                             </thead>
                             <tbody id="preview-table-body"></tbody>
@@ -1799,8 +2907,8 @@
 
             <aside class="inspector">
                 <div class="inspector-header">
-                    <h2 class="inspector-title">详细信息</h2>
-                    <button class="btn btn-small btn-muted" type="button" onclick="clearInspector()" title="清空选择">×</button>
+                    <h2 class="inspector-title" data-i18n="修复预览">修复预览</h2>
+                    <button class="btn btn-small btn-muted" type="button" onclick="closeInspector()" title="关闭详情">×</button>
                 </div>
                 <div class="inspector-body">
                     <div class="cover-preview" id="cover-preview">
@@ -1813,16 +2921,16 @@
                     <div class="inspector-caption" id="inspector-caption">未选择游戏</div>
 
                     <div class="inspector-tabs">
-                        <div class="inspector-tab active">匹配详情</div>
-                        <div class="inspector-tab">元数据</div>
-                        <div class="inspector-tab">文件信息</div>
+                        <div class="inspector-tab active" data-i18n="匹配详情">匹配详情</div>
+                        <div class="inspector-tab" data-i18n="元数据">元数据</div>
+                        <div class="inspector-tab" data-i18n="文件信息">文件信息</div>
                     </div>
 
                     <div class="timeline">
                         <div class="timeline-item">
                             <div class="timeline-icon">F</div>
                             <div>
-                                <div class="timeline-label">文件名</div>
+                                <div class="timeline-label" data-i18n="文件名">文件名</div>
                                 <div class="timeline-value" id="inspector-original">尚未分析</div>
                             </div>
                             <div class="timeline-time">本地</div>
@@ -1830,7 +2938,7 @@
                         <div class="timeline-item">
                             <div class="timeline-icon">DB</div>
                             <div>
-                                <div class="timeline-label">中文库（rom-name-cn）</div>
+                                <div class="timeline-label" data-i18n="中文库（rom-name-cn）">中文库（rom-name-cn）</div>
                                 <div class="timeline-value" id="inspector-cn">等待匹配</div>
                             </div>
                             <div class="timeline-time">SQLite</div>
@@ -1838,7 +2946,7 @@
                         <div class="timeline-item">
                             <div class="timeline-icon">✓</div>
                             <div>
-                                <div class="timeline-label">DAT（Libretro）</div>
+                                <div class="timeline-label" data-i18n="DAT（Libretro）">DAT（Libretro）</div>
                                 <div class="timeline-value" id="inspector-dat">等待标准名</div>
                             </div>
                             <div class="timeline-time">DAT</div>
@@ -1846,7 +2954,7 @@
                         <div class="timeline-item">
                             <div class="timeline-icon">URL</div>
                             <div>
-                                <div class="timeline-label">缩略图 URL</div>
+                                <div class="timeline-label" data-i18n="缩略图 URL">缩略图 URL</div>
                                 <div class="timeline-value" id="inspector-url">等待封面源</div>
                             </div>
                             <div class="timeline-time">Libretro</div>
@@ -1855,23 +2963,29 @@
 
                     <div class="inspector-fields">
                         <div class="form-group">
-                            <label for="inspector-label">显示名称（将写入播放列表）</label>
+                            <label for="inspector-label" data-i18n="显示名称（将写入游戏列表）">显示名称（将写入游戏列表）</label>
                             <input type="text" id="inspector-label" oninput="updateSelectedFromInspector('new_label', this.value)">
                         </div>
                         <div class="form-group">
-                            <label for="inspector-thumb">封面源</label>
+                            <label for="inspector-thumb" data-i18n="封面源">封面源</label>
                             <div class="source-control">
                                 <input type="text" id="inspector-thumb" oninput="updateSelectedFromInspector('thumbnail_source', this.value)">
+                                <button class="mini-btn" id="search-selected-thumb-btn" type="button" onclick="openSearchModal(selectedChangeIndex)" title="搜索数据库" disabled>
+                                    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path></svg>
+                                </button>
                                 <button class="mini-btn" type="button" onclick="refreshCoverPreview()" title="刷新封面预览">
                                     <svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4.7L4 8"></path><path d="M4 4v4h4"></path><path d="M4 13a8 8 0 0 0 14.5 4.7L20 16"></path><path d="M20 20v-4h-4"></path></svg>
                                 </button>
                             </div>
                         </div>
                         <div class="confidence-line">
-                            <span>匹配置信度</span>
+                            <span data-i18n="匹配置信度">匹配置信度</span>
                             <strong id="inspector-confidence">--</strong>
                         </div>
-                        <button class="btn btn-ghost" id="open-thumb-folder" onclick="openThumbnailFolder()" type="button">打开封面文件夹</button>
+                        <div class="inspector-actions">
+                            <button class="btn btn-success" id="confirm-selected-btn" onclick="confirmSelectedChange()" data-i18n="确认当前项" type="button">确认当前项</button>
+                            <button class="btn btn-ghost" id="open-thumb-folder" onclick="openThumbnailFolder()" data-i18n="打开封面文件夹" type="button">打开封面文件夹</button>
+                        </div>
                     </div>
                 </div>
             </aside>
@@ -1879,11 +2993,40 @@
 
         <section class="bottom-dock">
             <div class="dock-section">
-                <h2 class="dock-title">任务进度 <span id="inline-progress-label">待处理</span></h2>
+                <h2 class="dock-title">
+                    <span class="dock-title-main"><span data-i18n="任务进度">任务进度</span> <span id="inline-progress-label">待处理</span></span>
+                    <span class="dock-title-actions">
+                        <button class="btn btn-muted" type="button" onclick="toggleDetailsDrawer()" data-i18n="任务详情" style="min-height: 30px; padding: 0 10px;">任务详情</button>
+                    </span>
+                </h2>
                 <div class="inline-progress"><span id="inline-progress-fill"></span></div>
                 <div class="progress-meta">
                     <span id="inline-progress-main">等待预览校对</span>
                     <span id="inline-progress-current">当前：未开始</span>
+                    <span class="repair-summary-inline" id="repair-summary-inline">已选 0 项 · 等待游戏库</span>
+                </div>
+                <div class="dock-flow">
+                    <div class="dock-stage">
+                        <div class="dock-stage-number">1</div>
+                        <div>
+                            <div class="dock-stage-label" data-i18n="扫描设备">扫描设备</div>
+                            <div class="dock-stage-value" id="dock-scan-count">0 个游戏列表</div>
+                        </div>
+                    </div>
+                    <div class="dock-stage">
+                        <div class="dock-stage-number">2</div>
+                        <div>
+                            <div class="dock-stage-label" data-i18n="生成修复计划">生成修复计划</div>
+                            <div class="dock-stage-value" id="dock-plan-count">0 项待校对</div>
+                        </div>
+                    </div>
+                    <div class="dock-stage">
+                        <div class="dock-stage-number">3</div>
+                        <div>
+                            <div class="dock-stage-label" data-i18n="下载官方封面">下载官方封面</div>
+                            <div class="dock-stage-value" id="dock-download-count">0 项待下载</div>
+                        </div>
+                    </div>
                 </div>
                 <div class="progress-cards">
                     <div class="progress-card">
@@ -1904,29 +3047,6 @@
                 </div>
             </div>
 
-            <div class="dock-section">
-                <h2 class="dock-title">
-                    任务日志
-                    <button class="btn btn-muted" type="button" onclick="clearLogs()" style="min-height: 30px; padding: 0 10px;">清空日志</button>
-                </h2>
-                <div id="single-log-container">
-                    <div id="single-log-view" class="log-view"></div>
-                </div>
-                <div id="batch-log-container">
-                    <div id="batch-log-view" class="log-view"></div>
-                </div>
-                <div id="log-placeholder" class="log-view log-placeholder">等待任务开始，处理日志会显示在这里。</div>
-            </div>
-
-            <div class="dock-section">
-                <h2 class="dock-title">下载汇总 <button class="btn btn-muted" type="button" onclick="showDownloadDetails()" style="min-height: 30px; padding: 0 10px;">详情</button></h2>
-                <div class="download-grid">
-                    <div class="download-row"><strong>Boxarts（封面）</strong><span class="ok" id="sum-box-ok">0 成功</span><span class="fail" id="sum-box-fail">0 失败</span><span id="sum-box-skip">0 跳过</span></div>
-                    <div class="download-row"><strong>Snaps（截图）</strong><span class="ok" id="sum-snap-ok">0 成功</span><span class="fail" id="sum-snap-fail">0 失败</span><span id="sum-snap-skip">0 跳过</span></div>
-                    <div class="download-row"><strong>Titles（标题）</strong><span class="ok" id="sum-title-ok">0 成功</span><span class="fail" id="sum-title-fail">0 失败</span><span id="sum-title-skip">0 跳过</span></div>
-                    <div class="download-row total"><strong>总计</strong><span class="ok" id="sum-total-ok">0 成功</span><span class="fail" id="sum-total-fail">0 失败</span><span id="sum-total-skip">0 跳过</span></div>
-                </div>
-            </div>
         </section>
 
         <div id="status" class="status"></div>
@@ -1961,7 +3081,7 @@
                         <div class="timeline-icon">UI</div>
                         <div>
                             <div class="timeline-label">PLCN 工作台</div>
-                            <div class="timeline-value">本地 Web UI 用于预览、校对、写回 RetroArch 播放列表并下载三类缩略图。</div>
+                            <div class="timeline-value">本地 Web UI 用于预览、校对、写回 RetroArch 游戏列表并下载三类缩略图。</div>
                         </div>
                         <div class="timeline-time">当前</div>
                     </div>
@@ -2005,31 +3125,36 @@
         </div>
     </div>
 
-    <div id="download-details-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>下载详情</h2>
-                <span class="close-modal" onclick="closeDownloadDetails()">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div class="download-grid" id="download-details-content"></div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-muted" onclick="closeDownloadDetails()" type="button">关闭</button>
-            </div>
+    <aside class="details-drawer" id="details-drawer" aria-hidden="true">
+        <div class="details-drawer-header">
+            <h2 data-i18n="任务详情">任务详情</h2>
+            <button class="details-close-btn" type="button" onclick="toggleDetailsDrawer(false)" title="关闭任务详情" aria-label="关闭任务详情">×</button>
         </div>
-    </div>
+        <div class="details-drawer-body">
+            <section class="details-block">
+                <h3><span data-i18n="任务日志">任务日志</span> <button class="btn btn-muted" type="button" onclick="clearLogs()" data-i18n="清空日志" style="min-height: 30px; padding: 0 10px;">清空日志</button></h3>
+                <div id="single-log-container">
+                    <div id="single-log-view" class="log-view"></div>
+                </div>
+                <div id="batch-log-container">
+                    <div id="batch-log-view" class="log-view"></div>
+                </div>
+                <div id="log-placeholder" class="log-view log-placeholder" data-i18n="等待任务开始，处理日志会显示在这里。">等待任务开始，处理日志会显示在这里。</div>
+            </section>
 
-    <div id="progress-modal" class="modal">
-        <div class="modal-content">
-            <h2>正在处理...</h2>
-            <div style="margin: 20px 0;">
-                <progress id="task-progress" value="0" max="100"></progress>
-            </div>
-            <p id="progress-message">准备中...</p>
-            <p id="progress-stats">0 / 0</p>
+            <section class="details-block">
+                <h3 data-i18n="下载汇总">下载汇总</h3>
+                <div class="download-grid">
+                    <div class="download-row"><strong>Boxarts（封面）</strong><span class="ok" id="sum-box-ok">0 成功</span><span class="fail" id="sum-box-fail">0 失败</span><span id="sum-box-skip">0 跳过</span></div>
+                    <div class="download-row"><strong>Snaps（截图）</strong><span class="ok" id="sum-snap-ok">0 成功</span><span class="fail" id="sum-snap-fail">0 失败</span><span id="sum-snap-skip">0 跳过</span></div>
+                    <div class="download-row"><strong>Titles（标题）</strong><span class="ok" id="sum-title-ok">0 成功</span><span class="fail" id="sum-title-fail">0 失败</span><span id="sum-title-skip">0 跳过</span></div>
+                    <div class="download-row total"><strong>总计</strong><span class="ok" id="sum-total-ok">0 成功</span><span class="fail" id="sum-total-fail">0 失败</span><span id="sum-total-skip">0 跳过</span></div>
+                </div>
+                <div class="download-grid" id="download-details-content"></div>
+                <button class="btn btn-muted" type="button" onclick="showDownloadDetails()" data-i18n="刷新下载明细" style="margin-top: 10px; min-height: 30px; padding: 0 10px;">刷新下载明细</button>
+            </section>
         </div>
-    </div>
+    </aside>
 
     <script>
         let currentTargetInputId = '';
@@ -2039,6 +3164,164 @@
         let currentPreviewFilter = 'all';
         let selectedChangeIndex = -1;
         let lastDownloadSummary = null;
+        let currentDeviceScan = null;
+        let currentUILanguage = 'zh';
+        let currentTheme = 'light';
+        let selectedLibrarySystem = '';
+
+        const UI_EN = {
+            '当前游戏列表': 'Current List',
+            '全部游戏列表': 'All Lists',
+            '本地数据库': 'Local DB',
+            '设备与目录': 'Device & Paths',
+            '连接目标': 'Target',
+            '自动检测': 'Auto Detect',
+            '扫描目录': 'Scan Path',
+            '目录详情': 'Directory Details',
+            '游戏列表目录': 'Game List Directory',
+            '封面缩略图目录': 'Thumbnail Directory',
+            '配置文件': 'Config File',
+            '检测到的游戏列表': 'Detected Game Lists',
+            '扫描后显示 .lpl 游戏列表': 'Scan to show .lpl game lists',
+            '扫描后按主机名称显示 .lpl 游戏列表': 'Scan to show .lpl game lists grouped by system',
+            '未命名主机': 'Unnamed System',
+            '修复流程': 'Repair Flow',
+            '扫描设备': 'Scan Device',
+            '选择游戏列表': 'Choose Game List',
+            '生成修复计划': 'Build Repair Plan',
+            '修复并下载': 'Apply & Download',
+            '先确认低置信匹配': 'Review low-confidence matches first',
+            '当前': 'Current',
+            '写入 playlist，下载三类缩略图': 'Write playlist and download three thumbnail types',
+            '等待': 'Waiting',
+            '单项配置': 'Single Config',
+            '游戏列表路径': 'Game List Path',
+            '系统名称': 'System',
+            '缩略图保存路径': 'Thumbnail Save Path',
+            '缩略图目录': 'Thumbnail Directory',
+            'rom-name-cn 路径': 'rom-name-cn Path',
+            '自动使用高置信度结果': 'Use high-confidence matches automatically',
+            '下载缺失的封面和截图': 'Download missing covers and screenshots',
+            '优先使用本地数据库': 'Prefer local database',
+            '处理重复条目时自动重命名': 'Auto-rename duplicates when processing',
+            '预览校对': 'Preview',
+            '预览后应用': 'Preview & Apply',
+            '批量配置': 'Batch Config',
+            '每个 playlist 自动备份': 'Back up each playlist',
+            '遇到错误继续处理下一个': 'Continue after errors',
+            '批量下载三类缩略图': 'Download all thumbnail types',
+            '开始批量处理': 'Start Batch',
+            '游戏库扫描': 'Game Library Scan',
+            '全部': 'All',
+            '可自动修复': 'Auto Repair',
+            '需人工确认': 'Needs Review',
+            '重复需处理': 'Duplicates',
+            '缺封面源': 'Missing Cover',
+            '已手动编辑': 'Edited',
+            '缺少中文名': 'Missing Chinese name',
+            '名称未变化': 'Name unchanged',
+            '低置信匹配': 'Low-confidence match',
+            '发现重复条目': 'Duplicate entry found',
+            '名称和封面可写入': 'Name and cover are ready',
+            '已人工确认': 'Manually confirmed',
+            '后端建议需复核': 'Backend marked for review',
+            '预览变更': 'Preview Changes',
+            '应用已选修复': 'Apply Selected',
+            '准备应用修复': 'Ready to apply repairs',
+            '确认应用': 'Confirm Apply',
+            '取消': 'Cancel',
+            '已取消应用': 'Apply cancelled',
+            '将写回游戏列表': 'Will write to game list',
+            '将下载封面': 'Will download covers',
+            '跳过下载': 'Downloads skipped',
+            '重复项': 'duplicates',
+            '筛选': 'Filter',
+            '搜索游戏名 / rom 名称': 'Search game / ROM name',
+            '选择游戏列表后开始预览': 'Choose a game list to preview',
+            'PLCN 会先展示建议显示名、封面源和匹配状态，低置信结果可在右侧手动校对。': 'PLCN shows proposed names, cover sources, and match status. Low-confidence results can be reviewed on the right.',
+            '当前名称': 'Current Name',
+            '修复状态 / 确认': 'Status / Confirm',
+            '推荐中文名': 'Suggested Chinese Name',
+            '官方英文名': 'Official English Name',
+            '封面状态': 'Cover',
+            '修复预览': 'Repair Preview',
+            '匹配详情': 'Match',
+            '元数据': 'Metadata',
+            '文件信息': 'File',
+            '文件名': 'File',
+            '中文库（rom-name-cn）': 'Chinese DB (rom-name-cn)',
+            'DAT（Libretro）': 'DAT (Libretro)',
+            '缩略图 URL': 'Thumbnail URL',
+            '显示名称（将写入游戏列表）': 'Display Name (written to game list)',
+            '封面源': 'Cover Source',
+            '匹配置信度': 'Match Confidence',
+            '确认当前项': 'Confirm Item',
+            '打开封面文件夹': 'Open Cover Folder',
+            '任务进度': 'Task Progress',
+            '任务详情': 'Task Details',
+            '日志和下载明细按需查看。': 'Logs and download details are available on demand.',
+            '任务日志': 'Task Logs',
+            '清空日志': 'Clear Logs',
+            '等待任务开始，处理日志会显示在这里。': 'Logs will appear here after a task starts.',
+            '下载汇总': 'Download Summary',
+            '刷新下载明细': 'Refresh Download Details',
+            '下载官方封面': 'Download Covers',
+            '加载中': 'Loading',
+            '未就绪': 'Not ready',
+            '读取失败': 'Failed',
+            '未检测': 'Not detected',
+            '就绪': 'Ready',
+            '待处理': 'Idle',
+            '等待预览校对': 'Waiting for preview',
+            '当前：未开始': 'Current: not started',
+            '已选 0 项 · 等待游戏库': 'Selected 0 · Waiting for library',
+            '等待扫描 RetroArch 目录': 'Waiting to scan RetroArch directory',
+            '等待选择 .lpl 文件': 'Waiting for .lpl file',
+            '等待生成修复计划': 'Waiting to build repair plan',
+            '请选择系统...': 'Choose system...',
+            '系统：': 'System: ',
+            '待确认': 'Needs Review',
+            '待应用': 'Ready',
+            '已分析': 'Analyzed',
+            '当前：等待人工确认': 'Current: waiting for review',
+            '项需人工确认': 'need review',
+            '项可应用': 'ready to apply',
+            '已选': 'Selected',
+            '项': 'items',
+            '等待游戏库': 'Waiting for library',
+            '确认': 'Confirm',
+            '已确认': 'Confirmed',
+            '待下载': 'Pending Download',
+            '已有封面': 'Cover Exists',
+            '缺少封面源': 'Missing Cover Source',
+            '未命名': 'Untitled',
+            '留空则不下载': 'Leave empty to skip download',
+            '没有符合当前筛选条件的项目。': 'No items match the current filters.',
+            'UI：中文': 'UI: Chinese',
+            '切换界面语言': 'Switch UI language',
+            '切换到英文界面': 'Switch to English UI',
+            '切换到中文界面': 'Switch to Chinese UI',
+            '切换浅色/深色主题': 'Switch light/dark theme',
+            '切换到深色模式': 'Switch to dark mode',
+            '切换到浅色模式': 'Switch to light mode',
+            '已切换界面语言': 'UI language changed',
+            '已反选': 'Inverted',
+            '浅色模式已开启': 'Light mode enabled',
+            '深色模式已开启': 'Dark mode enabled',
+            '浅色': 'Light',
+            '深色': 'Dark',
+            '修复完成': 'Repair complete',
+            '扫描中': 'Scanning',
+            '正在扫描 RetroArch 目录': 'Scanning RetroArch directory',
+            '当前：读取 playlists': 'Current: reading playlists',
+            '已扫描': 'Scanned',
+            '未找到': 'Not found',
+            '扫描失败': 'Scan failed',
+            '无法扫描 RetroArch 目录': 'Unable to scan RetroArch directory',
+            '成功': 'success',
+            '失败': 'failed',
+            '跳过': 'skipped'
+        };
 
         function switchTab(tab, target) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -2056,6 +3339,7 @@
                 const response = await fetch('/api/config');
                 const config = await response.json();
 
+                document.getElementById('retroarch_root').value = config.retroarch_root || '';
                 document.getElementById('playlist_path').value = config.single_playlist_path || '';
                 document.getElementById('system_name').value = config.single_system_name || '';
                 document.getElementById('thumbnails_dir').value = config.single_thumbnails_dir || '';
@@ -2067,6 +3351,9 @@
 
                 updateWorkflowLabels();
                 loadStats();
+                if (config.retroarch_root) {
+                    scanDevice(false);
+                }
             } catch (error) {
                 showStatus('加载配置失败', 'error');
             }
@@ -2080,29 +3367,36 @@
 
                 const databaseChip = document.getElementById('database-status-chip');
                 const datChip = document.getElementById('dat-status-chip');
-                const offlineChip = document.getElementById('offline-status-chip');
-
                 databaseChip.classList.remove('loading', 'unavailable');
                 datChip.classList.remove('loading', 'unavailable');
-                offlineChip.classList.remove('loading', 'unavailable');
 
                 const databaseReady = stats.database_ready && Number(stats.database_count) > 0;
                 const datReady = Number(stats.dat_count) > 0;
                 databaseChip.classList.toggle('unavailable', !databaseReady);
                 datChip.classList.toggle('unavailable', !datReady);
-                offlineChip.classList.toggle('unavailable', !stats.offline_available);
 
-                document.getElementById('stat-db-count').textContent = databaseReady ? `${formatNumber(stats.database_count)} 条` : '未就绪';
-                document.getElementById('stat-dat-count').textContent = datReady ? `${formatNumber(stats.dat_count)} 个` : '0 个';
-                document.getElementById('stat-offline-label').textContent = stats.offline_available ? '离线可用' : '需联网补全';
+                const databaseText = databaseReady ? formatNumber(stats.database_count) : '--';
+                const datText = datReady ? formatNumber(stats.dat_count) : '0';
+                document.getElementById('stat-db-count').textContent = databaseText;
+                document.getElementById('stat-dat-count').textContent = datText;
+                setStatusChipLabel(databaseChip, `${uiText('本地数据库')} ${databaseReady ? formatDatabaseCount(stats.database_count) : uiText('未就绪')}`);
+                setStatusChipLabel(datChip, `DAT ${datReady ? formatDatCount(stats.dat_count) : formatDatCount(0)}`);
             } catch (error) {
-                document.getElementById('stat-db-count').textContent = '读取失败';
-                document.getElementById('stat-dat-count').textContent = '读取失败';
-                document.getElementById('stat-offline-label').textContent = '状态未知';
-                document.getElementById('database-status-chip').classList.add('unavailable');
-                document.getElementById('dat-status-chip').classList.add('unavailable');
-                document.getElementById('offline-status-chip').classList.add('unavailable');
+                const databaseChip = document.getElementById('database-status-chip');
+                const datChip = document.getElementById('dat-status-chip');
+                document.getElementById('stat-db-count').textContent = '--';
+                document.getElementById('stat-dat-count').textContent = '--';
+                databaseChip.classList.add('unavailable');
+                datChip.classList.add('unavailable');
+                setStatusChipLabel(databaseChip, `${uiText('本地数据库')} ${uiText('读取失败')}`);
+                setStatusChipLabel(datChip, `DAT ${uiText('读取失败')}`);
             }
+        }
+
+        function setStatusChipLabel(chip, label) {
+            if (!chip) return;
+            chip.title = label;
+            chip.setAttribute('aria-label', label);
         }
 
         async function saveConfig(mode) {
@@ -2110,6 +3404,7 @@
 
             if (mode === 'single') {
                 config = {
+                    retroarch_root: document.getElementById('retroarch_root').value,
                     single_playlist_path: document.getElementById('playlist_path').value,
                     single_system_name: document.getElementById('system_name').value,
                     single_thumbnails_dir: document.getElementById('thumbnails_dir').value,
@@ -2122,6 +3417,7 @@
                 };
             } else if (mode === 'batch') {
                 config = {
+                    retroarch_root: document.getElementById('retroarch_root').value,
                     batch_dir: document.getElementById('batch_dir').value,
                     batch_thumbnails_dir: document.getElementById('batch_thumbnails_dir').value,
                     batch_rom_name_cn_path: document.getElementById('batch_rom_name_cn_path').value,
@@ -2173,6 +3469,319 @@
             };
         }
 
+        async function scanDevice(useDefault = false) {
+            const rootInput = document.getElementById('retroarch_root');
+            const scanBtn = document.getElementById('scan-device-btn');
+            const defaultBtn = document.getElementById('scan-default-btn');
+            const targetPath = useDefault ? '' : rootInput.value.trim();
+
+            if (!useDefault && !targetPath) {
+                showStatus('请先选择 RetroArch 目录，或使用自动检测', 'error');
+                return;
+            }
+
+            scanBtn.disabled = true;
+            defaultBtn.disabled = true;
+            setInlineProgress(5, uiText('扫描中'), uiText('正在扫描 RetroArch 目录'), uiText('当前：读取 playlists'));
+
+            try {
+                const url = targetPath ? `/api/device/scan?path=${encodeURIComponent(targetPath)}` : '/api/device/scan';
+                const response = await fetch(url);
+                const scan = await response.json();
+                if (!response.ok || scan.error) throw new Error(scan.error || '扫描失败');
+
+                currentDeviceScan = scan;
+                selectedLibrarySystem = '';
+                document.getElementById('playlist_path').value = '';
+                renderDeviceScan(scan);
+
+                if (scan.root_path) rootInput.value = scan.root_path;
+                if (scan.directories?.playlists) document.getElementById('batch_dir').value = scan.directories.playlists;
+                if (scan.directories?.thumbnails) {
+                    document.getElementById('thumbnails_dir').value = scan.directories.thumbnails;
+                    document.getElementById('batch_thumbnails_dir').value = scan.directories.thumbnails;
+                }
+
+                updateWorkflowLabels();
+                const playlistCount = scan.totals?.playlists || 0;
+                const itemCount = scan.totals?.items || 0;
+                document.getElementById('dock-scan-count').textContent = formatGameListCount(playlistCount);
+                setInlineProgress(
+                    playlistCount ? 16 : 0,
+                    playlistCount ? uiText('已扫描') : uiText('未找到'),
+                    currentUILanguage === 'en'
+                        ? (playlistCount ? 'RetroArch directory detected' : 'No game lists found')
+                        : (scan.message || '扫描完成'),
+                    currentUILanguage === 'en' ? `Current: ${itemCount} game entries` : `当前：${itemCount} 个游戏条目`
+                );
+                const scanStatusMessage = currentUILanguage === 'en'
+                    ? (playlistCount ? 'RetroArch directory detected' : 'No game lists found')
+                    : (scan.message || '扫描完成');
+                showStatus(scanStatusMessage, playlistCount ? 'success' : 'error');
+                if (playlistCount) {
+                    await previewFirstPlaylistForSystem(selectedLibrarySystem);
+                }
+            } catch (error) {
+                currentDeviceScan = null;
+                renderDeviceScan(null);
+                setInlineProgress(0, uiText('扫描失败'), uiText('无法扫描 RetroArch 目录'), error.message);
+                showStatus(`${uiText('扫描失败')}: ${error.message}`, 'error');
+            } finally {
+                scanBtn.disabled = false;
+                defaultBtn.disabled = false;
+            }
+        }
+
+        function getPlaylistSystemName(playlist) {
+            return playlist?.system || playlist?.db_name || playlist?.name || uiText('未命名主机');
+        }
+
+        function getSystemAbbreviation(systemName) {
+            const name = String(systemName || '').trim();
+            if (!name) return uiText('未命名主机');
+
+            const rules = [
+                [/FinalBurn\s+Neo|FBNeo/i, 'FBNeo'],
+                [/Microsoft\s*[-–]\s*MSX2/i, 'MSX2'],
+                [/NEC\s*[-–]\s*PC\s*Engine\s*CD|TurboGrafx\s*[-–]?\s*CD/i, 'PCE CD'],
+                [/NEC\s*[-–]\s*PC\s*Engine|TurboGrafx/i, 'PCE'],
+                [/NEC\s*[-–]\s*PC\s*98|PC-98/i, 'PC-98'],
+                [/Nintendo\s*[-–]\s*Game\s*Boy\s*Advance/i, 'GBA'],
+                [/Nintendo\s*[-–]\s*Game\s*Boy\s*Color/i, 'GBC'],
+                [/Nintendo\s*[-–]\s*Game\s*Boy(?!\s*(Advance|Color))/i, 'GB'],
+                [/Nintendo\s*[-–]\s*Nintendo\s*64/i, 'N64'],
+                [/Nintendo\s*[-–]\s*Nintendo\s*DS/i, 'NDS'],
+                [/Nintendo\s*[-–]\s*Nintendo\s*Entertainment\s*System/i, 'NES'],
+                [/Nintendo\s*[-–]\s*Super\s*Nintendo\s*Entertainment\s*System/i, 'SNES'],
+                [/Nintendo\s*[-–]\s*GameCube/i, 'GC'],
+                [/Nintendo\s*[-–]\s*Wii/i, 'Wii'],
+                [/Sega\s*[-–]\s*Mega\s*Drive|Genesis/i, 'MD'],
+                [/Sega\s*[-–]\s*Dreamcast/i, 'DC'],
+                [/Sega\s*[-–]\s*Saturn/i, 'SS'],
+                [/Sony\s*[-–]\s*PlayStation\s*2/i, 'PS2'],
+                [/Sony\s*[-–]\s*PlayStation/i, 'PS1'],
+                [/DOS/i, 'DOS'],
+                [/Arcade/i, 'Arcade'],
+            ];
+
+            const matched = rules.find(([pattern]) => pattern.test(name));
+            if (matched) return matched[1];
+
+            const compact = name
+                .replace(/\([^)]*\)/g, '')
+                .replace(/\.(lpl|json)$/i, '')
+                .replace(/\s+[-–]\s+/g, ' ')
+                .trim();
+            if (/^[A-Z0-9][A-Z0-9 -]{1,9}$/i.test(compact)) return compact;
+
+            const initials = compact
+                .split(/[\s_\-–]+/)
+                .filter(Boolean)
+                .map((part) => part[0]?.toUpperCase())
+                .join('');
+            return initials.slice(0, 8) || compact.slice(0, 8) || name;
+        }
+
+        async function previewFirstPlaylistForSystem(systemName) {
+            const playlists = currentDeviceScan?.playlists || [];
+            const index = playlists.findIndex((playlist) => getPlaylistSystemName(playlist) === systemName && playlist.valid);
+            if (index >= 0) {
+                await selectScannedPlaylist(index);
+            }
+        }
+
+        function renderDeviceScan(scan) {
+            const summary = document.getElementById('device-summary');
+            const list = document.getElementById('scanned-playlists');
+            const librarySummary = document.getElementById('library-browser-summary');
+            const previewIsActive = !document.getElementById('preview-area')?.hidden;
+            updateDeviceDirectoryRows(scan);
+            list.innerHTML = '';
+            if (!previewIsActive) setLibraryBrowserVisible(true);
+
+            if (!scan) {
+                summary.textContent = uiText('等待扫描 RetroArch 目录');
+                summary.classList.remove('ready');
+                list.innerHTML = `<div class="playlist-empty">${uiText('扫描后显示 .lpl 游戏列表')}</div>`;
+                if (librarySummary) librarySummary.textContent = uiText('扫描后按主机名称显示 .lpl 游戏列表');
+                document.getElementById('dock-scan-count').textContent = formatGameListCount(0);
+                return;
+            }
+
+            const playlistCount = scan.totals?.playlists || 0;
+            const itemCount = scan.totals?.items || 0;
+            const groups = new Map();
+            (scan.playlists || []).forEach((playlist, index) => {
+                const groupName = getPlaylistSystemName(playlist);
+                if (!groups.has(groupName)) groups.set(groupName, []);
+                groups.get(groupName).push({ playlist, index });
+            });
+
+            document.getElementById('dock-scan-count').textContent = formatGameListCount(playlistCount);
+            summary.textContent = playlistCount
+                ? `${shortPath(scan.root_path)} · ${formatGameListCount(playlistCount)} · ${formatGameCount(itemCount)}`
+                : (currentUILanguage === 'en' ? 'No game lists found' : (scan.message || '未找到游戏列表'));
+            summary.classList.toggle('ready', playlistCount > 0);
+            if (librarySummary) {
+                const systemCount = currentUILanguage === 'en' ? `${groups.size} systems` : `${groups.size} 个主机`;
+                librarySummary.textContent = playlistCount
+                    ? `${formatGameListCount(playlistCount)} · ${formatGameCount(itemCount)} · ${systemCount}`
+                    : uiText('扫描后按主机名称显示 .lpl 游戏列表');
+            }
+
+            if (!scan.playlists?.length) {
+                list.innerHTML = `<div class="playlist-empty">${currentUILanguage === 'en' ? 'No .lpl files found. Choose the RetroArch root or playlists directory.' : '未找到 .lpl 文件，可改选 RetroArch 根目录或 playlists 目录。'}</div>`;
+                return;
+            }
+
+            const preferredSystem = findPreferredLibrarySystem(groups);
+            selectedLibrarySystem = groups.has(selectedLibrarySystem) ? selectedLibrarySystem : preferredSystem;
+            renderLibrarySystemTabs(list, groups);
+            renderSelectedLibraryList(list, groups);
+        }
+
+        function findPreferredLibrarySystem(groups) {
+            const selectedPath = document.getElementById('playlist_path').value;
+            if (selectedPath) {
+                for (const [groupName, items] of groups.entries()) {
+                    if (items.some(({ playlist }) => playlist.path === selectedPath)) return groupName;
+                }
+            }
+            return groups.keys().next().value || '';
+        }
+
+        function renderLibrarySystemTabs(container, groups) {
+            const tabs = document.createElement('div');
+            tabs.className = 'playlist-system-tabs';
+
+            groups.forEach((items, groupName) => {
+                const tabButton = document.createElement('button');
+                tabButton.type = 'button';
+                tabButton.className = `playlist-system-tab${groupName === selectedLibrarySystem ? ' active' : ''}`;
+                tabButton.textContent = getSystemAbbreviation(groupName);
+                tabButton.title = groupName;
+                tabButton.setAttribute('aria-label', groupName);
+                tabButton.setAttribute('aria-pressed', String(groupName === selectedLibrarySystem));
+                tabButton.onclick = () => {
+                    selectedLibrarySystem = groupName;
+                    renderDeviceScan(currentDeviceScan);
+                    previewFirstPlaylistForSystem(groupName);
+                };
+                tabs.appendChild(tabButton);
+            });
+
+            container.appendChild(tabs);
+        }
+
+        function renderSelectedLibraryList(container, groups) {
+            const items = groups.get(selectedLibrarySystem) || [];
+            const caption = document.createElement('div');
+            caption.className = 'playlist-list-caption';
+            const title = document.createElement('strong');
+            title.textContent = getSystemAbbreviation(selectedLibrarySystem);
+            title.title = selectedLibrarySystem || title.textContent;
+            const count = document.createElement('span');
+            const itemCount = items.reduce((sum, item) => sum + (Number(item.playlist.item_count) || 0), 0);
+            count.textContent = `${formatGameListCount(items.length)} · ${formatGameCount(itemCount)}`;
+            caption.appendChild(title);
+            caption.appendChild(count);
+
+            container.appendChild(caption);
+        }
+
+        function buildPlaylistCard(playlist, index) {
+            const card = document.createElement('button');
+            card.type = 'button';
+            card.className = `playlist-card${playlist.valid ? '' : ' invalid'}`;
+            if (playlist.path === document.getElementById('playlist_path').value) card.classList.add('active');
+            card.onclick = () => selectScannedPlaylist(index);
+
+            const body = document.createElement('div');
+            const name = document.createElement('div');
+            name.className = 'playlist-name';
+            name.textContent = playlist.name || playlist.system || uiText('未命名主机');
+            name.title = name.textContent;
+            const meta = document.createElement('div');
+            meta.className = 'playlist-meta';
+            const transportLabel = playlist.transport === 'adb'
+                ? (currentUILanguage === 'en' ? 'ADB device' : 'ADB 实机')
+                : (currentUILanguage === 'en' ? 'Local' : '本地');
+            meta.textContent = playlist.valid
+                ? `${transportLabel} · ${playlist.db_name || playlist.system || (currentUILanguage === 'en' ? 'No db_name' : '无 db_name')}`
+                : `${transportLabel} · ${playlist.error || (currentUILanguage === 'en' ? 'Unreadable' : '无法读取')}`;
+            meta.title = meta.textContent;
+            body.appendChild(name);
+            body.appendChild(meta);
+
+            const count = document.createElement('div');
+            count.className = 'playlist-count';
+            count.textContent = playlist.valid ? formatItemCount(playlist.item_count) : (currentUILanguage === 'en' ? 'Invalid' : '无效');
+
+            card.appendChild(body);
+            card.appendChild(count);
+            return card;
+        }
+
+        function setLibraryBrowserVisible(visible) {
+            const browser = document.getElementById('library-browser');
+            if (browser) browser.hidden = !visible;
+        }
+
+        function setPreviewAreaVisible(visible) {
+            const previewArea = document.getElementById('preview-area');
+            if (previewArea) previewArea.hidden = !visible;
+            document.getElementById('library-browser')?.classList.toggle('has-preview', visible);
+        }
+
+        function updateDeviceDirectoryRows(scan) {
+            const dirs = scan?.directories || {};
+            setPathText('device-playlists-dir', dirs.playlists || uiText('未检测'));
+            setPathText('device-thumbnails-dir', dirs.thumbnails || uiText('未检测'));
+            setPathText('device-config-file', dirs.config || uiText('未检测'));
+        }
+
+        function setPathText(id, value) {
+            const el = document.getElementById(id);
+            el.textContent = value;
+            el.title = value;
+        }
+
+        async function selectScannedPlaylist(index) {
+            const playlist = currentDeviceScan?.playlists?.[index];
+            if (!playlist) return;
+            if (!playlist.valid) {
+                showStatus('该游戏列表无法读取，请检查 .lpl JSON 内容', 'error');
+                return;
+            }
+
+            document.getElementById('playlist_path').value = playlist.path;
+            if (currentDeviceScan?.directories?.playlists) {
+                document.getElementById('batch_dir').value = currentDeviceScan.directories.playlists;
+            }
+            if (currentDeviceScan?.directories?.thumbnails) {
+                document.getElementById('thumbnails_dir').value = currentDeviceScan.directories.thumbnails;
+                document.getElementById('batch_thumbnails_dir').value = currentDeviceScan.directories.thumbnails;
+            }
+            ensureSystemOption(playlist.system);
+            document.getElementById('system_name').value = playlist.system || '';
+            updateWorkflowLabels();
+            renderDeviceScan(currentDeviceScan);
+            await saveConfig('single');
+            await previewTask();
+        }
+
+        function ensureSystemOption(systemName) {
+            if (!systemName) return;
+            const select = document.getElementById('system_name');
+            const exists = Array.from(select.options).some(option => option.value === systemName);
+            if (!exists) {
+                const option = document.createElement('option');
+                option.value = systemName;
+                option.textContent = systemName + '（未找到匹配的翻译库）';
+                select.appendChild(option);
+            }
+        }
+
         function showStatus(message, type = 'info') {
             const el = document.getElementById('status');
             el.textContent = message;
@@ -2200,31 +3809,128 @@
             showStatus('已定位到配置区域', 'info');
         }
 
-        function toggleBottomDock() {
-            const shell = document.querySelector('.app-shell');
-            const button = document.getElementById('toggle-dock-btn');
-            const collapsed = shell.classList.toggle('dock-collapsed');
-            button.setAttribute('aria-pressed', String(collapsed));
-            button.title = collapsed ? '展开底栏' : '收起底栏';
-            showStatus(collapsed ? '已收起底部进度区' : '已展开底部进度区', 'info');
+        function toggleUILanguage() {
+            applyUILanguage(currentUILanguage === 'zh' ? 'en' : 'zh');
+            localStorage.setItem('plcn-ui-language', currentUILanguage);
+            showStatus(uiText('已切换界面语言'), 'info');
         }
 
-        async function toggleFullscreen() {
-            const shell = document.querySelector('.app-shell');
-            const button = document.getElementById('fullscreen-btn');
-            const focused = shell.classList.toggle('focus-mode');
-            button.setAttribute('aria-pressed', String(focused));
-            button.title = focused ? '退出专注模式' : '切换专注模式';
-            showStatus(focused ? '已进入专注模式' : '已退出专注模式', 'info');
+        function uiText(text) {
+            return currentUILanguage === 'en' ? (UI_EN[text] || text) : text;
         }
 
-        function toggleInspector() {
-            const shell = document.querySelector('.app-shell');
-            const button = document.getElementById('toggle-inspector-btn');
-            const hidden = shell.classList.toggle('inspector-hidden');
-            button.setAttribute('aria-pressed', String(hidden));
-            button.title = hidden ? '显示详情栏' : '隐藏详情栏';
-            showStatus(hidden ? '已隐藏详情栏' : '已显示详情栏', 'info');
+        function iconOnlyButton(button, svg, label) {
+            if (!button) return;
+            button.innerHTML = svg;
+            button.title = label;
+            button.setAttribute('aria-label', label);
+        }
+
+        function getLanguageIconSvg(language) {
+            if (language === 'en') {
+                return '<svg class="ui-language-icon" data-icon="ui-to-zh" width="20" height="20" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M21.54 15H17a2 2 0 0 0-2 2v4.54"></path><path d="M7 3.34V5a3 3 0 0 0 3 3h.5a2 2 0 0 1 2 2 2 2 0 0 0 2 2 2 2 0 0 1 2 2c0 .83.67 1.5 1.5 1.5H22"></path><path d="M11 21.95V18a2 2 0 0 0-2-2 2 2 0 0 1-2-2v-1a2 2 0 0 0-2-2H2.05"></path></svg>';
+            }
+            return '<svg class="ui-language-icon" data-icon="ui-to-en" width="20" height="20" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 1 0 20"></path><path d="M12 2a14.5 14.5 0 0 0 0 20"></path><path d="M2 12h20"></path></svg>';
+        }
+
+        function getThemeIconSvg(theme) {
+            if (theme === 'dark') {
+                return '<svg class="theme-toggle-icon" data-icon="theme-to-light" width="20" height="20" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m4.93 19.07 1.41-1.41"></path><path d="m17.66 6.34 1.41-1.41"></path></svg>';
+            }
+            return '<svg class="theme-toggle-icon" data-icon="theme-to-dark" width="20" height="20" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path d="M20.4 14.4A7.8 7.8 0 0 1 9.6 3.6a8.2 8.2 0 1 0 10.8 10.8Z"></path></svg>';
+        }
+
+        function renderLanguageButton() {
+            const button = document.getElementById('language-display-btn');
+            const label = currentUILanguage === 'en' ? uiText('切换到中文界面') : uiText('切换到英文界面');
+            iconOnlyButton(button, getLanguageIconSvg(currentUILanguage), label);
+        }
+
+        function renderThemeButton() {
+            const button = document.getElementById('theme-toggle-btn');
+            const label = currentTheme === 'dark' ? uiText('切换到浅色模式') : uiText('切换到深色模式');
+            iconOnlyButton(button, getThemeIconSvg(currentTheme), label);
+            if (button) button.setAttribute('aria-pressed', String(currentTheme === 'dark'));
+        }
+
+        function applyUILanguage(language) {
+            currentUILanguage = language === 'en' ? 'en' : 'zh';
+            document.documentElement.lang = currentUILanguage === 'en' ? 'en' : 'zh-CN';
+            document.body.dataset.uiLanguage = currentUILanguage;
+
+            document.querySelectorAll('[data-i18n]').forEach((el) => {
+                el.textContent = uiText(el.dataset.i18n);
+            });
+            document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
+                el.placeholder = uiText(el.dataset.i18nPlaceholder);
+            });
+            renderLanguageButton();
+            renderThemeButton();
+
+            renderPreviewTable(currentChanges);
+            if (currentDeviceScan) {
+                renderDeviceScan(currentDeviceScan);
+            } else {
+                renderDeviceScan(null);
+            }
+            hideApplySummary();
+            updateSummary(currentChanges);
+            updateWorkflowLabels();
+            setDownloadSummary(lastDownloadSummary);
+            loadStats();
+        }
+
+        function formatGameListCount(count) {
+            return currentUILanguage === 'en' ? `${count} game lists` : `${count} 个游戏列表`;
+        }
+
+        function formatGameCount(count) {
+            return currentUILanguage === 'en' ? `${count} games` : `${count} 个游戏`;
+        }
+
+        function formatItemCount(count) {
+            return currentUILanguage === 'en' ? `${count} items` : `${count} 项`;
+        }
+
+        function formatPendingReviewCount(count) {
+            return currentUILanguage === 'en' ? `${count} to review` : `${count} 项待校对`;
+        }
+
+        function formatPendingDownloadCount(count) {
+            return currentUILanguage === 'en' ? `${count} to download` : `${count} 项待下载`;
+        }
+
+        function formatDatabaseCount(count) {
+            return currentUILanguage === 'en' ? `${formatNumber(count)} records` : `${formatNumber(count)} 条`;
+        }
+
+        function formatDatCount(count) {
+            return currentUILanguage === 'en' ? `${formatNumber(count)} items` : `${formatNumber(count)} 个`;
+        }
+
+        function toggleTheme() {
+            applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
+            localStorage.setItem('plcn-theme', currentTheme);
+            showStatus(uiText(currentTheme === 'dark' ? '深色模式已开启' : '浅色模式已开启'), 'info');
+        }
+
+        function applyTheme(theme) {
+            currentTheme = theme === 'dark' ? 'dark' : 'light';
+            document.body.dataset.theme = currentTheme;
+            renderThemeButton();
+        }
+
+        function initializeDisplayPreferences() {
+            applyUILanguage(localStorage.getItem('plcn-ui-language') || 'zh');
+            applyTheme(localStorage.getItem('plcn-theme') || 'light');
+        }
+
+        function toggleDetailsDrawer(forceOpen) {
+            const drawer = document.getElementById('details-drawer');
+            const open = typeof forceOpen === 'boolean' ? forceOpen : !drawer.classList.contains('open');
+            drawer.classList.toggle('open', open);
+            drawer.setAttribute('aria-hidden', String(!open));
+            if (open) showDownloadDetails(false);
         }
 
         function toggleFilterBar() {
@@ -2296,12 +4002,18 @@
             if (currentTargetInputId === 'playlist_path') {
                 detectSystemName(path);
             }
+            if (currentTargetInputId === 'retroarch_root') {
+                scanDevice(false);
+            }
             updateWorkflowLabels();
         }
 
         function selectCurrentDir() {
             document.getElementById(currentTargetInputId).value = currentPath;
             closeModal();
+            if (currentTargetInputId === 'retroarch_root') {
+                scanDevice(false);
+            }
             updateWorkflowLabels();
         }
 
@@ -2313,7 +4025,7 @@
                 const options = getProcessingOptions();
 
                 if (!playlistPath || !systemName || (options.download_thumbnails && !thumbnailsDir)) {
-                    showStatus(options.download_thumbnails ? '请填写播放列表、系统和缩略图目录' : '请填写播放列表和系统', 'error');
+                    showStatus(options.download_thumbnails ? '请填写游戏列表、系统和缩略图目录' : '请填写游戏列表和系统', 'error');
                     return;
                 }
 
@@ -2322,18 +4034,13 @@
 
                 showStatus('正在直接运行...', 'success');
                 showLogPanel('single');
-                setInlineProgress(5, '分析中', '正在分析播放列表', '当前：读取 playlist');
-
-                document.getElementById('progress-modal').style.display = 'block';
-                document.getElementById('progress-message').textContent = '正在分析播放列表...';
-                document.getElementById('progress-stats').textContent = '步骤 1/2';
-                document.getElementById('task-progress').value = 0;
+                setInlineProgress(5, '分析中', '正在分析游戏列表', '当前：读取 playlist');
 
                 const logView = document.getElementById('single-log-view');
                 logView.innerHTML = '<strong>运行日志：</strong><br>开始直接运行...<br>';
 
                 try {
-                    logView.innerHTML += '正在分析播放列表...<br>';
+                    logView.innerHTML += '正在分析游戏列表...<br>';
                     const previewResponse = await fetch('/api/playlist/preview', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -2353,10 +4060,6 @@
                     logView.innerHTML += `分析完成，共 ${currentChanges.length} 个游戏，已勾选 ${includedChanges.length} 项<br>`;
                     setInlineProgress(50, '应用中', applyMessage, `当前：${includedChanges.length} 项待处理`);
 
-                    document.getElementById('progress-message').textContent = `分析完成，${applyMessage}...`;
-                    document.getElementById('progress-stats').textContent = '步骤 2/2';
-                    document.getElementById('task-progress').value = 50;
-
                     const applyResponse = await fetch('/api/playlist/apply', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -2375,13 +4078,12 @@
                         trackProgress(applyData.job_id);
                     } else {
                         alert('Error starting job: ' + (applyData.error || 'Unknown error'));
-                        document.getElementById('progress-modal').style.display = 'none';
                     }
                 } catch (error) {
                     showStatus('运行失败: ' + error.message, 'error');
                     logView.innerHTML += `<br><span style="color:red">错误: ${escapeHtml(error.message)}</span><br>`;
                     alert('错误: ' + error.message);
-                    document.getElementById('progress-modal').style.display = 'none';
+                    setInlineProgress(0, '失败', '运行失败', error.message);
                 }
                 return;
             }
@@ -2393,7 +4095,7 @@
                 const options = getBatchOptions();
 
                 if (!batchDir) {
-                    showStatus('请选择播放列表目录', 'error');
+                    showStatus('请选择游戏列表目录', 'error');
                     return;
                 }
                 if (options.download_thumbnails && !thumbnailsDir) {
@@ -2405,10 +4107,8 @@
                 if (!saved) return;
 
                 showLogPanel('batch');
-                setInlineProgress(2, '启动中', '正在启动批量处理', '当前：扫描播放列表目录');
+                setInlineProgress(2, '启动中', '正在启动批量处理', '当前：扫描游戏列表目录');
                 document.getElementById('batch-log-view').innerHTML = '<strong>批量运行日志：</strong><br>正在启动批量处理...<br>';
-                document.getElementById('progress-modal').style.display = 'block';
-                document.getElementById('progress-message').textContent = '正在启动批量处理...';
 
                 try {
                     const response = await fetch('/api/batch/apply', {
@@ -2427,14 +4127,15 @@
                         trackProgress(data.job_id, 'batch');
                     } else {
                         alert('Error starting batch job: ' + (data.error || 'Unknown error'));
-                        document.getElementById('progress-modal').style.display = 'none';
                     }
                 } catch (error) {
                     alert('Error: ' + error.message);
-                    document.getElementById('progress-modal').style.display = 'none';
+                    setInlineProgress(0, '失败', '批量处理启动失败', error.message);
                 }
             }
         }
+
+        initializeDisplayPreferences();
 
         loadSystems().then(() => {
             loadConfig();
@@ -2446,7 +4147,7 @@
                 const data = await response.json();
 
                 const select = document.getElementById('system_name');
-                select.innerHTML = '<option value="">请选择系统...</option>';
+                select.innerHTML = `<option value="">${uiText('请选择系统...')}</option>`;
 
                 if (data.systems) {
                     data.systems.forEach(sys => {
@@ -2469,14 +4170,8 @@
 
                 if (data.system_name) {
                     const select = document.getElementById('system_name');
+                    ensureSystemOption(data.system_name);
                     select.value = data.system_name;
-                    if (select.value !== data.system_name) {
-                        const option = document.createElement('option');
-                        option.value = data.system_name;
-                        option.textContent = data.system_name + '（未找到匹配的翻译库）';
-                        select.appendChild(option);
-                        select.value = data.system_name;
-                    }
                     showStatus(`已自动识别系统: ${data.system_name}`, 'success');
                     updateWorkflowLabels();
                 } else {
@@ -2490,14 +4185,15 @@
         async function previewTask() {
             const playlistPath = document.getElementById('playlist_path').value;
             const systemName = document.getElementById('system_name').value;
+            hideApplySummary();
 
             if (!playlistPath || !systemName) {
-                showStatus('请先选择播放列表和系统', 'error');
+                showStatus('请先选择游戏列表和系统', 'error');
                 return;
             }
 
-            showStatus('正在分析播放列表...', 'success');
-            setInlineProgress(8, '分析中', '正在分析播放列表', '当前：生成预览');
+            showStatus('正在分析游戏列表...', 'success');
+            setInlineProgress(8, '分析中', '正在分析游戏列表', '当前：生成预览');
 
             try {
                 const response = await fetch('/api/playlist/preview', {
@@ -2510,12 +4206,14 @@
                 if (data.error) throw new Error(data.error);
 
                 currentChanges = preparePreviewChanges(data.changes || []);
-                selectedChangeIndex = currentChanges.length ? 0 : -1;
+                selectedChangeIndex = -1;
+                setLibraryBrowserVisible(true);
+                setPreviewAreaVisible(true);
                 document.getElementById('preview-empty').style.display = currentChanges.length ? 'none' : 'grid';
                 document.getElementById('preview-container').style.display = currentChanges.length ? 'block' : 'none';
                 updateSummary(currentChanges);
                 renderPreviewTable(currentChanges);
-                if (currentChanges.length) selectPreviewRow(0);
+                clearInspector();
                 showLogPanel(null);
                 setInlineProgress(20, '待校对', `已分析 ${currentChanges.length} 项`, '当前：等待人工确认');
                 showStatus('分析完成，请校对', 'success');
@@ -2563,24 +4261,49 @@
                 tr.appendChild(tdSelect);
 
                 const tdOriginal = document.createElement('td');
-                tdOriginal.className = 'name-cell';
+                tdOriginal.className = 'name-cell library-name-cell';
+                const tableThumb = document.createElement('div');
+                tableThumb.className = 'table-thumb';
+                if (change.thumbnail_source) {
+                    const system = document.getElementById('system_name').value || change.system || '';
+                    const img = document.createElement('img');
+                    img.alt = '';
+                    img.loading = 'lazy';
+                    img.src = buildThumbnailUrl(system, change.thumbnail_source);
+                    img.onerror = () => {
+                        tableThumb.textContent = 'IMG';
+                    };
+                    tableThumb.appendChild(img);
+                } else {
+                    tableThumb.textContent = 'IMG';
+                }
+                const originalText = document.createElement('div');
                 const originalName = document.createElement('div');
                 originalName.className = 'name-primary';
-                originalName.textContent = change.original_label || '未命名';
+                originalName.textContent = change.original_label || uiText('未命名');
+                originalName.title = change.original_label || uiText('未命名');
                 const originalPath = document.createElement('div');
                 originalPath.className = 'name-secondary';
                 originalPath.textContent = change.path || '';
-                tdOriginal.appendChild(originalName);
-                tdOriginal.appendChild(originalPath);
+                originalPath.title = change.path || '';
+                originalText.appendChild(originalName);
+                originalText.appendChild(originalPath);
+                tdOriginal.appendChild(tableThumb);
+                tdOriginal.appendChild(originalText);
+                tdOriginal.title = [change.original_label, change.path].filter(Boolean).join('\n');
                 tr.appendChild(tdOriginal);
+                tr.appendChild(buildStatusCell(info, index));
 
                 const tdNew = document.createElement('td');
+                tdNew.className = 'cn-name-col';
                 const inputNew = document.createElement('input');
                 inputNew.type = 'text';
                 inputNew.className = 'new-label-input';
                 inputNew.value = change.new_label || '';
+                inputNew.title = change.new_label || '';
                 inputNew.oninput = (e) => {
                     currentChanges[index].new_label = e.target.value;
+                    e.target.title = e.target.value;
                     markChangeEdited(index, '手动编辑显示名称');
                     if (selectedChangeIndex === index) updateInspector(currentChanges[index]);
                     updateSummary(currentChanges);
@@ -2590,15 +4313,18 @@
                 tr.appendChild(tdNew);
 
                 const tdThumb = document.createElement('td');
+                tdThumb.className = 'en-name-col';
                 const thumbWrap = document.createElement('div');
                 thumbWrap.className = 'thumb-cell';
                 const inputThumb = document.createElement('input');
                 inputThumb.type = 'text';
                 inputThumb.className = 'thumb-source-input';
                 inputThumb.value = change.thumbnail_source || '';
-                inputThumb.placeholder = '留空则不下载';
+                inputThumb.title = change.thumbnail_source || uiText('留空则不下载');
+                inputThumb.placeholder = uiText('留空则不下载');
                 inputThumb.oninput = (e) => {
                     currentChanges[index].thumbnail_source = e.target.value;
+                    e.target.title = e.target.value || uiText('留空则不下载');
                     markChangeEdited(index, '手动编辑封面源');
                     if (selectedChangeIndex === index) updateInspector(currentChanges[index]);
                     updateSummary(currentChanges);
@@ -2633,20 +4359,14 @@
                 tdThumb.appendChild(thumbWrap);
                 tr.appendChild(tdThumb);
 
-                const tdConfidence = document.createElement('td');
-                const confidence = document.createElement('span');
-                confidence.className = 'badge ' + info.badgeClass;
-                confidence.textContent = `${info.confidence}%`;
-                tdConfidence.appendChild(confidence);
-                tr.appendChild(tdConfidence);
-
-                const tdStatus = document.createElement('td');
-                const status = document.createElement('span');
-                status.className = 'status-text';
-                status.style.color = info.color;
-                status.innerHTML = `<span class="status-dot"></span>${info.label}`;
-                tdStatus.appendChild(status);
-                tr.appendChild(tdStatus);
+                const tdCoverStatus = document.createElement('td');
+                const coverInfo = getCoverStatusInfo(change);
+                const coverStatus = document.createElement('span');
+                coverStatus.className = `cover-status${coverInfo.className ? ` ${coverInfo.className}` : ''}`;
+                coverStatus.textContent = coverInfo.label;
+                coverStatus.title = coverInfo.title;
+                tdCoverStatus.appendChild(coverStatus);
+                tr.appendChild(tdCoverStatus);
 
                 tbody.appendChild(tr);
             });
@@ -2658,13 +4378,67 @@
                 td.style.textAlign = 'center';
                 td.style.color = 'var(--muted)';
                 td.style.padding = '28px';
-                td.textContent = '没有符合当前筛选条件的项目。';
+                td.textContent = uiText('没有符合当前筛选条件的项目。');
                 tr.appendChild(td);
                 tbody.appendChild(tr);
             }
         }
 
-        async function applyChanges() {
+        function getCoverStatusInfo(change) {
+            if (!change.thumbnail_source) {
+                return {
+                    className: 'missing',
+                    label: uiText('缺少封面源'),
+                    title: uiText('缺少封面源')
+                };
+            }
+
+            if (change.thumbnail_exists || change.local_thumbnail_exists || change.cover_exists) {
+                return {
+                    className: 'exists',
+                    label: uiText('已有封面'),
+                    title: currentUILanguage === 'en' ? 'A local cover is already available' : '本地已存在可用封面'
+                };
+            }
+
+            return {
+                className: '',
+                label: uiText('待下载'),
+                title: currentUILanguage === 'en' ? 'Will download when applying selected fixes' : '应用已选修复时下载封面'
+            };
+        }
+
+        function buildStatusCell(info, index) {
+            const tdStatus = document.createElement('td');
+            const statusStack = document.createElement('div');
+            statusStack.className = 'status-stack';
+            const statusMainline = document.createElement('div');
+            statusMainline.className = 'status-mainline';
+            const status = document.createElement('span');
+            status.className = 'status-text';
+            status.style.color = info.color;
+            status.innerHTML = `<span class="status-dot"></span>${info.label}`;
+            statusMainline.appendChild(status);
+            if (info.kind === 'review') {
+                const confirmButton = document.createElement('button');
+                confirmButton.type = 'button';
+                confirmButton.className = 'confirm-row-btn';
+                confirmButton.textContent = uiText('确认');
+                confirmButton.title = '确认当前中文名和封面源';
+                confirmButton.onclick = (event) => confirmChange(index, event);
+                statusMainline.appendChild(confirmButton);
+            }
+            const reason = document.createElement('div');
+            reason.className = 'status-reason';
+            reason.textContent = getMatchReasonLabel(info, currentChanges[index]);
+            reason.title = reason.textContent;
+            statusStack.appendChild(statusMainline);
+            statusStack.appendChild(reason);
+            tdStatus.appendChild(statusStack);
+            return tdStatus;
+        }
+
+        async function applyChanges(confirmed = false) {
             const playlistPath = document.getElementById('playlist_path').value;
             const thumbnailsDir = document.getElementById('thumbnails_dir').value;
 
@@ -2686,6 +4460,12 @@
                 return;
             }
 
+            if (!confirmed) {
+                showApplySummary(buildApplySummary(includedChanges, options));
+                return;
+            }
+
+            hideApplySummary();
             const applyMessage = options.download_thumbnails ? '正在应用更改并下载封面' : '正在应用更改（跳过下载）';
             showStatus(applyMessage + '...', 'success');
             showLogPanel('single');
@@ -2693,7 +4473,6 @@
             document.getElementById('single-log-view').innerHTML = options.download_thumbnails
                 ? '正在后台处理，请稍候...<br>并发下载期间日志会持续更新。<br>'
                 : '正在后台处理，请稍候...<br>当前已选择跳过缩略图下载。<br>';
-            document.getElementById('progress-modal').style.display = 'block';
 
             try {
                 const response = await fetch('/api/playlist/apply', {
@@ -2714,27 +4493,116 @@
                     trackProgress(data.job_id);
                 } else {
                     alert('Error starting job: ' + (data.error || 'Unknown error'));
-                    document.getElementById('progress-modal').style.display = 'none';
                 }
             } catch (error) {
                 alert('Error: ' + error.message);
-                document.getElementById('progress-modal').style.display = 'none';
+                setInlineProgress(0, '失败', '应用更改失败', error.message);
             }
         }
 
+        function buildApplySummary(changes, options) {
+            const summary = {
+                selected: changes.length,
+                autoRepair: 0,
+                review: 0,
+                duplicate: 0,
+                downloads: 0,
+                skipped: Math.max(0, currentChanges.length - changes.length),
+                downloadEnabled: options.download_thumbnails !== false
+            };
+
+            changes.forEach((change) => {
+                const info = getMatchInfo(change);
+                if (info.kind === 'matched') summary.autoRepair += 1;
+                if (info.kind === 'review') summary.review += 1;
+                if (info.kind === 'duplicate') summary.duplicate += 1;
+                if (change.thumbnail_source && summary.downloadEnabled) summary.downloads += 1;
+            });
+
+            return summary;
+        }
+
+        function showApplySummary(summary) {
+            const panel = document.getElementById('apply-summary-panel');
+            document.getElementById('apply-summary-title').textContent = uiText('准备应用修复');
+            document.getElementById('apply-summary-text').textContent = formatApplySummaryText(summary);
+            panel.hidden = false;
+            panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function cancelApplySummary() {
+            hideApplySummary();
+            showStatus(uiText('已取消应用'), 'info');
+        }
+
+        function hideApplySummary() {
+            const panel = document.getElementById('apply-summary-panel');
+            if (panel) panel.hidden = true;
+        }
+
+        function formatApplySummaryText(summary) {
+            if (currentUILanguage === 'en') {
+                const downloadText = summary.downloadEnabled
+                    ? `${summary.downloads} covers will be downloaded`
+                    : 'downloads skipped';
+                return `${summary.selected} selected: ${summary.autoRepair} auto repair, ${summary.review} need review, ${summary.duplicate} duplicates, ${summary.skipped} skipped. ${downloadText}.`;
+            }
+            const downloadText = summary.downloadEnabled
+                ? `将下载 ${summary.downloads} 个封面`
+                : '跳过下载';
+            return `将写回游戏列表：${summary.selected} 项已选，${summary.autoRepair} 可自动修复，${summary.review} 需人工确认，${summary.duplicate} 重复项，${summary.skipped} 项跳过。${downloadText}。`;
+        }
+
         function openSearchModal(rowIndex) {
+            if (rowIndex < 0 || !currentChanges[rowIndex]) {
+                showStatus(currentUILanguage === 'en' ? 'Select a game before searching.' : '请先选择一个游戏再搜索', 'error');
+                return;
+            }
             currentSearchRowIndex = rowIndex;
+            const change = currentChanges[rowIndex] || {};
+            const defaultQuery = getDefaultSearchQuery(change);
+            const input = document.getElementById('search-input');
+            const results = document.getElementById('search-results');
             document.getElementById('search-modal').style.display = 'block';
-            document.getElementById('search-input').value = '';
-            document.getElementById('search-results').innerHTML = '';
-            document.getElementById('search-input').focus();
+            input.value = defaultQuery;
+            results.innerHTML = defaultQuery
+                ? `<p>${escapeHtml(currentUILanguage === 'en' ? 'Searching' : '正在搜索')}：${escapeHtml(defaultQuery)}</p>`
+                : `<p>${escapeHtml(currentUILanguage === 'en' ? 'No English name available for this row.' : '当前行没有可用英文名。')}</p>`;
+            input.focus();
+            input.select();
+            if (defaultQuery) performSearch();
+        }
+
+        function getDefaultSearchQuery(change) {
+            const candidates = [
+                change.thumbnail_source,
+                change.original_db_name,
+                change.original_item_label,
+                change.original_label,
+                getFileStem(change.path)
+            ];
+            const value = candidates.find(candidate => String(candidate || '').trim());
+            return normalizeSearchQuery(value || '');
+        }
+
+        function getFileStem(path) {
+            if (!path) return '';
+            const clean = String(path).split('#')[0].split('?')[0];
+            const file = clean.split(/[\\/]/).pop() || clean;
+            return file.replace(/\.[^.]+$/, '');
+        }
+
+        function normalizeSearchQuery(value) {
+            return String(value || '')
+                .replace(/\s+/g, ' ')
+                .trim();
         }
 
         function closeSearchModal() {
             document.getElementById('search-modal').style.display = 'none';
         }
 
-        function showDownloadDetails() {
+        function showDownloadDetails(keepDrawerState = true) {
             const content = document.getElementById('download-details-content');
             const rows = [
                 ['Boxarts（封面）', 'sum-box-ok', 'sum-box-fail', 'sum-box-skip', 'progress-box-count', 'progress-box-percent'],
@@ -2780,17 +4648,13 @@
 
             content.innerHTML = summaryHtml + detailHtml;
 
-            document.getElementById('download-details-modal').style.display = 'block';
-        }
-
-        function closeDownloadDetails() {
-            document.getElementById('download-details-modal').style.display = 'none';
+            if (keepDrawerState) toggleDetailsDrawer(true);
         }
 
         let currentSearchRowIndex = -1;
 
         async function performSearch() {
-            const query = document.getElementById('search-input').value;
+            const query = normalizeSearchQuery(document.getElementById('search-input').value);
             if (!query) return;
 
             const system = document.getElementById('system_name').value;
@@ -2857,33 +4721,27 @@
 
         function trackProgress(jobId, mode = 'single') {
             const eventSource = new EventSource(`/api/progress?job_id=${jobId}`);
-            const progressBar = document.getElementById('task-progress');
-            const progressMsg = document.getElementById('progress-message');
-            const progressStats = document.getElementById('progress-stats');
             const logView = document.getElementById(mode === 'batch' ? 'batch-log-view' : 'single-log-view');
+            const detailSummary = document.getElementById('detail-summary-main');
 
             eventSource.onmessage = function (event) {
                 const data = JSON.parse(event.data);
 
                 if (data.error) {
-                    progressMsg.textContent = 'Error: ' + data.error;
-                    progressMsg.style.color = 'red';
                     if (logView) logView.innerHTML += `<span style="color:red">错误: ${escapeHtml(data.error)}</span><br>`;
+                    if (detailSummary) detailSummary.textContent = `任务失败：${data.error}`;
+                    setInlineProgress(0, '失败', '任务失败', data.error);
                     eventSource.close();
-                    setTimeout(() => { document.getElementById('progress-modal').style.display = 'none'; }, 3000);
                     return;
                 }
 
                 if (data.total > 0) {
-                    progressBar.max = data.total;
-                    progressBar.value = data.progress;
-                    progressStats.textContent = `${data.progress} / ${data.total}`;
                     const percent = Math.round((data.progress / data.total) * 100);
                     setInlineProgress(percent, data.status === 'completed' ? '完成' : '处理中', `${data.progress} / ${data.total}`, data.message || '正在处理');
                 }
 
                 if (data.message) {
-                    progressMsg.textContent = data.message;
+                    if (detailSummary) detailSummary.textContent = data.message;
                     if (logView) {
                         const timestamp = new Date().toLocaleTimeString();
                         logView.innerHTML += `[${timestamp}] ${escapeHtml(data.message)}<br>`;
@@ -2892,38 +4750,62 @@
                 }
 
                 if (data.status === 'completed') {
-                    progressMsg.textContent = '完成！';
                     if (logView) logView.innerHTML += `<span style="color:#58d68d">所有操作完成！</span><br>`;
                     eventSource.close();
                     setInlineProgress(100, '完成', '所有操作完成', '当前：可检查输出文件');
                     lastDownloadSummary = data.result?.download_summary || null;
                     setDownloadSummary(lastDownloadSummary);
-                    setTimeout(() => {
-                        document.getElementById('progress-modal').style.display = 'none';
-                        alert('应用更改完成！');
-                    }, 1000);
+                    showDownloadDetails(false);
+                    document.getElementById('dock-download-count').textContent = '下载任务完成';
+                    document.getElementById('repair-summary-inline').textContent = uiText('修复完成');
+                    if (detailSummary) detailSummary.textContent = '任务完成，日志和下载明细已更新。';
+                    showStatus('应用更改完成', 'success');
                 } else if (data.status === 'failed') {
-                    progressMsg.textContent = '失败: ' + data.error;
                     if (logView) logView.innerHTML += `<span style="color:red">失败: ${escapeHtml(data.error)}</span><br>`;
                     eventSource.close();
                     setInlineProgress(0, '失败', '任务失败', data.error || '未知错误');
+                    if (detailSummary) detailSummary.textContent = `任务失败：${data.error || '未知错误'}`;
                 }
             };
 
             eventSource.onerror = function () {
                 console.error('EventSource failed for progress tracking.');
                 eventSource.close();
-                progressMsg.textContent = '连接断开，无法追踪进度。';
-                progressMsg.style.color = 'orange';
+                if (detailSummary) detailSummary.textContent = '连接断开，无法追踪进度。';
+                setInlineProgress(0, '断开', '进度连接断开', '当前：请稍后刷新任务状态');
                 if (logView) logView.innerHTML += `<span style="color:orange">连接断开，无法追踪进度。</span><br>`;
             };
         }
 
         function setPreviewFilter(filter, target) {
+            const shouldInvertSelection = filter === 'all'
+                && currentPreviewFilter === 'all'
+                && target?.classList.contains('active')
+                && currentChanges.length > 0;
+
+            if (shouldInvertSelection) {
+                invertVisibleSelection();
+                return;
+            }
+
             currentPreviewFilter = filter;
             document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
             if (target) target.classList.add('active');
             renderPreviewTable(currentChanges);
+        }
+
+        function invertVisibleSelection() {
+            const query = (document.getElementById('preview-search').value || '').trim().toLowerCase();
+            let invertedCount = 0;
+            hideApplySummary();
+            currentChanges.forEach((change) => {
+                if (!matchesFilter(change, query)) return;
+                change.enabled = change.enabled === false;
+                invertedCount += 1;
+            });
+            updateSummary(currentChanges);
+            renderPreviewTable(currentChanges);
+            showStatus(`${uiText('已反选')} ${invertedCount} ${uiText('项')}`, 'info');
         }
 
         function matchesFilter(change, query) {
@@ -2939,11 +4821,22 @@
             if (currentPreviewFilter === 'review') return info.kind === 'review';
             if (currentPreviewFilter === 'duplicate') return info.kind === 'duplicate';
             if (currentPreviewFilter === 'matched') return info.kind === 'matched';
+            if (currentPreviewFilter === 'missing-cover') return !change.thumbnail_source;
+            if (currentPreviewFilter === 'edited') return isEditedChange(change);
             return true;
+        }
+
+        function isEditedChange(change) {
+            return Boolean(
+                change.confirmed ||
+                change.match_source === 'manual' ||
+                change.match_source === 'manual-confirmed'
+            );
         }
 
         function toggleChangeEnabled(index, control) {
             if (!currentChanges[index]) return;
+            hideApplySummary();
             const nextEnabled = currentChanges[index].enabled === false;
             currentChanges[index].enabled = nextEnabled;
             if (control) {
@@ -2960,6 +4853,7 @@
         function markChangeEdited(index, reason) {
             const change = currentChanges[index];
             if (!change) return;
+            hideApplySummary();
             const label = change.new_label || '';
             const thumb = change.thumbnail_source || '';
             const labelHasChinese = /[\u4e00-\u9fa5]/.test(label);
@@ -2971,12 +4865,73 @@
             change.needs_review = !ready;
         }
 
+        function confirmSelectedChange() {
+            if (selectedChangeIndex < 0) {
+                showStatus('请先选择需要确认的游戏', 'error');
+                return;
+            }
+            confirmChange(selectedChangeIndex);
+        }
+
+        function confirmChange(index, event) {
+            if (event) event.stopPropagation();
+            const change = currentChanges[index];
+            if (!change) return;
+
+            const label = change.new_label || '';
+            const thumb = change.thumbnail_source || '';
+            if (!/[\u4e00-\u9fa5]/.test(label)) {
+                selectPreviewRow(index);
+                showStatus('请先补齐中文显示名，再确认', 'error');
+                return;
+            }
+            if (!thumb && document.getElementById('option-download-thumbnails').checked) {
+                selectPreviewRow(index);
+                showStatus('请先补齐官方英文名/封面源，再确认', 'error');
+                return;
+            }
+
+            change.match_status = 'matched';
+            change.match_score = Math.max(Number(change.match_score) || 0, 98);
+            change.match_source = 'manual-confirmed';
+            change.match_reason = '已人工确认：中文名和封面源可用';
+            change.needs_review = false;
+            change.confirmed = true;
+            hideApplySummary();
+            renderPreviewTable(currentChanges);
+            updateSummary(currentChanges);
+            selectPreviewRow(index);
+            showStatus('已确认当前游戏，可应用修复', 'success');
+        }
+
+        function getMatchReasonLabel(info, change) {
+            if (!change) return info.reason || '';
+            if (change.confirmed) return uiText('已人工确认');
+            if (info.kind === 'duplicate') return uiText('发现重复条目');
+
+            const original = change.original_label || '';
+            const label = change.new_label || '';
+            const thumb = change.thumbnail_source || '';
+            const hasChinese = /[\u4e00-\u9fa5]/.test(label);
+
+            if (info.kind === 'review') {
+                if (!hasChinese) return uiText('缺少中文名');
+                if (!thumb) return uiText('缺少封面源');
+                if (original && label && original === label) return uiText('名称未变化');
+                if (info.source === 'backend') return uiText('后端建议需复核');
+                return uiText('低置信匹配');
+            }
+
+            if (info.kind === 'matched') return uiText('名称和封面可写入');
+            return info.reason || '';
+        }
+
         function getMatchInfo(change) {
             if (change.match_status) {
                 const statusMap = {
-                    matched: { label: '已匹配', badgeClass: 'success', rowClass: '', color: 'var(--green)', fallbackScore: 96 },
-                    review: { label: '需确认', badgeClass: 'warning', rowClass: 'row-warning', color: 'var(--amber)', fallbackScore: 72 },
-                    duplicate: { label: '重复项', badgeClass: 'danger', rowClass: 'row-danger', color: 'var(--red)', fallbackScore: 99 }
+                    matched: { label: uiText('可自动修复'), badgeClass: 'success', rowClass: '', color: 'var(--green)', fallbackScore: 96 },
+                    review: { label: uiText('需人工确认'), badgeClass: 'warning', rowClass: 'row-warning', color: 'var(--amber)', fallbackScore: 72 },
+                    duplicate: { label: uiText('重复需处理'), badgeClass: 'danger', rowClass: 'row-danger', color: 'var(--red)', fallbackScore: 99 }
                 };
                 const status = statusMap[change.match_status] || statusMap.review;
                 const score = Number(change.match_score);
@@ -3001,12 +4956,12 @@
             const missingThumb = !thumb;
 
             if (duplicate) {
-                return { kind: 'duplicate', confidence: 99, label: '重复项', badgeClass: 'danger', rowClass: 'row-danger', color: 'var(--red)', reason: '检测到重复项标记', source: 'frontend-fallback' };
+                return { kind: 'duplicate', confidence: 99, label: uiText('重复需处理'), badgeClass: 'danger', rowClass: 'row-danger', color: 'var(--red)', reason: '检测到重复条目标记', source: 'frontend-fallback' };
             }
             if (missingThumb || unchanged || !hasChinese) {
-                return { kind: 'review', confidence: hasChinese ? 72 : 64, label: '需确认', badgeClass: 'warning', rowClass: 'row-warning', color: 'var(--amber)', reason: '前端兼容判断：缺少中文名或封面源', source: 'frontend-fallback' };
+                return { kind: 'review', confidence: hasChinese ? 72 : 64, label: uiText('需人工确认'), badgeClass: 'warning', rowClass: 'row-warning', color: 'var(--amber)', reason: '前端兼容判断：缺少中文名或封面源', source: 'frontend-fallback' };
             }
-            return { kind: 'matched', confidence: thumb !== original ? 96 : 90, label: '已匹配', badgeClass: 'success', rowClass: '', color: 'var(--green)', reason: '前端兼容判断：中文名和封面源均存在', source: 'frontend-fallback' };
+            return { kind: 'matched', confidence: thumb !== original ? 96 : 90, label: uiText('可自动修复'), badgeClass: 'success', rowClass: '', color: 'var(--green)', reason: '前端兼容判断：中文名和封面源均存在', source: 'frontend-fallback' };
         }
 
         function updateSummary(changes) {
@@ -3014,9 +4969,11 @@
             let review = 0;
             let duplicate = 0;
             let enabled = 0;
+            let downloadable = 0;
             changes.forEach(change => {
                 const info = getMatchInfo(change);
                 if (change.enabled !== false) enabled += 1;
+                if (change.enabled !== false && change.thumbnail_source) downloadable += 1;
                 if (info.kind === 'matched') matched += 1;
                 if (info.kind === 'review') review += 1;
                 if (info.kind === 'duplicate') duplicate += 1;
@@ -3026,8 +4983,49 @@
             document.getElementById('summary-matched').textContent = matched;
             document.getElementById('summary-review').textContent = review;
             document.getElementById('summary-duplicate').textContent = duplicate;
-            document.getElementById('step-preview').textContent = `${changes.length || 0} 项，${enabled} 项已勾选，${review} 项需确认`;
+            document.getElementById('step-preview').textContent = currentUILanguage === 'en'
+                ? `${changes.length || 0} items, ${enabled} selected, ${review} need review`
+                : `${changes.length || 0} 项，${enabled} 项已勾选，${review} 项需人工确认`;
+            document.getElementById('dock-plan-count').textContent = formatPendingReviewCount(enabled);
+            document.getElementById('dock-download-count').textContent = formatPendingDownloadCount(downloadable);
+            document.getElementById('repair-summary-inline').textContent = getRepairSummaryText(enabled, matched, review, changes.length);
+            updateReviewProgress(changes.length, review, enabled);
             setProgressCardTotals(changes.length || 0, 0);
+        }
+
+        function getRepairSummaryText(enabled, matched, review, total) {
+            if (!total) return uiText('已选 0 项 · 等待游戏库');
+            return currentUILanguage === 'en'
+                ? `Selected ${enabled} · ${matched} auto repair · ${review} need review`
+                : `已选 ${enabled} 项 · ${matched} 可自动修复 · ${review} 需人工确认`;
+        }
+
+        function updateReviewProgress(total, review, enabled) {
+            const progressLabel = document.getElementById('inline-progress-label');
+            if (!progressLabel) return;
+            const busyStates = ['应用中', '处理中', '完成', '失败', '断开', '启动中'];
+            if (busyStates.includes(progressLabel.textContent.trim())) return;
+
+            if (!total) {
+                setInlineProgress(0, uiText('待处理'), uiText('等待预览校对'), uiText('当前：未开始'));
+                return;
+            }
+
+            if (review > 0) {
+                setInlineProgress(
+                    20,
+                    uiText('待确认'),
+                    currentUILanguage === 'en' ? `Analyzed ${total}` : `已分析 ${total} 项`,
+                    currentUILanguage === 'en' ? `Current: ${review} need review` : `当前：${review} 项需人工确认`
+                );
+            } else {
+                setInlineProgress(
+                    35,
+                    uiText('待应用'),
+                    currentUILanguage === 'en' ? `Analyzed ${total}` : `已分析 ${total} 项`,
+                    currentUILanguage === 'en' ? `Current: ${enabled} ready to apply` : `当前：${enabled} 项可应用`
+                );
+            }
         }
 
         function selectPreviewRow(index) {
@@ -3035,6 +5033,7 @@
             document.querySelectorAll('#preview-table-body tr').forEach(row => {
                 row.classList.toggle('selected', Number(row.dataset.index) === index);
             });
+            document.querySelector('.app-shell')?.classList.remove('inspector-hidden');
             updateInspector(currentChanges[index]);
         }
 
@@ -3059,6 +5058,14 @@
             document.getElementById('inspector-label').value = change.new_label || '';
             document.getElementById('inspector-thumb').value = change.thumbnail_source || '';
             document.getElementById('inspector-confidence').textContent = `${info.confidence}%（${info.label}） · ${info.reason}`;
+            const confirmButton = document.getElementById('confirm-selected-btn');
+            if (confirmButton) {
+                const needsConfirmation = info.kind === 'review';
+                confirmButton.disabled = !needsConfirmation;
+                confirmButton.textContent = needsConfirmation ? uiText('确认当前项') : uiText('已确认');
+            }
+            const searchButton = document.getElementById('search-selected-thumb-btn');
+            if (searchButton) searchButton.disabled = false;
 
             cover.classList.remove('has-image');
             coverImage.removeAttribute('src');
@@ -3074,6 +5081,7 @@
             selectedChangeIndex = -1;
             const cover = document.getElementById('cover-preview');
             const coverImage = document.getElementById('cover-image');
+            document.querySelector('.app-shell')?.classList.add('inspector-hidden');
             document.querySelectorAll('#preview-table-body tr').forEach(row => row.classList.remove('selected'));
             cover.classList.remove('has-image');
             coverImage.removeAttribute('src');
@@ -3088,11 +5096,23 @@
             document.getElementById('inspector-label').value = '';
             document.getElementById('inspector-thumb').value = '';
             document.getElementById('inspector-confidence').textContent = '--';
+            const confirmButton = document.getElementById('confirm-selected-btn');
+            if (confirmButton) {
+                confirmButton.disabled = true;
+                confirmButton.textContent = uiText('确认当前项');
+            }
+            const searchButton = document.getElementById('search-selected-thumb-btn');
+            if (searchButton) searchButton.disabled = true;
+        }
+
+        function closeInspector() {
+            clearInspector();
         }
 
         function updateSelectedFromInspector(key, value) {
             if (selectedChangeIndex < 0 || !currentChanges[selectedChangeIndex]) return;
             currentChanges[selectedChangeIndex][key] = value;
+            markChangeEdited(selectedChangeIndex, key === 'new_label' ? '手动编辑显示名称' : '手动编辑封面源');
             renderPreviewTable(currentChanges);
             selectPreviewRow(selectedChangeIndex);
             updateSummary(currentChanges);
@@ -3110,6 +5130,11 @@
 
             if (!dir) {
                 showStatus('请先设置缩略图保存路径', 'error');
+                return;
+            }
+
+            if (dir.startsWith('adb://')) {
+                showStatus('这是 ADB 实机目录，不能用本机文件管理器直接打开', 'info');
                 return;
             }
 
@@ -3186,9 +5211,9 @@
                 const completed = success + skipped;
                 const percent = total ? Math.round((completed / total) * 100) : 0;
 
-                document.getElementById(`sum-${key}-ok`).textContent = `${success} 成功`;
-                document.getElementById(`sum-${key}-fail`).textContent = `${failed} 失败`;
-                document.getElementById(`sum-${key}-skip`).textContent = `${skipped} 跳过`;
+                document.getElementById(`sum-${key}-ok`).textContent = formatDownloadOutcome(success, '成功');
+                document.getElementById(`sum-${key}-fail`).textContent = formatDownloadOutcome(failed, '失败');
+                document.getElementById(`sum-${key}-skip`).textContent = formatDownloadOutcome(skipped, '跳过');
                 document.getElementById(`progress-${key}-count`).textContent = `${completed} / ${total}`;
                 document.getElementById(`progress-${key}-percent`).textContent = `(${percent}%)`;
 
@@ -3197,16 +5222,24 @@
                 totalSkipped += skipped;
             });
 
-            document.getElementById('sum-total-ok').textContent = `${totalSuccess} 成功`;
-            document.getElementById('sum-total-fail').textContent = `${totalFailed} 失败`;
-            document.getElementById('sum-total-skip').textContent = `${totalSkipped} 跳过`;
+            document.getElementById('sum-total-ok').textContent = formatDownloadOutcome(totalSuccess, '成功');
+            document.getElementById('sum-total-fail').textContent = formatDownloadOutcome(totalFailed, '失败');
+            document.getElementById('sum-total-skip').textContent = formatDownloadOutcome(totalSkipped, '跳过');
+        }
+
+        function formatDownloadOutcome(count, label) {
+            return `${count} ${uiText(label)}`;
         }
 
         function updateWorkflowLabels() {
+            const device = document.getElementById('retroarch_root').value;
             const playlist = document.getElementById('playlist_path').value;
             const system = document.getElementById('system_name').value;
-            document.getElementById('step-playlist').textContent = playlist ? shortPath(playlist) : '等待选择 .lpl 文件';
-            document.getElementById('step-system').textContent = system || '自动读取 db_name';
+            document.getElementById('step-device').textContent = device ? shortPath(device) : uiText('等待扫描 RetroArch 目录');
+            document.getElementById('step-playlist').textContent = playlist ? shortPath(playlist) : uiText('等待选择 .lpl 文件');
+            if (!currentChanges.length) {
+                document.getElementById('step-preview').textContent = system ? `${uiText('系统：')}${system}` : uiText('等待生成修复计划');
+            }
         }
 
         function shortPath(path) {
@@ -3217,7 +5250,7 @@
         }
 
         function formatNumber(value) {
-            return new Intl.NumberFormat('zh-CN').format(Number(value) || 0);
+            return new Intl.NumberFormat(currentUILanguage === 'en' ? 'en-US' : 'zh-CN').format(Number(value) || 0);
         }
 
         function shortThumbnailType(typeName) {
@@ -3246,13 +5279,13 @@
         }
 
         document.addEventListener('input', (event) => {
-            if (['playlist_path', 'system_name', 'thumbnails_dir', 'rom_name_cn_path'].includes(event.target.id)) {
+            if (['retroarch_root', 'playlist_path', 'system_name', 'thumbnails_dir', 'rom_name_cn_path'].includes(event.target.id)) {
                 updateWorkflowLabels();
             }
         });
 
         document.addEventListener('change', (event) => {
-            if (['playlist_path', 'system_name', 'thumbnails_dir', 'rom_name_cn_path'].includes(event.target.id)) {
+            if (['retroarch_root', 'playlist_path', 'system_name', 'thumbnails_dir', 'rom_name_cn_path'].includes(event.target.id)) {
                 updateWorkflowLabels();
             }
         });
@@ -3262,8 +5295,8 @@
                 closeModal();
                 closeSearchModal();
                 closeProjectDocs();
-                closeDownloadDetails();
-                document.getElementById('progress-modal').style.display = 'none';
+                toggleDetailsDrawer(false);
+                closeInspector();
             }
         });
     </script>
