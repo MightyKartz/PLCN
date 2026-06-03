@@ -65,8 +65,17 @@ class Translator:
         chinese, english = self.db.search_by_normalized_alias(norm_text, system=self.system_name)
         if chinese and english:
             return chinese, english
+
+        # 4. Cross-system exact normalized alias.
+        # Arcade DAT names often differ only by region from console ports in rom-name-cn.
+        # Prefer an exact normalized title from any system before fuzzy matching so variants
+        # like "Strikers 1945 II" do not inherit "Strikers 1945 Plus".
+        if self.system_name:
+            chinese, english = self.db.search_by_normalized_alias(norm_text)
+            if chinese and english:
+                return chinese, english
             
-        # 3. Alias / Acronym handling (Hardcoded fallbacks)
+        # 5. Alias / Acronym handling (Hardcoded fallbacks)
         # SRWF -> Super Robot Taisen F
         acronyms = {
             "srwf": "Super Robot Taisen F (Japan) (Rev A) (10M, 11M, 12M, 13M)",
@@ -89,7 +98,7 @@ class Translator:
             if norm_text in fallback_chinese:
                  return fallback_chinese[norm_text], standard_english
 
-        # 4. Try fuzzy matching
+        # 6. Try fuzzy matching
         # If text contains non-ASCII characters, try Chinese fuzzy search
         if any(ord(c) >= 128 for c in text):
              result = self.db.fuzzy_search_by_chinese(text, system=self.system_name)
@@ -102,7 +111,7 @@ class Translator:
              if fuzzy_cn:
                  return fuzzy_cn, text
 
-        # 5. Try LibretroDB for standard English name
+        # 7. Try LibretroDB for standard English name
         # This helps games without Chinese translations get standardized names
         if self.libretro_db:
             standard_name = self.libretro_db.get_standard_name(text)
@@ -117,7 +126,7 @@ class Translator:
                 # No Chinese translation available, use standard English as both label and thumbnail source
                 return standard_name, standard_name
 
-        # 6. For Arcade/FBNeo games, clean the ROM name for better presentation
+        # 8. For Arcade/FBNeo games, clean the ROM name for better presentation
         # This handles cases where LibretroDB has no data
         if self.system_name and ('Arcade' in self.system_name or 'FBNeo' in self.system_name):
             cleaned = self._clean_arcade_rom_name(text)
@@ -125,7 +134,7 @@ class Translator:
                 print(f"Cleaned arcade ROM name: '{text}' -> '{cleaned}'")
                 return cleaned, cleaned
 
-        # 7. Fallback to LLM (if configured)
+        # 9. Fallback to LLM (if configured)
         if self.llm_client:
             llm_result = self.translate_with_llm(text)
             if llm_result:

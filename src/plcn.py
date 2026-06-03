@@ -3,12 +3,15 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import sys
 import glob
 import unicodedata
+import urllib.parse
 from playlist_manager import PlaylistManager
 from translator import Translator
 from thumbnail_downloader import ThumbnailDownloader
+from rom_fingerprint import build_rom_match_candidates
 import webbrowser
 import server
 import subprocess
@@ -147,6 +150,29 @@ def has_chinese(text):
 def normalize_value(value):
     return unicodedata.normalize('NFC', value or '')
 
+def add_unique_candidate(candidates, value, source):
+    value = (value or '').strip()
+    if not value:
+        return
+    key = value.casefold()
+    if key in {candidate.casefold() for candidate, _ in candidates}:
+        return
+    candidates.append((value, source))
+
+def get_rom_path_candidates(path):
+    candidates = []
+    if not path:
+        return candidates
+    basename = os.path.basename(path)
+    if '#' in basename:
+        basename = basename.split('#')[0]
+    if not basename:
+        return candidates
+    stem = os.path.splitext(basename)[0]
+    add_unique_candidate(candidates, stem, "rom")
+    add_unique_candidate(candidates, basename, "rom")
+    return candidates
+
 def build_proposal_id(system_name, index, path, original_item_label, original_db_name):
     raw = "\n".join([
         normalize_value(system_name),
@@ -157,11 +183,116 @@ def build_proposal_id(system_name, index, path, original_item_label, original_db
     ])
     return hashlib.sha1(raw.encode('utf-8')).hexdigest()[:16]
 
-def classify_match(display_label, new_label, thumbnail_source):
+def sanitize_thumbnail_filename(name):
+    for char in ['&', '*', '/', ':', '<', '>', '?', '\\', '|']:
+        name = (name or '').replace(char, '_')
+    return name
+
+def local_thumbnail_path(thumbnails_dir, system_name, label, type_name="Named_Boxarts"):
+    if not thumbnails_dir or not label:
+        return None
+    filename = sanitize_thumbnail_filename(label) + ".png"
+    return os.path.join(thumbnails_dir, system_name, type_name, filename)
+
+def boxart_dir_path(thumbnails_dir, system_name, type_name="Named_Boxarts"):
+    if not thumbnails_dir or not system_name:
+        return None
+    return os.path.join(thumbnails_dir, system_name, type_name)
+
+def adb_thumbnail_exists(thumbnails_dir, system_name, label, type_name="Named_Boxarts"):
+    if not thumbnails_dir or not label:
+        return False, None
+    try:
+        from retroarch_scanner import is_adb_uri, parse_adb_uri, _adb_shell
+        if not is_adb_uri(thumbnails_dir):
+            return False, None
+        serial, remote_dir = parse_adb_uri(thumbnails_dir)
+        if not remote_dir:
+            return False, None
+        filename = sanitize_thumbnail_filename(label) + ".png"
+        remote_path = "/".join(part.strip("/") for part in [remote_dir, system_name, type_name, filename] if part)
+        remote_path = "/" + remote_path if not remote_path.startswith("/") else remote_path
+        script = f"test -f {shlex.quote(remote_path)} && echo 1 || echo 0"
+        exists = (_adb_shell(serial, script, timeout=8) or "").strip().splitlines()
+        return (exists[0] == "1" if exists else False), remote_path
+    except Exception:
+        return False, None
+
+def build_existing_boxart_lookup(thumbnails_dir, system_name, type_name="Named_Boxarts"):
+    if not thumbnails_dir or not system_name:
+        return {"type": "none", "base_path": None, "filenames": set()}
+
+    try:
+        from retroarch_scanner import is_adb_uri, parse_adb_uri, _adb_shell
+        if is_adb_uri(thumbnails_dir):
+            serial, remote_dir = parse_adb_uri(thumbnails_dir)
+            if not remote_dir:
+                return {"type": "adb", "base_path": None, "filenames": set()}
+            remote_path = "/".join(part.strip("/") for part in [remote_dir, system_name, type_name] if part)
+            remote_path = "/" + remote_path if not remote_path.startswith("/") else remote_path
+            output = _adb_shell(serial, f"ls -1 {shlex.quote(remote_path)} 2>/dev/null", timeout=15)
+            filenames = {os.path.basename(line.strip()) for line in (output or "").splitlines() if line.strip()}
+            return {"type": "adb", "serial": serial, "base_path": remote_path, "filenames": filenames}
+    except Exception:
+        return {"type": "adb", "serial": None, "base_path": None, "filenames": set()}
+
+    local_dir = boxart_dir_path(thumbnails_dir, system_name, type_name)
+    if not local_dir or not os.path.isdir(local_dir):
+        return {"type": "local", "base_path": local_dir, "filenames": set()}
+    try:
+        filenames = {name for name in os.listdir(local_dir) if os.path.isfile(os.path.join(local_dir, name))}
+    except OSError:
+        filenames = set()
+    return {"type": "local", "base_path": local_dir, "filenames": filenames}
+
+def find_existing_boxart(thumbnails_dir, system_name, *labels, lookup=None):
+    if not thumbnails_dir:
+        return False, None
+    if lookup is not None:
+        filenames = lookup.get("filenames") or set()
+        base_path = lookup.get("base_path")
+        for label in labels:
+            if not label:
+                continue
+            filename = sanitize_thumbnail_filename(label) + ".png"
+            if filename in filenames:
+                if lookup.get("type") == "adb":
+                    remote_path = f"{base_path.rstrip('/')}/{filename}" if base_path else filename
+                    serial = lookup.get("serial")
+                    if serial and remote_path.startswith("/"):
+                        return True, f"adb://{serial}{remote_path}"
+                    return True, remote_path
+                return True, os.path.join(base_path, filename) if base_path else filename
+        return False, None
+
+    try:
+        from retroarch_scanner import is_adb_uri, parse_adb_uri
+        if is_adb_uri(thumbnails_dir):
+            serial, _remote_dir = parse_adb_uri(thumbnails_dir)
+            for label in labels:
+                exists, path = adb_thumbnail_exists(thumbnails_dir, system_name, label)
+                if exists:
+                    return True, f"adb://{serial}{path}" if path and path.startswith("/") else path
+            return False, None
+    except Exception:
+        pass
+
+    for label in labels:
+        path = local_thumbnail_path(thumbnails_dir, system_name, label)
+        if path and os.path.exists(path):
+            return True, path
+    return False, None
+
+def cover_preview_url(cover_path):
+    if not cover_path:
+        return None
+    return "/api/thumbnail/preview?path=" + urllib.parse.quote(str(cover_path), safe="")
+
+def classify_match(display_label, new_label, thumbnail_source, current_label=None, cover_exists=False):
     duplicate = bool(re.search(r'\(\d+\)$', (display_label or '').strip()) or re.search(r'\(\d+\)$', (new_label or '').strip()))
-    unchanged = bool(display_label and new_label and display_label == new_label)
     missing_thumb = not thumbnail_source
     label_has_chinese = has_chinese(new_label)
+    current_matches_new = bool(current_label and new_label and normalize_value(current_label) == normalize_value(new_label))
 
     if duplicate:
         return {
@@ -170,12 +301,33 @@ def classify_match(display_label, new_label, thumbnail_source):
             "needs_review": True,
             "default_reason": "检测到重复项标记，需要确认是否保留或重命名",
         }
-    if missing_thumb or unchanged or not label_has_chinese:
+    if current_matches_new and thumbnail_source and cover_exists and label_has_chinese:
+        return {
+            "match_status": "ready",
+            "match_score": 100,
+            "needs_review": False,
+            "default_reason": "中文名、封面源和本地封面已就绪，无需修复",
+        }
+    if current_matches_new and thumbnail_source and label_has_chinese:
+        return {
+            "match_status": "download",
+            "match_score": 94,
+            "needs_review": False,
+            "default_reason": "中文名和封面源已就绪，仅需下载封面",
+        }
+    if missing_thumb or not label_has_chinese:
         return {
             "match_status": "review",
             "match_score": 72 if label_has_chinese else 64,
             "needs_review": True,
             "default_reason": "缺少中文名或封面标准名，需要人工确认",
+        }
+    if cover_exists:
+        return {
+            "match_status": "rename",
+            "match_score": 96,
+            "needs_review": False,
+            "default_reason": "封面已存在，仅需写入中文名",
         }
     return {
         "match_status": "matched",
@@ -184,11 +336,11 @@ def classify_match(display_label, new_label, thumbnail_source):
         "default_reason": "已匹配中文名和缩略图标准名",
     }
 
-def build_change_proposal(index, item, display_label, new_label, thumbnail_source, system_name, match_source="heuristic", match_reason=None):
+def build_change_proposal(index, item, display_label, new_label, thumbnail_source, system_name, match_source="heuristic", match_reason=None, match_diagnostics=None, cover_exists=False, cover_path=None):
     original_item_label = item.get('label') or ''
     original_db_name = item.get('db_name') or ''
     path = item.get('path') or ''
-    match_info = classify_match(display_label, new_label, thumbnail_source)
+    match_info = classify_match(display_label, new_label, thumbnail_source, current_label=original_item_label, cover_exists=cover_exists)
 
     return {
         'proposal_id': build_proposal_id(system_name, index, path, original_item_label, original_db_name),
@@ -204,7 +356,13 @@ def build_change_proposal(index, item, display_label, new_label, thumbnail_sourc
         'match_status': match_info["match_status"],
         'match_source': match_source,
         'match_reason': match_reason or match_info["default_reason"],
+        'match_diagnostics': match_diagnostics or {},
         'needs_review': match_info["needs_review"],
+        'thumbnail_exists': cover_exists,
+        'local_thumbnail_exists': cover_exists,
+        'cover_exists': cover_exists,
+        'cover_path': cover_path,
+        'cover_preview_url': cover_preview_url(cover_path),
     }
 
 def proposal_matches_item(change, item):
@@ -220,7 +378,7 @@ def proposal_matches_item(change, item):
         return False
     return True
 
-def analyze_playlist(playlist_path, system_name, rom_name_cn_path):
+def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_dir=None):
     """
     Analyzes the playlist and returns a list of proposed changes.
     Returns:
@@ -274,8 +432,16 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path):
 
     items = playlist_manager.get_items()
     proposed_changes = []
+    boxart_lookup = build_existing_boxart_lookup(thumbnails_dir, system_name)
 
-    def add_proposal(index, item, display_label, new_label, thumbnail_source, match_source, match_reason):
+    def add_proposal(index, item, display_label, new_label, thumbnail_source, match_source, match_reason, match_diagnostics=None):
+        cover_exists, cover_path = find_existing_boxart(
+            thumbnails_dir,
+            system_name,
+            new_label,
+            item.get('label') or '',
+            lookup=boxart_lookup,
+        )
         proposed_changes.append(build_change_proposal(
             index=index,
             item=item,
@@ -285,7 +451,109 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path):
             system_name=system_name,
             match_source=match_source,
             match_reason=match_reason,
+            match_diagnostics=match_diagnostics,
+            cover_exists=cover_exists,
+            cover_path=cover_path,
         ))
+
+    def build_rom_match_diagnostics(rom_matches, dat_result, matched_candidate=None, matched_source=None):
+        return {
+            "candidate_count": len(rom_matches.candidates),
+            "candidate_sources": sorted({source for _, source in rom_matches.candidates}),
+            "fingerprint_status": rom_matches.fingerprint_status,
+            "fingerprint_error": rom_matches.fingerprint_error,
+            "dat_result": dat_result,
+            "matched_candidate": matched_candidate,
+            "matched_candidate_source": matched_source,
+        }
+
+    def fbneo_fallback_reason(rom_matches):
+        if rom_matches.fingerprint_status == "readable":
+            return "本地 DAT 未命中：已读取 ROM 指纹，但没有匹配到标准名，需要确认封面源"
+        if rom_matches.fingerprint_status == "unreadable":
+            return "本地 DAT 未命中：ROM 文件读取失败，仅使用路径和游戏列表名称生成建议"
+        return "本地 DAT 未命中：ROM 文件不可直接读取，仅使用路径和游戏列表名称生成建议"
+
+    def translate_arcade_label_candidate(candidate):
+        if not candidate:
+            return None, None
+
+        chinese = translator.db.search_by_english(candidate, system=translator.system_name)
+        if chinese:
+            return chinese, candidate
+
+        normalized = translator.normalize_name(candidate)
+        chinese, english = translator.db.search_by_normalized_alias(normalized, system=translator.system_name)
+        if chinese and english:
+            return chinese, english
+
+        if translator.libretro_db:
+            standard_name = translator.libretro_db.get_standard_name(candidate)
+            if standard_name:
+                chinese = translator.db.search_by_english(standard_name, system=translator.system_name)
+                return chinese or standard_name, standard_name
+
+        return None, None
+
+    def is_chinese_text(value):
+        return any('\u4e00' <= char <= '\u9fff' for char in (value or ''))
+
+    def filename_stem_from_path(value):
+        if not value:
+            return None
+        basename = os.path.basename(value)
+        if '#' in basename:
+            basename = basename.split('#')[0]
+        return os.path.splitext(basename)[0] or None
+
+    def resolve_exact_english_source(candidate):
+        if not candidate or is_chinese_text(candidate):
+            return None
+
+        candidate = os.path.splitext(str(candidate).strip())[0] if "." in str(candidate) else str(candidate).strip()
+        if not candidate:
+            return None
+
+        if translator.db.search_by_english(candidate, system=translator.system_name):
+            return candidate
+
+        normalized = translator.normalize_name(candidate)
+        chinese, english = translator.db.search_by_normalized_alias(normalized, system=translator.system_name)
+        if chinese and english:
+            return english
+
+        if translator.system_name:
+            chinese, english = translator.db.search_by_normalized_alias(normalized)
+            if chinese and english:
+                return english
+
+        if translator.libretro_db:
+            standard_name = translator.libretro_db.get_standard_name(candidate)
+            if standard_name:
+                return standard_name
+
+        return None
+
+    def resolve_thumbnail_source_for_chinese_label(chinese_label, path, display_label, original_label):
+        exact_chinese_source = translator.db.search_by_chinese(chinese_label, system=translator.system_name)
+        if exact_chinese_source:
+            return exact_chinese_source
+
+        english_candidates = []
+        add_unique_candidate(english_candidates, filename_stem_from_path(path), "filename")
+        add_unique_candidate(english_candidates, display_label, "display")
+        add_unique_candidate(english_candidates, original_label, "playlist")
+
+        for candidate, _ in english_candidates:
+            source = resolve_exact_english_source(candidate)
+            if source:
+                return source
+
+        for candidate, _ in english_candidates:
+            if candidate and not is_chinese_text(candidate):
+                return candidate
+
+        return chinese_label
 
     for i, item in enumerate(items):
         original_label = item.get('label')
@@ -310,104 +578,101 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path):
             # Clean the arcade name (remove region codes and dates)
             cleaned_name = clean_arcade_name(original_label)
             print(f"  [{i}] Arcade game detected: '{original_label}' -> '{cleaned_name}'")
-            
-            # Try to translate the cleaned name
-            translated_cn, english_name = translator.translate(cleaned_name)
-            
-            # Check if we found a match
-            if translated_cn and translated_cn != cleaned_name:
-                # Found Chinese translation
+
+            rom_matches = build_rom_match_candidates(path, item.get('crc32'))
+            matched_candidate = None
+            matched_source = None
+            standard_english_name = None
+
+            if translator.libretro_db:
+                for candidate, candidate_source in rom_matches.candidates:
+                    standard_name = translator.libretro_db.get_standard_name(candidate)
+                    if standard_name:
+                        matched_candidate = candidate
+                        matched_source = candidate_source
+                        standard_english_name = standard_name
+                        break
+
+            if standard_english_name:
+                translated_cn, _ = translator.translate(standard_english_name)
+                new_label = translated_cn if has_chinese(translated_cn) else standard_english_name
+                thumbnail_source = standard_english_name
+                print(f"  [{i}] Libretro DAT ROM match: '{matched_candidate}' -> '{standard_english_name}'")
+                add_proposal(
+                    i,
+                    item,
+                    display_label,
+                    new_label,
+                    thumbnail_source,
+                    "libretro-dat-rom",
+                    "ROM 文件名或校验值通过 Libretro DAT 标准化"
+                    if has_chinese(new_label)
+                    else "ROM 文件名或校验值已匹配 DAT 标准名，但缺少中文名，需要人工确认",
+                    build_rom_match_diagnostics(rom_matches, "matched", matched_candidate, matched_source),
+                )
+                continue
+
+            label_candidates = []
+            add_unique_candidate(label_candidates, original_label, "label")
+            add_unique_candidate(label_candidates, display_label, "label")
+            add_unique_candidate(label_candidates, cleaned_name, "label")
+
+            matched_candidate = None
+            translated_cn = None
+            english_name = None
+
+            for candidate, _ in label_candidates:
+                candidate_cn, candidate_en = translate_arcade_label_candidate(candidate)
+                is_chinese_match = has_chinese(candidate_cn) and candidate_cn != candidate
+                is_standard_name_match = candidate_en and candidate_en != candidate and candidate_en != candidate_cn
+                if is_chinese_match or is_standard_name_match:
+                    matched_candidate = candidate
+                    translated_cn = candidate_cn
+                    english_name = candidate_en
+                    break
+
+            diagnostics = build_rom_match_diagnostics(rom_matches, "not-found")
+
+            if matched_candidate and translated_cn and translated_cn != matched_candidate:
                 new_label = translated_cn
-                thumbnail_source = english_name if english_name else cleaned_name
-                print(f"  [{i}] Found Chinese translation: '{translated_cn}'")
-            elif english_name and english_name != cleaned_name:
-                # No Chinese translation, but found standardized English name
+                thumbnail_source = english_name if english_name else matched_candidate
+                match_source = "rom-name-cn"
+                match_reason = "街机名称通过本地中文库匹配"
+                print(f"  [{i}] Found Chinese translation: '{translated_cn}' from '{matched_candidate}'")
+            elif matched_candidate and english_name and english_name != matched_candidate:
                 new_label = english_name
                 thumbnail_source = english_name
-                print(f"  [{i}] Using standardized English name: '{english_name}'")
+                match_source = "libretro-dat"
+                match_reason = "街机名称通过 Libretro DAT 标准化"
+                print(f"  [{i}] Using standardized English name: '{english_name}' from '{matched_candidate}'")
             else:
-                # No match found, use cleaned name as label for consistency
                 new_label = cleaned_name
                 thumbnail_source = cleaned_name
-                print(f"  [{i}] No match found, using cleaned name")
-            
-            match_source = "rom-name-cn" if has_chinese(new_label) else "arcade-cleanup"
-            add_proposal(i, item, display_label, new_label, thumbnail_source, match_source, "街机名称清理后生成建议")
+                match_source = "arcade-fallback"
+                match_reason = fbneo_fallback_reason(rom_matches)
+                print(f"  [{i}] No DAT match found, using cleaned name")
+
+            add_proposal(i, item, display_label, new_label, thumbnail_source, match_source, match_reason, diagnostics)
             continue
         
         # Priority 0: Check if parent directory name contains Chinese characters
         # This takes precedence over existing label because folder structure is often the "source of truth"
         if path:
             parent_dir = os.path.basename(os.path.dirname(path))
-            if parent_dir and any('\u4e00' <= char <= '\u9fff' for char in parent_dir):
+            if parent_dir and is_chinese_text(parent_dir):
                 new_label = parent_dir
-                
-                # Use translator.translate for fuzzy matching
-                translated_cn, english_name = translator.translate(parent_dir)
-                # Check if we found a match
-                # Check if we found a match
-                if translated_cn and translated_cn != parent_dir:
-                    # Found Chinese translation
-                    
-                    # If parent_dir is ALREADY Chinese, prefer it over the translation
-                    # This prevents bad fuzzy matches (e.g. "棉花小魔女" -> "小魔女") from overwriting user's folder name
-                    if any('\u4e00' <= char <= '\u9fff' for char in parent_dir):
-                        new_label = parent_dir
-                    else:
-                        new_label = translated_cn
-                        
-                    thumbnail_source = english_name if english_name else parent_dir
-                elif english_name and english_name != parent_dir:
-                    # No Chinese, but found standardized English name
-                    # If parent_dir is already Chinese, prefer it over English name
-                    if any('\u4e00' <= char <= '\u9fff' for char in parent_dir):
-                        new_label = parent_dir
-                        thumbnail_source = english_name
-                    else:
-                        new_label = english_name
-                        thumbnail_source = english_name
-                else:
-                    # Try translating candidates
-                    filename_no_ext = os.path.splitext(os.path.basename(path))[0] if path else None
-                    candidates = []
-                    if filename_no_ext: candidates.append(filename_no_ext)
-                    if original_label and original_label != filename_no_ext: candidates.append(original_label)
-                    
-                    for candidate in candidates:
-                        _, std_en = translator.translate(candidate)
-                        if std_en and std_en != candidate:
-                            thumbnail_source = std_en
-                            break
-                    
-                    if not thumbnail_source:
-                        thumbnail_source = filename_no_ext if filename_no_ext else original_label
-
-                add_proposal(i, item, display_label, new_label, thumbnail_source, "folder", "优先使用中文父目录，并反查缩略图标准名")
+                thumbnail_source = resolve_thumbnail_source_for_chinese_label(parent_dir, path, display_label, original_label)
+                add_proposal(i, item, display_label, new_label, thumbnail_source, "folder", "优先使用中文父目录，并使用文件名或精确库匹配封面源")
                 continue
 
         # Priority 1: If original_label already contains Chinese and is not empty, use it
         # This preserves user's manual edits from previous runs
-        if original_label and any('\u4e00' <= char <= '\u9fff' for char in original_label):
+        if original_label and is_chinese_text(original_label):
             print(f"  [{i}] Using existing Chinese label: '{original_label}'")
             new_label = original_label
-            # Try to find English name for thumbnail
-            translated_cn, english_name = translator.translate(original_label)
-            # Check if we found a match (either name changed from original)
-            if (translated_cn and translated_cn != original_label) or (english_name and english_name != original_label):
-                # We found a match in database
-                if english_name and english_name != original_label:
-                    thumbnail_source = english_name
-                    print(f"  [{i}] Found thumbnail source: '{english_name}'")
-                # Update to standardized Chinese name if available
-                if translated_cn and translated_cn != original_label:
-                    new_label = translated_cn
-                    print(f"  [{i}] Updated to standardized Chinese name: '{translated_cn}'")
-            else:
-                # No match found, keep original label but still try to download thumbnails
-                print(f"  [{i}] No thumbnail source found for '{original_label}'")
-                # Fallback to filename for thumbnail source (better than Chinese label)
-                filename_no_ext = os.path.splitext(os.path.basename(path))[0] if path else None
-                thumbnail_source = filename_no_ext if filename_no_ext else original_label
+            thumbnail_source = resolve_thumbnail_source_for_chinese_label(original_label, path, display_label, original_label)
+            if thumbnail_source:
+                print(f"  [{i}] Found thumbnail source: '{thumbnail_source}'")
             
             add_proposal(i, item, display_label, new_label, thumbnail_source, "playlist", "游戏列表已有中文标签，保留并补齐封面源")
             continue

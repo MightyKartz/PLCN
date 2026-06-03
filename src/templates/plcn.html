@@ -29,6 +29,7 @@
             --violet-soft: #f0eaff;
             --shadow: 0 10px 28px rgba(30, 42, 70, 0.07);
             --radius: 6px;
+            --bottom-dock-height: 104px;
             --font: Inter, "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
             --fs-xs: 0.75rem;
             --fs-sm: 0.8125rem;
@@ -118,7 +119,7 @@
             height: 100vh;
             min-height: 100vh;
             display: grid;
-            grid-template-rows: 60px minmax(0, 1fr) 156px;
+            grid-template-rows: 60px minmax(0, 1fr) var(--bottom-dock-height);
             overflow: hidden;
             min-width: 0;
         }
@@ -959,6 +960,13 @@
             background: var(--primary);
         }
 
+        .row-check:disabled {
+            cursor: not-allowed;
+            opacity: 0.45;
+            background: var(--surface-subtle);
+            color: transparent;
+        }
+
         .main-panel {
             display: grid;
             grid-template-rows: auto auto auto auto minmax(0, 1fr);
@@ -1020,6 +1028,18 @@
             background: var(--green-soft);
             border-color: #bce8cc;
             color: var(--green);
+        }
+
+        .summary-chip.ready {
+            background: var(--surface-soft);
+            border-color: var(--border);
+            color: var(--muted);
+        }
+
+        .summary-chip.completed {
+            background: var(--primary-soft);
+            border-color: #bfd5fb;
+            color: var(--primary);
         }
 
         .summary-chip.warning {
@@ -1454,6 +1474,10 @@
             background: #fff5f5;
         }
 
+        .preview-table tr.row-ready {
+            background: var(--surface);
+        }
+
         .preview-table tr.row-warning.selected {
             background: linear-gradient(90deg, #dceaff 0, #eaf2ff 26%, #fff6e6 100%);
         }
@@ -1464,6 +1488,53 @@
 
         .preview-table tr.selected td {
             border-bottom-color: #8eb8ff;
+        }
+
+        .search-results-table {
+            width: 100%;
+            min-width: 0;
+            border-collapse: collapse;
+            table-layout: fixed;
+            font-size: var(--fs-sm);
+        }
+
+        .search-results-table th,
+        .search-results-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        .search-results-table th {
+            color: var(--muted);
+            font-size: var(--fs-xs);
+            font-weight: 900;
+        }
+
+        .search-result-row {
+            cursor: pointer;
+        }
+
+        .search-result-row:hover,
+        .search-result-row:focus {
+            background: var(--primary-soft);
+            outline: none;
+        }
+
+        .search-result-title {
+            font-weight: 800;
+            overflow-wrap: anywhere;
+        }
+
+        .search-result-muted {
+            color: var(--muted);
+            overflow-wrap: anywhere;
+        }
+
+        .search-action-cell {
+            width: 92px;
+            text-align: right;
         }
 
         body[data-theme="dark"] .preview-table tr {
@@ -1558,6 +1629,18 @@
             border-color: #cbd5e1;
             background: var(--surface-soft);
             color: var(--muted);
+        }
+
+        .cover-status.failed {
+            border-color: #f2b8b8;
+            background: var(--red-soft);
+            color: var(--red);
+        }
+
+        .cover-status.skipped {
+            border-color: #cbd5e1;
+            background: var(--surface-soft);
+            color: var(--quiet);
         }
 
         .name-primary {
@@ -1683,6 +1766,12 @@
             background: #2d181b;
         }
 
+        body[data-theme="dark"] .badge.ready {
+            color: var(--muted);
+            border-color: var(--border);
+            background: var(--surface-soft);
+        }
+
         body[data-theme="dark"] .badge.violet {
             color: #ad9fec;
             border-color: #51416f;
@@ -1721,36 +1810,6 @@
             color: var(--quiet);
             font-size: var(--fs-xs);
             line-height: 1.15;
-        }
-
-        .confirm-row-btn {
-            flex: 0 0 auto;
-            min-height: 26px;
-            padding: 0 8px;
-            border-radius: 5px;
-            border: 1px solid var(--amber);
-            background: var(--amber-soft);
-            color: var(--amber);
-            cursor: pointer;
-            font-size: var(--fs-xs);
-            font-weight: 900;
-        }
-
-        .confirm-row-btn:hover {
-            color: #fff;
-            background: var(--amber);
-        }
-
-        body[data-theme="dark"] .confirm-row-btn {
-            color: var(--amber);
-            background: #2b2114;
-            border-color: #6a4d2a;
-        }
-
-        body[data-theme="dark"] .confirm-row-btn:hover {
-            color: #fff1dc;
-            background: #704d23;
-            border-color: #815f35;
         }
 
         .status-dot {
@@ -2062,7 +2121,7 @@
         }
 
         .dock-flow {
-            display: grid;
+            display: none;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 8px;
             margin-top: 10px;
@@ -2253,10 +2312,10 @@
             position: fixed;
             left: 6px;
             right: 6px;
-            bottom: 164px;
+            bottom: calc(var(--bottom-dock-height) + 8px);
             z-index: 70;
             width: auto;
-            height: min(220px, calc(100vh - 248px));
+            height: min(220px, calc(100vh - var(--bottom-dock-height) - 92px));
             max-height: 220px;
             display: none;
             grid-template-rows: 34px minmax(0, 1fr);
@@ -2578,9 +2637,9 @@
             .details-drawer {
                 left: 8px;
                 right: 8px;
-                bottom: 178px;
+                bottom: 116px;
                 height: min(260px, calc(100vh - 24px));
-                max-height: min(260px, calc(100vh - 220px));
+                max-height: min(260px, calc(100vh - 158px));
             }
 
             .details-drawer-body {
@@ -2605,7 +2664,7 @@
                 <div>
                     <div class="brand-line">
                         <div class="brand-name">PLCN</div>
-                        <div class="brand-version">v3.0</div>
+                        <div class="brand-version">v3.1</div>
                     </div>
                     <div class="brand-product">PLCN Device Library</div>
                 </div>
@@ -2818,6 +2877,8 @@
                     <div class="summary-chips">
                         <div class="summary-chip"><span data-i18n="全部">全部</span> <strong id="summary-total">0</strong></div>
                         <div class="summary-chip success"><span data-i18n="可自动修复">可自动修复</span> <strong id="summary-matched">0</strong></div>
+                        <div class="summary-chip ready"><span data-i18n="无需修复">无需修复</span> <strong id="summary-ready">0</strong></div>
+                        <div class="summary-chip completed"><span data-i18n="已完成">已完成</span> <strong id="summary-completed">0</strong></div>
                         <div class="summary-chip warning"><span data-i18n="需人工确认">需人工确认</span> <strong id="summary-review">0</strong></div>
                         <div class="summary-chip danger"><span data-i18n="重复需处理">重复需处理</span> <strong id="summary-duplicate">0</strong></div>
                     </div>
@@ -2833,6 +2894,8 @@
                         <button class="filter-btn" type="button" data-filter="review" data-i18n="需人工确认" onclick="setPreviewFilter('review', this)">需人工确认</button>
                         <button class="filter-btn" type="button" data-filter="duplicate" data-i18n="重复需处理" onclick="setPreviewFilter('duplicate', this)">重复需处理</button>
                         <button class="filter-btn" type="button" data-filter="matched" data-i18n="可自动修复" onclick="setPreviewFilter('matched', this)">可自动修复</button>
+                        <button class="filter-btn" type="button" data-filter="ready" data-i18n="无需修复" onclick="setPreviewFilter('ready', this)">无需修复</button>
+                        <button class="filter-btn" type="button" data-filter="completed" data-i18n="已完成" onclick="setPreviewFilter('completed', this)">已完成</button>
                         <button class="filter-btn" type="button" data-filter="missing-cover" data-i18n="缺封面源" onclick="setPreviewFilter('missing-cover', this)">缺封面源</button>
                         <button class="filter-btn" type="button" data-filter="edited" data-i18n="已手动编辑" onclick="setPreviewFilter('edited', this)">已手动编辑</button>
                     </div>
@@ -2875,7 +2938,7 @@
                     <div class="empty-state" id="preview-empty">
                         <div>
                             <h2 data-i18n="选择游戏列表后开始预览">选择游戏列表后开始预览</h2>
-                            <p data-i18n="PLCN 会先展示建议显示名、封面源和匹配状态，低置信结果可在右侧手动校对。">PLCN 会先展示建议显示名、封面源和匹配状态，低置信结果可在右侧手动校对。</p>
+                            <p data-i18n="PLCN 会先展示写入名称、封面源和匹配状态，低置信结果可在右侧手动校对。">PLCN 会先展示写入名称、封面源和匹配状态，低置信结果可在右侧手动校对。</p>
                         </div>
                     </div>
 
@@ -2893,9 +2956,9 @@
                                 <tr>
                                     <th class="select-cell"></th>
                                     <th data-i18n="当前名称">当前名称</th>
-                                    <th data-i18n="修复状态 / 确认">修复状态 / 确认</th>
-                                    <th class="cn-name-col" data-i18n="推荐中文名">推荐中文名</th>
-                                    <th class="en-name-col" data-i18n="官方英文名">官方英文名</th>
+                                    <th data-i18n="修复状态">修复状态</th>
+                                    <th class="cn-name-col" data-i18n="写入名称">写入名称</th>
+                                    <th class="en-name-col" data-i18n="封面源英文名">封面源英文名</th>
                                     <th data-i18n="封面状态">封面状态</th>
                                 </tr>
                             </thead>
@@ -2983,7 +3046,6 @@
                             <strong id="inspector-confidence">--</strong>
                         </div>
                         <div class="inspector-actions">
-                            <button class="btn btn-success" id="confirm-selected-btn" onclick="confirmSelectedChange()" data-i18n="确认当前项" type="button">确认当前项</button>
                             <button class="btn btn-ghost" id="open-thumb-folder" onclick="openThumbnailFolder()" data-i18n="打开封面文件夹" type="button">打开封面文件夹</button>
                         </div>
                     </div>
@@ -3120,7 +3182,7 @@
                     <input type="text" id="search-input" placeholder="输入游戏名（中/英）">
                     <button onclick="performSearch()" class="btn" type="button">搜索</button>
                 </div>
-                <div id="search-results" style="max-height: 360px; overflow-y: auto;"></div>
+                <div id="search-results" style="max-height: 360px; overflow: auto;"></div>
             </div>
         </div>
     </div>
@@ -3164,6 +3226,8 @@
         let currentPreviewFilter = 'all';
         let selectedChangeIndex = -1;
         let lastDownloadSummary = null;
+        let lastAppliedChangeKeys = new Set();
+        let lastAppliedDownloadEnabled = true;
         let currentDeviceScan = null;
         let currentUILanguage = 'zh';
         let currentTheme = 'light';
@@ -3216,14 +3280,25 @@
             '可自动修复': 'Auto Repair',
             '需人工确认': 'Needs Review',
             '重复需处理': 'Duplicates',
+            '无需修复': 'No Repair Needed',
+            '已就绪': 'Ready',
+            '仅下载封面': 'Download Cover Only',
+            '仅改中文名': 'Rename Only',
+            '已完成': 'Completed',
             '缺封面源': 'Missing Cover',
             '已手动编辑': 'Edited',
             '缺少中文名': 'Missing Chinese name',
             '名称未变化': 'Name unchanged',
             '低置信匹配': 'Low-confidence match',
             '发现重复条目': 'Duplicate entry found',
+            '中文名、封面源和封面已就绪': 'Chinese name, cover source, and cover are ready',
+            '中文名和封面源已就绪，仅需下载封面': 'Chinese name and cover source are ready; only cover download is needed',
+            '封面已存在，仅需写入中文名': 'Cover exists; only display name needs writing',
+            '将写入中文名并下载封面': 'Will write Chinese name and download cover',
+            '已有封面 · 缺源': 'Cover exists · Missing source',
+            '无需处理': 'No action needed',
+            '当前：无需处理': 'Current: no action needed',
             '名称和封面可写入': 'Name and cover are ready',
-            '已人工确认': 'Manually confirmed',
             '后端建议需复核': 'Backend marked for review',
             '预览变更': 'Preview Changes',
             '应用已选修复': 'Apply Selected',
@@ -3238,11 +3313,11 @@
             '筛选': 'Filter',
             '搜索游戏名 / rom 名称': 'Search game / ROM name',
             '选择游戏列表后开始预览': 'Choose a game list to preview',
-            'PLCN 会先展示建议显示名、封面源和匹配状态，低置信结果可在右侧手动校对。': 'PLCN shows proposed names, cover sources, and match status. Low-confidence results can be reviewed on the right.',
+            'PLCN 会先展示写入名称、封面源和匹配状态，低置信结果可在右侧手动校对。': 'PLCN shows the name to write, cover source, and match status. Low-confidence results can be reviewed on the right.',
             '当前名称': 'Current Name',
-            '修复状态 / 确认': 'Status / Confirm',
-            '推荐中文名': 'Suggested Chinese Name',
-            '官方英文名': 'Official English Name',
+            '修复状态': 'Status',
+            '写入名称': 'Write Name',
+            '封面源英文名': 'Cover Source Name',
             '封面状态': 'Cover',
             '修复预览': 'Repair Preview',
             '匹配详情': 'Match',
@@ -3255,7 +3330,6 @@
             '显示名称（将写入游戏列表）': 'Display Name (written to game list)',
             '封面源': 'Cover Source',
             '匹配置信度': 'Match Confidence',
-            '确认当前项': 'Confirm Item',
             '打开封面文件夹': 'Open Cover Folder',
             '任务进度': 'Task Progress',
             '任务详情': 'Task Details',
@@ -3289,11 +3363,13 @@
             '已选': 'Selected',
             '项': 'items',
             '等待游戏库': 'Waiting for library',
-            '确认': 'Confirm',
-            '已确认': 'Confirmed',
             '待下载': 'Pending Download',
             '已有封面': 'Cover Exists',
+            '已下载': 'Downloaded',
+            '下载失败': 'Download Failed',
+            '已跳过下载': 'Download Skipped',
             '缺少封面源': 'Missing Cover Source',
+            '本地': 'Local',
             '未命名': 'Untitled',
             '留空则不下载': 'Leave empty to skip download',
             '没有符合当前筛选条件的项目。': 'No items match the current filters.',
@@ -3311,6 +3387,8 @@
             '浅色': 'Light',
             '深色': 'Dark',
             '修复完成': 'Repair complete',
+            '已写入 playlist': 'Written to playlist',
+            '项已写回': 'items written',
             '扫描中': 'Scanning',
             '正在扫描 RetroArch 目录': 'Scanning RetroArch directory',
             '当前：读取 playlists': 'Current: reading playlists',
@@ -3447,12 +3525,133 @@
         function preparePreviewChanges(changes) {
             return (changes || []).map(change => ({
                 ...change,
-                enabled: change.enabled !== false
+                enabled: shouldAutoSelectChange(change)
             }));
         }
 
         function getIncludedChanges() {
-            return currentChanges.filter(change => change.enabled !== false);
+            return currentChanges.filter(change => change.enabled !== false && isActionableChange(change));
+        }
+
+        function getChangeIdentity(change) {
+            if (!change) return '';
+            if (change.proposal_id) return String(change.proposal_id);
+            return [
+                change.index,
+                change.path,
+                change.original_item_label,
+                change.original_label
+            ].map(value => String(value || '').trim()).join('|');
+        }
+
+        function rememberAppliedChanges(changes, options) {
+            lastAppliedChangeKeys = new Set((changes || []).map(getChangeIdentity).filter(Boolean));
+            lastAppliedDownloadEnabled = options?.download_thumbnails !== false;
+        }
+
+        function normalizeDownloadKey(value) {
+            return String(value || '').trim().toLowerCase();
+        }
+
+        function normalizeDisplayName(value) {
+            return String(value || '').trim().replace(/\s+/g, ' ');
+        }
+
+        function hasChineseDisplayName(value) {
+            return /[\u4e00-\u9fff]/.test(String(value || ''));
+        }
+
+        function currentMatchesWriteName(change) {
+            const current = normalizeDisplayName(change?.original_item_label || change?.original_label);
+            const writeName = normalizeDisplayName(change?.new_label);
+            return Boolean(current && writeName && current === writeName);
+        }
+
+        function clearCoverState(change) {
+            change.thumbnail_exists = false;
+            change.local_thumbnail_exists = false;
+            change.cover_exists = false;
+            change.cover_path = '';
+            change.cover_preview_url = '';
+            change.cover_download_status = '';
+            change.cover_download_message = '';
+        }
+
+        function findBoxartDownloadResult(change, summary) {
+            const details = summary?.details || [];
+            const sourceKey = normalizeDownloadKey(change.thumbnail_source);
+            const labelKey = normalizeDownloadKey(change.new_label);
+            return details.find(item => {
+                if (item?.type !== 'Named_Boxarts') return false;
+                const itemSource = normalizeDownloadKey(item.source);
+                const itemGame = normalizeDownloadKey(item.game);
+                return (sourceKey && itemSource === sourceKey) || (labelKey && itemGame === labelKey);
+            }) || null;
+        }
+
+        function hasExistingCover(change) {
+            return Boolean(change?.thumbnail_exists || change?.local_thumbnail_exists || change?.cover_exists);
+        }
+
+        function isAutoRepairKind(kind) {
+            return ['matched', 'download', 'rename'].includes(kind);
+        }
+
+        function isActionableChange(change) {
+            return isAutoRepairKind(getMatchInfo(change).kind);
+        }
+
+        function shouldAutoSelectChange(change) {
+            return change.enabled !== false && isActionableChange(change);
+        }
+
+        function needsCoverDownload(change, info = getMatchInfo(change)) {
+            return ['matched', 'download'].includes(info.kind) && !hasExistingCover(change) && Boolean(change.thumbnail_source);
+        }
+
+        function applyCompletedJobToPreview(result) {
+            if (!currentChanges.length || !lastAppliedChangeKeys.size) return;
+
+            const summary = result?.download_summary || null;
+            currentChanges.forEach(change => {
+                if (!lastAppliedChangeKeys.has(getChangeIdentity(change))) return;
+
+                change.applied = true;
+                change.match_status = 'applied';
+                change.match_score = 100;
+                change.match_source = 'applied';
+                change.match_reason = uiText('已写入 playlist');
+                change.needs_review = false;
+                change.enabled = false;
+                change.original_item_label = change.new_label || change.original_item_label;
+
+                if (!change.thumbnail_source) return;
+
+                if (!lastAppliedDownloadEnabled) {
+                    change.cover_download_status = 'skipped-download';
+                    return;
+                }
+
+                const boxartResult = findBoxartDownloadResult(change, summary);
+                if (!boxartResult) return;
+
+                change.cover_download_status = boxartResult.status;
+                change.cover_download_message = boxartResult.message || '';
+                if (boxartResult.status === 'success' || boxartResult.status === 'skipped') {
+                    const coverPath = boxartResult.cover_path || boxartResult.path || '';
+                    change.thumbnail_exists = true;
+                    change.local_thumbnail_exists = true;
+                    change.cover_exists = true;
+                    change.cover_path = coverPath;
+                    change.cover_preview_url = boxartResult.cover_preview_url || (coverPath ? `/api/thumbnail/preview?path=${encodeURIComponent(coverPath)}` : '');
+                }
+            });
+
+            updateSummary(currentChanges);
+            renderPreviewTable(currentChanges);
+            if (selectedChangeIndex >= 0 && currentChanges[selectedChangeIndex]) {
+                updateInspector(currentChanges[selectedChangeIndex]);
+            }
         }
 
         function getProcessingOptions() {
@@ -4044,17 +4243,20 @@
                     const previewResponse = await fetch('/api/playlist/preview', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ playlist_path: playlistPath, system_name: systemName })
+                        body: JSON.stringify({ playlist_path: playlistPath, system_name: systemName, thumbnails_dir: thumbnailsDir })
                     });
                     const previewData = await previewResponse.json();
                     if (previewData.error) throw new Error(previewData.error);
 
                     currentChanges = preparePreviewChanges(previewData.changes || []);
+                    lastAppliedChangeKeys = new Set();
+                    lastDownloadSummary = null;
+                    setDownloadSummary(null);
                     updateSummary(currentChanges);
                     renderPreviewTable(currentChanges);
 
                     const includedChanges = getIncludedChanges();
-                    if (!includedChanges.length) throw new Error('没有勾选任何项目');
+                    if (!includedChanges.length) throw new Error('没有可应用的修复项，请先补齐中文名或封面源');
 
                     const applyMessage = options.download_thumbnails ? '正在应用更改并下载封面' : '正在应用更改（跳过下载）';
                     logView.innerHTML += `分析完成，共 ${currentChanges.length} 个游戏，已勾选 ${includedChanges.length} 项<br>`;
@@ -4074,6 +4276,7 @@
                     if (applyData.error) throw new Error(applyData.error);
 
                     if (applyData.job_id) {
+                        rememberAppliedChanges(includedChanges, options);
                         logView.innerHTML += options.download_thumbnails ? '后台任务已启动，正在下载封面...<br>' : '后台任务已启动，将跳过缩略图下载...<br>';
                         trackProgress(applyData.job_id);
                     } else {
@@ -4185,6 +4388,7 @@
         async function previewTask() {
             const playlistPath = document.getElementById('playlist_path').value;
             const systemName = document.getElementById('system_name').value;
+            const thumbnailsDir = document.getElementById('thumbnails_dir').value;
             hideApplySummary();
 
             if (!playlistPath || !systemName) {
@@ -4199,13 +4403,16 @@
                 const response = await fetch('/api/playlist/preview', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ playlist_path: playlistPath, system_name: systemName })
+                    body: JSON.stringify({ playlist_path: playlistPath, system_name: systemName, thumbnails_dir: thumbnailsDir })
                 });
 
                 const data = await response.json();
                 if (data.error) throw new Error(data.error);
 
                 currentChanges = preparePreviewChanges(data.changes || []);
+                lastAppliedChangeKeys = new Set();
+                lastDownloadSummary = null;
+                setDownloadSummary(null);
                 selectedChangeIndex = -1;
                 setLibraryBrowserVisible(true);
                 setPreviewAreaVisible(true);
@@ -4215,7 +4422,6 @@
                 renderPreviewTable(currentChanges);
                 clearInspector();
                 showLogPanel(null);
-                setInlineProgress(20, '待校对', `已分析 ${currentChanges.length} 项`, '当前：等待人工确认');
                 showStatus('分析完成，请校对', 'success');
             } catch (error) {
                 showStatus('预览失败: ' + error.message, 'error');
@@ -4242,13 +4448,17 @@
 
                 const tdSelect = document.createElement('td');
                 tdSelect.className = 'select-cell';
+                const canSelect = isActionableChange(change);
+                const isSelected = change.enabled !== false && canSelect;
                 const rowCheck = document.createElement('button');
                 rowCheck.type = 'button';
                 rowCheck.className = 'row-check';
-                rowCheck.textContent = change.enabled !== false ? '✓' : '';
+                rowCheck.textContent = isSelected ? '✓' : '';
                 rowCheck.setAttribute('role', 'checkbox');
-                rowCheck.setAttribute('aria-checked', String(change.enabled !== false));
+                rowCheck.setAttribute('aria-checked', String(isSelected));
+                rowCheck.setAttribute('aria-disabled', String(!canSelect));
                 rowCheck.setAttribute('aria-label', `选择 ${change.original_label || '当前项目'}`);
+                rowCheck.disabled = !canSelect;
                 rowCheck.addEventListener('click', (event) => {
                     event.stopPropagation();
                     toggleChangeEnabled(index, event.currentTarget);
@@ -4264,14 +4474,22 @@
                 tdOriginal.className = 'name-cell library-name-cell';
                 const tableThumb = document.createElement('div');
                 tableThumb.className = 'table-thumb';
-                if (change.thumbnail_source) {
-                    const system = document.getElementById('system_name').value || change.system || '';
+                const coverUrl = getCoverPreviewUrl(change);
+                if (coverUrl) {
                     const img = document.createElement('img');
                     img.alt = '';
                     img.loading = 'lazy';
-                    img.src = buildThumbnailUrl(system, change.thumbnail_source);
+                    img.src = coverUrl;
                     img.onerror = () => {
-                        tableThumb.textContent = 'IMG';
+                        const fallbackUrl = getRemoteCoverUrl(change);
+                        if (fallbackUrl && fallbackUrl !== coverUrl) {
+                            img.onerror = () => {
+                                tableThumb.textContent = hasExistingCover(change) ? uiText('本地') : 'IMG';
+                            };
+                            img.src = fallbackUrl;
+                            return;
+                        }
+                        tableThumb.textContent = hasExistingCover(change) ? uiText('本地') : 'IMG';
                     };
                     tableThumb.appendChild(img);
                 } else {
@@ -4280,17 +4498,17 @@
                 const originalText = document.createElement('div');
                 const originalName = document.createElement('div');
                 originalName.className = 'name-primary';
-                originalName.textContent = change.original_label || uiText('未命名');
-                originalName.title = change.original_label || uiText('未命名');
+                originalName.textContent = getCurrentItemLabel(change);
+                originalName.title = getCurrentItemLabel(change);
                 const originalPath = document.createElement('div');
                 originalPath.className = 'name-secondary';
-                originalPath.textContent = change.path || '';
-                originalPath.title = change.path || '';
+                originalPath.textContent = getCurrentItemMeta(change);
+                originalPath.title = getCurrentItemMeta(change);
                 originalText.appendChild(originalName);
                 originalText.appendChild(originalPath);
                 tdOriginal.appendChild(tableThumb);
                 tdOriginal.appendChild(originalText);
-                tdOriginal.title = [change.original_label, change.path].filter(Boolean).join('\n');
+                tdOriginal.title = [getCurrentItemLabel(change), getCurrentItemMeta(change)].filter(Boolean).join('\n');
                 tr.appendChild(tdOriginal);
                 tr.appendChild(buildStatusCell(info, index));
 
@@ -4304,7 +4522,8 @@
                 inputNew.oninput = (e) => {
                     currentChanges[index].new_label = e.target.value;
                     e.target.title = e.target.value;
-                    markChangeEdited(index, '手动编辑显示名称');
+                    markChangeEdited(index, '手动编辑显示名称', 'new_label');
+                    refreshPreviewRowState(index);
                     if (selectedChangeIndex === index) updateInspector(currentChanges[index]);
                     updateSummary(currentChanges);
                 };
@@ -4325,7 +4544,8 @@
                 inputThumb.oninput = (e) => {
                     currentChanges[index].thumbnail_source = e.target.value;
                     e.target.title = e.target.value || uiText('留空则不下载');
-                    markChangeEdited(index, '手动编辑封面源');
+                    markChangeEdited(index, '手动编辑封面源', 'thumbnail_source');
+                    refreshPreviewRowState(index);
                     if (selectedChangeIndex === index) updateInspector(currentChanges[index]);
                     updateSummary(currentChanges);
                 };
@@ -4344,13 +4564,13 @@
                 thumbWrap.appendChild(inputThumb);
                 thumbWrap.appendChild(btnSearch);
 
-                if (change.thumbnail_source) {
+                const previewHref = getCoverPreviewUrl(change);
+                if (previewHref) {
                     const linkPreview = document.createElement('a');
-                    const system = document.getElementById('system_name').value || change.system || '';
-                    linkPreview.href = buildThumbnailUrl(system, change.thumbnail_source);
+                    linkPreview.href = previewHref;
                     linkPreview.target = '_blank';
                     linkPreview.innerHTML = '<svg viewBox="0 0 24 24"><path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"></path><circle cx="12" cy="12" r="2.5"></circle></svg>';
-                    linkPreview.title = '预览封面（Libretro）';
+                    linkPreview.title = '预览封面';
                     linkPreview.className = 'link-preview';
                     linkPreview.onclick = (event) => event.stopPropagation();
                     thumbWrap.appendChild(linkPreview);
@@ -4359,14 +4579,7 @@
                 tdThumb.appendChild(thumbWrap);
                 tr.appendChild(tdThumb);
 
-                const tdCoverStatus = document.createElement('td');
-                const coverInfo = getCoverStatusInfo(change);
-                const coverStatus = document.createElement('span');
-                coverStatus.className = `cover-status${coverInfo.className ? ` ${coverInfo.className}` : ''}`;
-                coverStatus.textContent = coverInfo.label;
-                coverStatus.title = coverInfo.title;
-                tdCoverStatus.appendChild(coverStatus);
-                tr.appendChild(tdCoverStatus);
+                tr.appendChild(buildCoverStatusCell(change));
 
                 tbody.appendChild(tr);
             });
@@ -4386,10 +4599,41 @@
 
         function getCoverStatusInfo(change) {
             if (!change.thumbnail_source) {
+                if (hasExistingCover(change)) {
+                    return {
+                        className: 'exists',
+                        label: uiText('已有封面 · 缺源'),
+                        title: currentUILanguage === 'en' ? 'A local cover exists, but cover source is missing' : '本地封面已存在，但缺少封面源'
+                    };
+                }
                 return {
                     className: 'missing',
                     label: uiText('缺少封面源'),
                     title: uiText('缺少封面源')
+                };
+            }
+
+            if (change.cover_download_status === 'failed') {
+                return {
+                    className: 'failed',
+                    label: uiText('下载失败'),
+                    title: change.cover_download_message || uiText('下载失败')
+                };
+            }
+
+            if (change.cover_download_status === 'success') {
+                return {
+                    className: 'downloaded',
+                    label: uiText('已下载'),
+                    title: currentUILanguage === 'en' ? 'Cover downloaded in this task' : '本次任务已下载封面'
+                };
+            }
+
+            if (change.cover_download_status === 'skipped-download') {
+                return {
+                    className: 'skipped',
+                    label: uiText('已跳过下载'),
+                    title: uiText('跳过下载')
                 };
             }
 
@@ -4408,6 +4652,54 @@
             };
         }
 
+        function getCurrentItemLabel(change) {
+            return change?.original_item_label || change?.original_label || uiText('未命名');
+        }
+
+        function getCurrentItemMeta(change) {
+            const parsedName = change?.original_label && change.original_label !== change.original_item_label
+                ? change.original_label
+                : '';
+            return [parsedName, change?.path].filter(Boolean).join(' / ');
+        }
+
+        function buildCoverStatusCell(change) {
+            const tdCoverStatus = document.createElement('td');
+            const coverInfo = getCoverStatusInfo(change);
+            const coverStatus = document.createElement('span');
+            coverStatus.className = `cover-status${coverInfo.className ? ` ${coverInfo.className}` : ''}`;
+            coverStatus.textContent = coverInfo.label;
+            coverStatus.title = coverInfo.title;
+            tdCoverStatus.appendChild(coverStatus);
+            return tdCoverStatus;
+        }
+
+        function refreshPreviewRowState(index) {
+            const change = currentChanges[index];
+            const row = document.querySelector(`#preview-table-body tr[data-index="${index}"]`);
+            if (!change || !row) return;
+
+            const info = getMatchInfo(change);
+            row.className = info.rowClass || '';
+            if (index === selectedChangeIndex) row.classList.add('selected');
+
+            const canSelect = isActionableChange(change);
+            const isSelected = change.enabled !== false && canSelect;
+            const rowCheck = row.querySelector('.row-check');
+            if (rowCheck) {
+                rowCheck.textContent = isSelected ? '✓' : '';
+                rowCheck.setAttribute('aria-checked', String(isSelected));
+                rowCheck.setAttribute('aria-disabled', String(!canSelect));
+                rowCheck.disabled = !canSelect;
+            }
+
+            const statusCell = row.children[2];
+            if (statusCell) statusCell.replaceWith(buildStatusCell(info, index));
+
+            const coverCell = row.children[5];
+            if (coverCell) coverCell.replaceWith(buildCoverStatusCell(change));
+        }
+
         function buildStatusCell(info, index) {
             const tdStatus = document.createElement('td');
             const statusStack = document.createElement('div');
@@ -4419,15 +4711,6 @@
             status.style.color = info.color;
             status.innerHTML = `<span class="status-dot"></span>${info.label}`;
             statusMainline.appendChild(status);
-            if (info.kind === 'review') {
-                const confirmButton = document.createElement('button');
-                confirmButton.type = 'button';
-                confirmButton.className = 'confirm-row-btn';
-                confirmButton.textContent = uiText('确认');
-                confirmButton.title = '确认当前中文名和封面源';
-                confirmButton.onclick = (event) => confirmChange(index, event);
-                statusMainline.appendChild(confirmButton);
-            }
             const reason = document.createElement('div');
             reason.className = 'status-reason';
             reason.textContent = getMatchReasonLabel(info, currentChanges[index]);
@@ -4449,7 +4732,12 @@
 
             const includedChanges = getIncludedChanges();
             if (!includedChanges.length) {
-                showStatus('请至少勾选一个项目', 'error');
+                showStatus(
+                    currentUILanguage === 'en'
+                        ? 'No actionable fixes selected.'
+                        : '没有可应用的修复项，请先补齐中文名或封面源',
+                    'error'
+                );
                 return;
             }
 
@@ -4490,6 +4778,7 @@
                 if (data.error) throw new Error(data.error);
 
                 if (data.job_id) {
+                    rememberAppliedChanges(includedChanges, options);
                     trackProgress(data.job_id);
                 } else {
                     alert('Error starting job: ' + (data.error || 'Unknown error'));
@@ -4504,6 +4793,8 @@
             const summary = {
                 selected: changes.length,
                 autoRepair: 0,
+                ready: 0,
+                completed: 0,
                 review: 0,
                 duplicate: 0,
                 downloads: 0,
@@ -4513,10 +4804,12 @@
 
             changes.forEach((change) => {
                 const info = getMatchInfo(change);
-                if (info.kind === 'matched') summary.autoRepair += 1;
+                if (isAutoRepairKind(info.kind)) summary.autoRepair += 1;
+                if (info.kind === 'ready') summary.ready += 1;
+                if (info.kind === 'completed') summary.completed += 1;
                 if (info.kind === 'review') summary.review += 1;
                 if (info.kind === 'duplicate') summary.duplicate += 1;
-                if (change.thumbnail_source && summary.downloadEnabled) summary.downloads += 1;
+                if (needsCoverDownload(change, info) && summary.downloadEnabled) summary.downloads += 1;
             });
 
             return summary;
@@ -4545,12 +4838,12 @@
                 const downloadText = summary.downloadEnabled
                     ? `${summary.downloads} covers will be downloaded`
                     : 'downloads skipped';
-                return `${summary.selected} selected: ${summary.autoRepair} auto repair, ${summary.review} need review, ${summary.duplicate} duplicates, ${summary.skipped} skipped. ${downloadText}.`;
+                return `${summary.selected} selected: ${summary.autoRepair} auto repair, ${summary.ready} no repair needed, ${summary.completed} completed, ${summary.review} need review, ${summary.duplicate} duplicates, ${summary.skipped} skipped. ${downloadText}.`;
             }
             const downloadText = summary.downloadEnabled
                 ? `将下载 ${summary.downloads} 个封面`
                 : '跳过下载';
-            return `将写回游戏列表：${summary.selected} 项已选，${summary.autoRepair} 可自动修复，${summary.review} 需人工确认，${summary.duplicate} 重复项，${summary.skipped} 项跳过。${downloadText}。`;
+            return `将写回游戏列表：${summary.selected} 项已选，${summary.autoRepair} 可自动修复，${summary.ready} 无需修复，${summary.completed} 已完成，${summary.review} 需人工确认，${summary.duplicate} 重复项，${summary.skipped} 项跳过。${downloadText}。`;
         }
 
         function openSearchModal(rowIndex) {
@@ -4669,25 +4962,82 @@
                 const data = await response.json();
 
                 if (data.results && data.results.length > 0) {
-                    let html = '<table class="preview-table"><thead><tr><th>英文名</th><th>中文名</th><th>系统</th><th>操作</th></tr></thead><tbody>';
-                    data.results.forEach(item => {
-                        html += `
-                            <tr>
-                                <td>${escapeHtml(item.english_name)}</td>
-                                <td>${escapeHtml(item.chinese_name || '')}</td>
-                                <td>${escapeHtml(item.system || '-')}</td>
-                                <td><button class="btn btn-ghost" type="button" onclick="selectSearchResult('${escapeAttr(item.english_name)}', '${escapeAttr(item.chinese_name || '')}')">选择</button></td>
-                            </tr>
-                        `;
-                    });
-                    html += '</tbody></table>';
-                    resultsDiv.innerHTML = html;
+                    renderSearchResults(data.results, resultsDiv);
                 } else {
                     resultsDiv.innerHTML = '<p>未找到结果。</p>';
                 }
             } catch (error) {
                 resultsDiv.innerHTML = `<p style="color: red;">搜索出错: ${escapeHtml(error.message)}</p>`;
             }
+        }
+
+        function renderSearchResults(results, container) {
+            container.innerHTML = '';
+
+            const table = document.createElement('table');
+            table.className = 'search-results-table';
+
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            ['英文名', '中文名', '系统', '操作'].forEach(label => {
+                const th = document.createElement('th');
+                th.textContent = label;
+                if (label === '操作') th.className = 'search-action-cell';
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+
+            const tbody = document.createElement('tbody');
+            results.forEach(item => {
+                const englishName = item.english_name || '';
+                const chineseName = item.chinese_name || '';
+                const row = document.createElement('tr');
+                row.className = 'search-result-row';
+                row.tabIndex = 0;
+                row.title = currentUILanguage === 'en' ? 'Click to select this result' : '点击选择此结果';
+
+                const englishCell = document.createElement('td');
+                englishCell.className = 'search-result-title';
+                englishCell.textContent = englishName;
+                row.appendChild(englishCell);
+
+                const chineseCell = document.createElement('td');
+                chineseCell.className = 'search-result-muted';
+                chineseCell.textContent = chineseName || (currentUILanguage === 'en' ? 'No Chinese name' : '无中文名');
+                row.appendChild(chineseCell);
+
+                const systemCell = document.createElement('td');
+                systemCell.className = 'search-result-muted';
+                systemCell.textContent = item.system || '-';
+                row.appendChild(systemCell);
+
+                const actionCell = document.createElement('td');
+                actionCell.className = 'search-action-cell';
+                const button = document.createElement('button');
+                button.className = 'btn btn-ghost';
+                button.type = 'button';
+                button.textContent = currentUILanguage === 'en' ? 'Select' : '选择';
+                button.addEventListener('click', event => {
+                    event.stopPropagation();
+                    selectSearchResult(englishName, chineseName);
+                });
+                actionCell.appendChild(button);
+                row.appendChild(actionCell);
+
+                row.addEventListener('click', () => selectSearchResult(englishName, chineseName));
+                row.addEventListener('keydown', event => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        selectSearchResult(englishName, chineseName);
+                    }
+                });
+
+                tbody.appendChild(row);
+            });
+
+            table.appendChild(thead);
+            table.appendChild(tbody);
+            container.appendChild(table);
         }
 
         function selectSearchResult(englishName, chineseName) {
@@ -4702,7 +5052,7 @@
 
                 currentChanges[currentSearchRowIndex].new_label = finalName;
                 currentChanges[currentSearchRowIndex].thumbnail_source = englishName;
-                markChangeEdited(currentSearchRowIndex, '手动从数据库搜索结果选择');
+                markChangeEdited(currentSearchRowIndex, '手动从数据库搜索结果选择', 'both');
 
                 if (row) {
                     const labelInput = row.querySelector('.new-label-input');
@@ -4755,9 +5105,12 @@
                     setInlineProgress(100, '完成', '所有操作完成', '当前：可检查输出文件');
                     lastDownloadSummary = data.result?.download_summary || null;
                     setDownloadSummary(lastDownloadSummary);
+                    if (mode === 'single') applyCompletedJobToPreview(data.result);
                     showDownloadDetails(false);
                     document.getElementById('dock-download-count').textContent = '下载任务完成';
-                    document.getElementById('repair-summary-inline').textContent = uiText('修复完成');
+                    document.getElementById('repair-summary-inline').textContent = mode === 'single'
+                        ? getAppliedSummaryText(lastAppliedChangeKeys.size || data.result?.applied_count || 0)
+                        : uiText('修复完成');
                     if (detailSummary) detailSummary.textContent = '任务完成，日志和下载明细已更新。';
                     showStatus('应用更改完成', 'success');
                 } else if (data.status === 'failed') {
@@ -4800,6 +5153,10 @@
             hideApplySummary();
             currentChanges.forEach((change) => {
                 if (!matchesFilter(change, query)) return;
+                if (!isActionableChange(change)) {
+                    change.enabled = false;
+                    return;
+                }
                 change.enabled = change.enabled === false;
                 invertedCount += 1;
             });
@@ -4811,6 +5168,7 @@
         function matchesFilter(change, query) {
             const info = getMatchInfo(change);
             const matchesQuery = !query || [
+                change.original_item_label,
                 change.original_label,
                 change.new_label,
                 change.thumbnail_source,
@@ -4820,7 +5178,9 @@
             if (!matchesQuery) return false;
             if (currentPreviewFilter === 'review') return info.kind === 'review';
             if (currentPreviewFilter === 'duplicate') return info.kind === 'duplicate';
-            if (currentPreviewFilter === 'matched') return info.kind === 'matched';
+            if (currentPreviewFilter === 'matched') return isAutoRepairKind(info.kind);
+            if (currentPreviewFilter === 'ready') return info.kind === 'ready';
+            if (currentPreviewFilter === 'completed') return info.kind === 'completed';
             if (currentPreviewFilter === 'missing-cover') return !change.thumbnail_source;
             if (currentPreviewFilter === 'edited') return isEditedChange(change);
             return true;
@@ -4828,17 +5188,25 @@
 
         function isEditedChange(change) {
             return Boolean(
-                change.confirmed ||
-                change.match_source === 'manual' ||
-                change.match_source === 'manual-confirmed'
+                change.match_source === 'manual'
             );
         }
 
         function toggleChangeEnabled(index, control) {
-            if (!currentChanges[index]) return;
+            const change = currentChanges[index];
+            if (!change) return;
             hideApplySummary();
-            const nextEnabled = currentChanges[index].enabled === false;
-            currentChanges[index].enabled = nextEnabled;
+            const nextEnabled = change.enabled === false;
+            if (nextEnabled && !isActionableChange(change)) {
+                showStatus(
+                    currentUILanguage === 'en'
+                        ? 'Complete the Chinese name and cover source before selecting this item.'
+                        : '请先补齐中文名和封面源，再加入应用队列',
+                    'error'
+                );
+                return;
+            }
+            change.enabled = nextEnabled;
             if (control) {
                 if (control.matches('button')) {
                     control.setAttribute('aria-checked', String(nextEnabled));
@@ -4850,93 +5218,95 @@
             updateSummary(currentChanges);
         }
 
-        function markChangeEdited(index, reason) {
-            const change = currentChanges[index];
-            if (!change) return;
-            hideApplySummary();
-            const label = change.new_label || '';
-            const thumb = change.thumbnail_source || '';
-            const labelHasChinese = /[\u4e00-\u9fa5]/.test(label);
-            const ready = Boolean(label && thumb && labelHasChinese);
-            change.match_status = ready ? 'matched' : 'review';
-            change.match_score = ready ? 100 : 70;
+        function reclassifyEditedChange(change, reason) {
+            const label = normalizeDisplayName(change?.new_label);
+            const thumb = normalizeDisplayName(change?.thumbnail_source);
+            const hasChinese = hasChineseDisplayName(label);
+            const duplicate = /\(\d+\)$/.test(normalizeDisplayName(change?.original_label)) || /\(\d+\)$/.test(label);
+            let status = 'review';
+            let score = hasChinese ? 72 : 64;
+
+            if (duplicate) {
+                status = 'duplicate';
+                score = 99;
+            } else if (!label || !hasChinese || !thumb) {
+                status = 'review';
+            } else if (currentMatchesWriteName(change) && hasExistingCover(change)) {
+                status = 'ready';
+                score = 100;
+            } else if (currentMatchesWriteName(change)) {
+                status = 'download';
+                score = 94;
+            } else if (hasExistingCover(change)) {
+                status = 'rename';
+                score = 96;
+            } else {
+                status = 'matched';
+                score = 96;
+            }
+
+            change.match_status = status;
+            change.match_score = score;
             change.match_source = 'manual';
             change.match_reason = reason;
-            change.needs_review = !ready;
+            change.needs_review = status === 'review' || status === 'duplicate';
+            change.enabled = isAutoRepairKind(status);
         }
 
-        function confirmSelectedChange() {
-            if (selectedChangeIndex < 0) {
-                showStatus('请先选择需要确认的游戏', 'error');
-                return;
-            }
-            confirmChange(selectedChangeIndex);
-        }
-
-        function confirmChange(index, event) {
-            if (event) event.stopPropagation();
+        function markChangeEdited(index, reason, editedKey = '') {
             const change = currentChanges[index];
             if (!change) return;
-
-            const label = change.new_label || '';
-            const thumb = change.thumbnail_source || '';
-            if (!/[\u4e00-\u9fa5]/.test(label)) {
-                selectPreviewRow(index);
-                showStatus('请先补齐中文显示名，再确认', 'error');
-                return;
-            }
-            if (!thumb && document.getElementById('option-download-thumbnails').checked) {
-                selectPreviewRow(index);
-                showStatus('请先补齐官方英文名/封面源，再确认', 'error');
-                return;
-            }
-
-            change.match_status = 'matched';
-            change.match_score = Math.max(Number(change.match_score) || 0, 98);
-            change.match_source = 'manual-confirmed';
-            change.match_reason = '已人工确认：中文名和封面源可用';
-            change.needs_review = false;
-            change.confirmed = true;
             hideApplySummary();
-            renderPreviewTable(currentChanges);
-            updateSummary(currentChanges);
-            selectPreviewRow(index);
-            showStatus('已确认当前游戏，可应用修复', 'success');
+            const coverStillTargetsCurrentName = currentMatchesWriteName(change);
+            if (editedKey === 'thumbnail_source' || editedKey === 'both' || (editedKey === 'new_label' && !coverStillTargetsCurrentName)) {
+                clearCoverState(change);
+            } else {
+                change.cover_download_status = '';
+                change.cover_download_message = '';
+            }
+            reclassifyEditedChange(change, reason);
         }
 
         function getMatchReasonLabel(info, change) {
             if (!change) return info.reason || '';
-            if (change.confirmed) return uiText('已人工确认');
+            if (change.applied || change.match_status === 'applied') return uiText('已写入 playlist');
+            if (info.kind === 'ready') return uiText('中文名、封面源和封面已就绪');
+            if (info.kind === 'download') return uiText('中文名和封面源已就绪，仅需下载封面');
+            if (info.kind === 'rename') return uiText('封面已存在，仅需写入中文名');
             if (info.kind === 'duplicate') return uiText('发现重复条目');
 
-            const original = change.original_label || '';
+            const current = getCurrentItemLabel(change);
             const label = change.new_label || '';
             const thumb = change.thumbnail_source || '';
-            const hasChinese = /[\u4e00-\u9fa5]/.test(label);
+            const hasChinese = hasChineseDisplayName(label);
 
             if (info.kind === 'review') {
                 if (!hasChinese) return uiText('缺少中文名');
                 if (!thumb) return uiText('缺少封面源');
-                if (original && label && original === label) return uiText('名称未变化');
+                if (normalizeDisplayName(current) && normalizeDisplayName(label) && normalizeDisplayName(current) === normalizeDisplayName(label)) return uiText('名称未变化');
                 if (info.source === 'backend') return uiText('后端建议需复核');
                 return uiText('低置信匹配');
             }
 
-            if (info.kind === 'matched') return uiText('名称和封面可写入');
+            if (info.kind === 'matched') return uiText('将写入中文名并下载封面');
             return info.reason || '';
         }
 
         function getMatchInfo(change) {
             if (change.match_status) {
                 const statusMap = {
-                    matched: { label: uiText('可自动修复'), badgeClass: 'success', rowClass: '', color: 'var(--green)', fallbackScore: 96 },
+                    matched: { label: uiText('修复并下载'), badgeClass: 'success', rowClass: '', color: 'var(--green)', fallbackScore: 96 },
+                    download: { label: uiText('仅下载封面'), badgeClass: 'success', rowClass: '', color: 'var(--green)', fallbackScore: 94 },
+                    rename: { label: uiText('仅改中文名'), badgeClass: 'success', rowClass: '', color: 'var(--green)', fallbackScore: 96 },
+                    ready: { label: uiText('无需修复'), badgeClass: 'ready', rowClass: 'row-ready', color: 'var(--muted)', fallbackScore: 100 },
                     review: { label: uiText('需人工确认'), badgeClass: 'warning', rowClass: 'row-warning', color: 'var(--amber)', fallbackScore: 72 },
-                    duplicate: { label: uiText('重复需处理'), badgeClass: 'danger', rowClass: 'row-danger', color: 'var(--red)', fallbackScore: 99 }
+                    duplicate: { label: uiText('重复需处理'), badgeClass: 'danger', rowClass: 'row-danger', color: 'var(--red)', fallbackScore: 99 },
+                    applied: { kind: 'completed', label: uiText('已完成'), badgeClass: 'success', rowClass: '', color: 'var(--green)', fallbackScore: 100 }
                 };
                 const status = statusMap[change.match_status] || statusMap.review;
                 const score = Number(change.match_score);
                 return {
-                    kind: change.match_status in statusMap ? change.match_status : 'review',
+                    kind: status.kind || (change.match_status in statusMap ? change.match_status : 'review'),
                     confidence: Number.isFinite(score) ? Math.max(0, Math.min(100, Math.round(score))) : status.fallbackScore,
                     label: status.label,
                     badgeClass: status.badgeClass,
@@ -4948,59 +5318,87 @@
             }
 
             const original = change.original_label || '';
+            const currentLabel = change.original_item_label || original;
             const label = change.new_label || '';
             const thumb = change.thumbnail_source || '';
-            const hasChinese = /[\u4e00-\u9fa5]/.test(label);
+            const hasChinese = hasChineseDisplayName(label);
             const duplicate = /\(\d+\)$/.test(original.trim()) || /\(\d+\)$/.test(label.trim());
-            const unchanged = original && label && original === label;
+            const currentMatchesNew = currentMatchesWriteName(change);
+            const alreadyReady = currentMatchesNew && thumb && hasChinese && hasExistingCover(change);
             const missingThumb = !thumb;
 
             if (duplicate) {
                 return { kind: 'duplicate', confidence: 99, label: uiText('重复需处理'), badgeClass: 'danger', rowClass: 'row-danger', color: 'var(--red)', reason: '检测到重复条目标记', source: 'frontend-fallback' };
             }
-            if (missingThumb || unchanged || !hasChinese) {
+            if (alreadyReady) {
+                return { kind: 'ready', confidence: 100, label: uiText('无需修复'), badgeClass: 'ready', rowClass: 'row-ready', color: 'var(--muted)', reason: '前端兼容判断：中文名、封面源和封面已就绪', source: 'frontend-fallback' };
+            }
+            if (missingThumb || !hasChinese) {
                 return { kind: 'review', confidence: hasChinese ? 72 : 64, label: uiText('需人工确认'), badgeClass: 'warning', rowClass: 'row-warning', color: 'var(--amber)', reason: '前端兼容判断：缺少中文名或封面源', source: 'frontend-fallback' };
             }
-            return { kind: 'matched', confidence: thumb !== original ? 96 : 90, label: uiText('可自动修复'), badgeClass: 'success', rowClass: '', color: 'var(--green)', reason: '前端兼容判断：中文名和封面源均存在', source: 'frontend-fallback' };
+            if (currentMatchesNew) {
+                return { kind: 'download', confidence: 94, label: uiText('仅下载封面'), badgeClass: 'success', rowClass: '', color: 'var(--green)', reason: '前端兼容判断：中文名和封面源已就绪，仅需下载封面', source: 'frontend-fallback' };
+            }
+            if (hasExistingCover(change)) {
+                return { kind: 'rename', confidence: 96, label: uiText('仅改中文名'), badgeClass: 'success', rowClass: '', color: 'var(--green)', reason: '前端兼容判断：封面已存在，仅需写入中文名', source: 'frontend-fallback' };
+            }
+            return { kind: 'matched', confidence: thumb !== original ? 96 : 90, label: uiText('修复并下载'), badgeClass: 'success', rowClass: '', color: 'var(--green)', reason: '前端兼容判断：将写入中文名并下载封面', source: 'frontend-fallback' };
         }
 
         function updateSummary(changes) {
             let matched = 0;
+            let ready = 0;
             let review = 0;
             let duplicate = 0;
             let enabled = 0;
             let downloadable = 0;
+            let completed = 0;
             changes.forEach(change => {
                 const info = getMatchInfo(change);
-                if (change.enabled !== false) enabled += 1;
-                if (change.enabled !== false && change.thumbnail_source) downloadable += 1;
-                if (info.kind === 'matched') matched += 1;
+                const isIncluded = change.enabled !== false && isAutoRepairKind(info.kind);
+                if (isIncluded) enabled += 1;
+                if (isIncluded && needsCoverDownload(change, info)) downloadable += 1;
+                if (isAutoRepairKind(info.kind)) matched += 1;
+                if (info.kind === 'ready') ready += 1;
                 if (info.kind === 'review') review += 1;
                 if (info.kind === 'duplicate') duplicate += 1;
+                if (info.kind === 'completed') completed += 1;
             });
 
             document.getElementById('summary-total').textContent = changes.length;
             document.getElementById('summary-matched').textContent = matched;
+            document.getElementById('summary-ready').textContent = ready;
+            document.getElementById('summary-completed').textContent = completed;
             document.getElementById('summary-review').textContent = review;
             document.getElementById('summary-duplicate').textContent = duplicate;
             document.getElementById('step-preview').textContent = currentUILanguage === 'en'
                 ? `${changes.length || 0} items, ${enabled} selected, ${review} need review`
                 : `${changes.length || 0} 项，${enabled} 项已勾选，${review} 项需人工确认`;
-            document.getElementById('dock-plan-count').textContent = formatPendingReviewCount(enabled);
+            document.getElementById('dock-plan-count').textContent = currentUILanguage === 'en'
+                ? `${enabled} ready · ${review} to review`
+                : `${enabled} 可应用 · ${review} 待校对`;
             document.getElementById('dock-download-count').textContent = formatPendingDownloadCount(downloadable);
-            document.getElementById('repair-summary-inline').textContent = getRepairSummaryText(enabled, matched, review, changes.length);
-            updateReviewProgress(changes.length, review, enabled);
+            document.getElementById('repair-summary-inline').textContent = completed
+                ? getAppliedSummaryText(completed)
+                : getRepairSummaryText(enabled, matched, review, changes.length, ready, completed);
+            updateReviewProgress(changes.length, review, enabled, ready, completed);
             setProgressCardTotals(changes.length || 0, 0);
         }
 
-        function getRepairSummaryText(enabled, matched, review, total) {
-            if (!total) return uiText('已选 0 项 · 等待游戏库');
+        function getAppliedSummaryText(applied) {
             return currentUILanguage === 'en'
-                ? `Selected ${enabled} · ${matched} auto repair · ${review} need review`
-                : `已选 ${enabled} 项 · ${matched} 可自动修复 · ${review} 需人工确认`;
+                ? `${uiText('修复完成')} · ${applied} ${uiText('项已写回')}`
+                : `${uiText('修复完成')} · ${applied} ${uiText('项已写回')}`;
         }
 
-        function updateReviewProgress(total, review, enabled) {
+        function getRepairSummaryText(enabled, matched, review, total, ready = 0, completed = 0) {
+            if (!total) return uiText('已选 0 项 · 等待游戏库');
+            return currentUILanguage === 'en'
+                ? `Selected ${enabled} · ${matched} auto repair · ${ready} no repair needed · ${completed} completed · ${review} need review`
+                : `已选 ${enabled} 项 · ${matched} 可自动修复 · ${ready} 无需修复 · ${completed} 已完成 · ${review} 需人工确认`;
+        }
+
+        function updateReviewProgress(total, review, enabled, ready = 0, completed = 0) {
             const progressLabel = document.getElementById('inline-progress-label');
             if (!progressLabel) return;
             const busyStates = ['应用中', '处理中', '完成', '失败', '断开', '启动中'];
@@ -5019,6 +5417,15 @@
                     currentUILanguage === 'en' ? `Current: ${review} need review` : `当前：${review} 项需人工确认`
                 );
             } else {
+                if (!enabled && ready + completed >= total) {
+                    setInlineProgress(
+                        100,
+                        uiText('无需处理'),
+                        currentUILanguage === 'en' ? `Analyzed ${total}` : `已分析 ${total} 项`,
+                        uiText('当前：无需处理')
+                    );
+                    return;
+                }
                 setInlineProgress(
                     35,
                     uiText('待应用'),
@@ -5043,37 +5450,38 @@
                 return;
             }
             const info = getMatchInfo(change);
-            const system = document.getElementById('system_name').value || change.system || '';
-            const thumbUrl = change.thumbnail_source ? buildThumbnailUrl(system, change.thumbnail_source) : '等待封面源';
+            const coverUrl = getCoverPreviewUrl(change);
+            const coverSource = getCoverPreviewSourceLabel(change);
             const cover = document.getElementById('cover-preview');
             const coverImage = document.getElementById('cover-image');
 
             document.getElementById('cover-title').textContent = change.new_label || change.original_label || '未命名';
-            document.getElementById('cover-subtitle').textContent = change.thumbnail_source || '未设置封面源';
-            document.getElementById('inspector-caption').textContent = change.original_label || '未选择游戏';
-            document.getElementById('inspector-original').textContent = change.path || change.original_label || '无路径';
-            document.getElementById('inspector-cn').textContent = change.new_label || '未匹配中文名';
+            document.getElementById('cover-subtitle').textContent = coverSource;
+            document.getElementById('inspector-caption').textContent = getCurrentItemLabel(change);
+            document.getElementById('inspector-original').textContent = getCurrentItemMeta(change) || getCurrentItemLabel(change);
+            const hasChineseDisplayName = /[\u4e00-\u9fff]/.test(change.new_label || '');
+            document.getElementById('inspector-cn').textContent = hasChineseDisplayName
+                ? change.new_label
+                : change.new_label
+                    ? (currentUILanguage === 'en'
+                        ? `No Chinese name found; using standard English: ${change.new_label}`
+                        : `未找到中文名，暂用标准英文：${change.new_label}`)
+                    : uiText('未匹配中文名');
             document.getElementById('inspector-dat').textContent = change.thumbnail_source || '未匹配标准英文名';
-            document.getElementById('inspector-url').textContent = thumbUrl;
+            document.getElementById('inspector-url').textContent = coverSource;
             document.getElementById('inspector-label').value = change.new_label || '';
             document.getElementById('inspector-thumb').value = change.thumbnail_source || '';
             document.getElementById('inspector-confidence').textContent = `${info.confidence}%（${info.label}） · ${info.reason}`;
-            const confirmButton = document.getElementById('confirm-selected-btn');
-            if (confirmButton) {
-                const needsConfirmation = info.kind === 'review';
-                confirmButton.disabled = !needsConfirmation;
-                confirmButton.textContent = needsConfirmation ? uiText('确认当前项') : uiText('已确认');
-            }
             const searchButton = document.getElementById('search-selected-thumb-btn');
             if (searchButton) searchButton.disabled = false;
 
             cover.classList.remove('has-image');
             coverImage.removeAttribute('src');
-            coverImage.alt = change.original_label || '';
-            if (change.thumbnail_source) {
+            coverImage.alt = getCurrentItemLabel(change);
+            if (coverUrl) {
                 coverImage.onload = () => cover.classList.add('has-image');
                 coverImage.onerror = () => cover.classList.remove('has-image');
-                coverImage.src = thumbUrl;
+                coverImage.src = coverUrl;
             }
         }
 
@@ -5096,11 +5504,6 @@
             document.getElementById('inspector-label').value = '';
             document.getElementById('inspector-thumb').value = '';
             document.getElementById('inspector-confidence').textContent = '--';
-            const confirmButton = document.getElementById('confirm-selected-btn');
-            if (confirmButton) {
-                confirmButton.disabled = true;
-                confirmButton.textContent = uiText('确认当前项');
-            }
             const searchButton = document.getElementById('search-selected-thumb-btn');
             if (searchButton) searchButton.disabled = true;
         }
@@ -5112,7 +5515,7 @@
         function updateSelectedFromInspector(key, value) {
             if (selectedChangeIndex < 0 || !currentChanges[selectedChangeIndex]) return;
             currentChanges[selectedChangeIndex][key] = value;
-            markChangeEdited(selectedChangeIndex, key === 'new_label' ? '手动编辑显示名称' : '手动编辑封面源');
+            markChangeEdited(selectedChangeIndex, key === 'new_label' ? '手动编辑显示名称' : '手动编辑封面源', key);
             renderPreviewTable(currentChanges);
             selectPreviewRow(selectedChangeIndex);
             updateSummary(currentChanges);
@@ -5150,6 +5553,30 @@
             } catch (error) {
                 showStatus('打开目录失败: ' + error.message, 'error');
             }
+        }
+
+        function getCoverPreviewUrl(change) {
+            if (!change) return '';
+            if (change.cover_preview_url) return change.cover_preview_url;
+            if (hasExistingCover(change) && change.cover_path) {
+                return `/api/thumbnail/preview?path=${encodeURIComponent(change.cover_path)}`;
+            }
+            return getRemoteCoverUrl(change);
+        }
+
+        function getCoverPreviewSourceLabel(change) {
+            if (!change) return '等待封面源';
+            if (change.cover_preview_url || (hasExistingCover(change) && change.cover_path)) {
+                return change.cover_path || uiText('本地');
+            }
+            return getRemoteCoverUrl(change) || '等待封面源';
+        }
+
+        function getRemoteCoverUrl(change) {
+            const source = change?.thumbnail_source;
+            if (!source) return '';
+            const system = document.getElementById('system_name').value || change.system || '';
+            return buildThumbnailUrl(system, source);
         }
 
         function buildThumbnailUrl(system, source) {

@@ -4,6 +4,8 @@ import json
 import os
 import sys
 import glob
+import mimetypes
+import shlex
 import subprocess
 import sqlite3
 import tempfile
@@ -17,6 +19,44 @@ def get_base_path():
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 TEMPLATE_DIR = os.path.join(get_base_path(), "src", "templates")
+
+def thumbnail_preview_url(path):
+    if not path:
+        return None
+    return "/api/thumbnail/preview?path=" + urllib.parse.quote(str(path), safe="")
+
+def annotate_download_summary_paths(summary, local_root=None, final_root=None):
+    if not summary:
+        return summary
+
+    try:
+        from retroarch_scanner import is_adb_uri, parse_adb_uri
+    except Exception:
+        is_adb_uri = lambda value: False
+        parse_adb_uri = None
+
+    adb_target = bool(final_root and is_adb_uri(final_root) and parse_adb_uri)
+    local_base = os.path.abspath(local_root) if local_root else None
+
+    for detail in summary.get("details", []):
+        path = detail.get("path")
+        if path and adb_target and local_base:
+            try:
+                path_abs = os.path.abspath(path)
+                if path_abs == local_base or path_abs.startswith(local_base + os.sep):
+                    serial, remote_root = parse_adb_uri(final_root)
+                    rel_path = os.path.relpath(path_abs, local_base).replace(os.sep, "/")
+                    remote_path = "/".join(part.strip("/") for part in [remote_root, rel_path] if part)
+                    path = f"adb://{serial}/{remote_path}" if remote_path else f"adb://{serial}"
+                    detail["path"] = path
+            except Exception:
+                pass
+
+        if detail.get("type") == "Named_Boxarts" and detail.get("status") in {"success", "skipped"} and path:
+            detail["cover_path"] = path
+            detail["cover_preview_url"] = thumbnail_preview_url(path)
+
+    return summary
 
 # Job Management
 import threading
@@ -110,6 +150,9 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
         elif path == "/api/progress":
             job_id = query_params.get('job_id', [''])[0]
             self.stream_progress(job_id)
+        elif path == "/api/thumbnail/preview":
+            target_path = query_params.get('path', [''])[0]
+            self.serve_thumbnail_preview(target_path)
         elif path == "/api/execute":
             # Legacy execute endpoint (SSE)
             self.send_response(200)
@@ -237,6 +280,53 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps({"error": str(e)}, ensure_ascii=False).encode("utf-8"))
 
+    def serve_thumbnail_preview(self, target_path):
+        allowed_exts = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
+        if not target_path:
+            self.send_response(404)
+            self.end_headers()
+            return
+
+        ext = os.path.splitext(urllib.parse.urlparse(target_path).path)[1].lower()
+        if ext not in allowed_exts:
+            self.send_response(415)
+            self.end_headers()
+            return
+
+        try:
+            from retroarch_scanner import is_adb_uri, parse_adb_uri
+
+            if is_adb_uri(target_path):
+                serial, remote_path = parse_adb_uri(target_path)
+                if not serial or not remote_path:
+                    raise FileNotFoundError(target_path)
+                result = subprocess.run(
+                    ["adb", "-s", serial, "exec-out", "sh", "-c", f"cat {shlex.quote(remote_path)}"],
+                    capture_output=True,
+                    timeout=15,
+                    check=False,
+                )
+                if result.returncode != 0 or not result.stdout:
+                    raise FileNotFoundError(target_path)
+                content = result.stdout
+            else:
+                local_path = os.path.abspath(os.path.expanduser(target_path))
+                if not os.path.isfile(local_path):
+                    raise FileNotFoundError(local_path)
+                with open(local_path, "rb") as f:
+                    content = f.read()
+
+            content_type = mimetypes.guess_type(target_path)[0] or "image/png"
+            self.send_response(200)
+            self.send_header("Content-type", content_type)
+            self.send_header("Cache-Control", "max-age=300")
+            self.send_header("Content-Length", str(len(content)))
+            self.end_headers()
+            self.wfile.write(content)
+        except Exception:
+            self.send_response(404)
+            self.end_headers()
+
     def list_systems(self):
         # List available systems from rom-name-cn directory
         try:
@@ -349,7 +439,13 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                 print(f"DEBUG search_db: Loading DAT for system '{system}'...")
                 if libretro_db.load_system_dat(system):
                     print(f"DEBUG search_db: DAT loaded successfully, searching...")
-                    libretro_results = libretro_db.search(keyword, limit=50)
+                    exact_standard_name = libretro_db.get_standard_name(keyword)
+                    libretro_results = []
+                    if exact_standard_name:
+                        libretro_results.append(exact_standard_name)
+                    for name in libretro_db.search(keyword, limit=50):
+                        if name not in libretro_results:
+                            libretro_results.append(name)
                     
                     print(f"DEBUG search_db: Found {len(libretro_results)} matches in LibretroDB")
                     
@@ -512,6 +608,7 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                 data = json.loads(post_data)
                 playlist_path = data.get('playlist_path')
                 system_name = data.get('system_name')
+                thumbnails_dir = data.get('thumbnails_dir')
                 
                 config = {}
                 if os.path.exists(CONFIG_FILE):
@@ -525,7 +622,7 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                 effective_playlist_path = materialize_adb_file(playlist_path) if is_adb_uri(playlist_path) else playlist_path
 
                 import plcn
-                changes = plcn.analyze_playlist(effective_playlist_path, system_name, rom_name_cn_path)
+                changes = plcn.analyze_playlist(effective_playlist_path, system_name, rom_name_cn_path, thumbnails_dir)
                 
                 self.send_response(200)
                 self.send_header("Content-type", "application/json")
@@ -603,6 +700,12 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                         if remote_playlist and remote_thumbnails and should_download:
                             job_manager.update_job(jid, len(chgs or []), len(chgs or []), "正在推送缩略图到实机...")
                             push_adb_directory(effective_thumbnails_dir, t_dir)
+
+                        summary = annotate_download_summary_paths(
+                            summary,
+                            local_root=effective_thumbnails_dir,
+                            final_root=t_dir,
+                        )
 
                         job_manager.complete_job(jid, {
                             "applied_count": len(chgs or []),
@@ -690,6 +793,11 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                                     t_dir,
                                     backup=use_backup,
                                     download_thumbnails=should_download
+                                )
+                                summary = annotate_download_summary_paths(
+                                    summary,
+                                    local_root=t_dir,
+                                    final_root=t_dir,
                                 )
                                 summaries.append(summary)
                                 

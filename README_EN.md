@@ -1,18 +1,20 @@
 # PLCN
 
-[中文 README](README.md)
+GitHub shows the Chinese README by default. To return to Chinese, open [README.md](README.md).
 
 PLCN is a local RetroArch game-list localization and thumbnail matching tool. It currently runs as a Python CLI plus local Web UI: it reads `.lpl` game lists, proposes Chinese display names and standard English thumbnail sources from local data and Libretro databases, then writes the confirmed changes back and downloads matching artwork.
 
 > Current implementation note: PLCN is an external local helper for RetroArch playlists and thumbnail folders. It is not an in-RetroArch plugin and does not modify RetroArch itself.
 
-## Latest Version: v3.0.0
+## Latest Version: v3.1.0
 
-- Added the PLCN v3.0 device-library workbench for scanning RetroArch game lists from local folders, mounted devices, and authorized ADB Android handhelds/devices.
-- Reworked the Web UI information architecture with device/directory entry on the left, game-library scan in the center, on-demand repair preview on the right, and task progress at the bottom.
-- Improved row-level repair flows with system abbreviation tabs, cover thumbnails, cover status, manual confirmation, selected-item apply, and automatic database search using the default English game name.
-- Refined light/dark themes, UI language switching, button semantics, table alignment, and narrow-screen behavior.
-- Added regression tests for device scanning, UI information architecture, and dark-theme active states.
+- Upgraded the PLCN v3.1 status-driven repair workbench with distinct auto-repair, no-repair-needed, completed, review, and duplicate states.
+- Removed per-row manual confirmation buttons; clear status labels, the selected queue, and the apply summary now drive write-back decisions.
+- After applying repairs, current names, cover states, and local/ADB cover previews update immediately without requiring a page refresh.
+- Clarified the table fields as **Write Name** and **Cover Source Name** so English thumbnail sources are not mistaken for recommended Chinese names.
+- Hardened artwork-source matching: Chinese folders or existing Chinese labels no longer let loose Chinese fuzzy matches override filename/DAT evidence, fixing cases like `Snatcher.bin` being matched to an unrelated English title.
+- Improved FBNeo/Arcade local matching with ROM paths, zip short names, RetroArch `crc32`, local zip CRCs, and DAT checksum aliases.
+- Added regression coverage for cover-path write-back, download summaries, FBNeo matching, search precision, and the UI status model.
 
 ## Features
 
@@ -23,6 +25,8 @@ PLCN is a local RetroArch game-list localization and thumbnail matching tool. It
   - Attempts to recover the standard English game name even when the ROM filename or current label is Chinese.
   - Downloads `Named_Boxarts`, `Named_Snaps`, and `Named_Titles` from the official Libretro thumbnail server.
   - Uses `libretro-database` data to reduce naming mismatches and missing thumbnails.
+  - For FBNeo/Arcade games, PLCN now prioritizes the `.lpl` ROM path, zip short name, RetroArch `crc32` field, local zip-entry CRCs, and DAT checksum aliases to recover the standard title and reduce artwork-source errors caused by arcade short names.
+  - PLCN remains local/offline-first and does not integrate the ScreenScraper/Skraper API; matching diagnostics explain whether a row came from a DAT hit, an unreadable ROM fingerprint, or manual-review fallback.
 - **Batch processing**: Processes multiple `.lpl` game lists from one directory.
 - **Local data cache**: Uses SQLite to cache translation and matching data.
 - **Cross-platform packaging**: Distributed for Windows, macOS, and Linux through PyInstaller builds.
@@ -74,8 +78,9 @@ Download the latest release for your platform from the [Releases](https://github
 
 3. **Preview and review**:
    - Generate a preview before applying changes.
-   - Review original labels, proposed Chinese labels, thumbnail sources, and match status.
+   - Review current names, write names, cover source names, cover status, and repair status.
    - Uncheck rows you do not want to write back; unchecked rows are excluded from apply and download.
+   - Edit uncertain write names or cover sources directly; once a row reaches an actionable status, add it to the apply queue.
 
 4. **Apply and download**:
    - Write confirmed labels back to the game list.

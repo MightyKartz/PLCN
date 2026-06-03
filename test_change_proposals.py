@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+from urllib.parse import parse_qs, urlparse
 
 sys.path.append(os.path.join(os.getcwd(), "src"))
 
@@ -33,6 +34,137 @@ def test_build_change_proposal_adds_backend_match_metadata():
     assert proposal["match_source"] == "rom-name-cn"
     assert proposal["match_reason"] == "中文库精确匹配"
     assert proposal["needs_review"] is False
+
+
+def test_build_change_proposal_marks_existing_complete_item_ready():
+    item = {
+        "path": "/roms/snes/Super Mario World (USA).sfc",
+        "label": "超级马里奥世界",
+        "db_name": "Nintendo - Super Nintendo Entertainment System.lpl",
+    }
+
+    proposal = plcn.build_change_proposal(
+        index=0,
+        item=item,
+        display_label="Super Mario World (USA)",
+        new_label="超级马里奥世界",
+        thumbnail_source="Super Mario World",
+        system_name="Nintendo - Super Nintendo Entertainment System",
+        match_source="playlist",
+        cover_exists=True,
+        cover_path="/thumbs/Nintendo - Super Nintendo Entertainment System/Named_Boxarts/超级马里奥世界.png",
+    )
+
+    assert proposal["match_status"] == "ready"
+    assert proposal["match_score"] == 100
+    assert proposal["needs_review"] is False
+    assert proposal["cover_exists"] is True
+    cover_preview = urlparse(proposal["cover_preview_url"])
+    assert cover_preview.path == "/api/thumbnail/preview"
+    assert parse_qs(cover_preview.query)["path"][0] == proposal["cover_path"]
+
+
+def test_build_change_proposal_marks_label_correct_cover_missing_as_download_only():
+    item = {
+        "path": "/roms/snes/Super Mario World (USA).sfc",
+        "label": "超级马里奥世界",
+        "db_name": "Nintendo - Super Nintendo Entertainment System.lpl",
+    }
+
+    proposal = plcn.build_change_proposal(
+        index=0,
+        item=item,
+        display_label="Super Mario World (USA)",
+        new_label="超级马里奥世界",
+        thumbnail_source="Super Mario World",
+        system_name="Nintendo - Super Nintendo Entertainment System",
+        match_source="playlist",
+        cover_exists=False,
+    )
+
+    assert proposal["match_status"] == "download"
+    assert proposal["needs_review"] is False
+    assert proposal["cover_exists"] is False
+
+
+def test_build_change_proposal_marks_cover_existing_label_change_as_rename_only():
+    item = {
+        "path": "/roms/snes/Super Mario World (USA).sfc",
+        "label": "Super Mario World",
+        "db_name": "Nintendo - Super Nintendo Entertainment System.lpl",
+    }
+
+    proposal = plcn.build_change_proposal(
+        index=0,
+        item=item,
+        display_label="Super Mario World",
+        new_label="超级马里奥世界",
+        thumbnail_source="Super Mario World",
+        system_name="Nintendo - Super Nintendo Entertainment System",
+        match_source="rom-name-cn",
+        cover_exists=True,
+    )
+
+    assert proposal["match_status"] == "rename"
+    assert proposal["needs_review"] is False
+    assert proposal["cover_exists"] is True
+
+
+def test_chinese_parent_directory_uses_filename_for_cover_source(tmp_path):
+    playlist_path = tmp_path / "Sony - PlayStation.lpl"
+    playlist_path.write_text(
+        json.dumps(
+            {
+                "version": "1.5",
+                "items": [
+                    {
+                        "path": "/roms/PS/掠夺者/Snatcher.bin",
+                        "label": "掠夺者",
+                        "core_path": "",
+                        "core_name": "",
+                        "crc32": "00000000|crc",
+                        "db_name": "Sony - PlayStation.lpl",
+                    }
+                ],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    try:
+        changes = plcn.analyze_playlist(
+            str(playlist_path),
+            "Sony - PlayStation",
+            "data/rom-name-cn",
+        )
+    finally:
+        playlist_path.unlink(missing_ok=True)
+
+    assert changes[0]["new_label"] == "掠夺者"
+    assert changes[0]["thumbnail_source"] == "Snatcher (Japan)"
+    assert "Tiger & Bunny" not in changes[0]["thumbnail_source"]
+
+
+def test_existing_boxart_lookup_indexes_local_named_boxarts(tmp_path):
+    thumbnails_dir = tmp_path / "thumbnails"
+    boxarts = thumbnails_dir / "Nintendo - Super Nintendo Entertainment System" / "Named_Boxarts"
+    boxarts.mkdir(parents=True)
+    (boxarts / "超级马里奥世界.png").write_bytes(b"")
+
+    lookup = plcn.build_existing_boxart_lookup(
+        str(thumbnails_dir),
+        "Nintendo - Super Nintendo Entertainment System",
+    )
+    exists, path = plcn.find_existing_boxart(
+        str(thumbnails_dir),
+        "Nintendo - Super Nintendo Entertainment System",
+        "超级马里奥世界",
+        "Super Mario World",
+        lookup=lookup,
+    )
+
+    assert exists is True
+    assert path.endswith("超级马里奥世界.png")
 
 
 def test_apply_changes_skips_stale_proposal_snapshot(tmp_path):

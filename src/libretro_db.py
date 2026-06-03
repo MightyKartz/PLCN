@@ -151,6 +151,7 @@ class LibretroDB:
             current_block = None
             current_name = None
             current_desc = None
+            current_rom_aliases = []
             
             for line in content.splitlines():
                 line = line.strip()
@@ -158,45 +159,64 @@ class LibretroDB:
                     current_block = 'game'
                     current_name = None
                     current_desc = None
+                    current_rom_aliases = []
                 elif line.startswith(')'):
                     if current_block == 'game' and current_name:
                         # If we have a description, use it as the standard name (common for Arcade)
                         # Otherwise use the name
                         standard_name = current_desc if current_desc else current_name
-                        
-                        # Store mapping: normalized(name) -> standard_name
-                        # This allows looking up by zip name ("aof3") to get "Art of Fighting 3"
-                        norm_name = self.normalize_name(current_name)
-                        if norm_name not in self.standard_names:
-                            self.standard_names[norm_name] = []
-                        if standard_name not in self.standard_names[norm_name]:
-                            self.standard_names[norm_name].append(standard_name)
-                            
-                        # ALSO store mapping: normalized(description) -> standard_name
-                        # This allows looking up by full title ("Art of Fighting 3") to get "Art of Fighting 3"
+
+                        # Store mapping: normalized(game name/description) -> standard_name.
+                        self._add_standard_name_alias(current_name, standard_name)
                         if current_desc:
-                            norm_desc = self.normalize_name(current_desc)
-                            if norm_desc not in self.standard_names:
-                                self.standard_names[norm_desc] = []
-                            if standard_name not in self.standard_names[norm_desc]:
-                                self.standard_names[norm_desc].append(standard_name)
+                            self._add_standard_name_alias(current_desc, standard_name)
+
+                        # Arcade DATs often identify romsets through zip names and checksums.
+                        # Index those aliases so FBNeo paths like aof3.zip resolve reliably.
+                        for alias in current_rom_aliases:
+                            self._add_standard_name_alias(alias, standard_name)
                                 
                     current_block = None
                 elif current_block == 'game':
                     if line.startswith('name'):
-                        match = re.search(r'name\s+"(.*?)"', line)
-                        if match:
-                            current_name = match.group(1)
+                        current_name = self._extract_dat_field(line, 'name')
                     elif line.startswith('description'):
-                        match = re.search(r'description\s+"(.*?)"', line)
-                        if match:
-                            current_desc = match.group(1)
+                        current_desc = self._extract_dat_field(line, 'description')
+                    elif line.startswith('rom'):
+                        rom_name = self._extract_dat_field(line, 'name')
+                        if rom_name:
+                            current_rom_aliases.append(rom_name)
+                            rom_stem = os.path.splitext(rom_name)[0]
+                            if rom_stem and rom_stem != rom_name:
+                                current_rom_aliases.append(rom_stem)
+                        for checksum_field in ('crc', 'md5', 'sha1'):
+                            checksum = self._extract_dat_field(line, checksum_field)
+                            if checksum:
+                                current_rom_aliases.append(checksum)
             
             print(f"Loaded {len(self.standard_names)} normalized entries from {system_name}.dat")
             return True
         except Exception as e:
             print(f"Error parsing DAT file {dat_path}: {e}")
             return False
+
+    def _add_standard_name_alias(self, alias, standard_name):
+        if not alias or not standard_name:
+            return
+        norm_alias = self.normalize_name(alias)
+        if not norm_alias:
+            return
+        if norm_alias not in self.standard_names:
+            self.standard_names[norm_alias] = []
+        if standard_name not in self.standard_names[norm_alias]:
+            self.standard_names[norm_alias].append(standard_name)
+
+    def _extract_dat_field(self, line, field_name):
+        pattern = rf'\b{re.escape(field_name)}\s+(?:"([^"]+)"|([^\s\)]+))'
+        match = re.search(pattern, line)
+        if not match:
+            return None
+        return match.group(1) or match.group(2)
             
     def normalize_name(self, name):
         """

@@ -579,6 +579,23 @@ class DatabaseManager:
             
             if not english_names:
                 return []
+
+            norm_keyword = self.normalize_name(keyword)
+            exact_matches = [
+                (en, cn, sys)
+                for en, cn, sys in candidates
+                if en.casefold() == keyword.casefold() or self.normalize_name(en) == norm_keyword
+            ]
+
+            if exact_matches:
+                for en, cn, sys in exact_matches[:limit]:
+                    results.append({
+                        'english_name': en,
+                        'chinese_name': cn,
+                        'system': sys
+                    })
+                print(f"DEBUG search_by_keyword: Returning {len(results)} exact result(s)")
+                return results
             
             # Fuzzy search on English names
             # Hybrid approach:
@@ -596,11 +613,28 @@ class DatabaseManager:
                 matches = process.extract(keyword, english_names, scorer=fuzz.WRatio, limit=limit*2)
 
             print(f"DEBUG search_by_keyword: Top matches (before filtering): {[(m[0], m[1]) for m in matches[:5]]}")
+
+            noise_tokens = {
+                "usa", "us", "japan", "jpn", "europe", "eur", "world", "asia",
+                "korea", "hong", "kong", "china", "taiwan", "ver", "version",
+                "rev", "set", "bootleg", "prototype", "proto", "beta", "demo",
+                "the", "and", "of", "no", "with", "conversion", "buggy"
+            }
+            query_tokens = [
+                token.lower()
+                for token in re.findall(r"[A-Za-z][A-Za-z0-9]+", keyword)
+                if len(token) >= 3 and token.lower() not in noise_tokens
+            ]
+            required_token = query_tokens[0] if query_tokens else ""
             
             # Build results from matches
             count = 0
             for match_name, score, _ in matches:
                 if score < 60: continue
+
+                if required_token and required_token not in self.normalize_name(match_name):
+                    print(f"DEBUG search_by_keyword: Skipping '{match_name}' (score {score}) - missing required token '{required_token}'")
+                    continue
                 
                 # Apply stricter filtering for short queries
                 if is_short_query:
