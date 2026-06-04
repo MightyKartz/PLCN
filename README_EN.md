@@ -6,15 +6,13 @@ PLCN is a local RetroArch game-list localization and thumbnail matching tool. It
 
 > Current implementation note: PLCN is an external local helper for RetroArch playlists and thumbnail folders. It is not an in-RetroArch plugin and does not modify RetroArch itself.
 
-## Latest Version: v3.1.0
+## Latest Version: v3.1.1
 
-- Upgraded the PLCN v3.1 status-driven repair workbench with distinct auto-repair, no-repair-needed, completed, review, and duplicate states.
-- Removed per-row manual confirmation buttons; clear status labels, the selected queue, and the apply summary now drive write-back decisions.
-- After applying repairs, current names, cover states, and local/ADB cover previews update immediately without requiring a page refresh.
-- Clarified the table fields as **Write Name** and **Cover Source Name** so English thumbnail sources are not mistaken for recommended Chinese names.
-- Hardened artwork-source matching: Chinese folders or existing Chinese labels no longer let loose Chinese fuzzy matches override filename/DAT evidence, fixing cases like `Snatcher.bin` being matched to an unrelated English title.
-- Improved FBNeo/Arcade local matching with ROM paths, zip short names, RetroArch `crc32`, local zip CRCs, and DAT checksum aliases.
-- Added regression coverage for cover-path write-back, download summaries, FBNeo matching, search precision, and the UI status model.
+- Fixed regular ROM playlist scans where Chinese parent folders such as `gba中文游戏`, `中文游戏`, or `游戏合集` could be written as every game's display name.
+- Fixed playlists already polluted by older versions: when the current label is a generic collection folder name, preview now repairs it from the ROM filename and database match.
+- Adjusted matching priority so ROM filenames, valid existing labels, Libretro DAT evidence, and the local Chinese database win over generic Chinese collection folders.
+- Preserved the v3.1 status-driven repair workbench, immediate cover-state refresh, separated **Write Name / Cover Source Name** fields, and FBNeo/Arcade matching improvements.
+- Added regression coverage for GBA Chinese parent folders and polluted labels so a whole scanned list cannot collapse to one folder name again.
 
 ## Features
 
@@ -25,6 +23,7 @@ PLCN is a local RetroArch game-list localization and thumbnail matching tool. It
   - Attempts to recover the standard English game name even when the ROM filename or current label is Chinese.
   - Downloads `Named_Boxarts`, `Named_Snaps`, and `Named_Titles` from the official Libretro thumbnail server.
   - Uses `libretro-database` data to reduce naming mismatches and missing thumbnails.
+  - Regular ROM playlists prioritize ROM filenames and database evidence so collection folders like `gba中文游戏` cannot overwrite every game's display name.
   - For FBNeo/Arcade games, PLCN now prioritizes the `.lpl` ROM path, zip short name, RetroArch `crc32` field, local zip-entry CRCs, and DAT checksum aliases to recover the standard title and reduce artwork-source errors caused by arcade short names.
   - PLCN remains local/offline-first and does not integrate the ScreenScraper/Skraper API; matching diagnostics explain whether a row came from a DAT hit, an unreadable ROM fingerprint, or manual-review fallback.
 - **Batch processing**: Processes multiple `.lpl` game lists from one directory.

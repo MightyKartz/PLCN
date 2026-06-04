@@ -147,6 +147,35 @@ def detect_system(playlist_path):
 def has_chinese(text):
     return any('\u4e00' <= char <= '\u9fff' for char in (text or ''))
 
+def is_generic_collection_label(text):
+    if not has_chinese(text):
+        return False
+
+    compact = re.sub(r'[\s_\-·./\\]+', '', (text or '').casefold())
+    if not compact:
+        return False
+
+    exact_generic_names = {
+        "中文游戏",
+        "汉化游戏",
+        "游戏合集",
+        "游戏目录",
+        "游戏列表",
+        "游戏",
+    }
+    if compact in exact_generic_names:
+        return True
+
+    if any(phrase in compact for phrase in ("中文游戏", "汉化游戏", "游戏合集", "游戏目录", "游戏列表")):
+        return True
+
+    platform_aliases = {
+        "gba", "gb", "gbc", "nds", "nes", "fc", "sfc", "snes", "md",
+        "n64", "ps", "ps1", "psx", "pce", "msx", "wii", "dc", "ss",
+    }
+    generic_suffixes = {"中文", "游戏", "中文游戏", "汉化", "汉化游戏"}
+    return any(compact == f"{alias}{suffix}" for alias in platform_aliases for suffix in generic_suffixes)
+
 def normalize_value(value):
     return unicodedata.normalize('NFC', value or '')
 
@@ -655,19 +684,9 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
             add_proposal(i, item, display_label, new_label, thumbnail_source, match_source, match_reason, diagnostics)
             continue
         
-        # Priority 0: Check if parent directory name contains Chinese characters
-        # This takes precedence over existing label because folder structure is often the "source of truth"
-        if path:
-            parent_dir = os.path.basename(os.path.dirname(path))
-            if parent_dir and is_chinese_text(parent_dir):
-                new_label = parent_dir
-                thumbnail_source = resolve_thumbnail_source_for_chinese_label(parent_dir, path, display_label, original_label)
-                add_proposal(i, item, display_label, new_label, thumbnail_source, "folder", "优先使用中文父目录，并使用文件名或精确库匹配封面源")
-                continue
-
         # Priority 1: If original_label already contains Chinese and is not empty, use it
         # This preserves user's manual edits from previous runs
-        if original_label and is_chinese_text(original_label):
+        if original_label and is_chinese_text(original_label) and not is_generic_collection_label(original_label):
             print(f"  [{i}] Using existing Chinese label: '{original_label}'")
             new_label = original_label
             thumbnail_source = resolve_thumbnail_source_for_chinese_label(original_label, path, display_label, original_label)
@@ -744,11 +763,13 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
         if path:
             filename_no_ext = os.path.splitext(os.path.basename(path))[0]
             if filename_no_ext: candidates.append(filename_no_ext)
-        if original_label and original_label not in candidates:
+        if original_label and original_label not in candidates and not is_generic_collection_label(original_label):
             candidates.append(original_label)
         if path:
             parent_dir = os.path.basename(os.path.dirname(path))
-            if parent_dir and parent_dir not in candidates:
+            # Parent folders often describe a collection, e.g. "gba中文游戏".
+            # Do not let Chinese folder names override stronger ROM filename or playlist label evidence.
+            if parent_dir and parent_dir not in candidates and not is_chinese_text(parent_dir):
                 candidates.append(parent_dir)
         
         translated_label = None

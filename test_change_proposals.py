@@ -145,6 +145,86 @@ def test_chinese_parent_directory_uses_filename_for_cover_source(tmp_path):
     assert "Tiger & Bunny" not in changes[0]["thumbnail_source"]
 
 
+def test_generic_chinese_parent_directory_does_not_override_rom_label(tmp_path):
+    playlist_path = tmp_path / "Nintendo - Game Boy Advance.lpl"
+    playlist_path.write_text(
+        json.dumps(
+            {
+                "version": "1.5",
+                "items": [
+                    {
+                        "path": "/roms/gba中文游戏/F-Zero - Maximum Velocity (USA, Europe).gba",
+                        "label": "F-Zero - Maximum Velocity (USA, Europe)",
+                        "core_path": "",
+                        "core_name": "",
+                        "crc32": "00000000|crc",
+                        "db_name": "Nintendo - Game Boy Advance.lpl",
+                    },
+                    {
+                        "path": "/roms/gba中文游戏/Castlevania - Aria of Sorrow (USA).gba",
+                        "label": "Castlevania - Aria of Sorrow (USA)",
+                        "core_path": "",
+                        "core_name": "",
+                        "crc32": "00000000|crc",
+                        "db_name": "Nintendo - Game Boy Advance.lpl",
+                    },
+                ],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    changes = plcn.analyze_playlist(
+        str(playlist_path),
+        "Nintendo - Game Boy Advance",
+        "data/rom-name-cn",
+    )
+
+    assert [change["new_label"] for change in changes] == [
+        "F-Zero-极速传说",
+        "恶魔城-晓月圆舞曲",
+    ]
+    assert [change["thumbnail_source"] for change in changes] == [
+        "F-Zero - Maximum Velocity (USA, Europe)",
+        "Castlevania - Aria of Sorrow (USA)",
+    ]
+    assert all(change["match_source"] != "folder" for change in changes)
+
+
+def test_generic_chinese_existing_label_is_repaired_from_rom_filename(tmp_path):
+    playlist_path = tmp_path / "Nintendo - Game Boy Advance.lpl"
+    playlist_path.write_text(
+        json.dumps(
+            {
+                "version": "1.5",
+                "items": [
+                    {
+                        "path": "/roms/gba中文游戏/F-Zero - Maximum Velocity (USA, Europe).gba",
+                        "label": "gba中文游戏",
+                        "core_path": "",
+                        "core_name": "",
+                        "crc32": "00000000|crc",
+                        "db_name": "Nintendo - Game Boy Advance.lpl",
+                    }
+                ],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    changes = plcn.analyze_playlist(
+        str(playlist_path),
+        "Nintendo - Game Boy Advance",
+        "data/rom-name-cn",
+    )
+
+    assert changes[0]["new_label"] == "F-Zero-极速传说"
+    assert changes[0]["thumbnail_source"] == "F-Zero - Maximum Velocity (USA, Europe)"
+    assert changes[0]["match_source"] == "rom-name-cn"
+
+
 def test_existing_boxart_lookup_indexes_local_named_boxarts(tmp_path):
     thumbnails_dir = tmp_path / "thumbnails"
     boxarts = thumbnails_dir / "Nintendo - Super Nintendo Entertainment System" / "Named_Boxarts"

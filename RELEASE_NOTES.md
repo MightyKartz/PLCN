@@ -1,21 +1,17 @@
-# PLCN v3.1.0 状态与封面匹配优化
+# PLCN v3.1.1 中文父目录名称修复
 
 ## 中文更新
 
-- 升级状态驱动修复工作台，清晰区分“可自动修复 / 无需修复 / 已完成 / 需人工确认 / 重复需处理”。
-- 移除逐行人工确认按钮，改为通过状态、勾选队列和应用摘要决定是否写回。
-- 修复完成后即时更新当前名称、封面状态和本地/ADB 封面预览，不再依赖刷新页面。
-- 将表格字段调整为“写入名称”和“封面源英文名”，避免把英文封面源误读为推荐中文名。
-- 优化中文目录和中文当前名的封面源匹配：优先使用文件名、精确别名和 Libretro DAT 线索，修复 `Snatcher.bin` 被匹配到无关英文名的问题。
-- 增强 FBNeo/Arcade 本地匹配，支持 ROM 路径、zip 短名、RetroArch `crc32`、本地 zip CRC 和 DAT 校验值别名。
-- 补充封面路径回写、下载汇总、FBNeo 匹配、搜索精度和 UI 状态模型回归测试。
+- 修复普通 ROM 列表扫描时，`gba中文游戏`、`中文游戏`、`游戏合集` 等中文父目录名被误写成所有游戏名称的问题。
+- 修复已被旧版本污染的游戏列表：如果当前 label 已经变成泛化目录名，重新预览时会回到 ROM 文件名和数据库匹配结果。
+- 调整匹配优先级：ROM 文件名、已有有效 label、Libretro DAT 和本地中文库优先，中文集合目录只作为弱线索，不再覆盖游戏身份。
+- 保留 v3.1 状态驱动修复工作台、封面状态即时刷新、“写入名称 / 封面源英文名”拆分显示和 FBNeo/Arcade 匹配增强。
+- 新增 GBA 中文父目录和已污染 label 的回归测试，防止扫描后整组游戏显示成同一个目录名。
 
 ## English Updates
 
-- Upgraded the status-driven repair workbench with clear auto-repair, no-repair-needed, completed, review, and duplicate states.
-- Removed per-row manual confirmation buttons; status labels, the selected queue, and the apply summary now drive write-back decisions.
-- Current names, cover states, and local/ADB cover previews update immediately after apply without requiring a page refresh.
-- Renamed table fields to “Write Name” and “Cover Source Name” so English artwork sources are not confused with recommended Chinese names.
-- Hardened artwork-source matching for Chinese folders and existing Chinese labels by preferring filename, exact alias, and Libretro DAT evidence; this fixes cases like `Snatcher.bin` matching an unrelated English title.
-- Improved FBNeo/Arcade local matching with ROM paths, zip short names, RetroArch `crc32`, local zip CRCs, and DAT checksum aliases.
-- Added regression coverage for cover-path write-back, download summaries, FBNeo matching, search precision, and the UI status model.
+- Fixed regular ROM playlist scans where Chinese parent folders such as `gba中文游戏`, `中文游戏`, or `游戏合集` could be written as every game's display name.
+- Fixed playlists already polluted by older versions: when the current label is a generic collection folder name, preview now repairs it from the ROM filename and database match.
+- Adjusted matching priority so ROM filenames, valid existing labels, Libretro DAT evidence, and the local Chinese database win over generic Chinese collection folders.
+- Preserved the v3.1 status-driven repair workbench, immediate cover-state refresh, separated **Write Name / Cover Source Name** fields, and FBNeo/Arcade matching improvements.
+- Added regression coverage for GBA Chinese parent folders and polluted labels so a whole scanned list cannot collapse to one folder name again.
