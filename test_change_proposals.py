@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import sys
 import unicodedata
 from pathlib import Path
@@ -199,6 +200,50 @@ def test_snatcher_bad_source_stays_review_only_without_wrong_tiger_bunny_source(
     assert changes[0]["thumbnail_source"] != "Tiger & Bunny - On-Air Jack! (Japan)"
     assert changes[0]["match_status"] == "review"
     assert changes[0]["needs_review"] is True
+
+
+def write_playlist(path, items):
+    path.write_text(
+        json.dumps(
+            {
+                "version": "1.5",
+                "items": items,
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+
+def snes_item(path="/roms/snes/Super Mario World (USA).sfc", label="Super Mario World (USA)"):
+    return {
+        "path": path,
+        "label": label,
+        "core_path": "",
+        "core_name": "",
+        "crc32": "00000000|crc",
+        "db_name": "Nintendo - Super Nintendo Entertainment System.lpl",
+    }
+
+
+def valid_change_for_item(item, index=0, new_label="超级马里奥世界", system="Nintendo - Super Nintendo Entertainment System"):
+    return {
+        "proposal_id": plcn.build_proposal_id(
+            system,
+            index,
+            item["path"],
+            item["label"],
+            item["db_name"],
+        ),
+        "index": index,
+        "path": item["path"],
+        "original_label": item["label"],
+        "original_item_label": item["label"],
+        "original_db_name": item["db_name"],
+        "new_label": new_label,
+        "thumbnail_source": "Super Mario World",
+        "system": system,
+    }
 
 
 def test_build_change_proposal_adds_backend_match_metadata():
@@ -655,42 +700,110 @@ def test_apply_changes_skips_stale_proposal_snapshot(tmp_path):
     assert summary["total"] == {"success": 0, "failed": 0, "skipped": 0}
 
 
-def test_apply_changes_preserves_ps1_cue_bin_siblings(tmp_path):
-    playlist_path = tmp_path / "Sony - PlayStation.lpl"
-    playlist_path.write_text(
-        json.dumps(
-            {
-                "version": "1.5",
-                "items": [
-                    {
-                        "path": "/roms/ps1/Final Fantasy Tactics (USA).cue",
-                        "label": "Final Fantasy Tactics (USA)",
-                        "core_path": "",
-                        "core_name": "",
-                        "crc32": "DETECT",
-                        "db_name": "Sony - PlayStation.lpl",
-                    },
-                    {
-                        "path": "/roms/ps1/Final Fantasy Tactics (USA).bin",
-                        "label": "Final Fantasy Tactics (USA)",
-                        "core_path": "",
-                        "core_name": "",
-                        "crc32": "DETECT",
-                        "db_name": "Sony - PlayStation.lpl",
-                    },
-                ],
-            },
-            ensure_ascii=False,
-        ),
-        encoding="utf-8",
+def test_apply_changes_returns_writeback_summary_and_timestamped_backup(tmp_path):
+    playlist_path = tmp_path / "Nintendo - Super Nintendo Entertainment System.lpl"
+    item = snes_item()
+    write_playlist(playlist_path, [item])
+    change = valid_change_for_item(item)
+
+    summary = plcn.apply_changes(
+        str(playlist_path),
+        [change],
+        str(tmp_path / "thumbnails"),
+        backup=True,
+        download_thumbnails=False,
     )
 
-    changes = plcn.analyze_playlist(
+    backups = list(tmp_path.glob("Nintendo - Super Nintendo Entertainment System.lpl.bak-*"))
+    assert len(backups) == 1
+    assert re.search(r"\.bak-\d{8}-\d{6}$", str(backups[0]))
+
+    saved = json.loads(playlist_path.read_text(encoding="utf-8"))
+    assert saved["items"][0]["label"] == "超级马里奥世界"
+    assert summary["writeback"]["backup_path"] == str(backups[0])
+    assert summary["writeback"]["applied"][0]["proposal_id"] == change["proposal_id"]
+    assert summary["writeback"]["applied"][0]["path"] == item["path"]
+    assert summary["writeback"]["applied"][0]["new_label"] == "超级马里奥世界"
+    assert summary["writeback"]["failed"] == []
+
+
+def test_apply_changes_reports_readback_failure_without_silent_success(tmp_path, monkeypatch):
+    playlist_path = tmp_path / "Nintendo - Super Nintendo Entertainment System.lpl"
+    item = snes_item()
+    write_playlist(playlist_path, [item])
+    change = valid_change_for_item(item)
+
+    def pretend_save_without_persisting(self, output_path=None):
+        return None
+
+    monkeypatch.setattr(plcn.PlaylistManager, "save", pretend_save_without_persisting)
+
+    summary = plcn.apply_changes(
         str(playlist_path),
-        "Sony - PlayStation",
-        "data/rom-name-cn",
+        [change],
+        str(tmp_path / "thumbnails"),
+        backup=False,
+        download_thumbnails=False,
     )
-    assert len(changes) == 2
+
+    saved = json.loads(playlist_path.read_text(encoding="utf-8"))
+    assert saved["items"][0]["label"] == "Super Mario World (USA)"
+    assert summary["writeback"]["failed"][0]["reason"] == "readback_mismatch"
+    assert change["proposal_id"] not in {
+        record.get("proposal_id") for record in summary["writeback"]["applied"]
+    }
+
+
+def test_apply_changes_readback_uses_index_not_any_duplicate_path(tmp_path, monkeypatch):
+    playlist_path = tmp_path / "Nintendo - Super Nintendo Entertainment System.lpl"
+    already_renamed = snes_item(label="超级马里奥世界")
+    stale_duplicate = snes_item(label="Super Mario World (USA)")
+    write_playlist(playlist_path, [already_renamed, stale_duplicate])
+    change = valid_change_for_item(stale_duplicate)
+    change["index"] = 1
+
+    def pretend_save_without_persisting(self, output_path=None):
+        return None
+
+    monkeypatch.setattr(plcn.PlaylistManager, "save", pretend_save_without_persisting)
+
+    summary = plcn.apply_changes(
+        str(playlist_path),
+        [change],
+        str(tmp_path / "thumbnails"),
+        backup=False,
+        download_thumbnails=False,
+    )
+
+    assert summary["writeback"]["applied"] == []
+    assert summary["writeback"]["failed"][0]["reason"] == "readback_mismatch"
+
+
+def test_apply_changes_preserves_ps1_cue_bin_siblings_during_apply(tmp_path):
+    playlist_path = tmp_path / "Sony - PlayStation.lpl"
+    cue_item = {
+        "path": "/roms/ps1/Final Fantasy Tactics (USA).cue",
+        "label": "Final Fantasy Tactics",
+        "core_path": "",
+        "core_name": "",
+        "crc32": "00000000|crc",
+        "db_name": "Sony - PlayStation.lpl",
+    }
+    bin_item = {
+        "path": "/roms/ps1/Final Fantasy Tactics (USA).bin",
+        "label": "Final Fantasy Tactics",
+        "core_path": "",
+        "core_name": "",
+        "crc32": "00000000|crc",
+        "db_name": "Sony - PlayStation.lpl",
+    }
+    write_playlist(playlist_path, [cue_item, bin_item])
+    changes = [
+        valid_change_for_item(cue_item, index=0, new_label="最终幻想战略版", system="Sony - PlayStation"),
+        valid_change_for_item(bin_item, index=1, new_label="最终幻想战略版", system="Sony - PlayStation"),
+    ]
+    for change in changes:
+        change["thumbnail_source"] = "Final Fantasy Tactics"
 
     plcn.apply_changes(
         str(playlist_path),
@@ -701,11 +814,5 @@ def test_apply_changes_preserves_ps1_cue_bin_siblings(tmp_path):
     )
 
     saved = json.loads(playlist_path.read_text(encoding="utf-8"))
-    assert [item["path"] for item in saved["items"]] == [
-        "/roms/ps1/Final Fantasy Tactics (USA).cue",
-        "/roms/ps1/Final Fantasy Tactics (USA).bin",
-    ]
-    assert [item["label"] for item in saved["items"]] == [
-        "最终幻想战略版",
-        "最终幻想战略版",
-    ]
+    assert [item["path"] for item in saved["items"]] == [cue_item["path"], bin_item["path"]]
+    assert [item["label"] for item in saved["items"]] == ["最终幻想战略版", "最终幻想战略版"]

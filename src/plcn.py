@@ -8,6 +8,7 @@ import re
 import shlex
 import sys
 import glob
+import time
 import unicodedata
 import urllib.parse
 from typing import Any, Dict, Optional
@@ -43,6 +44,7 @@ class ChangeProposal:
     original_item_label: str
     original_db_name: str
     path: str
+    crc32: Optional[str]
     new_label: str
     thumbnail_source: Optional[str]
     system: str
@@ -270,6 +272,54 @@ def build_proposal_id(system_name, index, path, original_item_label, original_db
     ])
     return hashlib.sha1(raw.encode('utf-8')).hexdigest()[:16]
 
+def timestamped_backup_path(playlist_path):
+    timestamp = time.strftime("%Y%m%d-%H%M%S")
+    candidate = f"{playlist_path}.bak-{timestamp}"
+    if not os.path.exists(candidate):
+        return candidate
+
+    counter = 1
+    while True:
+        candidate = f"{playlist_path}.bak-{timestamp}-{counter:02d}"
+        if not os.path.exists(candidate):
+            return candidate
+        counter += 1
+
+def disc_sibling_key(path):
+    if not path:
+        return None, None
+    clean_path = normalize_value(str(path)).split('#')[0].replace('\\', '/')
+    dirname, basename = clean_path.rsplit('/', 1) if '/' in clean_path else ('', clean_path)
+    stem, ext = os.path.splitext(basename)
+    if not stem:
+        return None, None
+    return f"{dirname}/{stem}".casefold(), ext.casefold()
+
+def has_disc_descriptor_siblings(items):
+    descriptor_exts = {'.cue'}
+    media_exts = {'.bin', '.img'}
+    path_grouped_exts = {}
+    label_grouped_exts = {}
+
+    for item in items or []:
+        key, ext = disc_sibling_key(item.get('path'))
+        if not ext:
+            continue
+
+        if key:
+            path_grouped_exts.setdefault(key, set()).add(ext)
+
+        label = normalize_value(item.get('label')).casefold()
+        if label:
+            label_grouped_exts.setdefault(label, set()).add(ext)
+
+    groups = list(path_grouped_exts.values()) + list(label_grouped_exts.values())
+
+    return any(
+        exts & descriptor_exts and exts & media_exts
+        for exts in groups
+    )
+
 def sanitize_thumbnail_filename(name):
     for char in ['&', '*', '/', ':', '<', '>', '?', '\\', '|']:
         name = (name or '').replace(char, '_')
@@ -428,6 +478,7 @@ def build_change_proposal(index, item, display_label, new_label, thumbnail_sourc
         original_item_label=original_item_label,
         original_db_name=original_db_name,
         path=path,
+        crc32=item.get('crc32'),
         new_label=new_label,
         thumbnail_source=thumbnail_source,
         system=system_name,
@@ -546,8 +597,8 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
     playlist_manager = PlaylistManager(playlist_path)
     translator = Translator(rom_name_cn_path, normalized_system)
     
-    # Deduplicate items (in memory for analysis)
-    # Note: This modifies the playlist_manager's internal state
+    # Deduplicate items (in memory for analysis), but preserve disc descriptor
+    # rows where RetroArch playlists contain both a .cue and its .bin/.img sibling.
     if has_disc_descriptor_siblings(playlist_manager.get_items()):
         removed_count = 0
     else:
@@ -732,6 +783,53 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
 
         return chinese_label, "fallback"
 
+    def find_exact_rom_source(path):
+        for candidate, _ in get_rom_path_candidates(path):
+            source = resolve_exact_english_source(candidate)
+            if source:
+                return source
+        return None
+
+    def add_manual_override_proposal(index, item, display_label, override):
+        new_label = override.get("new_label") or item.get("label")
+        thumbnail_source = override.get("thumbnail_source")
+        exact_source = find_exact_rom_source(item.get("path"))
+        conflict = bool(
+            exact_source
+            and thumbnail_source
+            and normalize_value(exact_source).casefold() != normalize_value(thumbnail_source).casefold()
+        )
+        diagnostics = {
+            "override_updated_at": override.get("updated_at"),
+            "exact_rom_source": exact_source,
+        }
+
+        if conflict:
+            diagnostics["conflicting_thumbnail_source"] = thumbnail_source
+            match_reason = f"manual override conflict with exact ROM source: {exact_source}"
+        else:
+            match_reason = "本地人工覆盖记录命中"
+
+        add_proposal(
+            index,
+            item,
+            display_label,
+            new_label,
+            thumbnail_source,
+            "manual_override",
+            match_reason,
+            diagnostics,
+        )
+
+        proposal = proposed_changes[-1]
+        if conflict:
+            proposal["match_status"] = "review"
+            proposal["match_score"] = 80
+            proposal["needs_review"] = True
+        else:
+            proposal["match_score"] = 100
+            proposal["needs_review"] = False
+
     for i, item in enumerate(items):
         original_label = item.get('label')
         path = item.get('path')
@@ -749,19 +847,7 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
 
         manual_override = find_override(manual_overrides, system_name, item)
         if manual_override:
-            new_label = manual_override.get("new_label") or original_label
-            thumbnail_source = manual_override.get("thumbnail_source")
-            print(f"  [{i}] Using manual override: '{new_label}'")
-            add_proposal(
-                i,
-                item,
-                display_label,
-                new_label,
-                thumbnail_source,
-                "manual_override",
-                "本地手动覆盖规则匹配",
-                {"evidence_source": "manual_override"},
-            )
+            add_manual_override_proposal(i, item, display_label, manual_override)
             continue
         
         # Special handling for FBNeo/Arcade games
@@ -1087,6 +1173,78 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
 
     return proposed_changes
 
+def writeback_record(change, item=None, reason=None):
+    proposal_path = change.get('path')
+    item_path = (item or {}).get('path')
+    record = {
+        "proposal_id": change.get('proposal_id'),
+        "index": change.get('index'),
+        "path": proposal_path or item_path,
+        "old_label": change.get('original_item_label') or change.get('original_label'),
+        "new_label": change.get('new_label'),
+    }
+    if item_path and proposal_path and normalize_value(item_path) != normalize_value(proposal_path):
+        record["actual_path"] = item_path
+    if reason:
+        record["reason"] = reason
+    if reason == "stale_proposal":
+        record["expected"] = {
+            "label": change.get("original_item_label"),
+            "db_name": change.get("original_db_name"),
+        }
+        record["actual"] = {
+            "label": (item or {}).get("label"),
+            "db_name": (item or {}).get("db_name"),
+        }
+    return record
+
+def apply_summary_applied_record(record):
+    return {
+        "proposal_id": record.get("proposal_id"),
+        "index": record.get("index"),
+        "path": record.get("path"),
+        "old_label": record.get("old_label"),
+        "new_label": record.get("new_label"),
+        "thumbnail_source": record.get("thumbnail_source"),
+    }
+
+def apply_summary_skipped_record(record):
+    summary = {
+        "proposal_id": record.get("proposal_id"),
+        "index": record.get("index"),
+        "path": record.get("path"),
+        "reason": record.get("reason"),
+    }
+    if record.get("reason") == "stale_proposal":
+        summary["expected"] = record.get("expected")
+        summary["actual"] = record.get("actual")
+    if record.get("actual_path"):
+        summary["actual_path"] = record.get("actual_path")
+    return summary
+
+def attach_writeback_summary(summary, writeback):
+    summary["writeback"] = writeback
+    return summary
+
+def applied_record_verified(record, items):
+    target_path = normalize_value(record.get("path"))
+    target_label = normalize_value(record.get("new_label"))
+    if not target_path or not target_label:
+        return False
+
+    record_index = record.get("actual_index", record.get("index"))
+    if isinstance(record_index, int) and 0 <= record_index < len(items):
+        item = items[record_index]
+        return (
+            normalize_value(item.get("path")) == target_path
+            and normalize_value(item.get("label")) == target_label
+        )
+
+    for item in items:
+        if normalize_value(item.get("path")) == target_path and normalize_value(item.get("label")) == target_label:
+            return True
+    return False
+
 def apply_changes(playlist_path, changes, thumbnails_dir, backup=True, progress_callback=None, download_thumbnails=True):
     """
     Applies the changes to the playlist and downloads thumbnails.
@@ -1098,117 +1256,166 @@ def apply_changes(playlist_path, changes, thumbnails_dir, backup=True, progress_
         shutil.copy2(playlist_path, backup_path)
         print(f"Backed up playlist to {backup_path}")
 
+    writeback = {
+        "backup_path": backup_path,
+        "applied": [],
+        "skipped": [],
+        "failed": [],
+    }
+
     playlist_manager = PlaylistManager(playlist_path)
-    # Keep apply aligned with analyze: cue/bin sibling entries are valid RetroArch
-    # playlist rows and must not be collapsed after the preview was generated.
+    # Keep apply-time item ordering consistent with analysis while preserving disc
+    # descriptor/media siblings that RetroArch may intentionally list separately.
     if not has_disc_descriptor_siblings(playlist_manager.get_items()):
         playlist_manager.deduplicate_items()
-    
+
     downloader = ThumbnailDownloader(thumbnails_dir)
-    download_tasks = []
-    applied_details = []
-    skipped_details = []
-    
-    for change in changes or []:
+    candidate_applied = []
+
+    for change in changes:
         index = change.get('index')
         new_label = change.get('new_label')
-        thumbnail_source = change.get('thumbnail_source')
-        system = change.get('system')
         target_path = change.get('path')
 
         if not new_label:
-            skipped_details.append(skipped_apply_detail(change, "missing_new_label"))
+            writeback["skipped"].append(writeback_record(change, reason="missing_new_label"))
             continue
 
-        target_index = None
         target_item = None
+        target_index = None
+        path_was_found = False
+
+        if target_path and isinstance(index, int) and 0 <= index < len(playlist_manager.items):
+            norm_target = normalize_value(target_path)
+            indexed_item = playlist_manager.items[index]
+            if normalize_value(indexed_item.get('path')) == norm_target:
+                path_was_found = True
+                if not proposal_matches_item(change, indexed_item):
+                    print(f"Warning: Proposal {change.get('proposal_id', index)} is stale for {os.path.basename(target_path)}. Skipping update.")
+                    writeback["skipped"].append(writeback_record(change, indexed_item, "stale_proposal"))
+                else:
+                    target_item = indexed_item
+                    target_index = index
+
+            if path_was_found and target_item is None:
+                continue
+
+        if target_path and target_item is None:
+            norm_target = normalize_value(target_path)
+            for item_index, item in enumerate(playlist_manager.items):
+                item_path = item.get('path')
+                if item_path and normalize_value(item_path) == norm_target:
+                    path_was_found = True
+                    if proposal_matches_item(change, item):
+                        target_item = item
+                        target_index = item_index
+                        break
+
+            if path_was_found and target_item is None:
+                print(f"Warning: Proposal {change.get('proposal_id', index)} is stale for {os.path.basename(target_path)}. Skipping update.")
+                writeback["skipped"].append(writeback_record(change, reason="stale_proposal"))
+                continue
+
+        if target_item is None:
+            if not isinstance(index, int) or not (0 <= index < len(playlist_manager.items)):
+                print(f"Error: Index {index} out of bounds. Skipping update.")
+                writeback["skipped"].append(writeback_record(change, reason="index_out_of_bounds"))
+                continue
+
+            current_item = playlist_manager.items[index]
+            if target_path and normalize_value(current_item.get('path')) != normalize_value(target_path):
+                print(f"Warning: Index {index} path mismatch. Expected {target_path}, got {current_item.get('path')}. Skipping update.")
+                writeback["skipped"].append(writeback_record(change, current_item, "path_mismatch"))
+                continue
+
+            if not proposal_matches_item(change, current_item):
+                print(f"Warning: Proposal {change.get('proposal_id', index)} no longer matches playlist item at index {index}. Skipping update.")
+                writeback["skipped"].append(writeback_record(change, current_item, "stale_proposal"))
+                continue
+
+            target_item = current_item
+            target_index = index
+
+        target_item['label'] = new_label
+        record = writeback_record(change, target_item)
+        record["actual_index"] = target_index
+        record["thumbnail_source"] = change.get('thumbnail_source')
+        record["system"] = change.get('system')
+        candidate_applied.append(record)
 
         if target_path:
-            target_index, target_item = find_playlist_item_by_path(playlist_manager.items, target_path)
-            if target_item is None:
-                skipped_details.append(skipped_apply_detail(change, "path_not_found"))
-                print(f"Warning: Proposal {change.get('proposal_id', index)} target path was not found. Skipping update.")
-                continue
-        elif isinstance(index, int) and 0 <= index < len(playlist_manager.items):
-            target_index = index
-            target_item = playlist_manager.items[index]
+            print(f"Updated label for {os.path.basename(target_path)} to '{new_label}'")
         else:
-            skipped_details.append(skipped_apply_detail(change, "index_out_of_bounds"))
-            print(f"Error: Index {index} out of bounds. Skipping update.")
-            continue
+            print(f"Updated label at index {target_index} to '{new_label}'")
 
-        if not proposal_matches_item(change, target_item):
-            skipped_details.append(skipped_apply_detail(change, "stale_proposal", target_item))
-            print(f"Warning: Proposal {change.get('proposal_id', index)} no longer matches playlist item. Skipping update.")
-            continue
-
-        old_label = target_item.get('label')
-        target_item['label'] = new_label
-        print(f"Updated label for {os.path.basename(target_path or old_label or str(index))} to '{new_label}'")
-
-        applied_details.append({
-            "proposal_id": change.get("proposal_id", index),
-            "index": target_index,
-            "path": target_item.get("path"),
-            "old_label": old_label,
-            "new_label": new_label,
-            "thumbnail_source": thumbnail_source,
-        })
-
-        if thumbnail_source and new_label:
-            download_tasks.append((system, thumbnail_source, new_label))
-            
-    if applied_details:
+    if candidate_applied:
         playlist_manager.save(playlist_path)
         print(f"Saved updated playlist to {playlist_path}")
 
-    verification = []
-    if applied_details:
         try:
-            read_back_manager = PlaylistManager(playlist_path)
-            for detail in applied_details:
-                actual_label = None
-                _, item = find_playlist_item_by_path(read_back_manager.items, detail.get("path"))
-                if item is None and 0 <= detail["index"] < len(read_back_manager.items):
-                    item = read_back_manager.items[detail["index"]]
-                if item is not None:
-                    actual_label = item.get("label")
-                verification.append({
-                    "proposal_id": detail["proposal_id"],
-                    "index": detail["index"],
-                    "path": detail["path"],
-                    "expected_label": detail["new_label"],
-                    "actual_label": actual_label,
-                    "status": "passed" if normalize_value(actual_label) == normalize_value(detail["new_label"]) else "failed",
-                })
+            mtime = os.path.getmtime(playlist_path)
+            print(f"File modification time: {time.ctime(mtime)}")
         except Exception as e:
-            for detail in applied_details:
-                verification.append({
-                    "proposal_id": detail["proposal_id"],
-                    "index": detail["index"],
-                    "path": detail["path"],
-                    "expected_label": detail["new_label"],
-                    "actual_label": None,
-                    "status": "failed",
-                    "error": str(e),
-                })
+            print(f"Verification failed: {e}")
 
+    reloaded_manager = PlaylistManager(playlist_path)
+    reloaded_items = reloaded_manager.get_items()
+    for record in candidate_applied:
+        if applied_record_verified(record, reloaded_items):
+            writeback["applied"].append(record)
+        else:
+            failed_record = dict(record)
+            failed_record["reason"] = "readback_mismatch"
+            writeback["failed"].append(failed_record)
+
+    download_tasks = [
+        (record.get("system"), record.get("thumbnail_source"), record.get("new_label"))
+        for record in writeback["applied"]
+        if record.get("system") and record.get("thumbnail_source") and record.get("new_label")
+    ]
+
+    verification = [
+        {
+            "proposal_id": record.get("proposal_id"),
+            "index": record.get("actual_index", record.get("index")),
+            "path": record.get("path"),
+            "expected_label": record.get("new_label"),
+            "actual_label": record.get("new_label"),
+            "status": "passed",
+        }
+        for record in writeback["applied"]
+    ] + [
+        {
+            "proposal_id": record.get("proposal_id"),
+            "index": record.get("actual_index", record.get("index")),
+            "path": record.get("path"),
+            "expected_label": record.get("new_label"),
+            "actual_label": None,
+            "status": "failed",
+            "error": record.get("reason"),
+        }
+        for record in writeback["failed"]
+    ]
     apply_summary = {
         "requested_count": len(changes or []),
-        "applied": applied_details,
-        "skipped": skipped_details,
+        "applied": [apply_summary_applied_record(record) for record in writeback["applied"]],
+        "skipped": [apply_summary_skipped_record(record) for record in writeback["skipped"]],
         "verification": verification,
         "backup_path": backup_path,
     }
 
+    def finalize(download_summary):
+        attach_writeback_summary(download_summary, writeback)
+        return wrap_apply_result(download_summary, apply_summary)
+
     if not download_tasks:
-        return wrap_apply_result(downloader.empty_summary(0), apply_summary)
+        return finalize(downloader.empty_summary(0))
 
     if not download_thumbnails:
-        return wrap_apply_result(downloader.skipped_summary(download_tasks, "已按用户选项跳过下载"), apply_summary)
+        return finalize(downloader.skipped_summary(download_tasks, "已按用户选项跳过下载"))
 
     download_summary = downloader.download_batch(download_tasks, progress_callback=progress_callback)
-    return wrap_apply_result(download_summary, apply_summary)
+    return finalize(download_summary)
 
 def process_playlist(playlist_path, system_name, thumbnails_dir, rom_name_cn_path):
     print(f"Analyzing playlist: {playlist_path}")

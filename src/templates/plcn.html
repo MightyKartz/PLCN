@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PLCN</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231769e8'/%3E%3Cpath d='M9 22V10h8.5a4.5 4.5 0 0 1 0 9H13v3z' fill='white'/%3E%3C/svg%3E">
     <style>
         :root {
             --bg: #f6f8fc;
@@ -2022,7 +2023,8 @@
             color: var(--green);
         }
 
-        #open-thumb-folder {
+        #open-thumb-folder,
+        #save-local-override {
             min-height: 30px;
         }
 
@@ -3046,6 +3048,7 @@
                             <strong id="inspector-confidence">--</strong>
                         </div>
                         <div class="inspector-actions">
+                            <button class="btn btn-success" id="save-local-override" onclick="saveSelectedOverride()" data-i18n="保存为本地修正规则" type="button" disabled>保存为本地修正规则</button>
                             <button class="btn btn-ghost" id="open-thumb-folder" onclick="openThumbnailFolder()" data-i18n="打开封面文件夹" type="button">打开封面文件夹</button>
                         </div>
                     </div>
@@ -3291,6 +3294,11 @@
             '名称未变化': 'Name unchanged',
             '低置信匹配': 'Low-confidence match',
             '发现重复条目': 'Duplicate entry found',
+            '待保存本地修正': 'Pending local correction save',
+            '后端状态缺失': 'Backend status missing',
+            '本地修正规则已保存': 'Local correction saved',
+            '本地修正规则已保存，重新预览后应用': 'Local correction saved; preview again before applying',
+            '保存为本地修正规则': 'Save Local Correction',
             '中文名、封面源和封面已就绪': 'Chinese name, cover source, and cover are ready',
             '中文名和封面源已就绪，仅需下载封面': 'Chinese name and cover source are ready; only cover download is needed',
             '封面已存在，仅需写入中文名': 'Cover exists; only display name needs writing',
@@ -3544,6 +3552,36 @@
             ].map(value => String(value || '').trim()).join('|');
         }
 
+        function writebackMatchesChange(record, change) {
+            if (!record || !change) return false;
+            if (record.proposal_id && change.proposal_id) {
+                return String(record.proposal_id) === String(change.proposal_id);
+            }
+            const sameIndex = record.index === undefined || change.index === undefined
+                ? true
+                : Number(record.index) === Number(change.index);
+            const samePath = !record.path || !change.path
+                ? true
+                : normalizeDownloadKey(record.path) === normalizeDownloadKey(change.path);
+            return sameIndex && samePath;
+        }
+
+        function findWritebackRecord(change, records = []) {
+            return (records || []).find(record => writebackMatchesChange(record, change)) || null;
+        }
+
+        function markWritebackProblem(change, record, fallbackReason) {
+            change.applied = false;
+            change.match_status = 'review';
+            change.match_score = 0;
+            change.match_source = 'writeback';
+            change.match_reason = record?.reason || fallbackReason;
+            change.needs_review = true;
+            change.enabled = false;
+            change.cover_download_status = '';
+            change.cover_download_message = '';
+        }
+
         function rememberAppliedChanges(changes, options) {
             lastAppliedChangeKeys = new Set((changes || []).map(getChangeIdentity).filter(Boolean));
             lastAppliedDownloadEnabled = options?.download_thumbnails !== false;
@@ -3613,8 +3651,31 @@
             if (!currentChanges.length || !lastAppliedChangeKeys.size) return;
 
             const summary = result?.download_summary || null;
+            const writeback = summary?.writeback || {};
+            const appliedRecords = writeback.applied || [];
+            const failedRecords = writeback.failed || [];
+            const skippedRecords = writeback.skipped || [];
+            const hasWriteback = Boolean(summary?.writeback);
             currentChanges.forEach(change => {
                 if (!lastAppliedChangeKeys.has(getChangeIdentity(change))) return;
+
+                const failedRecord = findWritebackRecord(change, failedRecords);
+                if (failedRecord) {
+                    markWritebackProblem(change, failedRecord, 'readback_mismatch');
+                    return;
+                }
+
+                const skippedRecord = findWritebackRecord(change, skippedRecords);
+                if (skippedRecord) {
+                    markWritebackProblem(change, skippedRecord, 'skipped');
+                    return;
+                }
+
+                const appliedRecord = findWritebackRecord(change, appliedRecords);
+                if (hasWriteback && !appliedRecord) {
+                    markWritebackProblem(change, null, 'not_applied');
+                    return;
+                }
 
                 change.applied = true;
                 change.match_status = 'applied';
@@ -5188,7 +5249,7 @@
 
         function isEditedChange(change) {
             return Boolean(
-                change.match_source === 'manual'
+                change.pending_override || change.match_source === 'manual-edit' || change.match_source === 'manual'
             );
         }
 
@@ -5219,38 +5280,13 @@
         }
 
         function reclassifyEditedChange(change, reason) {
-            const label = normalizeDisplayName(change?.new_label);
-            const thumb = normalizeDisplayName(change?.thumbnail_source);
-            const hasChinese = hasChineseDisplayName(label);
-            const duplicate = /\(\d+\)$/.test(normalizeDisplayName(change?.original_label)) || /\(\d+\)$/.test(label);
-            let status = 'review';
-            let score = hasChinese ? 72 : 64;
-
-            if (duplicate) {
-                status = 'duplicate';
-                score = 99;
-            } else if (!label || !hasChinese || !thumb) {
-                status = 'review';
-            } else if (currentMatchesWriteName(change) && hasExistingCover(change)) {
-                status = 'ready';
-                score = 100;
-            } else if (currentMatchesWriteName(change)) {
-                status = 'download';
-                score = 94;
-            } else if (hasExistingCover(change)) {
-                status = 'rename';
-                score = 96;
-            } else {
-                status = 'matched';
-                score = 96;
-            }
-
-            change.match_status = status;
-            change.match_score = score;
-            change.match_source = 'manual';
+            change.match_status = 'review';
+            change.match_score = 72;
+            change.match_source = 'manual-edit';
             change.match_reason = reason;
-            change.needs_review = status === 'review' || status === 'duplicate';
-            change.enabled = isAutoRepairKind(status);
+            change.needs_review = true;
+            change.pending_override = true;
+            change.enabled = false;
         }
 
         function markChangeEdited(index, reason, editedKey = '') {
@@ -5270,6 +5306,9 @@
         function getMatchReasonLabel(info, change) {
             if (!change) return info.reason || '';
             if (change.applied || change.match_status === 'applied') return uiText('已写入 playlist');
+            if (change.pending_override || info.source === 'manual-edit') {
+                return [uiText('待保存本地修正'), change.match_reason || info.reason || ''].filter(Boolean).join(' · ');
+            }
             if (info.kind === 'ready') return uiText('中文名、封面源和封面已就绪');
             if (info.kind === 'download') return uiText('中文名和封面源已就绪，仅需下载封面');
             if (info.kind === 'rename') return uiText('封面已存在，仅需写入中文名');
@@ -5281,6 +5320,7 @@
             const hasChinese = hasChineseDisplayName(label);
 
             if (info.kind === 'review') {
+                if (info.source === 'backend-missing') return uiText('后端状态缺失');
                 if (!hasChinese) return uiText('缺少中文名');
                 if (!thumb) return uiText('缺少封面源');
                 if (normalizeDisplayName(current) && normalizeDisplayName(label) && normalizeDisplayName(current) === normalizeDisplayName(label)) return uiText('名称未变化');
@@ -5317,32 +5357,16 @@
                 };
             }
 
-            const original = change.original_label || '';
-            const currentLabel = change.original_item_label || original;
-            const label = change.new_label || '';
-            const thumb = change.thumbnail_source || '';
-            const hasChinese = hasChineseDisplayName(label);
-            const duplicate = /\(\d+\)$/.test(original.trim()) || /\(\d+\)$/.test(label.trim());
-            const currentMatchesNew = currentMatchesWriteName(change);
-            const alreadyReady = currentMatchesNew && thumb && hasChinese && hasExistingCover(change);
-            const missingThumb = !thumb;
-
-            if (duplicate) {
-                return { kind: 'duplicate', confidence: 99, label: uiText('重复需处理'), badgeClass: 'danger', rowClass: 'row-danger', color: 'var(--red)', reason: '检测到重复条目标记', source: 'frontend-fallback' };
-            }
-            if (alreadyReady) {
-                return { kind: 'ready', confidence: 100, label: uiText('无需修复'), badgeClass: 'ready', rowClass: 'row-ready', color: 'var(--muted)', reason: '前端兼容判断：中文名、封面源和封面已就绪', source: 'frontend-fallback' };
-            }
-            if (missingThumb || !hasChinese) {
-                return { kind: 'review', confidence: hasChinese ? 72 : 64, label: uiText('需人工确认'), badgeClass: 'warning', rowClass: 'row-warning', color: 'var(--amber)', reason: '前端兼容判断：缺少中文名或封面源', source: 'frontend-fallback' };
-            }
-            if (currentMatchesNew) {
-                return { kind: 'download', confidence: 94, label: uiText('仅下载封面'), badgeClass: 'success', rowClass: '', color: 'var(--green)', reason: '前端兼容判断：中文名和封面源已就绪，仅需下载封面', source: 'frontend-fallback' };
-            }
-            if (hasExistingCover(change)) {
-                return { kind: 'rename', confidence: 96, label: uiText('仅改中文名'), badgeClass: 'success', rowClass: '', color: 'var(--green)', reason: '前端兼容判断：封面已存在，仅需写入中文名', source: 'frontend-fallback' };
-            }
-            return { kind: 'matched', confidence: thumb !== original ? 96 : 90, label: uiText('修复并下载'), badgeClass: 'success', rowClass: '', color: 'var(--green)', reason: '前端兼容判断：将写入中文名并下载封面', source: 'frontend-fallback' };
+            return {
+                kind: 'review',
+                confidence: 0,
+                label: uiText('需人工确认'),
+                badgeClass: 'warning',
+                rowClass: 'row-warning',
+                color: 'var(--amber)',
+                reason: uiText('后端状态缺失'),
+                source: 'backend-missing'
+            };
         }
 
         function updateSummary(changes) {
@@ -5474,6 +5498,8 @@
             document.getElementById('inspector-confidence').textContent = `${info.confidence}%（${info.label}） · ${info.reason}`;
             const searchButton = document.getElementById('search-selected-thumb-btn');
             if (searchButton) searchButton.disabled = false;
+            const saveOverrideButton = document.getElementById('save-local-override');
+            if (saveOverrideButton) saveOverrideButton.disabled = !canSaveSelectedOverride(change);
 
             cover.classList.remove('has-image');
             coverImage.removeAttribute('src');
@@ -5506,6 +5532,8 @@
             document.getElementById('inspector-confidence').textContent = '--';
             const searchButton = document.getElementById('search-selected-thumb-btn');
             if (searchButton) searchButton.disabled = true;
+            const saveOverrideButton = document.getElementById('save-local-override');
+            if (saveOverrideButton) saveOverrideButton.disabled = true;
         }
 
         function closeInspector() {
@@ -5519,6 +5547,69 @@
             renderPreviewTable(currentChanges);
             selectPreviewRow(selectedChangeIndex);
             updateSummary(currentChanges);
+        }
+
+        function canSaveSelectedOverride(change = currentChanges[selectedChangeIndex]) {
+            return selectedChangeIndex >= 0
+                && Boolean(change)
+                && isEditedChange(change)
+                && Boolean(normalizeDisplayName(change.new_label))
+                && Boolean(normalizeDisplayName(change.thumbnail_source));
+        }
+
+        async function saveSelectedOverride() {
+            const index = selectedChangeIndex;
+            const change = currentChanges[index];
+            if (!canSaveSelectedOverride(change)) return;
+
+            const button = document.getElementById('save-local-override');
+            if (button) button.disabled = true;
+
+            const system = change.system || document.getElementById('system_name').value || '';
+            const payload = {
+                system,
+                change: {
+                    system,
+                    path: change.path || '',
+                    crc32: change.crc32 || '',
+                    new_label: change.new_label || '',
+                    thumbnail_source: change.thumbnail_source || ''
+                }
+            };
+
+            try {
+                const response = await fetch('/api/overrides/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || data.error) throw new Error(data.error || '保存本地修正规则失败');
+
+                const saved = data.entry || payload.change;
+                const savedChange = currentChanges[index];
+                if (!savedChange) return;
+                savedChange.system = saved.system || system || savedChange.system;
+                savedChange.new_label = saved.new_label || savedChange.new_label;
+                savedChange.thumbnail_source = saved.thumbnail_source || savedChange.thumbnail_source;
+                savedChange.match_source = 'manual_override';
+                savedChange.match_status = 'review';
+                savedChange.match_score = 100;
+                savedChange.match_reason = uiText('本地修正规则已保存，重新预览后应用');
+                savedChange.needs_review = true;
+                savedChange.pending_override = false;
+                savedChange.enabled = false;
+
+                updateSummary(currentChanges);
+                renderPreviewTable(currentChanges);
+                selectPreviewRow(index);
+                showStatus(uiText('本地修正规则已保存'), 'success');
+            } catch (error) {
+                showStatus('保存本地修正规则失败: ' + error.message, 'error');
+            } finally {
+                const currentButton = document.getElementById('save-local-override');
+                if (currentButton) currentButton.disabled = !canSaveSelectedOverride();
+            }
         }
 
         function refreshCoverPreview() {
