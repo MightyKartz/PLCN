@@ -29,6 +29,178 @@ def analyze_fixture(filename, system_name):
     return plcn.analyze_playlist(str(FIXTURE_DIR / filename), system_name, ROM_NAME_CN_PATH)
 
 
+def assert_change_contract(change, expected):
+    assert change["new_label"] == expected["new_label"]
+    assert change["thumbnail_source"] == expected["thumbnail_source"]
+    assert change["match_source"] == expected["match_source"]
+    assert change["match_score"] == expected["match_score"]
+    assert change["needs_review"] is expected["needs_review"]
+    if "match_status" in expected:
+        assert change["match_status"] == expected["match_status"]
+
+    evidence_chain = change.get("match_diagnostics", {}).get("evidence_chain")
+    assert evidence_chain, "match_diagnostics.evidence_chain should explain the local evidence used"
+    for expected_evidence in expected["evidence_chain_contains"]:
+        assert any(expected_evidence in str(step) for step in evidence_chain), evidence_chain
+
+
+def test_playlist_fixtures_capture_accuracy_loop_contract():
+    cases = [
+        (
+            "snatcher_bad_source.lpl",
+            "Sony - PlayStation",
+            [
+                {
+                    "new_label": "掠夺者",
+                    "thumbnail_source": "Snatcher (Japan)",
+                    "match_source": "playlist",
+                    "match_score": 72,
+                    "match_status": "review",
+                    "needs_review": True,
+                    "evidence_chain_contains": ["Snatcher.bin", "Chinese playlist label", "manual review"],
+                }
+            ],
+        ),
+        (
+            "gba_chinese_parent_folder.lpl",
+            "Nintendo - Game Boy Advance",
+            [
+                {
+                    "new_label": "F-Zero-极速传说",
+                    "thumbnail_source": "F-Zero - Maximum Velocity (USA, Europe)",
+                    "match_source": "rom-name-cn",
+                    "match_score": 96,
+                    "needs_review": False,
+                    "evidence_chain_contains": ["F-Zero - Maximum Velocity", "rom-name-cn", "parent folder ignored"],
+                }
+            ],
+        ),
+        (
+            "fbneo_zip_short_name.lpl",
+            "FBNeo - Arcade Games",
+            [
+                {
+                    "new_label": "龙虎之拳 3 - 斗士之路",
+                    "thumbnail_source": EXPECTED_AOF3,
+                    "match_source": "libretro-dat-rom",
+                    "match_score": 96,
+                    "needs_review": False,
+                    "evidence_chain_contains": ["aof3.zip", "zip-short-name", "Libretro DAT"],
+                }
+            ],
+        ),
+        (
+            "ps1_tactics_bin_cue.lpl",
+            "Sony - PlayStation",
+            [
+                {
+                    "new_label": "最终幻想战略版",
+                    "thumbnail_source": "Final Fantasy Tactics (USA)",
+                    "match_source": "rom-name-cn",
+                    "match_score": 96,
+                    "needs_review": False,
+                    "evidence_chain_contains": ["Final Fantasy Tactics (USA).cue", "cue", "rom-name-cn"],
+                },
+                {
+                    "new_label": "最终幻想战略版",
+                    "thumbnail_source": "Final Fantasy Tactics (USA)",
+                    "match_source": "rom-name-cn",
+                    "match_score": 96,
+                    "needs_review": False,
+                    "evidence_chain_contains": ["Final Fantasy Tactics (USA).bin", "bin", "rom-name-cn"],
+                },
+            ],
+        ),
+        (
+            "unicode_dreamcast_nfc_nfd.lpl",
+            "Sega - Dreamcast",
+            [
+                {
+                    "new_label": "Café Unicode Test",
+                    "thumbnail_source": "Café Unicode Test",
+                    "match_source": "fallback",
+                    "match_score": 64,
+                    "match_status": "review",
+                    "needs_review": True,
+                    "evidence_chain_contains": ["Cafe\u0301 Unicode Test", "Café Unicode Test", "unicode-normalized"],
+                }
+            ],
+        ),
+        (
+            "same_title_snes_shadowrun.lpl",
+            "Nintendo - Super Nintendo Entertainment System",
+            [
+                {
+                    "new_label": "死而复生",
+                    "thumbnail_source": "Shadowrun (USA)",
+                    "match_source": "rom-name-cn",
+                    "match_score": 96,
+                    "needs_review": False,
+                    "evidence_chain_contains": ["Shadowrun (USA)", "SNES", "rom-name-cn"],
+                }
+            ],
+        ),
+        (
+            "same_title_genesis_shadowrun.lpl",
+            "Sega - Mega Drive - Genesis",
+            [
+                {
+                    "new_label": "暗影狂奔",
+                    "thumbnail_source": "Shadowrun (USA)",
+                    "match_source": "rom-name-cn",
+                    "match_score": 96,
+                    "needs_review": False,
+                    "evidence_chain_contains": ["Shadowrun (USA)", "Genesis", "rom-name-cn"],
+                }
+            ],
+        ),
+        (
+            "hack_collection_review.lpl",
+            "Nintendo - Super Nintendo Entertainment System",
+            [
+                {
+                    "new_label": "Super Mario World - Kaizo Hack Collection",
+                    "thumbnail_source": None,
+                    "match_source": "fallback",
+                    "match_score": 64,
+                    "match_status": "review",
+                    "needs_review": True,
+                    "evidence_chain_contains": ["Kaizo Hack Collection", "nonstandard", "manual review"],
+                }
+            ],
+        ),
+        (
+            "missing_thumbnail_source_nes.lpl",
+            "Nintendo - Nintendo Entertainment System",
+            [
+                {
+                    "new_label": "不存在的中文游戏",
+                    "thumbnail_source": None,
+                    "match_source": "filename",
+                    "match_score": 72,
+                    "match_status": "review",
+                    "needs_review": True,
+                    "evidence_chain_contains": ["不存在的中文游戏", "missing thumbnail source", "manual review"],
+                }
+            ],
+        ),
+    ]
+
+    for filename, system_name, expected_changes in cases:
+        changes = analyze_fixture(filename, system_name)
+        assert len(changes) == len(expected_changes)
+        for change, expected in zip(changes, expected_changes):
+            assert_change_contract(change, expected)
+
+
+def test_snatcher_bad_source_stays_review_only_without_wrong_tiger_bunny_source():
+    changes = analyze_fixture("snatcher_bad_source.lpl", "Sony - PlayStation")
+
+    assert changes[0]["thumbnail_source"] != "Tiger & Bunny - On-Air Jack! (Japan)"
+    assert changes[0]["match_status"] == "review"
+    assert changes[0]["needs_review"] is True
+
+
 def test_build_change_proposal_adds_backend_match_metadata():
     item = {
         "path": "/roms/snes/Super Mario World (USA).sfc",
@@ -55,6 +227,46 @@ def test_build_change_proposal_adds_backend_match_metadata():
     assert proposal["match_source"] == "rom-name-cn"
     assert proposal["match_reason"] == "中文库精确匹配"
     assert proposal["needs_review"] is False
+    assert proposal["match_diagnostics"]["evidence_chain"]
+    assert proposal["match_diagnostics"]["conflicts"] == []
+
+
+def test_build_change_proposal_marks_weak_conflict_with_rom_evidence_for_review():
+    item = {
+        "path": "/roms/ps/Snatcher.bin",
+        "label": "掠夺者",
+        "db_name": "Sony - PlayStation.lpl",
+    }
+
+    proposal = plcn.build_change_proposal(
+        index=0,
+        item=item,
+        display_label="Snatcher",
+        new_label="猛虎与兔子",
+        thumbnail_source="Tiger & Bunny - On-Air Jack! (Japan)",
+        system_name="Sony - PlayStation",
+        match_source="rom-name-cn",
+        match_reason="中文库匹配",
+        match_diagnostics={
+            "evidence_chain": [
+                {
+                    "source": "rom_filename",
+                    "value": "Snatcher.bin",
+                    "resolved_name": "Snatcher (Japan)",
+                },
+                {
+                    "source": "fuzzy_candidate",
+                    "value": "掠夺者",
+                    "resolved_name": "Tiger & Bunny - On-Air Jack! (Japan)",
+                },
+            ]
+        },
+    )
+
+    assert proposal["match_status"] == "review"
+    assert proposal["needs_review"] is True
+    assert proposal["match_diagnostics"]["conflicts"]
+    assert "强 ROM/DAT/CRC 证据与弱中文/模糊证据冲突" in proposal["match_reason"]
 
 
 @pytest.mark.parametrize(
@@ -129,13 +341,13 @@ def test_fbneo_zip_short_name_fixture_uses_dat_rom_evidence_before_label():
 def test_ps1_bin_cue_fixture_prefers_cue_entry_and_rom_translation():
     changes = analyze_fixture("ps1_bin_cue.lpl", "Sony - PlayStation")
 
-    assert len(changes) == 1
-    change = changes[0]
-    assert change["path"].endswith(".cue")
-    assert change["new_label"] == "最终幻想7 初版"
-    assert change["thumbnail_source"] == "Final Fantasy VII (USA) (Disc 1)"
-    assert change["match_source"] == "rom-name-cn"
-    assert change["needs_review"] is False
+    assert len(changes) == 2
+    assert {Path(change["path"]).suffix for change in changes} == {".bin", ".cue"}
+    for change in changes:
+        assert change["new_label"] == "最终幻想7 初版"
+        assert change["thumbnail_source"] == "Final Fantasy VII (USA) (Disc 1)"
+        assert change["match_source"] == "rom-name-cn"
+        assert change["needs_review"] is False
 
 
 def test_unicode_fixture_snapshot_matching_accepts_nfc_nfd_equivalents():
@@ -205,6 +417,10 @@ def test_build_change_proposal_marks_existing_complete_item_ready():
     assert proposal["match_score"] == 100
     assert proposal["needs_review"] is False
     assert proposal["cover_exists"] is True
+    assert all(
+        step.get("source") != "manual_override"
+        for step in proposal["match_diagnostics"]["evidence_chain"]
+    )
     cover_preview = urlparse(proposal["cover_preview_url"])
     assert cover_preview.path == "/api/thumbnail/preview"
     assert parse_qs(cover_preview.query)["path"][0] == proposal["cover_path"]
@@ -437,3 +653,59 @@ def test_apply_changes_skips_stale_proposal_snapshot(tmp_path):
     saved = json.loads(playlist_path.read_text(encoding="utf-8"))
     assert saved["items"][0]["label"] == "User Edited Name"
     assert summary["total"] == {"success": 0, "failed": 0, "skipped": 0}
+
+
+def test_apply_changes_preserves_ps1_cue_bin_siblings(tmp_path):
+    playlist_path = tmp_path / "Sony - PlayStation.lpl"
+    playlist_path.write_text(
+        json.dumps(
+            {
+                "version": "1.5",
+                "items": [
+                    {
+                        "path": "/roms/ps1/Final Fantasy Tactics (USA).cue",
+                        "label": "Final Fantasy Tactics (USA)",
+                        "core_path": "",
+                        "core_name": "",
+                        "crc32": "DETECT",
+                        "db_name": "Sony - PlayStation.lpl",
+                    },
+                    {
+                        "path": "/roms/ps1/Final Fantasy Tactics (USA).bin",
+                        "label": "Final Fantasy Tactics (USA)",
+                        "core_path": "",
+                        "core_name": "",
+                        "crc32": "DETECT",
+                        "db_name": "Sony - PlayStation.lpl",
+                    },
+                ],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    changes = plcn.analyze_playlist(
+        str(playlist_path),
+        "Sony - PlayStation",
+        "data/rom-name-cn",
+    )
+    assert len(changes) == 2
+
+    plcn.apply_changes(
+        str(playlist_path),
+        changes,
+        str(tmp_path / "thumbnails"),
+        backup=False,
+        download_thumbnails=False,
+    )
+
+    saved = json.loads(playlist_path.read_text(encoding="utf-8"))
+    assert [item["path"] for item in saved["items"]] == [
+        "/roms/ps1/Final Fantasy Tactics (USA).cue",
+        "/roms/ps1/Final Fantasy Tactics (USA).bin",
+    ]
+    assert [item["label"] for item in saved["items"]] == [
+        "最终幻想战略版",
+        "最终幻想战略版",
+    ]

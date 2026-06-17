@@ -1,0 +1,13 @@
+{
+  "version": "1.5",
+  "items": [
+    {
+      "path": "/roms/snes/Super Mario World - Kaizo Hack Collection.sfc",
+      "label": "Super Mario World - Kaizo Hack Collection",
+      "core_path": "",
+      "core_name": "",
+      "crc32": "00000000|crc",
+      "db_name": "Nintendo - Super Nintendo Entertainment System.lpl"
+    }
+  ]
+}
