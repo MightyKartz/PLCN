@@ -4,7 +4,7 @@ from urllib.parse import parse_qs, urlparse
 
 sys.path.append(os.path.join(os.getcwd(), "src"))
 
-from server import annotate_download_summary_paths
+from server import annotate_download_summary_paths, split_plcn_apply_result
 
 
 def test_annotate_download_summary_rewrites_temp_paths_to_adb_preview_urls():
@@ -45,3 +45,38 @@ def test_annotate_download_summary_rewrites_temp_paths_to_adb_preview_urls():
     snap = summary["details"][1]
     assert snap["path"] == "adb://RG476H01077813/sdcard/RetroArch/thumbnails/SNES/Named_Snaps/超级马里奥世界.png"
     assert "cover_path" not in snap
+
+
+def test_split_apply_result_keeps_download_summary_layer_for_ui():
+    download_summary = {
+        "item_count": 1,
+        "types": {},
+        "total": {"success": 1, "failed": 0, "skipped": 0},
+        "details": [
+            {
+                "type": "Named_Boxarts",
+                "game": "魂斗罗",
+                "source": "Contra (USA)",
+                "system": "NES",
+                "status": "success",
+                "path": "/tmp/plcn-adb-thumbnails-def/NES/Named_Boxarts/魂斗罗.png",
+            }
+        ],
+    }
+    apply_summary = {"applied": [{"proposal_id": "contra"}], "skipped": []}
+    composite = {
+        **download_summary,
+        "download_summary": download_summary,
+        "apply": apply_summary,
+    }
+
+    summary, apply = split_plcn_apply_result(composite)
+    annotate_download_summary_paths(
+        summary,
+        local_root="/tmp/plcn-adb-thumbnails-def",
+        final_root="adb://RG476H01077813/sdcard/RetroArch/thumbnails",
+    )
+
+    assert summary is download_summary
+    assert apply is apply_summary
+    assert composite["download_summary"]["details"][0]["cover_path"].startswith("adb://RG476H01077813/")

@@ -1,0 +1,13 @@
+{
+  "version": "1.5",
+  "items": [
+    {
+      "path": "/roms/gba/Cafe\u0301 Puzzle.gba",
+      "label": "Cafe\u0301 Puzzle",
+      "core_path": "",
+      "core_name": "",
+      "crc32": "00000000|crc",
+      "db_name": "Nintendo - Game Boy Advance.lpl"
+    }
+  ]
+}
