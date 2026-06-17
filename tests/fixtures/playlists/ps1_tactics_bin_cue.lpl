@@ -1,0 +1,21 @@
+{
+  "version": "1.5",
+  "items": [
+    {
+      "path": "/roms/PS/Final Fantasy Tactics (USA).cue",
+      "label": "Final Fantasy Tactics (USA)",
+      "core_path": "",
+      "core_name": "",
+      "crc32": "00000000|crc",
+      "db_name": "Sony - PlayStation.lpl"
+    },
+    {
+      "path": "/roms/PS/Final Fantasy Tactics (USA).bin",
+      "label": "Final Fantasy Tactics (USA)",
+      "core_path": "",
+      "core_name": "",
+      "crc32": "00000000|crc",
+      "db_name": "Sony - PlayStation.lpl"
+    }
+  ]
+}

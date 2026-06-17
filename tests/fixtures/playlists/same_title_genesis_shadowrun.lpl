@@ -1,0 +1,13 @@
+{
+  "version": "1.5",
+  "items": [
+    {
+      "path": "/roms/genesis/Shadowrun (USA).md",
+      "label": "Shadowrun (USA)",
+      "core_path": "",
+      "core_name": "",
+      "crc32": "00000000|crc",
+      "db_name": "Sega - Mega Drive - Genesis.lpl"
+    }
+  ]
+}

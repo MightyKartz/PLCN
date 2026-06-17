@@ -1,0 +1,13 @@
+{
+  "version": "1.5",
+  "items": [
+    {
+      "path": "/roms/gba中文游戏/F-Zero - Maximum Velocity (USA, Europe).gba",
+      "label": "gba中文游戏",
+      "core_path": "",
+      "core_name": "",
+      "crc32": "00000000|crc",
+      "db_name": "Nintendo - Game Boy Advance.lpl"
+    }
+  ]
+}

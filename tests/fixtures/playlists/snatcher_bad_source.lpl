@@ -1,0 +1,13 @@
+{
+  "version": "1.5",
+  "items": [
+    {
+      "path": "/roms/PS/掠夺者/Snatcher.bin",
+      "label": "掠夺者",
+      "core_path": "",
+      "core_name": "",
+      "crc32": "00000000|crc",
+      "db_name": "Sony - PlayStation.lpl"
+    }
+  ]
+}

@@ -15,6 +15,8 @@ from playlist_manager import PlaylistManager
 from translator import Translator
 from thumbnail_downloader import ThumbnailDownloader
 from rom_fingerprint import build_rom_match_candidates
+from match_evidence import CONFLICT_REASON, build_match_diagnostics
+from manual_overrides import find_override, load_overrides
 import webbrowser
 import server
 import subprocess
@@ -64,6 +66,21 @@ def load_config():
         with open(CONFIG_FILE, 'r') as f:
             return json.load(f)
     return {}
+
+def has_disc_descriptor_siblings(items):
+    """Detect cue/bin-style sibling entries that must stay aligned through preview and apply."""
+    groups = {}
+    for item in items:
+        label = item.get('label') or ''
+        path = item.get('path') or ''
+        if not label or not path:
+            continue
+        _stem, ext = os.path.splitext(path.split("#", 1)[0].lower())
+        groups.setdefault(label, set()).add(ext)
+    return any(
+        ".cue" in extensions and extensions.intersection({".bin", ".img"})
+        for extensions in groups.values()
+    )
 
 def kill_process_on_port(port):
     """Kill any process using the specified port."""
@@ -374,13 +391,35 @@ def classify_match(display_label, new_label, thumbnail_source, current_label=Non
         return MatchResult("review", 72 if label_has_chinese else 64, True, "缺少中文名或封面标准名，需要人工确认")
     if cover_exists:
         return MatchResult("rename", 96, False, "封面已存在，仅需写入中文名")
-    return MatchResult("matched", 96 if thumbnail_source != display_label else 90, False, "已匹配中文名和缩略图标准名")
+    return MatchResult(
+        "matched",
+        96 if thumbnail_source != display_label or new_label != display_label else 90,
+        False,
+        "已匹配中文名和缩略图标准名",
+    )
 
 def build_change_proposal(index, item, display_label, new_label, thumbnail_source, system_name, match_source="heuristic", match_reason=None, match_diagnostics=None, cover_exists=False, cover_path=None):
     original_item_label = item.get('label') or ''
     original_db_name = item.get('db_name') or ''
     path = item.get('path') or ''
     match_info = classify_match(display_label, new_label, thumbnail_source, current_label=original_item_label, cover_exists=cover_exists)
+    diagnostics = build_match_diagnostics(
+        match_diagnostics,
+        match_source=match_source,
+        item=item,
+        display_label=display_label,
+        new_label=new_label,
+        thumbnail_source=thumbnail_source,
+    )
+    if diagnostics["conflicts"]:
+        match_info = MatchResult(
+            "review",
+            min(match_info.match_score, 72),
+            True,
+            match_info.default_reason,
+        )
+        if not match_reason or CONFLICT_REASON not in match_reason:
+            match_reason = f"{CONFLICT_REASON}：{match_reason or match_info.default_reason}"
 
     return ChangeProposal(
         proposal_id=build_proposal_id(system_name, index, path, original_item_label, original_db_name),
@@ -396,7 +435,7 @@ def build_change_proposal(index, item, display_label, new_label, thumbnail_sourc
         match_status=match_info.match_status,
         match_source=match_source,
         match_reason=match_reason or match_info.default_reason,
-        match_diagnostics=match_diagnostics or {},
+        match_diagnostics=diagnostics,
         needs_review=match_info.needs_review,
         thumbnail_exists=cover_exists,
         local_thumbnail_exists=cover_exists,
@@ -461,7 +500,7 @@ def wrap_apply_result(download_summary, apply_summary):
     result["apply"] = apply_summary
     return result
 
-def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_dir=None):
+def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_dir=None, manual_overrides_path=None):
     """
     Analyzes the playlist and returns a list of proposed changes.
     Returns:
@@ -497,7 +536,7 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
         normalized = re.sub(r'\s*\(\d{8}-\d{6}\)\s*', '', system_name)
         normalized = re.sub(r'\s*\(\d+\)\s*$', '', normalized)
         return normalized.strip()
-    
+
     normalized_system = normalize_system_name(system_name)
     print(f"System: {system_name}")
     if normalized_system != system_name:
@@ -509,13 +548,17 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
     
     # Deduplicate items (in memory for analysis)
     # Note: This modifies the playlist_manager's internal state
-    removed_count = playlist_manager.deduplicate_items()
-    if removed_count > 0:
-        print(f"Removed {removed_count} duplicate entries")
+    if has_disc_descriptor_siblings(playlist_manager.get_items()):
+        removed_count = 0
+    else:
+        removed_count = playlist_manager.deduplicate_items()
+        if removed_count > 0:
+            print(f"Removed {removed_count} duplicate entries")
 
     items = playlist_manager.get_items()
     proposed_changes = []
     boxart_lookup = build_existing_boxart_lookup(thumbnails_dir, system_name)
+    manual_overrides = load_overrides(manual_overrides_path) if manual_overrides_path else []
 
     def add_proposal(index, item, display_label, new_label, thumbnail_source, match_source, match_reason, match_diagnostics=None):
         cover_exists, cover_path = find_existing_boxart(
@@ -525,7 +568,7 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
             item.get('label') or '',
             lookup=boxart_lookup,
         )
-        proposed_changes.append(build_change_proposal(
+        proposal = build_change_proposal(
             index=index,
             item=item,
             display_label=display_label,
@@ -537,11 +580,21 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
             match_diagnostics=match_diagnostics,
             cover_exists=cover_exists,
             cover_path=cover_path,
-        ))
+        )
+        if match_source == "manual_override":
+            proposal["needs_review"] = False
+            proposal["match_score"] = 100
+            if proposal["match_status"] == "review":
+                proposal["match_status"] = "matched"
+        proposed_changes.append(proposal)
 
     def build_rom_match_diagnostics(rom_matches, dat_result, matched_candidate=None, matched_source=None):
         return {
             "candidate_count": len(rom_matches.candidates),
+            "candidates": [
+                {"value": candidate, "source": source}
+                for candidate, source in rom_matches.candidates
+            ],
             "candidate_sources": sorted({source for _, source in rom_matches.candidates}),
             "fingerprint_status": rom_matches.fingerprint_status,
             "fingerprint_error": rom_matches.fingerprint_error,
@@ -589,6 +642,47 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
             basename = basename.split('#')[0]
         return os.path.splitext(basename)[0] or None
 
+    def filename_from_path(value):
+        if not value:
+            return None
+        basename = os.path.basename(value)
+        if '#' in basename:
+            basename = basename.split('#')[0]
+        return basename or None
+
+    def evidence_system_hint(value):
+        if "Super Nintendo" in (value or ""):
+            return "SNES"
+        if "Genesis" in (value or ""):
+            return "Genesis"
+        return value
+
+    def looks_nonstandard_name(value):
+        compact = (value or "").casefold()
+        return any(term in compact for term in ("hack", "collection", "prototype", "homebrew"))
+
+    def is_system_folder_name(folder, system):
+        compact_folder = re.sub(r"[^a-z0-9]+", "", (folder or "").casefold())
+        compact_system = re.sub(r"[^a-z0-9]+", "", (system or "").casefold())
+        system_aliases = {
+            "gba": "nintendogameboyadvance",
+            "snes": "nintendosupernintendoentertainmentsystem",
+            "sfc": "nintendosupernintendoentertainmentsystem",
+            "genesis": "segamegadrivegenesis",
+            "megadrive": "segamegadrivegenesis",
+            "ps": "sonyplaystation",
+            "ps1": "sonyplaystation",
+            "dc": "segadreamcast",
+            "dreamcast": "segadreamcast",
+        }
+        return bool(
+            compact_folder
+            and (
+                compact_folder in compact_system
+                or system_aliases.get(compact_folder) == compact_system
+            )
+        )
+
     def resolve_exact_english_source(candidate):
         if not candidate or is_chinese_text(candidate):
             return None
@@ -620,7 +714,7 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
     def resolve_thumbnail_source_for_chinese_label(chinese_label, path, display_label, original_label):
         exact_chinese_source = translator.db.search_by_chinese(chinese_label, system=translator.system_name)
         if exact_chinese_source:
-            return exact_chinese_source
+            return exact_chinese_source, "exact_alias"
 
         english_candidates = []
         add_unique_candidate(english_candidates, filename_stem_from_path(path), "filename")
@@ -630,13 +724,13 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
         for candidate, _ in english_candidates:
             source = resolve_exact_english_source(candidate)
             if source:
-                return source
+                return source, "rom_filename"
 
         for candidate, _ in english_candidates:
             if candidate and not is_chinese_text(candidate):
-                return candidate
+                return candidate, "fallback"
 
-        return chinese_label
+        return chinese_label, "fallback"
 
     for i, item in enumerate(items):
         original_label = item.get('label')
@@ -652,6 +746,23 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
         
         new_label = original_label
         thumbnail_source = None
+
+        manual_override = find_override(manual_overrides, system_name, item)
+        if manual_override:
+            new_label = manual_override.get("new_label") or original_label
+            thumbnail_source = manual_override.get("thumbnail_source")
+            print(f"  [{i}] Using manual override: '{new_label}'")
+            add_proposal(
+                i,
+                item,
+                display_label,
+                new_label,
+                thumbnail_source,
+                "manual_override",
+                "本地手动覆盖规则匹配",
+                {"evidence_source": "manual_override"},
+            )
+            continue
         
         # Special handling for FBNeo/Arcade games
         # These games have region codes like "(World 900227)" that need to be removed
@@ -743,11 +854,43 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
         if original_label and is_chinese_text(original_label) and not is_generic_collection_label(original_label):
             print(f"  [{i}] Using existing Chinese label: '{original_label}'")
             new_label = original_label
-            thumbnail_source = resolve_thumbnail_source_for_chinese_label(original_label, path, display_label, original_label)
+            thumbnail_source, chinese_label_source = resolve_thumbnail_source_for_chinese_label(
+                original_label,
+                path,
+                display_label,
+                original_label,
+            )
             if thumbnail_source:
                 print(f"  [{i}] Found thumbnail source: '{thumbnail_source}'")
-            
-            add_proposal(i, item, display_label, new_label, thumbnail_source, "playlist", "游戏列表已有中文标签，保留并补齐封面源")
+
+            diagnostics = {
+                "evidence_chain": [
+                    {
+                        "source": "exact_alias" if chinese_label_source == "exact_alias" else "fuzzy_candidate",
+                        "value": original_label,
+                        "resolved_name": thumbnail_source if chinese_label_source == "exact_alias" else new_label,
+                        "note": "Chinese playlist label",
+                    }
+                ]
+            }
+            if chinese_label_source == "rom_filename":
+                diagnostics["evidence_chain"].insert(0, {
+                    "source": "rom_filename",
+                    "value": os.path.basename((path or "").split("#", 1)[0]),
+                    "resolved_name": thumbnail_source,
+                    "note": "ROM filename source; manual review",
+                })
+
+            add_proposal(
+                i,
+                item,
+                display_label,
+                new_label,
+                thumbnail_source,
+                "playlist",
+                "游戏列表已有中文标签，保留并补齐封面源",
+                diagnostics,
+            )
             continue
 
         # Priority 2: Check if filename (without extension) contains Chinese characters
@@ -760,7 +903,6 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
             filename_no_ext = os.path.splitext(basename)[0]
             
             if filename_no_ext and any('\u4e00' <= char <= '\u9fff' for char in filename_no_ext):
-                import re
                 # Remove content in brackets [] and parentheses ()
                 clean_name = re.sub(r'\[.*?\]', '', filename_no_ext)
                 clean_name = re.sub(r'\(.*?\)', '', clean_name).strip()
@@ -809,11 +951,33 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
                             thumbnail_source = original_label
                             print(f"  [{i}] Using original label as fallback: '{original_label}'")
                 
-                add_proposal(i, item, display_label, new_label, thumbnail_source, "filename", "中文文件名解析后生成建议")
+                filename_diagnostics = {
+                    "evidence_chain": [
+                        {
+                            "source": "rom_filename",
+                            "value": filename_from_path(path),
+                            "resolved_name": thumbnail_source or new_label,
+                            "note": "missing thumbnail source; manual review"
+                            if not thumbnail_source
+                            else "Chinese filename",
+                        }
+                    ]
+                }
+                add_proposal(
+                    i,
+                    item,
+                    display_label,
+                    new_label,
+                    thumbnail_source,
+                    "filename",
+                    "中文文件名解析后生成建议",
+                    filename_diagnostics,
+                )
                 continue
 
         # Priority 3: Translation
         candidates = []
+        ignored_parent_note = None
         if path:
             filename_no_ext = os.path.splitext(os.path.basename(path))[0]
             if filename_no_ext: candidates.append(filename_no_ext)
@@ -823,14 +987,23 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
             parent_dir = os.path.basename(os.path.dirname(path))
             # Parent folders often describe a collection, e.g. "gba中文游戏".
             # Do not let Chinese folder names override stronger ROM filename or playlist label evidence.
-            if parent_dir and parent_dir not in candidates and not is_chinese_text(parent_dir):
+            if (
+                parent_dir
+                and parent_dir not in candidates
+                and not is_chinese_text(parent_dir)
+                and not is_system_folder_name(parent_dir, normalized_system)
+            ):
                 candidates.append(parent_dir)
+            elif parent_dir and is_chinese_text(parent_dir):
+                ignored_parent_note = f"parent folder ignored: {parent_dir}"
         
         translated_label = None
         matched_english_name = None
         standard_english_name = None
         
         for candidate in candidates:
+            if looks_nonstandard_name(candidate):
+                continue
             translation, std_en = translator.translate(candidate)
             if translation != candidate:
                 # Found Chinese translation
@@ -851,15 +1024,15 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
         if translated_label and any('\u4e00' <= char <= '\u9fff' for char in translated_label):
             # Priority 1: Use Chinese translation
             new_label = translated_label
-            thumbnail_source = standard_english_name if standard_english_name else matched_english_name
+            thumbnail_source = matched_english_name or standard_english_name
         elif standard_english_name and standard_english_name != matched_english_name:
             # Priority 2: Use standardized English name (if different from original)
             new_label = standard_english_name
             thumbnail_source = standard_english_name
         else:
             # No translation or standardization found, keep original
-            new_label = original_label
-            thumbnail_source = original_label
+            new_label = normalize_value(display_label or original_label)
+            thumbnail_source = None if looks_nonstandard_name(new_label) else new_label
         
         if translated_label and has_chinese(translated_label):
             match_source = "rom-name-cn"
@@ -871,7 +1044,46 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
             match_source = "fallback"
             match_reason = "未找到中文或标准英文匹配，保留原始名称"
 
-        add_proposal(i, item, display_label, new_label, thumbnail_source, match_source, match_reason)
+        evidence_note_parts = [part for part in [
+            match_source,
+            ignored_parent_note,
+            evidence_system_hint(normalized_system),
+        ] if part]
+        unicode_normalized = bool(original_label and original_label != new_label and normalize_value(original_label) == new_label)
+
+        if match_source == "fallback" and looks_nonstandard_name(new_label):
+            evidence_note_parts.extend(["nonstandard", "manual review"])
+        elif match_source == "fallback" and unicode_normalized:
+            evidence_note_parts.append("unicode-normalized")
+
+        translation_diagnostics = {
+            "evidence_chain": [
+                {
+                    "source": "rom_filename",
+                    "value": filename_from_path(path),
+                    "resolved_name": thumbnail_source or new_label,
+                    "note": "; ".join(evidence_note_parts),
+                }
+            ]
+        }
+        if unicode_normalized:
+            translation_diagnostics["evidence_chain"].append({
+                "source": "fallback",
+                "value": original_label,
+                "resolved_name": new_label,
+                "note": "unicode-normalized",
+            })
+
+        add_proposal(
+            i,
+            item,
+            display_label,
+            new_label,
+            thumbnail_source,
+            match_source,
+            match_reason,
+            translation_diagnostics,
+        )
 
     return proposed_changes
 
@@ -887,7 +1099,10 @@ def apply_changes(playlist_path, changes, thumbnails_dir, backup=True, progress_
         print(f"Backed up playlist to {backup_path}")
 
     playlist_manager = PlaylistManager(playlist_path)
-    playlist_manager.deduplicate_items()
+    # Keep apply aligned with analyze: cue/bin sibling entries are valid RetroArch
+    # playlist rows and must not be collapsed after the preview was generated.
+    if not has_disc_descriptor_siblings(playlist_manager.get_items()):
+        playlist_manager.deduplicate_items()
     
     downloader = ThumbnailDownloader(thumbnails_dir)
     download_tasks = []
