@@ -1,0 +1,21 @@
+{
+  "version": "1.5",
+  "items": [
+    {
+      "path": "/roms/PS中文游戏/Final Fantasy VII (USA) (Disc 1).bin",
+      "label": "Final Fantasy VII (USA) (Disc 1)",
+      "core_path": "",
+      "core_name": "",
+      "crc32": "00000000|crc",
+      "db_name": "Sony - PlayStation.lpl"
+    },
+    {
+      "path": "/roms/PS中文游戏/Final Fantasy VII (USA) (Disc 1).cue",
+      "label": "Final Fantasy VII (USA) (Disc 1)",
+      "core_path": "",
+      "core_name": "",
+      "crc32": "00000000|crc",
+      "db_name": "Sony - PlayStation.lpl"
+    }
+  ]
+}

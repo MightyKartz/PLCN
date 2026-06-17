@@ -58,6 +58,11 @@ def annotate_download_summary_paths(summary, local_root=None, final_root=None):
 
     return summary
 
+def split_plcn_apply_result(result):
+    if isinstance(result, dict) and "download_summary" in result and "apply" in result:
+        return result.get("download_summary") or {}, result.get("apply")
+    return result or {}, None
+
 # Job Management
 import threading
 import time
@@ -683,13 +688,14 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                         if remote_playlist and remote_thumbnails:
                             effective_thumbnails_dir = tempfile.mkdtemp(prefix="plcn-adb-thumbnails-")
 
-                        summary = plcn.apply_changes(
+                        apply_result = plcn.apply_changes(
                             effective_playlist_path,
                             chgs,
                             effective_thumbnails_dir,
                             progress_callback=progress_cb,
                             download_thumbnails=should_download
                         )
+                        summary, apply_summary = split_plcn_apply_result(apply_result)
 
                         remote_backup = None
                         if remote_playlist:
@@ -708,8 +714,9 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                         )
 
                         job_manager.complete_job(jid, {
-                            "applied_count": len(chgs or []),
+                            "applied_count": len(apply_summary.get("applied", [])) if apply_summary else len(chgs or []),
                             "download_summary": summary,
+                            "apply": apply_summary,
                             "transport": "adb" if remote_playlist else "local",
                             "remote_backup": remote_backup
                         })
@@ -787,13 +794,14 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                                 # 2. Apply (with backup)
                                 # We pass a dummy progress callback or None, as we track file-level progress here.
                                 # Or we could aggregate progress? For simplicity, just file-level.
-                                summary = plcn.apply_changes(
+                                apply_result = plcn.apply_changes(
                                     playlist_path,
                                     changes,
                                     t_dir,
                                     backup=use_backup,
                                     download_thumbnails=should_download
                                 )
+                                summary, _apply_summary = split_plcn_apply_result(apply_result)
                                 summary = annotate_download_summary_paths(
                                     summary,
                                     local_root=t_dir,

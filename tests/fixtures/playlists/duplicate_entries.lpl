@@ -1,0 +1,21 @@
+{
+  "version": "1.5",
+  "items": [
+    {
+      "path": "/roms/gba/F-Zero - Maximum Velocity (USA, Europe).gba",
+      "label": "F-Zero - Maximum Velocity (USA, Europe)",
+      "core_path": "",
+      "core_name": "",
+      "crc32": "00000000|crc",
+      "db_name": "Nintendo - Game Boy Advance.lpl"
+    },
+    {
+      "path": "/roms/gba/F-Zero - Maximum Velocity (USA, Europe).gba",
+      "label": "F-Zero - Maximum Velocity (USA, Europe)",
+      "core_path": "",
+      "core_name": "",
+      "crc32": "00000000|crc",
+      "db_name": "Nintendo - Game Boy Advance.lpl"
+    }
+  ]
+}

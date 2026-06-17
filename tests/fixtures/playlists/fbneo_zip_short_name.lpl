@@ -1,0 +1,18 @@
+{
+  "version": "1.5",
+  "default_core_path": "DETECT",
+  "default_core_name": "DETECT",
+  "label_display_mode": 0,
+  "right_thumbnail_mode": 0,
+  "left_thumbnail_mode": 0,
+  "items": [
+    {
+      "path": "/storage/roms/fbneo/aof3.zip",
+      "label": "Unknown Arcade Entry",
+      "core_path": "DETECT",
+      "core_name": "DETECT",
+      "crc32": "DETECT",
+      "db_name": "FBNeo - Arcade Games.lpl"
+    }
+  ]
+}

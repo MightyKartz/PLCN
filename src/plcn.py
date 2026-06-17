@@ -1,4 +1,6 @@
 import argparse
+from dataclasses import asdict, dataclass
+from datetime import datetime
 import hashlib
 import json
 import os
@@ -8,6 +10,7 @@ import sys
 import glob
 import unicodedata
 import urllib.parse
+from typing import Any, Dict, Optional
 from playlist_manager import PlaylistManager
 from translator import Translator
 from thumbnail_downloader import ThumbnailDownloader
@@ -17,6 +20,44 @@ import server
 import subprocess
 
 CONFIG_FILE = "config.json"
+
+
+@dataclass(frozen=True)
+class MatchResult:
+    match_status: str
+    match_score: int
+    needs_review: bool
+    default_reason: str
+
+    def to_dict(self):
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class ChangeProposal:
+    proposal_id: str
+    index: int
+    original_label: str
+    original_item_label: str
+    original_db_name: str
+    path: str
+    new_label: str
+    thumbnail_source: Optional[str]
+    system: str
+    match_score: int
+    match_status: str
+    match_source: str
+    match_reason: str
+    match_diagnostics: Dict[str, Any]
+    needs_review: bool
+    thumbnail_exists: bool
+    local_thumbnail_exists: bool
+    cover_exists: bool
+    cover_path: Optional[str]
+    cover_preview_url: Optional[str]
+
+    def to_dict(self):
+        return asdict(self)
 
 def load_config():
     if os.path.exists(CONFIG_FILE):
@@ -324,46 +365,16 @@ def classify_match(display_label, new_label, thumbnail_source, current_label=Non
     current_matches_new = bool(current_label and new_label and normalize_value(current_label) == normalize_value(new_label))
 
     if duplicate:
-        return {
-            "match_status": "duplicate",
-            "match_score": 99,
-            "needs_review": True,
-            "default_reason": "检测到重复项标记，需要确认是否保留或重命名",
-        }
+        return MatchResult("duplicate", 99, True, "检测到重复项标记，需要确认是否保留或重命名")
     if current_matches_new and thumbnail_source and cover_exists and label_has_chinese:
-        return {
-            "match_status": "ready",
-            "match_score": 100,
-            "needs_review": False,
-            "default_reason": "中文名、封面源和本地封面已就绪，无需修复",
-        }
+        return MatchResult("ready", 100, False, "中文名、封面源和本地封面已就绪，无需修复")
     if current_matches_new and thumbnail_source and label_has_chinese:
-        return {
-            "match_status": "download",
-            "match_score": 94,
-            "needs_review": False,
-            "default_reason": "中文名和封面源已就绪，仅需下载封面",
-        }
+        return MatchResult("download", 94, False, "中文名和封面源已就绪，仅需下载封面")
     if missing_thumb or not label_has_chinese:
-        return {
-            "match_status": "review",
-            "match_score": 72 if label_has_chinese else 64,
-            "needs_review": True,
-            "default_reason": "缺少中文名或封面标准名，需要人工确认",
-        }
+        return MatchResult("review", 72 if label_has_chinese else 64, True, "缺少中文名或封面标准名，需要人工确认")
     if cover_exists:
-        return {
-            "match_status": "rename",
-            "match_score": 96,
-            "needs_review": False,
-            "default_reason": "封面已存在，仅需写入中文名",
-        }
-    return {
-        "match_status": "matched",
-        "match_score": 96 if thumbnail_source != display_label else 90,
-        "needs_review": False,
-        "default_reason": "已匹配中文名和缩略图标准名",
-    }
+        return MatchResult("rename", 96, False, "封面已存在，仅需写入中文名")
+    return MatchResult("matched", 96 if thumbnail_source != display_label else 90, False, "已匹配中文名和缩略图标准名")
 
 def build_change_proposal(index, item, display_label, new_label, thumbnail_source, system_name, match_source="heuristic", match_reason=None, match_diagnostics=None, cover_exists=False, cover_path=None):
     original_item_label = item.get('label') or ''
@@ -371,28 +382,28 @@ def build_change_proposal(index, item, display_label, new_label, thumbnail_sourc
     path = item.get('path') or ''
     match_info = classify_match(display_label, new_label, thumbnail_source, current_label=original_item_label, cover_exists=cover_exists)
 
-    return {
-        'proposal_id': build_proposal_id(system_name, index, path, original_item_label, original_db_name),
-        'index': index,
-        'original_label': display_label,
-        'original_item_label': original_item_label,
-        'original_db_name': original_db_name,
-        'path': path,
-        'new_label': new_label,
-        'thumbnail_source': thumbnail_source,
-        'system': system_name,
-        'match_score': match_info["match_score"],
-        'match_status': match_info["match_status"],
-        'match_source': match_source,
-        'match_reason': match_reason or match_info["default_reason"],
-        'match_diagnostics': match_diagnostics or {},
-        'needs_review': match_info["needs_review"],
-        'thumbnail_exists': cover_exists,
-        'local_thumbnail_exists': cover_exists,
-        'cover_exists': cover_exists,
-        'cover_path': cover_path,
-        'cover_preview_url': cover_preview_url(cover_path),
-    }
+    return ChangeProposal(
+        proposal_id=build_proposal_id(system_name, index, path, original_item_label, original_db_name),
+        index=index,
+        original_label=display_label,
+        original_item_label=original_item_label,
+        original_db_name=original_db_name,
+        path=path,
+        new_label=new_label,
+        thumbnail_source=thumbnail_source,
+        system=system_name,
+        match_score=match_info.match_score,
+        match_status=match_info.match_status,
+        match_source=match_source,
+        match_reason=match_reason or match_info.default_reason,
+        match_diagnostics=match_diagnostics or {},
+        needs_review=match_info.needs_review,
+        thumbnail_exists=cover_exists,
+        local_thumbnail_exists=cover_exists,
+        cover_exists=cover_exists,
+        cover_path=cover_path,
+        cover_preview_url=cover_preview_url(cover_path),
+    ).to_dict()
 
 def proposal_matches_item(change, item):
     expected_label = change.get('original_item_label')
@@ -406,6 +417,49 @@ def proposal_matches_item(change, item):
     if expected_db_name and normalize_value(item.get('db_name')) != normalize_value(expected_db_name):
         return False
     return True
+
+def timestamped_backup_path(playlist_path):
+    base_path = f"{playlist_path}.bak-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+    backup_path = base_path
+    suffix = 1
+    while os.path.exists(backup_path):
+        backup_path = f"{base_path}-{suffix}"
+        suffix += 1
+    return backup_path
+
+def find_playlist_item_by_path(items, target_path):
+    if not target_path:
+        return None, None
+    norm_target = normalize_value(target_path)
+    for index, item in enumerate(items):
+        item_path = item.get('path')
+        if item_path and normalize_value(item_path) == norm_target:
+            return index, item
+    return None, None
+
+def skipped_apply_detail(change, reason, item=None):
+    detail = {
+        "proposal_id": change.get("proposal_id", change.get("index")),
+        "index": change.get("index"),
+        "path": change.get("path"),
+        "reason": reason,
+    }
+    if reason == "stale_proposal":
+        detail["expected"] = {
+            "label": change.get("original_item_label"),
+            "db_name": change.get("original_db_name"),
+        }
+        detail["actual"] = {
+            "label": (item or {}).get("label"),
+            "db_name": (item or {}).get("db_name"),
+        }
+    return detail
+
+def wrap_apply_result(download_summary, apply_summary):
+    result = dict(download_summary or ThumbnailDownloader.empty_summary(0))
+    result["download_summary"] = download_summary or ThumbnailDownloader.empty_summary(0)
+    result["apply"] = apply_summary
+    return result
 
 def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_dir=None):
     """
@@ -825,92 +879,121 @@ def apply_changes(playlist_path, changes, thumbnails_dir, backup=True, progress_
     """
     Applies the changes to the playlist and downloads thumbnails.
     """
-    # 0. Backup
+    backup_path = None
     if backup:
-        backup_path = playlist_path + ".bak"
         import shutil
+        backup_path = timestamped_backup_path(playlist_path)
         shutil.copy2(playlist_path, backup_path)
         print(f"Backed up playlist to {backup_path}")
 
     playlist_manager = PlaylistManager(playlist_path)
-    # Re-deduplicate to ensure indices match (assuming analyze was run on fresh load)
-    # WARNING: If analyze removed items, indices in 'changes' must align with post-deduplication items.
-    # Ideally, analyze should return the FULL list of items including unchanged ones, or we trust the order.
-    # Since we re-instantiate PlaylistManager, we must ensure deterministic behavior.
     playlist_manager.deduplicate_items()
     
     downloader = ThumbnailDownloader(thumbnails_dir)
     download_tasks = []
+    applied_details = []
+    skipped_details = []
     
-    for change in changes:
-        index = change['index']
-        new_label = change['new_label']
-        thumbnail_source = change['thumbnail_source']
-        system = change['system']
+    for change in changes or []:
+        index = change.get('index')
+        new_label = change.get('new_label')
+        thumbnail_source = change.get('thumbnail_source')
+        system = change.get('system')
         target_path = change.get('path')
-        applied = False
-        
-        # Update label
-        if new_label:
-            # Try to find by path first (more robust)
-            if target_path:
-                norm_target = normalize_value(target_path)
-                for item in playlist_manager.items:
-                    item_path = item.get('path')
-                    if item_path and normalize_value(item_path) == norm_target:
-                        if not proposal_matches_item(change, item):
-                            print(f"Warning: Proposal {change.get('proposal_id', index)} is stale for {os.path.basename(target_path)}. Skipping update.")
-                            applied = False
-                            break
-                        item['label'] = new_label
-                        applied = True
-                        print(f"Updated label for {os.path.basename(target_path)} to '{new_label}'")
-                        break
-            
-            # Fallback to index if path not found or not provided
-            if not applied:
-                if 0 <= index < len(playlist_manager.items):
-                    # Verify path matches if possible
-                    current_item = playlist_manager.items[index]
-                    if target_path and normalize_value(current_item.get('path')) != normalize_value(target_path):
-                        print(f"Warning: Index {index} path mismatch. Expected {target_path}, got {current_item.get('path')}. Skipping update.")
-                    elif not proposal_matches_item(change, current_item):
-                        print(f"Warning: Proposal {change.get('proposal_id', index)} no longer matches playlist item at index {index}. Skipping update.")
-                    else:
-                        playlist_manager.update_label(index, new_label)
-                        applied = True
-                        print(f"Updated label at index {index} to '{new_label}'")
-                else:
-                    print(f"Error: Index {index} out of bounds. Skipping update.")
-            
-        # Collect download task
-        if applied and thumbnail_source and new_label:
+
+        if not new_label:
+            skipped_details.append(skipped_apply_detail(change, "missing_new_label"))
+            continue
+
+        target_index = None
+        target_item = None
+
+        if target_path:
+            target_index, target_item = find_playlist_item_by_path(playlist_manager.items, target_path)
+            if target_item is None:
+                skipped_details.append(skipped_apply_detail(change, "path_not_found"))
+                print(f"Warning: Proposal {change.get('proposal_id', index)} target path was not found. Skipping update.")
+                continue
+        elif isinstance(index, int) and 0 <= index < len(playlist_manager.items):
+            target_index = index
+            target_item = playlist_manager.items[index]
+        else:
+            skipped_details.append(skipped_apply_detail(change, "index_out_of_bounds"))
+            print(f"Error: Index {index} out of bounds. Skipping update.")
+            continue
+
+        if not proposal_matches_item(change, target_item):
+            skipped_details.append(skipped_apply_detail(change, "stale_proposal", target_item))
+            print(f"Warning: Proposal {change.get('proposal_id', index)} no longer matches playlist item. Skipping update.")
+            continue
+
+        old_label = target_item.get('label')
+        target_item['label'] = new_label
+        print(f"Updated label for {os.path.basename(target_path or old_label or str(index))} to '{new_label}'")
+
+        applied_details.append({
+            "proposal_id": change.get("proposal_id", index),
+            "index": target_index,
+            "path": target_item.get("path"),
+            "old_label": old_label,
+            "new_label": new_label,
+            "thumbnail_source": thumbnail_source,
+        })
+
+        if thumbnail_source and new_label:
             download_tasks.append((system, thumbnail_source, new_label))
             
-    # Save playlist
-    playlist_manager.save(playlist_path)
-    print(f"Saved updated playlist to {playlist_path}")
-    
-    # Verify save
-    try:
-        import time
-        mtime = os.path.getmtime(playlist_path)
-        print(f"File modification time: {time.ctime(mtime)}")
-        # Optional: Read back first item to verify
-        # with open(playlist_path, 'r', encoding='utf-8') as f:
-        #     data = json.load(f)
-        #     print(f"Verification - First item label: {data['items'][0].get('label')}")
-    except Exception as e:
-        print(f"Verification failed: {e}")
+    if applied_details:
+        playlist_manager.save(playlist_path)
+        print(f"Saved updated playlist to {playlist_path}")
+
+    verification = []
+    if applied_details:
+        try:
+            read_back_manager = PlaylistManager(playlist_path)
+            for detail in applied_details:
+                actual_label = None
+                _, item = find_playlist_item_by_path(read_back_manager.items, detail.get("path"))
+                if item is None and 0 <= detail["index"] < len(read_back_manager.items):
+                    item = read_back_manager.items[detail["index"]]
+                if item is not None:
+                    actual_label = item.get("label")
+                verification.append({
+                    "proposal_id": detail["proposal_id"],
+                    "index": detail["index"],
+                    "path": detail["path"],
+                    "expected_label": detail["new_label"],
+                    "actual_label": actual_label,
+                    "status": "passed" if normalize_value(actual_label) == normalize_value(detail["new_label"]) else "failed",
+                })
+        except Exception as e:
+            for detail in applied_details:
+                verification.append({
+                    "proposal_id": detail["proposal_id"],
+                    "index": detail["index"],
+                    "path": detail["path"],
+                    "expected_label": detail["new_label"],
+                    "actual_label": None,
+                    "status": "failed",
+                    "error": str(e),
+                })
+
+    apply_summary = {
+        "requested_count": len(changes or []),
+        "applied": applied_details,
+        "skipped": skipped_details,
+        "verification": verification,
+        "backup_path": backup_path,
+    }
 
     if not download_tasks:
-        return downloader.empty_summary(0)
+        return wrap_apply_result(downloader.empty_summary(0), apply_summary)
 
     if not download_thumbnails:
-        return downloader.skipped_summary(download_tasks, "已按用户选项跳过下载")
+        return wrap_apply_result(downloader.skipped_summary(download_tasks, "已按用户选项跳过下载"), apply_summary)
 
-    # Batch download
-    return downloader.download_batch(download_tasks, progress_callback=progress_callback)
+    download_summary = downloader.download_batch(download_tasks, progress_callback=progress_callback)
+    return wrap_apply_result(download_summary, apply_summary)
 
 def process_playlist(playlist_path, system_name, thumbnails_dir, rom_name_cn_path):
     print(f"Analyzing playlist: {playlist_path}")

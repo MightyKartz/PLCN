@@ -118,9 +118,12 @@ python3 src/plcn.py \
 常用验证命令：
 
 ```bash
+python3 -m pytest -q
 python3 -m py_compile src/*.py
-python3 -m pytest --collect-only -q
+git diff --check
 ```
+
+如果改动 `src/templates/plcn.html`，还需要对内联 JavaScript 做语法检查；发布前的完整检查命令见 [RELEASE_GUIDE.md](RELEASE_GUIDE.md)。
 
 ## 致谢与鸣谢
 

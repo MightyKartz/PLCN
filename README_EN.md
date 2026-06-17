@@ -119,9 +119,12 @@ python3 src/plcn.py \
 Common validation commands:
 
 ```bash
+python3 -m pytest -q
 python3 -m py_compile src/*.py
-python3 -m pytest --collect-only -q
+git diff --check
 ```
+
+If you touch `src/templates/plcn.html`, also syntax-check its inline JavaScript; see [RELEASE_GUIDE.md](RELEASE_GUIDE.md) for the full pre-release check command.
 
 ## Credits & Acknowledgements
 
