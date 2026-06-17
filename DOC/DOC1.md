@@ -34,7 +34,7 @@
 | RetroArch 集成 | 在 RetroArch 界面内直接显示中文 | 通过修改 `.lpl` 播放列表标签实现 | 先保证写回安全和可恢复，再评估更深集成 |
 | 缩略图下载 | 自动下载封面和截图 | 已支持 Boxart、Snap、Title 下载，并返回成功/失败/跳过统计 | 下一步补充断言式测试、重试策略和失败恢复 |
 | 外部辅助识别 | 早期曾考虑 API 辅助 | 当前不接入 ScreenScraper、Skraper、在线数据库、云服务或 LLM 匹配 | 继续坚持本地证据和可复现回归，避免远程匹配影响隐私与确定性 |
-| 匹配置信度 | 设想中未细分 | 后端已开始返回 `match_score`、`match_status`、`match_source` 和 `match_reason`；前端仍保留兼容性启发式 fallback | 后续由本地后端产出权威证据链，UI 只展示结果和人工校对状态 |
+| 匹配置信度 | 设想中未细分 | 后端已开始返回 `match_score`、`match_status`、`match_source` 和 `match_reason`；前端已收敛为展示后端权威状态和人工校对状态 | 后续继续补充本地证据链和 UI 展示 |
 | 数据维护 | 依赖外部数据源 | `rom-name-cn`、Libretro DAT、SQLite 混合使用 | 需要明确 `plcn.db` 是生成缓存还是版本化资产 |
 
 ## 后续方向

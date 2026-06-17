@@ -5,10 +5,9 @@ from libretro_db import LibretroDB
 from database import DatabaseManager
 
 class Translator:
-    def __init__(self, rom_name_cn_path, system_name=None, llm_client=None, db_path=None):
+    def __init__(self, rom_name_cn_path, system_name=None, db_path=None):
         self.rom_name_cn_path = rom_name_cn_path
         self.system_name = system_name
-        self.llm_client = llm_client
         
         # Initialize Database
         self.db = DatabaseManager(db_path=db_path)
@@ -134,12 +133,6 @@ class Translator:
                 print(f"Cleaned arcade ROM name: '{text}' -> '{cleaned}'")
                 return cleaned, cleaned
 
-        # 9. Fallback to LLM (if configured)
-        if self.llm_client:
-            llm_result = self.translate_with_llm(text)
-            if llm_result:
-                return llm_result, text 
-        
         return text, text
 
     def _clean_arcade_rom_name(self, name):
@@ -168,7 +161,3 @@ class Translator:
             name = ''.join(word.title() if word.isalnum() else word for word in words)
         
         return name.strip()
-
-    def translate_with_llm(self, text):
-        # Placeholder for LLM integration
-        return text

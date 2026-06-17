@@ -54,6 +54,16 @@ def test_primary_labels_are_clear():
     assert "normalizeDisplayName" in html
     assert "currentMatchesWriteName" in html
     assert "reclassifyEditedChange" in html
+    assert "frontend-fallback" not in html
+    assert "backend-missing" in html
+    assert "manual-edit" in html
+    assert "保存为本地修正规则" in html
+    assert "/api/overrides/save" in html
+    assert "待保存本地修正" in html
+    assert "pending_override" in html
+    assert "&& isEditedChange(change)" in html
+    assert "重新预览后应用" in html
+    assert "savedChange.enabled = false" in html
     assert "previewFirstPlaylistForSystem" in html
     assert "setLibraryBrowserVisible" in html
     assert "setLibraryBrowserVisible(false)" not in html
@@ -117,8 +127,13 @@ def test_primary_labels_are_clear():
     assert "change.match_status !== 'ready'" not in html
     assert "applyCompletedJobToPreview" in html
     assert "rememberAppliedChanges" in html
+    assert "findWritebackRecord" in html
+    assert "writeback.applied" in html
+    assert "writeback.failed" in html
+    assert "writeback.skipped" in html
     assert "findBoxartDownloadResult" in html
     assert "match_status = 'applied'" in html
+    assert "match_source = 'writeback'" in html
     assert "change.original_item_label = change.new_label || change.original_item_label" in html
     assert "kind: 'completed'" in html
     assert "label: uiText('已完成')" in html

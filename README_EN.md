@@ -28,6 +28,7 @@ PLCN is a local RetroArch game-list localization and thumbnail matching tool. It
   - PLCN remains local/offline-first and does not integrate the ScreenScraper/Skraper API; matching diagnostics explain whether a row came from a DAT hit, an unreadable ROM fingerprint, or manual-review fallback.
 - **Batch processing**: Processes multiple `.lpl` game lists from one directory.
 - **Local data cache**: Uses SQLite to cache translation and matching data.
+- **Local manual overrides**: Manual corrections can be saved to the local `manual_overrides.json` file and prioritized in later previews.
 - **Cross-platform packaging**: Distributed for Windows, macOS, and Linux through PyInstaller builds.
 
 ## Installation
@@ -85,6 +86,12 @@ Download the latest release for your platform from the [Releases](https://github
    - Write confirmed labels back to the game list.
    - Download box art, gameplay snapshots, and title images.
    - Check progress logs, success/failure/skip statistics, and download details in the UI.
+
+### Local Data Note
+
+- `manual_overrides.json` stays on this machine. If no path is configured, PLCN stores it in the launch directory; a local config can point it elsewhere.
+- Each record stores system, ROM path/name, CRC, write name, cover source, and update time. Within the same system, CRC matches win first, then ROM filename matches.
+- This file preserves manual corrections only; PLCN does not use cloud sync, online matching, or external scraping.
 
 ### Run from source
 

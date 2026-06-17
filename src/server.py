@@ -9,6 +9,13 @@ import shlex
 import subprocess
 import sqlite3
 import tempfile
+from manual_overrides import (
+    build_override_entry,
+    default_overrides_path,
+    load_overrides,
+    save_overrides,
+    upsert_override,
+)
 
 PORT = 7777
 CONFIG_FILE = "config.json"
@@ -19,6 +26,21 @@ def get_base_path():
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 TEMPLATE_DIR = os.path.join(get_base_path(), "src", "templates")
+
+def load_server_config():
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return {}
+
+def configured_overrides_path(config=None):
+    config = config if config is not None else load_server_config()
+    return config.get("manual_overrides_path") or default_overrides_path()
+
+def merge_server_config(config_data):
+    merged_config = load_server_config()
+    merged_config.update(config_data)
+    return merged_config
 
 def thumbnail_preview_url(path):
     if not path:
@@ -62,6 +84,23 @@ def split_plcn_apply_result(result):
     if isinstance(result, dict) and "download_summary" in result and "apply" in result:
         return result.get("download_summary") or {}, result.get("apply")
     return result or {}, None
+
+def build_apply_job_result(summary, apply_summary=None, changes=None, transport="local", remote_backup=None):
+    writeback = summary.get("writeback") if isinstance(summary, dict) else None
+    if isinstance(writeback, dict):
+        applied_count = len(writeback.get("applied") or [])
+    elif isinstance(apply_summary, dict):
+        applied_count = len(apply_summary.get("applied") or [])
+    else:
+        applied_count = len(changes or [])
+
+    return {
+        "applied_count": applied_count,
+        "download_summary": summary,
+        "apply": apply_summary,
+        "transport": transport,
+        "remote_backup": remote_backup,
+    }
 
 # Job Management
 import threading
@@ -158,6 +197,8 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
         elif path == "/api/thumbnail/preview":
             target_path = query_params.get('path', [''])[0]
             self.serve_thumbnail_preview(target_path)
+        elif path == "/api/overrides/list":
+            self.list_overrides()
         elif path == "/api/execute":
             # Legacy execute endpoint (SSE)
             self.send_response(200)
@@ -370,6 +411,25 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps({"error": str(e)}).encode())
 
+    def list_overrides(self):
+        try:
+            config = load_server_config()
+            path = configured_overrides_path(config)
+            entries = load_overrides(path)
+
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                "entries": entries,
+                "path": path,
+            }, ensure_ascii=False).encode("utf-8"))
+        except Exception as e:
+            self.send_response(500)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": str(e)}, ensure_ascii=False).encode("utf-8"))
+
     def detect_system(self, path):
         # Detect system from playlist file content
         if not path or not os.path.exists(path):
@@ -545,6 +605,34 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
             time.sleep(0.5)
 
     def do_POST(self):
+        if self.path == "/api/overrides/save":
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+
+            try:
+                data = json.loads(post_data)
+                config = load_server_config()
+                path = configured_overrides_path(config)
+                entry = build_override_entry(data)
+                entries = upsert_override(load_overrides(path), entry, now=entry.get("updated_at"))
+                save_overrides(path, entries)
+
+                self.send_response(200)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    "status": "success",
+                    "entry": entry,
+                    "entries": entries,
+                    "path": path,
+                }, ensure_ascii=False).encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}, ensure_ascii=False).encode("utf-8"))
+            return
+
         if self.path == "/api/fs/open":
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
@@ -593,8 +681,9 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
             
             try:
                 config_data = json.loads(post_data)
+                merged_config = merge_server_config(config_data)
                 with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
-                    json.dump(config_data, f, indent=4, ensure_ascii=False)
+                    json.dump(merged_config, f, indent=4, ensure_ascii=False)
                 self.send_response(200)
                 self.send_header("Content-type", "application/json")
                 self.end_headers()
@@ -620,6 +709,7 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                     with open(CONFIG_FILE, 'r') as f:
                         config = json.load(f)
                 rom_name_cn_path = config.get("rom_name_cn_path", "data/rom-name-cn")
+                manual_overrides_path = configured_overrides_path(config)
                 if getattr(sys, 'frozen', False) and not os.path.isabs(rom_name_cn_path):
                      rom_name_cn_path = os.path.join(sys._MEIPASS, rom_name_cn_path)
 
@@ -627,7 +717,13 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                 effective_playlist_path = materialize_adb_file(playlist_path) if is_adb_uri(playlist_path) else playlist_path
 
                 import plcn
-                changes = plcn.analyze_playlist(effective_playlist_path, system_name, rom_name_cn_path, thumbnails_dir)
+                changes = plcn.analyze_playlist(
+                    effective_playlist_path,
+                    system_name,
+                    rom_name_cn_path,
+                    thumbnails_dir,
+                    manual_overrides_path=manual_overrides_path,
+                )
                 
                 self.send_response(200)
                 self.send_header("Content-type", "application/json")
@@ -713,13 +809,13 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                             final_root=t_dir,
                         )
 
-                        job_manager.complete_job(jid, {
-                            "applied_count": len(apply_summary.get("applied", [])) if apply_summary else len(chgs or []),
-                            "download_summary": summary,
-                            "apply": apply_summary,
-                            "transport": "adb" if remote_playlist else "local",
-                            "remote_backup": remote_backup
-                        })
+                        job_manager.complete_job(jid, build_apply_job_result(
+                            summary,
+                            apply_summary=apply_summary,
+                            changes=chgs,
+                            transport="adb" if remote_playlist else "local",
+                            remote_backup=remote_backup,
+                        ))
                     except Exception as e:
                         import traceback
                         traceback.print_exc()

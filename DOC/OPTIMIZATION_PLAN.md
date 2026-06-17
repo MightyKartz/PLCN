@@ -1,6 +1,7 @@
 # PLCN 后续优化方案
 
 生成日期：2026-06-02
+最近更新：2026-06-17
 
 ## 目标
 
@@ -25,8 +26,9 @@ PLCN 是本地运行工具，不接入 ScreenScraper、Skraper、在线游戏数
 - 主入口：`src/plcn.py`，无参数或 `ui` 子命令会启动本地 Web UI。
 - 本地 Web 服务：`src/server.py`，只在本机运行，提供配置、运行时统计、文件浏览/打开目录、系统列表、预览、应用、批量处理、搜索和进度路由。
 - 设备目录扫描：`src/retroarch_scanner.py` 负责浅层识别本地/挂载 RetroArch 根目录和 ADB 授权设备中的 `playlists`、`thumbnails`、`retroarch.cfg` 和 `.lpl` 摘要。
-- 核心流程：读取 `.lpl` -> 去重 -> 匹配中文名/英文标准名 -> 生成建议变更 -> 用户确认 -> 备份并写回 -> 下载缩略图。
+- 核心流程：读取 `.lpl` -> 去重 -> 匹配中文名/英文标准名 -> 生成建议变更 -> 用户确认 -> 时间戳备份并写回 -> read-back verification -> 下载缩略图。
 - 数据来源：`data/rom-name-cn`、Libretro DAT、SQLite 缓存 `plcn.db`。
+- 人工覆盖：`manual_overrides.json` 是本地人工校正记录，优先于模糊匹配；同一 system 内先按标准化 CRC 命中，CRC 缺失时按 ROM 文件名命中。
 - UI 状态：`src/templates/plcn.html` 是单文件工作台 UI，已接入真实顶部统计、行勾选应用、批量选项和结构化下载汇总，但体量偏大。
 - 测试状态：已有多个 `test_*.py`，但部分测试偏脚本化输出，断言和稳定 fixture 还不足。
 
@@ -42,6 +44,7 @@ PLCN 是本地运行工具，不接入 ScreenScraper、Skraper、在线游戏数
 | Libretro DAT | `src/libretro_db.py` | 下载/解析/搜索 DAT | 文本解析和网络缓存需要失败恢复策略 |
 | 缩略图下载 | `src/thumbnail_downloader.py` | 并发下载 Boxart/Snap/Title，返回成功/失败/跳过结构化统计 | 需要补充断言式测试、失败重试策略和断点友好行为 |
 | 目录扫描 | `src/retroarch_scanner.py` | 扫描本地/挂载/ADB RetroArch 目录，列出 `.lpl`、缩略图目录和配置文件 | 尚未支持 SSH/SFTP；未检查本地单个封面是否已存在 |
+| 人工覆盖 | `src/manual_overrides.py` | 读取/保存本地人工校正，按 system + CRC/文件名匹配 `new_label` 和 `thumbnail_source` | 默认文件位置还需要产品决策；必须保持本地文件语义 |
 | Web UI | `src/templates/plcn.html` | 配置、预览、校对、进度、日志、下载明细 | 单文件过大；前端置信度是启发式，不应替代本地后端真实匹配结果 |
 | 打包发布 | `plcn.spec`、`.github/workflows` | PyInstaller 分发 | 需要确认数据文件、缓存文件和平台行为一致 |
 
@@ -51,12 +54,19 @@ PLCN 是本地运行工具，不接入 ScreenScraper、Skraper、在线游戏数
 
 写回 `.lpl` 是项目最高价值也最高风险的环节。当前流程会在分析和应用阶段都涉及去重与匹配，应用时依赖路径/NFC 标准化并带有索引 fallback。后续必须保证预览项和实际写回项一一对应，避免重复 ROM、Unicode 差异或游戏列表变动导致错误标签写入。
 
+本轮方向与已接入能力：
+
+- 备份文件改为 `.lpl.bak-YYYYMMDD-HHMMSS` 形式的时间戳备份，同一秒重复备份会追加序号，保留清晰恢复路径。
+- `apply_changes` 保存后会重新读取 `.lpl`，用写入路径和新 label 做 read-back verification。
+- 写回结果返回结构化 `writeback`：包含 `backup_path`、`applied`、`skipped`、`failed`，跳过原因包括空 label、过期 proposal、索引越界、路径不一致和快照不匹配，失败原因目前包括 `readback_mismatch`。
+- 下载任务只基于 read-back 已确认的 `applied` 记录生成，避免给未实际写入的条目继续下载封面。
+
 优化方向：
 
 - 为每个建议变更生成稳定 `proposal_id`。
 - 应用时以路径、原始 label、db_name、索引快照组成复合校验。
-- 应用后重新读取 `.lpl` 做 read-back verification。
-- 备份文件改为带时间戳，保留恢复路径。
+- 将 read-back verification 的失败详情继续透出到 UI，并提供面向用户的恢复提示。
+- 覆盖 ADB 拉取本地缓存、写回设备、再读回设备文件的端到端验证。
 
 ### P1：匹配准确性必须持续提高
 
@@ -70,6 +80,22 @@ PLCN 是本地运行工具，不接入 ScreenScraper、Skraper、在线游戏数
 - 本地后端保持返回权威置信度，UI 只负责展示和手动编辑后的本地标记。
 - 用户手动确认的修正应能写入本地 override/alias 文件，下一次扫描成为强于模糊搜索的本地证据。
 - Snatcher 误匹配、GBA 中文父目录污染、FBNeo zip short name、PS1 bin/cue 等案例必须长期保留为回归 fixture。
+
+### P1：本地人工覆盖与状态收敛
+
+本轮新增 `manual_overrides.json` 用于保存用户在本机确认过的人工校正。覆盖记录字段为 `system`、`rom_path`、`rom_filename`、`crc32`、`new_label`、`thumbnail_source`、`updated_at`。分析时按同一 system 内的标准化 CRC 优先命中；CRC 为空、`DETECT`、`00000000` 等无效值时退回 ROM 文件名。命中覆盖后 `match_source` 为 `manual_override`，正常情况下分数为 100；如果覆盖的封面源和精确 ROM 证据冲突，则保持待复核状态，避免人工旧记录覆盖更强本地证据。
+
+UI 状态收敛原则：
+
+- 后端返回的 `match_status`、`match_score`、`match_source`、`match_reason` 是权威状态。
+- 前端手动编辑写入名称或封面源时，只能把该行标记为本地待保存校正；这些编辑在保存到 `manual_overrides.json` 或写回 `.lpl` 之前，不应被描述为后端已确认事实。
+- “已完成”只表示写回流程确认该条目已应用；“无需修复”只表示当前名称、封面源和封面状态已满足本地检查。
+
+优化方向：
+
+- 明确 `manual_overrides.json` 默认位置：继续放在启动目录、放入用户配置目录，还是随 `config.json` 显示配置。
+- 在 UI 中清楚区分“本轮手动编辑待保存”和“已保存为本地人工覆盖”。
+- 为覆盖记录增加导入/导出和最小冲突说明，但保持本地 JSON，不接入在线匹配服务。
 
 ### P1：本地数据模型决定长期准确性
 
@@ -113,6 +139,8 @@ UI 已经具备工作台形态，但 `src/templates/plcn.html` 过大，状态�
 - “打开封面文件夹”改为调用本地后端打开系统文件管理器。
 - 预览建议项已增加 `proposal_id`、原始 label/db_name 快照、后端 `match_score`、`match_status`、`match_source` 和 `match_reason`。
 - 应用变更前会校验 proposal 快照，游戏列表在预览后被用户或外部程序修改时会跳过过期建议，避免覆盖新状态。
+- 应用结果已返回结构化写回摘要，UI 后续应以 `writeback.applied/skipped/failed` 收敛行状态和日志。
+- 手动编辑行应视为待保存的本地校正，不能覆盖后端权威状态来源；保存为覆盖记录后再作为 `manual_override` 参与下次预览。
 
 优化方向：
 
@@ -144,6 +172,12 @@ PLCN v3.0 第一版已经支持本地目录、挂载设备目录和 ADB 授权 A
 - 批量任务使用明确 job id 和可查询状态。
 - 文件浏览限制在用户选择过的目录上下文内。
 
+## 本轮剩余风险
+
+- UI 仍集中在 `src/templates/plcn.html` 单文件内，状态、渲染、API 调用和样式耦合，继续增加人工覆盖与写回摘要会放大回归风险。
+- `manual_overrides.json` 的默认位置仍需定案；当前未配置时使用启动目录，发布包、源码运行和不同工作目录下的用户预期可能不一致。
+- ADB 写回链路仍需更严谨的端到端验证：本地缓存 read-back 已存在，但设备侧备份、推回、再读取确认、断线/授权失效和多设备场景都可能产生额外 caveat。
+
 ## 阶段计划
 
 | 阶段 | 目标 | 关键任务 | 退出标准 |
@@ -165,6 +199,7 @@ PLCN v3.0 第一版已经支持本地目录、挂载设备目录和 ADB 授权 A
 6. 将 proposal 快照校验扩展为应用后的 read-back verification，并在 UI 中展示被跳过的过期项和验证失败项。
 7. 将本地封面存在性检查加入 `src/retroarch_scanner.py` 或独立 `artwork_resolver.py`，让 UI 区分已存在、待下载、缺源和下载失败。
 8. 拆分 `src/templates/plcn.html`，把本地路由调用、预览表、详情栏和下载汇总拆成独立 JS 模块。
+9. 定案 `manual_overrides.json` 的本地默认路径、迁移策略和 README 用户说明。
 
 ## 验证门禁
 
@@ -195,6 +230,7 @@ python3 src/plcn.py ui
 - PLCN 的长期产品形态：继续强化独立本地工具，还是重新评估 RetroArch 内部插件路线。
 - `plcn.db` 是否作为发布资产随包携带，还是始终在用户本机重建。
 - `manual_overrides` 是否默认保存在项目目录、用户配置目录，还是跟随打包应用的数据目录。
+- 不引入 LLM 在线匹配、云同步或外部刮削；匹配与人工覆盖继续保持本地数据和本地文件边界。
 - 本地服务是否必须支持局域网访问；默认建议只绑定本机 `127.0.0.1`。
 - 批量处理失败时的默认策略：遇错继续、遇错停止，还是用户可配置。
 
