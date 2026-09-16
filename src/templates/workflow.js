@@ -45,6 +45,7 @@ function endWorkbenchOperation() {
 function invalidateWorkbenchPreview() {
     workbench.previewKey = null;
     workbench.applied = false;
+    if (workbench.operation !== 'apply') workbench.hasTask = false;
     currentChanges = [];
     currentPreviewFilter = 'all';
     document.getElementById('preview-search').value = '';
@@ -58,6 +59,7 @@ function renderWorkbench() {
     if (!shell) return;
     const state = workbenchSnapshot();
     const batch = document.getElementById('batch-tab').classList.contains('active');
+    document.querySelector('.workflow-strip').hidden = batch;
     shell.classList.toggle('library-loaded', state.hasLibrary);
     shell.classList.toggle('preview-loaded', state.previewValid && !batch);
     shell.classList.toggle('task-visible', workbench.hasTask);
@@ -67,12 +69,15 @@ function renderWorkbench() {
     apply.disabled = !state.canApply;
     apply.hidden = batch || !state.previewValid;
     const count = getIncludedChanges().length;
-    apply.textContent = workbenchText(`应用 ${count} 项变更`, `Apply ${count} changes`);
+    apply.textContent = workbenchText(`应用 ${count} 项变更`, `Apply ${count} ${count === 1 ? 'change' : 'changes'}`);
     document.getElementById('confirm-apply-button').disabled = !state.canApply;
     document.getElementById('batch-start-button').hidden = !batch;
     document.getElementById('batch-start-button').disabled = !state.canBatch;
     document.getElementById('batch-explanation').hidden = !batch;
     document.getElementById('workspace-empty').hidden = state.previewValid || batch;
+    document.getElementById('workspace-empty').textContent = document.getElementById('playlist_path').value
+        ? workbenchText('已选择列表，点击“预览变更”检查名称与图片。', 'List selected. Preview the name and artwork changes.')
+        : uiText('选择左侧列表，然后预览名称与图片变更。');
     document.getElementById('preview-button').classList.toggle('btn-ghost', state.previewValid);
     document.getElementById('preview-button').textContent = state.previewValid ? workbenchText('重新预览', 'Refresh preview') : uiText('预览变更');
     document.getElementById('workspace-title').textContent = batch ? uiText('全部游戏列表')
@@ -91,6 +96,8 @@ function renderWorkbench() {
     });
     document.getElementById('scan-device-btn').disabled = state.busy || !document.getElementById('retroarch_root').value.trim();
     document.getElementById('preview-search').disabled = state.busy;
+    document.getElementById('preview-search').setAttribute('aria-label', uiText('搜索游戏名 / rom 名称'));
+    document.querySelector('.workflow-strip').setAttribute('aria-label', uiText('修复流程'));
     document.getElementById('preview-container').inert = state.busy;
     document.getElementById('inspector-panel').inert = state.busy;
     document.getElementById('workbench-busy').textContent = state.busy

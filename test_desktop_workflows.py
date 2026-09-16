@@ -147,6 +147,8 @@ def test_desktop_endpoints_and_shutdown_refuses_active_work(tmp_path, desktop_ho
             client.get(url, timeout=3).raise_for_status()
             assert client.get(url + '/api/instance', timeout=3).json()['instance_id'] == 'test-instance'
             assert client.get(url + '/assets/desktop.js', timeout=3).status_code == 200
+            assert client.get(url + '/assets/workflow.js', timeout=3).status_code == 200
+            assert client.get(url + '/api/data', timeout=3).json()['source_kind'] == 'bundled'
             picked = client.post(url + '/api/desktop/pick', json={'kind': 'directory'}, timeout=3).json()
             assert picked['path'].endswith('选择目录')
             job = jobs.create_job()

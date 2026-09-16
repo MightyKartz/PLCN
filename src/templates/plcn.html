@@ -4237,7 +4237,7 @@
             const button = document.getElementById('filter-toggle-btn');
             const compact = panel.classList.toggle('filters-compact');
             button.setAttribute('aria-expanded', String(!compact));
-            button.title = compact ? '展开筛选项' : '收起筛选项';
+            button.title = compact ? workbenchText('展开筛选项', 'Show more filters') : workbenchText('收起筛选项', 'Show fewer filters');
             showStatus(compact ? '已收起非当前筛选项' : '已展开全部筛选项', 'info');
         }
 
@@ -4301,6 +4301,7 @@
             closeModal();
 
             if (currentTargetInputId === 'playlist_path') {
+                document.getElementById('system_name').value = '';
                 detectSystemName(path);
             }
             if (currentTargetInputId === 'retroarch_root') {
@@ -4309,15 +4310,7 @@
             updateWorkflowLabels();
         }
 
-        function selectCurrentDir() {
-            invalidateWorkbenchPreview();
-            document.getElementById(currentTargetInputId).value = currentPath;
-            closeModal();
-            if (currentTargetInputId === 'retroarch_root') {
-                scanDevice(false);
-            }
-            updateWorkflowLabels();
-        }
+        function selectCurrentDir() { selectFile(currentPath); }
 
         async function executeTask(mode) {
             if (mode === 'single') return previewTask();
@@ -4338,7 +4331,10 @@
                     return;
                 }
 
-                if (!await desktopConfirm(workbenchText('处理目录中的全部列表？每个修改的列表会先备份，待确认项会跳过。', 'Process all lists in this folder? Changed lists are backed up; review items are skipped.'))) return;
+                const backupNote = options.backup
+                    ? workbenchText('每个修改的列表会先备份。', 'Changed lists will be backed up.')
+                    : workbenchText('自动备份已关闭。', 'Automatic backups are disabled.');
+                if (!await desktopConfirm(workbenchText('处理此目录中的全部列表：', 'Process all lists in: ') + batchDir + '\n' + backupNote + workbenchText('待确认项会跳过。', ' Review items will be skipped.'))) return;
                 if (!beginWorkbenchOperation('apply')) return;
                 workbench.hasTask = true;
                 const saved = await saveConfig(mode);
@@ -4402,6 +4398,8 @@
             try {
                 const response = await fetch(`/api/playlist/detect?path=${encodeURIComponent(path)}`);
                 const data = await response.json();
+
+                if (workbench.operation || document.getElementById('playlist_path').value !== path) return;
 
                 if (data.system_name) {
                     const select = document.getElementById('system_name');
@@ -4484,6 +4482,15 @@
                 tr.className = info.rowClass;
                 if (index === selectedChangeIndex) tr.classList.add('selected');
                 tr.onclick = () => selectPreviewRow(index);
+                tr.tabIndex = 0;
+                tr.setAttribute('aria-label', workbenchText('查看详情：', 'View details: ') + getCurrentItemLabel(change));
+                tr.addEventListener('keydown', event => {
+                    if (event.target === tr && ['Enter', ' '].includes(event.key)) {
+                        event.preventDefault();
+                        selectPreviewRow(index);
+                        document.getElementById('inspector-label').focus();
+                    }
+                });
 
                 const tdSelect = document.createElement('td');
                 tdSelect.className = 'select-cell';
@@ -4496,7 +4503,7 @@
                 rowCheck.setAttribute('role', 'checkbox');
                 rowCheck.setAttribute('aria-checked', String(isSelected));
                 rowCheck.setAttribute('aria-disabled', String(!canSelect));
-                rowCheck.setAttribute('aria-label', `选择 ${change.original_label || '当前项目'}`);
+                rowCheck.setAttribute('aria-label', workbenchText('选择 ', 'Select ') + (change.original_label || uiText('当前')));
                 rowCheck.disabled = !canSelect;
                 rowCheck.addEventListener('click', (event) => {
                     event.stopPropagation();
@@ -4556,6 +4563,7 @@
                 const inputNew = document.createElement('input');
                 inputNew.type = 'text';
                 inputNew.className = 'new-label-input';
+                inputNew.setAttribute('aria-label', uiText('写入名称') + ': ' + getCurrentItemLabel(change));
                 inputNew.value = change.new_label || '';
                 inputNew.title = change.new_label || '';
                 inputNew.oninput = (e) => {
@@ -4577,6 +4585,7 @@
                 const inputThumb = document.createElement('input');
                 inputThumb.type = 'text';
                 inputThumb.className = 'thumb-source-input';
+                inputThumb.setAttribute('aria-label', uiText('封面源英文名') + ': ' + getCurrentItemLabel(change));
                 inputThumb.value = change.thumbnail_source || '';
                 inputThumb.title = change.thumbnail_source || uiText('留空则不下载');
                 inputThumb.placeholder = uiText('留空则不下载');
@@ -4592,7 +4601,7 @@
 
                 const btnSearch = document.createElement('button');
                 btnSearch.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path></svg>';
-                btnSearch.title = '搜索数据库';
+                btnSearch.title = workbenchText('搜索数据库', 'Search database');
                 btnSearch.className = 'mini-btn';
                 btnSearch.type = 'button';
                 btnSearch.onclick = (event) => {
@@ -4609,7 +4618,7 @@
                     linkPreview.href = previewHref;
                     linkPreview.target = '_blank';
                     linkPreview.innerHTML = '<svg viewBox="0 0 24 24"><path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"></path><circle cx="12" cy="12" r="2.5"></circle></svg>';
-                    linkPreview.title = '预览封面';
+                    linkPreview.title = workbenchText('预览封面', 'Preview artwork');
                     linkPreview.className = 'link-preview';
                     linkPreview.onclick = (event) => event.stopPropagation();
                     thumbWrap.appendChild(linkPreview);
@@ -4867,10 +4876,12 @@
             document.getElementById('apply-summary-text').textContent = formatApplySummaryText(summary);
             panel.hidden = false;
             panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            document.getElementById('confirm-apply-button').focus();
         }
 
         function cancelApplySummary() {
             hideApplySummary();
+            document.getElementById('apply-button').focus();
             showStatus(uiText('已取消应用'), 'info');
         }
 
@@ -5299,6 +5310,9 @@
                 return [uiText('待保存本地修正'), change.match_reason || info.reason || ''].filter(Boolean).join(' · ');
             }
             if (document.getElementById('repair-mode').value === 'names' && ['rename', 'ready'].includes(info.kind)) return workbenchText('仅检查显示名称，图片保持不变', 'Only display names are checked; artwork is unchanged');
+            if (document.getElementById('repair-mode').value === 'artwork') return ['review', 'duplicate'].includes(info.kind)
+                ? workbenchText('图片来源需核对，当前名称保持不变', 'Review the artwork source; current names are preserved')
+                : workbenchText('检查并补全图片，当前名称保持不变', 'Check and complete artwork; current names are preserved');
             if (info.kind === 'ready') return uiText('中文名、封面源和封面已就绪');
             if (info.kind === 'download') return uiText('中文名和封面源已就绪，仅需下载封面');
             if (info.kind === 'rename') return uiText('封面已存在，仅需写入中文名');
@@ -5818,7 +5832,7 @@
         });
     </script>
     <dialog id="desktop-dialog" aria-labelledby="desktop-title">
-        <header><h2 id="desktop-title" data-i18n="PLCN 管理">PLCN 管理</h2><button class="btn btn-muted" onclick="document.getElementById('desktop-dialog').close()" type="button">关闭</button></header>
+        <header><h2 id="desktop-title" data-i18n="PLCN 管理">PLCN 管理</h2><button class="btn btn-muted" onclick="document.getElementById('desktop-dialog').close()" type="button" data-i18n="关闭">关闭</button></header>
         <nav class="desktop-toolbar" aria-label="管理页面"><button data-desktop-view="data" class="btn" onclick="openDesktop('data')" data-i18n="名称数据库">名称数据库</button><button data-desktop-view="tasks" class="btn" onclick="openDesktop('tasks')" data-i18n="任务">任务</button><button data-desktop-view="history" class="btn" onclick="openDesktop('history')" data-i18n="恢复历史">恢复历史</button></nav>
         <p id="desktop-message" role="status"></p><div id="desktop-content"></div><details id="data-source-settings"><summary data-i18n="自定义数据路径">自定义数据路径</summary>
 

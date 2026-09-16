@@ -113,3 +113,13 @@ body[data-theme="dark"] .desktop-welcome p { color: #c0ccdb; }
     .table-toolbar { grid-template-columns: minmax(0,1fr) auto; }
     .toolbar-tools { flex-wrap: nowrap; }
 }
+.main-panel { display: flex; flex-direction: column; }
+.workbench-content { min-width: 0; width: 100%; }
+.workbench-content > :not(.preview-area) { flex-shrink: 0; }
+.workbench-content .preview-area { flex: 1; min-width: 0; }
+.workflow-strip li { min-width: 0; }
+.preview-table tr:focus-visible { outline: 3px solid var(--primary); outline-offset: -3px; }
+@media (max-width: 820px) {
+    .workbench-content .preview-area { flex: none; }
+    #preview-container { max-height: 65vh; }
+}
