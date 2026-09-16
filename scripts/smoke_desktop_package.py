@@ -108,16 +108,52 @@ def installer_registration_exists():
     return False
 
 
+def windows_shell_folder(folder_id):
+    import ctypes
+    buffer = ctypes.create_unicode_buffer(32768)
+    result = ctypes.windll.shell32.SHGetFolderPathW(None, folder_id, None, 0, buffer)
+    if result != 0:
+        raise OSError('Cannot locate user shortcut directory')
+    return Path(buffer.value)
+
+
+@contextmanager
+def preserve_windows_shortcuts():
+    # A portable install can have shortcuts without an installer registration.
+    # Resolve actual shell folders (including redirected Desktop locations).
+    paths = [windows_shell_folder(2) / 'PLCN/PLCN.lnk', windows_shell_folder(16) / 'PLCN.lnk']
+    snapshots = {path: path.read_bytes() if path.exists() else None for path in paths}
+    try:
+        yield
+    finally:
+        changed = []
+        for path, before in snapshots.items():
+            after = path.read_bytes() if path.exists() else None
+            if after == before:
+                continue
+            changed.append(str(path))
+            if before is None:
+                path.unlink(missing_ok=True)
+            else:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(before)
+        if changed:
+            raise AssertionError('Installer altered existing shortcuts; restored originals: ' + ', '.join(changed))
+
+
 def check_installer(package, workspace):
     if installer_registration_exists():
         raise RuntimeError('PLCN already has an installer registration; use a clean Windows runner for this test')
     destination = workspace / 'installed app 中文'
+    group = 'PLCN smoke ' + workspace.name
     uninstaller = destination / 'unins000.exe'
     flags = ['/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-']
     try:
         run([str(package), *flags, '/NOCLOSEAPPLICATIONS', '/NORESTARTAPPLICATIONS',
-             '/NOICONS', '/TASKS=', '/DIR=' + str(destination), '/LOG=' + str(workspace / 'install.log')])
+             '/NOICONS', '/TASKS=', '/GROUP=' + group,
+             '/DIR=' + str(destination), '/LOG=' + str(workspace / 'install.log')])
         assert installer_registration_exists(), 'Installer did not register the app'
+        assert not (windows_shell_folder(2) / group / 'PLCN.lnk').exists(), 'Installer ignored /NOICONS'
         marker = check_binary(destination / 'PLCN.exe', workspace)
     finally:
         if uninstaller.exists():
@@ -155,7 +191,8 @@ def main():
     workspace = Path(tempfile.mkdtemp(prefix='plcn-package-smoke-')).resolve()
     print('Package smoke workspace:', workspace, flush=True)
     if args.installer:
-        check_installer(package, workspace)
+        with preserve_windows_shortcuts():
+            check_installer(package, workspace)
     elif args.dmg:
         check_dmg(package, workspace)
     else:
