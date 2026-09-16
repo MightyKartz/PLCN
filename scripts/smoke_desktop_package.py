@@ -160,10 +160,19 @@ def main():
         check_dmg(package, workspace)
     else:
         check_binary(package, workspace)
-    print('PASS: package resources, isolated profiles, single instance, port isolation, shutdown', flush=True)
     import shutil
     if workspace.parent == Path(tempfile.gettempdir()).resolve() and workspace.name.startswith('plcn-package-smoke-'):
-        shutil.rmtree(workspace)
+        # Inno's detached cleanup process can briefly retain its uninstall log
+        # after the uninstaller returns. Retry only Windows sharing/access errors.
+        for attempt in range(50):
+            try:
+                shutil.rmtree(workspace)
+                break
+            except PermissionError as error:
+                if getattr(error, 'winerror', None) not in (5, 32) or attempt == 49:
+                    raise
+                time.sleep(.2)
+    print('PASS: package resources, isolated profiles, single instance, port isolation, shutdown', flush=True)
 
 
 if __name__ == '__main__':
