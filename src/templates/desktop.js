@@ -163,9 +163,12 @@ function desktopClearPreview() {
 
 async function desktopReloadSource() {
     desktopClearPreview();
+    const selectedSystem = document.getElementById('system_name').value;
     const config = await desktopRequest('/api/config');
     for (const id of ['rom_name_cn_path', 'batch_rom_name_cn_path']) document.getElementById(id).value = config.rom_name_cn_path;
-    await loadSystems(); await loadStats();
+    await loadSystems();
+    if (selectedSystem) { ensureSystemOption(selectedSystem); document.getElementById('system_name').value = selectedSystem; }
+    await loadStats();
     showStatus(desktopText('数据源已切换，请重新预览。', 'Data source changed. Generate a new preview.'), 'success');
 }
 

@@ -3247,6 +3247,7 @@
         let lastDownloadSummary = null;
         let lastAppliedChangeKeys = new Set();
         let lastAppliedDownloadEnabled = true;
+        let lastAppliedWriteNames = true;
         let currentDeviceScan = null;
         let currentUILanguage = 'zh';
         let currentTheme = 'light';
@@ -3616,6 +3617,7 @@
         }
 
         function markWritebackProblem(change, record, fallbackReason) {
+            change.review_confirmed = false;
             change.applied = false;
             change.match_status = 'review';
             change.match_score = 0;
@@ -3630,6 +3632,7 @@
         function rememberAppliedChanges(changes, options) {
             lastAppliedChangeKeys = new Set((changes || []).map(getChangeIdentity).filter(Boolean));
             lastAppliedDownloadEnabled = options?.download_thumbnails !== false;
+            lastAppliedWriteNames = options?.write_names !== false;
         }
 
         function normalizeDownloadKey(value) {
@@ -5228,11 +5231,11 @@
                     setInlineProgress(100, '完成', '所有操作完成', '当前：可检查输出文件');
                     lastDownloadSummary = data.result?.download_summary || null;
                     setDownloadSummary(lastDownloadSummary);
-                    if (mode === 'single') applyCompletedJobToPreview(data.result);
+                    if (mode === 'single' && data.result) applyCompletedJobToPreview(data.result);
                     showDownloadDetails(false);
                     document.getElementById('dock-download-count').textContent = '下载任务完成';
                     document.getElementById('repair-summary-inline').textContent = mode === 'single'
-                        ? getAppliedSummaryText(lastAppliedChangeKeys.size || data.result?.applied_count || 0)
+                        ? getAppliedSummaryText(data.result?.applied_count || 0)
                         : uiText('修复完成');
                     if (detailSummary) detailSummary.textContent = '任务完成，日志和下载明细已更新。';
                     if (data.status === 'cancelled') {
@@ -5478,6 +5481,7 @@
         }
 
         function getAppliedSummaryText(applied) {
+            if (!lastAppliedWriteNames) return currentUILanguage === 'en' ? `${applied} items processed; names unchanged` : `${applied} 项图片已处理，名称保持不变`;
             return currentUILanguage === 'en'
                 ? `${uiText('修复完成')} · ${applied} ${uiText('项已写回')}`
                 : `${uiText('修复完成')} · ${applied} ${uiText('项已写回')}`;
