@@ -2667,7 +2667,7 @@
                 <div>
                     <div class="brand-line">
                         <div class="brand-name">PLCN</div>
-                        <div class="brand-version">v3.1.1</div>
+                        <div class="brand-version">v3.2 preview</div>
                     </div>
                     <div class="brand-product">PLCN Device Library</div>
                 </div>
@@ -2694,10 +2694,10 @@
             </div>
             <div class="utility-group" aria-label="工具">
                 <div class="desktop-toolbar">
-                    <button class="btn btn-muted" type="button" onclick="openDesktop('data')">数据库</button>
-                    <button class="btn btn-muted" type="button" onclick="openDesktop('tasks')">任务</button>
-                    <button class="btn btn-muted" type="button" onclick="openDesktop('history')">恢复</button>
-                    <button class="btn btn-muted" type="button" onclick="quitDesktop()">退出</button>
+                    <button class="btn btn-muted" type="button" onclick="openDesktop('data')" data-i18n="数据库">数据库</button>
+                    <button class="btn btn-muted" type="button" onclick="openDesktop('tasks')" data-i18n="任务">任务</button>
+                    <button class="btn btn-muted" type="button" onclick="openDesktop('history')" data-i18n="恢复">恢复</button>
+                    <button class="btn btn-muted" type="button" onclick="quitDesktop()" data-i18n="退出">退出</button>
                 </div>
                 <button class="btn btn-muted top-toggle" id="language-display-btn" type="button" onclick="toggleUILanguage()" title="切换界面语言" aria-label="切换界面语言">
                     <svg class="ui-language-icon" data-icon="ui-to-en" width="20" height="20" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 1 0 20"></path><path d="M12 2a14.5 14.5 0 0 0 0 20"></path><path d="M2 12h20"></path></svg>
@@ -2714,10 +2714,10 @@
                     <section class="desktop-welcome">
                         <strong>选择游戏库 → 预览 → 应用修复</strong>
                         <p id="desktop-welcome-text">选择 RetroArch 或 SD 卡目录，自动识别列表和图片路径。首次使用建议先处理一个列表。</p>
-                        <button class="btn" type="button" onclick="openFilePicker('retroarch_root', true)">选择游戏目录</button>
-                        <button class="btn btn-muted" id="continue-library" type="button" hidden>继续上次目录</button>
-                        <p><label for="repair-mode">本次操作</label></p>
-                        <select id="repair-mode" onchange="setRepairMode()"><option value="both">修复名称并补全图片</option><option value="names">仅修复名称</option><option value="artwork">仅补全图片（保留当前名称）</option></select>
+                        <button class="btn" type="button" onclick="openFilePicker('retroarch_root', true)" data-i18n="选择游戏目录">选择游戏目录</button>
+                        <button class="btn btn-muted" id="continue-library" type="button" hidden data-i18n="继续上次目录">继续上次目录</button>
+                        <p><label for="repair-mode" data-i18n="本次操作">本次操作</label></p>
+                        <select id="repair-mode" onchange="setRepairMode()"><option value="both" data-i18n="修复名称并补全图片">修复名称并补全图片</option><option value="names" data-i18n="仅修复名称">仅修复名称</option><option value="artwork" data-i18n="仅补全图片（保留当前名称）">仅补全图片（保留当前名称）</option></select>
                     </section>
                     <section class="device-panel">
                         <h2 class="section-title" data-i18n="设备与目录">设备与目录</h2>
@@ -2801,7 +2801,7 @@
                         </div>
                     </section>
 
-                    <section class="config-panel"><details class="desktop-advanced"><summary>高级配置与手动路径</summary>
+                    <section class="config-panel"><details class="desktop-advanced"><summary data-i18n="高级配置与手动路径">高级配置与手动路径</summary>
                         <div id="single-tab" class="tab-content active">
                             <h2 class="section-title" data-i18n="单项配置">单项配置</h2>
                             <div class="form-group">
@@ -3253,6 +3253,22 @@
         let selectedLibrarySystem = '';
 
         const UI_EN = {
+            "数据库": "Database",
+            "任务": "Tasks",
+            "恢复": "Restore",
+            "退出": "Quit",
+            "选择游戏目录": "Choose game folder",
+            "继续上次目录": "Continue previous library",
+            "本次操作": "Operation",
+            "修复名称并补全图片": "Repair names and artwork",
+            "仅修复名称": "Names only",
+            "仅补全图片（保留当前名称）": "Artwork only (keep names)",
+            "高级配置与手动路径": "Advanced configuration",
+            "名称数据库": "Name database",
+            "恢复历史": "Restore history",
+            "PLCN 管理": "PLCN management",
+            "匹配依据": "Match evidence",
+
             '当前游戏列表': 'Current List',
             '全部游戏列表': 'All Lists',
             '本地数据库': 'Local DB',
@@ -3549,6 +3565,10 @@
         function preparePreviewChanges(changes) {
             return (changes || []).map(original => {
                 const change = { ...original };
+                if (document.getElementById('repair-mode')?.value === 'names' && !change.needs_review && ['matched', 'rename', 'ready', 'download'].includes(change.match_status)) {
+                    change.match_status = currentMatchesWriteName(change) ? 'ready' : 'rename';
+                    change.match_reason = '仅修复名称；此次不下载图片';
+                }
                 if (document.getElementById('repair-mode')?.value === 'artwork') {
                     change.new_label = change.original_item_label || change.original_label;
                     change.artwork = null;
@@ -5887,8 +5907,8 @@
         });
     </script>
     <dialog id="desktop-dialog" aria-labelledby="desktop-title">
-        <header><h2 id="desktop-title">PLCN 管理</h2><button class="btn btn-muted" onclick="document.getElementById('desktop-dialog').close()" type="button">关闭</button></header>
-        <nav class="desktop-toolbar"><button class="btn" onclick="openDesktop('data')">名称数据库</button><button class="btn" onclick="openDesktop('tasks')">任务</button><button class="btn" onclick="openDesktop('history')">恢复历史</button></nav>
+        <header><h2 id="desktop-title" data-i18n="PLCN 管理">PLCN 管理</h2><button class="btn btn-muted" onclick="document.getElementById('desktop-dialog').close()" type="button">关闭</button></header>
+        <nav class="desktop-toolbar"><button class="btn" onclick="openDesktop('data')" data-i18n="名称数据库">名称数据库</button><button class="btn" onclick="openDesktop('tasks')" data-i18n="任务">任务</button><button class="btn" onclick="openDesktop('history')" data-i18n="恢复历史">恢复历史</button></nav>
         <p id="desktop-message" role="status"></p><div id="desktop-content"></div>
     </dialog>
     <script src="/assets/desktop.js"></script>

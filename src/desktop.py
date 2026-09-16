@@ -36,8 +36,9 @@ def main():
     log_dir = app_paths.user_data_dir() / 'logs'
     log_dir.mkdir(parents=True, exist_ok=True)
     log_path = log_dir / 'desktop.log'
-    if log_path.exists() and log_path.stat().st_size > 5 * 1024 * 1024:
+    if not (app_paths.user_data_dir() / 'instance.json').exists() and log_path.exists() and log_path.stat().st_size > 5 * 1024 * 1024:
         log_path.replace(log_dir / 'desktop.previous.log')
+    original_stdout, original_stderr = sys.stdout, sys.stderr
     with log_path.open('a', encoding='utf-8', buffering=1) as log:
         sys.stdout = sys.stderr = log
         try:
@@ -53,6 +54,8 @@ def main():
                 root.destroy()
             except Exception:
                 pass
+        finally:
+            sys.stdout, sys.stderr = original_stdout, original_stderr
 
 
 if __name__ == '__main__':

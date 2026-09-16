@@ -9,6 +9,21 @@ permissions:
   contents: read
 
 jobs:
+  linux-cli:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -r requirements.txt
+      - run: python -m PyInstaller --noconfirm plcn.spec
+      - run: ./dist/plcn --help
+      - run: tar -czf dist/PLCN-Linux-x64.tar.gz -C dist plcn
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PLCN-Linux-x64-unsigned
+          path: dist/PLCN-Linux-x64.tar.gz
   package:
     strategy:
       fail-fast: false

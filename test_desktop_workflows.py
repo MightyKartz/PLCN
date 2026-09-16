@@ -157,3 +157,36 @@ def test_desktop_endpoints_and_shutdown_refuses_active_work(tmp_path, desktop_ho
             assert client.get(url + '/api/desktop', timeout=3).json()['jobs'][0]['result']['partial']
     finally:
         httpd.shutdown(); httpd.server_close(); thread.join(3)
+
+
+def test_compare_installed_pack_keeps_active_config_and_reuses_baseline(tmp_path, desktop_home):
+    import data_pack
+    from desktop_api import compare_active, managed_pack
+    source = tmp_path / 'source'; source.mkdir()
+    csv = source / 'NES.csv'
+    csv.write_text('Name EN,Name CN\nGame,游戏\n', encoding='utf-8')
+    pack = desktop_home / 'packs' / 'test'
+    data_pack.build_pack(source, pack)
+    csv.write_text('Name EN,Name CN\nGame,新版\nAnother,另一个\n', encoding='utf-8')
+    config = tmp_path / 'config.json'
+    config.write_text(json.dumps({'rom_name_cn_path': str(source), 'manual_overrides_path': 'keep.json'}), encoding='utf-8')
+    before = config.read_bytes()
+    result = compare_active(pack, config)
+    assert result == {'added': 0, 'removed': 1, 'changed': 1, 'untranslated': 0}
+    assert compare_active(pack, config) == result
+    assert len(list((desktop_home / 'packs').glob('baseline-*'))) == 1
+    assert config.read_bytes() == before
+    assert managed_pack(str(pack)) == pack.resolve()
+    with pytest.raises(ValueError, match='数据目录'):
+        managed_pack(str(tmp_path / 'unmanaged'))
+
+
+def test_desktop_launcher_restores_streams_after_service_exit(desktop_home, monkeypatch):
+    import desktop
+    import sys
+    stdout, stderr = sys.stdout, sys.stderr
+    monkeypatch.setattr(sys, 'argv', ['desktop.py'])
+    monkeypatch.setattr(server, 'run_server', lambda **kwargs: print('service completed'))
+    desktop.main()
+    assert sys.stdout is stdout and sys.stderr is stderr
+    assert 'service completed' in (desktop_home / 'logs/desktop.log').read_text(encoding='utf-8')

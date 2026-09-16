@@ -4,6 +4,25 @@ let desktopPoll = null;
 let desktopView = 'data';
 const desktopText = (zh, en) => currentUILanguage === 'en' ? en : zh;
 
+function desktopConfirm(message) {
+    return new Promise(resolve => {
+        const dialog = document.createElement('dialog');
+        dialog.className = 'desktop-confirm';
+        const text = desktopElement('p', message, dialog);
+        text.id = 'desktop-confirm-message';
+        dialog.setAttribute('aria-labelledby', text.id);
+        let settled = false;
+        const finish = value => {
+            if (settled) return;
+            settled = true; dialog.close(); dialog.remove(); resolve(value);
+        };
+        desktopButton(dialog, desktopText('取消', 'Cancel'), () => finish(false));
+        desktopButton(dialog, desktopText('确认', 'Confirm'), () => finish(true));
+        dialog.addEventListener('cancel', event => { event.preventDefault(); finish(false); });
+        document.body.appendChild(dialog); dialog.showModal();
+    });
+}
+
 async function desktopRequest(path, payload) {
     const response = await fetch(path, payload === undefined ? {} : {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
@@ -54,7 +73,7 @@ async function refreshDesktop() {
             desktopButton(body, desktopText('检查更新', 'Check updates'), () => desktopDataTask('/api/data/check'));
             desktopButton(body, desktopText('下载并比较', 'Download and compare'), () => desktopDataTask('/api/data/fetch'));
             if (state.can_rollback) desktopButton(body, desktopText('回滚数据源', 'Roll back data'), async () => {
-                if (!confirm(desktopText('恢复上一次名称数据源？人工规则会保留。', 'Restore the previous data source? Manual corrections are preserved.'))) return;
+                if (!await desktopConfirm(desktopText('恢复上一次名称数据源？人工规则会保留。', 'Restore the previous data source? Manual corrections are preserved.'))) return;
                 await desktopRequest('/api/data/rollback', {}); await desktopReloadSource(); await refreshDesktop();
             });
             desktopElement('p', desktopText('更新不会自动启用。检查任务中的增删及译名变化后再选择数据包；条目增加不代表准确率提升。', 'Updates are not activated automatically. Review record changes in Tasks before selecting a pack.'), body);
@@ -62,9 +81,12 @@ async function refreshDesktop() {
                 const entry = desktopElement('div', undefined, body); entry.className = 'desktop-entry';
                 desktopElement('strong', `${pack.revision.slice(0, 16)} · ${pack.records} ${desktopText('条', 'records')} · ${pack.untranslated} ${desktopText('未翻译', 'untranslated')}`, entry);
                 desktopElement('p', pack.path, entry);
+                desktopButton(entry, desktopText('与当前数据比较', 'Compare with active data'), async () => {
+                    await desktopRequest('/api/data/compare', { pack: pack.path }); await openDesktop('tasks');
+                });
                 if (pack.active) desktopElement('span', desktopText('正在使用', 'Active'), entry);
                 else desktopButton(entry, desktopText('启用', 'Activate'), async () => {
-                    if (!confirm(desktopText('启用此数据包并清除当前预览？人工规则会保留。', 'Activate this pack and clear the current preview? Manual corrections are preserved.'))) return;
+                    if (!await desktopConfirm(desktopText('启用此数据包并清除当前预览？人工规则会保留。', 'Activate this pack and clear the current preview? Manual corrections are preserved.'))) return;
                     await desktopRequest('/api/data/activate', { pack: pack.path });
                     await desktopReloadSource(); await refreshDesktop();
                 });
@@ -83,7 +105,7 @@ async function refreshDesktop() {
                     desktopElement('p', desktopText('备份：', 'Backup: ') + record.backup, entry);
                     if (record.restored_at) desktopElement('span', desktopText('已恢复', 'Restored'), entry);
                     else desktopButton(entry, desktopText('恢复此次修改', 'Restore this change'), async () => {
-                        if (!confirm(desktopText('恢复此列表到修复前状态？当前文件也会先备份。', 'Restore the playlist to its previous state? The current file will be backed up.'))) return;
+                        if (!await desktopConfirm(desktopText('恢复此列表到修复前状态？当前文件也会先备份。', 'Restore the playlist to its previous state? The current file will be backed up.'))) return;
                         await desktopRequest('/api/history/restore', { id: record.id });
                         desktopClearPreview(); await refreshDesktop();
                     });
@@ -100,7 +122,14 @@ async function refreshDesktop() {
                     });
                     else {
                         const result = job.result || {};
-                        if (result.comparison || result.revision) desktopElement('pre', JSON.stringify(result, null, 2), entry);
+                        if (result.revision) desktopElement('p', desktopText('上游版本：', 'Upstream revision: ') + result.revision, entry);
+                        if (result.message) desktopElement('p', result.message, entry);
+                        if (result.comparison) {
+                            const change = result.comparison;
+                            desktopElement('p', desktopText(
+                                `新增 ${change.added} · 移除 ${change.removed} · 译名变化 ${change.changed} · 未翻译 ${change.untranslated}`,
+                                `Added ${change.added} · Removed ${change.removed} · Renamed ${change.changed} · Untranslated ${change.untranslated}`), entry);
+                        }
                         const details = result.download_summary?.details || [];
                         const failures = details.filter(row => row.status === 'failed' || row.reason === 'cancelled');
                         if (failures.length) {
@@ -113,7 +142,7 @@ async function refreshDesktop() {
                 }
                 if (!state.jobs.length) desktopElement('p', desktopText('暂无任务。', 'No tasks yet.'), body);
                 clearTimeout(desktopPoll);
-                desktopPoll = setTimeout(refreshDesktop, 2000);
+                if (state.active_jobs) desktopPoll = setTimeout(refreshDesktop, 2000);
             }
             desktopElement('h3', desktopText('应用数据', 'Application data'), body);
             desktopElement('p', state.data_dir, body);
@@ -141,7 +170,7 @@ async function desktopReloadSource() {
 }
 
 async function quitDesktop() {
-    if (!confirm(desktopText('退出 PLCN 本地服务？正在运行的任务会阻止退出。', 'Stop the PLCN service? Active tasks will prevent shutdown.'))) return;
+    if (!await desktopConfirm(desktopText('退出 PLCN 本地服务？正在运行的任务会阻止退出。', 'Stop the PLCN service? Active tasks will prevent shutdown.'))) return;
     try {
         await desktopRequest('/api/desktop/shutdown', {});
         document.body.replaceChildren(desktopElement('p', desktopText('PLCN 已退出，可以关闭此页面。', 'PLCN has stopped. You may close this page.')));

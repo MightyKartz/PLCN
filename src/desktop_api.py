@@ -12,7 +12,7 @@ from task_control import checkpoint
 
 POST_ROUTES = {
     '/api/desktop/pick', '/api/desktop/shutdown', '/api/jobs/cancel', '/api/jobs/retry',
-    '/api/data/check', '/api/data/fetch', '/api/data/activate', '/api/data/rollback',
+    '/api/data/check', '/api/data/fetch', '/api/data/compare', '/api/data/activate', '/api/data/rollback',
     '/api/history/restore',
 }
 
@@ -77,6 +77,20 @@ def managed_pack(value):
     return path
 
 
+def compare_active(pack, config_path):
+    config = json.loads(Path(config_path).read_text(encoding='utf-8')) if Path(config_path).exists() else {}
+    source = config.get('rom_name_cn_path') or str(app_paths.default_source())
+    if data_pack.catalog_path(source):
+        before = Path(source).parent
+    else:
+        before = app_paths.user_data_dir() / 'packs' / ('baseline-' + data_pack.source_fingerprint(source)[:16])
+        from safe_io import file_lock
+        with file_lock(before):
+            if not before.exists():
+                data_pack.build_pack(source, before)
+    return data_pack.compare_packs(before, pack)
+
+
 def post(handler, path, payload, jobs, config_path):
     if not isinstance(payload, dict):
         raise ValueError('请求必须是 JSON 对象')
@@ -130,15 +144,16 @@ def post(handler, path, payload, jobs, config_path):
             output = root / ('upstream-' + uuid.uuid4().hex[:12])
             info = data_pack.fetch_pack(output)
             checkpoint(lambda: jobs.cancelled(jid))
-            config = json.loads(Path(config_path).read_text(encoding='utf-8')) if Path(config_path).exists() else {}
-            source = config.get('rom_name_cn_path') or str(app_paths.default_source())
-            before = Path(source).parent if data_pack.catalog_path(source) else root / ('baseline-' + uuid.uuid4().hex[:12])
-            if not data_pack.catalog_path(source):
-                data_pack.build_pack(source, before)
-            comparison = data_pack.compare_packs(before, output)
+            comparison = compare_active(output, config_path)
             return {'pack': str(output), 'revision': info['revision'], 'comparison': comparison,
                     'message': '下载与校验完成，查看差异后手动启用；记录变化不代表准确率变化'}
         reply(handler, {'job_id': background(jobs, '下载和校验名称数据库（不会自动启用）', fetch)})
+    elif path == '/api/data/compare':
+        pack = managed_pack(payload['pack'])
+        def compare(jid):
+            checkpoint(lambda: jobs.cancelled(jid))
+            return {'pack': str(pack), 'comparison': compare_active(pack, config_path)}
+        reply(handler, {'job_id': background(jobs, '比较所选包与当前数据源', compare)})
     elif path == '/api/data/activate':
         data_pack.activate_pack(managed_pack(payload['pack']), config_path)
         reply(handler, {'activated': True})

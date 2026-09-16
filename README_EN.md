@@ -8,6 +8,8 @@ PLCN is a local RetroArch game-list localization and thumbnail matching tool. It
 
 ## Development changes (not yet released)
 
+The desktop preview adds a no-console launcher, OS-owned single-instance lock, per-user state with legacy migration, native file selection, data management, cooperative cancellation, local image retry and guarded playlist restore. CI builds Windows installer/portable ZIP and macOS Intel/Apple Silicon DMGs. Artifacts are unsigned previews; signing and real desktop validation are still required. See [desktop guide](DOC/DESKTOP_GUIDE.md).
+
 - Preserve every playlist entry; no implicit deduplication. CLI and batch workflows skip proposals that require manual review. In the UI, review edits and choose “已核对，加入应用” before the final apply summary.
 - Use cooperative locks, snapshot checks, backups, atomic replacement, and readback verification. ADB writes verify staged uploads and remote backups before replacement.
 - Scope translations and aliases by platform; resolve mixed playlists using each entry's `db_name`. CSV caches are isolated by source content fingerprint.

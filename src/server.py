@@ -351,9 +351,9 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                     database_error = str(e)
 
             dat_dir = str(app_paths.dat_storage() / "libretro-db" / "dat")
-            if getattr(sys, 'frozen', False):
-                dat_dir = os.path.join(sys._MEIPASS, "data", "libretro-db", "dat")
-            dat_count = len(glob.glob(os.path.join(dat_dir, "*.dat"))) if os.path.exists(dat_dir) else 0
+            bundled_dat = app_paths.resource_root() / 'data' / 'libretro-db' / 'dat'
+            dat_count = len({os.path.basename(file) for folder in (dat_dir, str(bundled_dat))
+                             for file in glob.glob(os.path.join(folder, '*.dat'))})
             csv_count = len(glob.glob(os.path.join(rom_db_path, "*.csv"))) if os.path.exists(rom_db_path) else 0
             offline_available = (database_count > 0 or csv_count > 0) and dat_count > 0
 
