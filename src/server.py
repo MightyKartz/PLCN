@@ -227,7 +227,7 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
         if path == "/":
             self.path = "/plcn.html"
             return self.serve_template()
-        elif path in ('/assets/desktop.js', '/assets/desktop.css'):
+        elif path in ('/assets/desktop.js', '/assets/desktop.css', '/assets/workflow.js'):
             filename = path.rsplit('/', 1)[-1]
             content = (app_paths.resource_root() / 'src' / 'templates' / filename).read_bytes()
             self.send_response(200)

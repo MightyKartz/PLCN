@@ -2694,10 +2694,12 @@
             </div>
             <div class="utility-group" aria-label="工具">
                 <div class="desktop-toolbar">
-                    <button class="btn btn-muted" type="button" onclick="openDesktop('data')" data-i18n="数据库">数据库</button>
-                    <button class="btn btn-muted" type="button" onclick="openDesktop('tasks')" data-i18n="任务">任务</button>
-                    <button class="btn btn-muted" type="button" onclick="openDesktop('history')" data-i18n="恢复">恢复</button>
-                    <button class="btn btn-muted" type="button" onclick="quitDesktop()" data-i18n="退出">退出</button>
+                    <button class="btn btn-muted" type="button" onclick="openDesktop('tasks')" data-i18n="任务与恢复">任务与恢复</button>
+                    <details id="tools-menu"><summary data-i18n="工具">工具</summary><div class="tools-menu-content">
+                        <button class="btn btn-muted" type="button" onclick="openDesktop('data')" data-i18n="名称数据库">名称数据库</button>
+                        <button class="btn btn-muted" type="button" onclick="openPathSettings()" data-i18n="路径设置">路径设置</button>
+                        <button class="btn btn-muted" type="button" onclick="quitDesktop()" data-i18n="退出">退出</button>
+                    </div></details>
                 </div>
                 <button class="btn btn-muted top-toggle" id="language-display-btn" type="button" onclick="toggleUILanguage()" title="切换界面语言" aria-label="切换界面语言">
                     <svg class="ui-language-icon" data-icon="ui-to-en" width="20" height="20" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 1 0 20"></path><path d="M12 2a14.5 14.5 0 0 0 0 20"></path><path d="M2 12h20"></path></svg>
@@ -2708,221 +2710,73 @@
             </div>
         </header>
 
+        <p id="workbench-busy" class="workbench-busy" role="status" aria-live="polite"></p>
         <main class="workspace">
             <aside class="sidebar">
                 <div class="sidebar-scroll">
-                    <section class="desktop-welcome">
-                        <strong>选择游戏库 → 预览 → 应用修复</strong>
-                        <p id="desktop-welcome-text">选择 RetroArch 或 SD 卡目录，自动识别列表和图片路径。首次使用建议先处理一个列表。</p>
-                        <button class="btn" type="button" onclick="openFilePicker('retroarch_root', true)" data-i18n="选择游戏目录">选择游戏目录</button>
-                        <button class="btn btn-muted" id="continue-library" type="button" hidden data-i18n="继续上次目录">继续上次目录</button>
-                        <p><label for="repair-mode" data-i18n="本次操作">本次操作</label></p>
-                        <select id="repair-mode" onchange="setRepairMode()"><option value="both" data-i18n="修复名称并补全图片">修复名称并补全图片</option><option value="names" data-i18n="仅修复名称">仅修复名称</option><option value="artwork" data-i18n="仅补全图片（保留当前名称）">仅补全图片（保留当前名称）</option></select>
+                    <section class="library-heading"><h2 data-i18n="当前游戏库">当前游戏库</h2><p id="library-location"></p>
+                        <button class="btn btn-muted" data-input-control type="button" onclick="openFilePicker('retroarch_root', true)" data-i18n="更换目录">更换目录</button>
+                        <button class="btn btn-muted" type="button" onclick="openPathSettings()" data-i18n="路径设置">路径设置</button>
                     </section>
-                    <section class="device-panel">
-                        <h2 class="section-title" data-i18n="设备与目录">设备与目录</h2>
-                        <div class="form-group">
-                            <label for="retroarch_root" data-i18n="连接目标">连接目标</label>
-                            <div class="input-group">
-                                <input type="text" id="retroarch_root" placeholder="/path/to/RetroArch">
-                                <button class="btn btn-small btn-muted" onclick="openFilePicker('retroarch_root', true)" title="选择 RetroArch 目录" type="button">...</button>
-                            </div>
+                <section class="library-browser" id="library-browser">
+                    <div class="library-browser-header">
+                        <div>
+                            <h2 data-i18n="检测到的游戏列表">检测到的游戏列表</h2>
+                            <p class="library-browser-summary" id="library-browser-summary" data-i18n="扫描后按主机名称显示 .lpl 游戏列表">扫描后按主机名称显示 .lpl 游戏列表</p>
                         </div>
-                        <div class="device-actions">
-                            <button class="btn btn-ghost" id="scan-default-btn" onclick="scanDevice(true)" data-i18n="自动检测" type="button">自动检测</button>
-                            <button class="btn" id="scan-device-btn" onclick="scanDevice(false)" data-i18n="扫描目录" type="button">扫描目录</button>
-                        </div>
-                        <div class="device-summary" id="device-summary">等待扫描 RetroArch 目录</div>
-
-                        <details class="directory-details">
-                            <summary data-i18n="目录详情">目录详情</summary>
-                            <div class="detected-list">
-                                <div class="detected-row">
-                                    <div class="detected-icon">PL</div>
-                                    <div>
-                                        <div class="detected-label" data-i18n="游戏列表目录">游戏列表目录</div>
-                                        <div class="detected-path" id="device-playlists-dir">未检测</div>
-                                    </div>
-                                </div>
-                                <div class="detected-row">
-                                    <div class="detected-icon">IMG</div>
-                                    <div>
-                                        <div class="detected-label" data-i18n="封面缩略图目录">封面缩略图目录</div>
-                                        <div class="detected-path" id="device-thumbnails-dir">未检测</div>
-                                    </div>
-                                </div>
-                                <div class="detected-row">
-                                    <div class="detected-icon">CFG</div>
-                                    <div>
-                                        <div class="detected-label" data-i18n="配置文件">配置文件</div>
-                                        <div class="detected-path" id="device-config-file">未检测</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </details>
-
-                    </section>
-
-                    <section class="workflow">
-                        <h2 class="section-title" data-i18n="修复流程">修复流程</h2>
-                        <div class="step-list">
-                            <div class="step done">
-                                <div class="step-number">1</div>
-                                <div>
-                                    <div class="step-title" data-i18n="扫描设备">扫描设备</div>
-                                    <div class="step-note" id="step-device">等待扫描 RetroArch 目录</div>
-                                </div>
-                                <div class="step-state" data-i18n="就绪">就绪</div>
-                            </div>
-                            <div class="step done">
-                                <div class="step-number">2</div>
-                                <div>
-                                    <div class="step-title" data-i18n="选择游戏列表">选择游戏列表</div>
-                                    <div class="step-note" id="step-playlist">等待选择 .lpl 文件</div>
-                                </div>
-                                <div class="step-state" data-i18n="就绪">就绪</div>
-                            </div>
-                            <div class="step active">
-                                <div class="step-number">3</div>
-                                <div>
-                                    <div class="step-title" data-i18n="生成修复计划">生成修复计划</div>
-                                    <div class="step-note" id="step-preview" data-i18n="先确认低置信匹配">先确认低置信匹配</div>
-                                </div>
-                                <div class="step-state" data-i18n="当前">当前</div>
-                            </div>
-                            <div class="step">
-                                <div class="step-number">4</div>
-                                <div>
-                                    <div class="step-title" data-i18n="修复并下载">修复并下载</div>
-                                    <div class="step-note" data-i18n="写入 playlist，下载三类缩略图">写入 playlist，下载三类缩略图</div>
-                                </div>
-                                <div class="step-state" data-i18n="等待" style="color: var(--quiet);">等待</div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section class="config-panel"><details class="desktop-advanced"><summary data-i18n="高级配置与手动路径">高级配置与手动路径</summary>
-                        <div id="single-tab" class="tab-content active">
-                            <h2 class="section-title" data-i18n="单项配置">单项配置</h2>
-                            <div class="form-group">
-                                <label for="playlist_path" data-i18n="游戏列表路径">游戏列表路径</label>
-                                <div class="input-group">
-                                    <input type="text" id="playlist_path" placeholder="/path/to/playlist.lpl">
-                                    <button class="btn btn-small btn-muted" onclick="openFilePicker('playlist_path', false)" title="选择文件" type="button">...</button>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="system_name" data-i18n="系统名称">系统名称</label>
-                                <select id="system_name">
-                                    <option value="">加载中...</option>
-                                </select>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="thumbnails_dir" data-i18n="缩略图保存路径">缩略图保存路径</label>
-                                <div class="input-group">
-                                    <input type="text" id="thumbnails_dir" placeholder="/path/to/retroarch/thumbnails">
-                                    <button class="btn btn-small btn-muted" onclick="openFilePicker('thumbnails_dir', true)" title="选择目录" type="button">...</button>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="rom_name_cn_path" data-i18n="rom-name-cn 路径">rom-name-cn 路径</label>
-                                <div class="input-group">
-                                    <input type="text" id="rom_name_cn_path" placeholder="data/rom-name-cn">
-                                    <button class="btn btn-small btn-muted" onclick="openFilePicker('rom_name_cn_path', true)" title="选择目录" type="button">...</button>
-                                </div>
-                            </div>
-
-                            <div class="option-list">
-                                <label class="option-disabled" title="当前匹配策略由后端统一决定"><input id="option-auto-high-confidence" type="checkbox" checked disabled> <span data-i18n="自动使用高置信度结果">自动使用高置信度结果</span></label>
-                                <label><input id="option-download-thumbnails" type="checkbox" checked> <span data-i18n="下载缺失的封面和截图">下载缺失的封面和截图</span></label>
-                                <label class="option-disabled" title="当前后端默认优先使用本地缓存和 rom-name-cn 数据"><input id="option-prefer-local-db" type="checkbox" checked disabled> <span data-i18n="优先使用本地数据库">优先使用本地数据库</span></label>
-                                <label class="option-disabled" title="保留全部原始条目；图片名称冲突需人工核对，自动重命名尚未实现"><input id="option-auto-rename-duplicates" type="checkbox" disabled> <span data-i18n="处理重复条目时自动重命名">处理重复条目时自动重命名</span></label>
-                            </div>
-
-                            <div class="sidebar-actions">
-                                <button class="btn btn-ghost" onclick="previewTask()" data-i18n="预览校对" type="button">预览校对</button>
-                                <button class="btn btn-success" onclick="executeTask('single')" data-i18n="预览后应用" type="button">预览后应用</button>
-                            </div>
-                        </div>
-
-                        <div id="batch-tab" class="tab-content">
-                            <h2 class="section-title" data-i18n="批量配置">批量配置</h2>
-                            <div class="form-group">
-                                <label for="batch_dir" data-i18n="游戏列表目录">游戏列表目录</label>
-                                <div class="input-group">
-                                    <input type="text" id="batch_dir" placeholder="/path/to/retroarch/playlists">
-                                    <button class="btn btn-small btn-muted" onclick="openFilePicker('batch_dir', true)" title="选择目录" type="button">...</button>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="batch_thumbnails_dir" data-i18n="缩略图目录">缩略图目录</label>
-                                <div class="input-group">
-                                    <input type="text" id="batch_thumbnails_dir" placeholder="/path/to/retroarch/thumbnails">
-                                    <button class="btn btn-small btn-muted" onclick="openFilePicker('batch_thumbnails_dir', true)" title="选择目录" type="button">...</button>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="batch_rom_name_cn_path" data-i18n="rom-name-cn 路径">rom-name-cn 路径</label>
-                                <div class="input-group">
-                                    <input type="text" id="batch_rom_name_cn_path" placeholder="data/rom-name-cn">
-                                    <button class="btn btn-small btn-muted" onclick="openFilePicker('batch_rom_name_cn_path', true)" title="选择目录" type="button">...</button>
-                                </div>
-                            </div>
-
-                            <div class="option-list">
-                                <label><input id="batch-option-backup" type="checkbox" checked> <span data-i18n="每个 playlist 自动备份">每个 playlist 自动备份</span></label>
-                                <label><input id="batch-option-continue" type="checkbox" checked> <span data-i18n="遇到错误继续处理下一个">遇到错误继续处理下一个</span></label>
-                                <label><input id="batch-option-download-thumbnails" type="checkbox" checked> <span data-i18n="批量下载三类缩略图">批量下载三类缩略图</span></label>
-                            </div>
-
-                            <div class="sidebar-actions" style="grid-template-columns: 1fr;">
-                                <button class="btn btn-success" onclick="executeTask('batch')" data-i18n="开始批量处理" type="button">开始批量处理</button>
-                            </div>
-                        </div>
-                    </details></section>
+                    </div>
+                    <div class="playlist-list playlist-system-list" id="scanned-playlists">
+                        <div class="playlist-empty" data-i18n="扫描后显示 .lpl 游戏列表">扫描后显示 .lpl 游戏列表</div>
+                    </div>
+                </section>
                 </div>
             </aside>
 
-            <section class="main-panel">
+            <section class="main-panel filters-compact">
+                <section class="desktop-welcome" id="library-onboarding">
+                    <h1 data-i18n="整理你的 RetroArch 游戏库">整理你的 RetroArch 游戏库</h1>
+                    <p data-i18n="先预览名称与图片变更，确认后再应用。">先预览名称与图片变更，确认后再应用。</p>
+                    <button class="btn" data-input-control type="button" onclick="openFilePicker('retroarch_root', true)" data-i18n="选择游戏目录">选择游戏目录</button>
+                    <button class="btn btn-muted" data-input-control id="scan-default-btn" onclick="scanDevice(true)" data-i18n="自动检测" type="button">自动检测</button>
+                    <button class="btn btn-muted" data-input-control id="continue-library" type="button" hidden data-i18n="继续上次目录">继续上次目录</button>
+                    <p id="desktop-welcome-text" data-i18n="支持 RetroArch、SD 卡或 playlists 目录。">支持 RetroArch、SD 卡或 playlists 目录。</p>
+                    <button class="btn btn-muted" type="button" onclick="openPathSettings()" data-i18n="手动选择文件或路径">手动选择文件或路径</button>
+                </section>
+                <div class="workbench-content">
+                <ol class="workflow-strip" aria-label="修复流程">
+                    <li data-workflow-step><span data-i18n="选择游戏库">选择游戏库</span><small class="flow-state"></small></li>
+                    <li data-workflow-step><span data-i18n="预览变更">预览变更</span><small class="flow-state"></small></li>
+                    <li data-workflow-step><span data-i18n="应用变更">应用变更</span><small class="flow-state"></small></li>
+                </ol>
                 <div class="panel-header">
-                    <h1 class="panel-title" data-i18n="游戏库扫描">游戏库扫描</h1>
-                    <div class="summary-chips">
-                        <div class="summary-chip"><span data-i18n="全部">全部</span> <strong id="summary-total">0</strong></div>
-                        <div class="summary-chip success"><span data-i18n="可自动修复">可自动修复</span> <strong id="summary-matched">0</strong></div>
-                        <div class="summary-chip ready"><span data-i18n="无需修复">无需修复</span> <strong id="summary-ready">0</strong></div>
-                        <div class="summary-chip completed"><span data-i18n="已完成">已完成</span> <strong id="summary-completed">0</strong></div>
-                        <div class="summary-chip warning"><span data-i18n="需人工确认">需人工确认</span> <strong id="summary-review">0</strong></div>
-                        <div class="summary-chip danger"><span data-i18n="重复需处理">重复需处理</span> <strong id="summary-duplicate">0</strong></div>
-                    </div>
+                    <h1 class="panel-title" id="workspace-title">选择游戏列表</h1>
+                    <div class="operation-choice"><label for="repair-mode" data-i18n="本次操作">本次操作</label><select data-input-control id="repair-mode" onchange="setRepairMode()"><option value="both" data-i18n="修复名称并补全图片">修复名称并补全图片</option><option value="names" data-i18n="仅修复名称">仅修复名称</option><option value="artwork" data-i18n="仅补全图片（保留当前名称）">仅补全图片（保留当前名称）</option></select></div>
                     <div class="panel-actions">
-                        <button class="btn btn-ghost" onclick="previewTask()" data-i18n="预览变更" type="button">预览变更</button>
-                        <button class="btn btn-success" onclick="applyChanges()" data-i18n="应用已选修复" type="button">应用已选修复</button>
+                        <button id="preview-button" class="btn" onclick="previewTask()" disabled data-i18n="预览变更" type="button">预览变更</button>
+                        <button id="apply-button" class="btn btn-success" onclick="applyChanges()" disabled type="button">应用已选修复</button>
+                        <button id="batch-start-button" class="btn" type="button" onclick="executeTask('batch')" hidden disabled data-i18n="处理全部列表">处理全部列表</button>
                     </div>
                 </div>
-
+                <p id="batch-explanation" class="workspace-note" hidden data-i18n="处理此目录中的全部列表；仅应用确定的匹配，待确认项会跳过。">处理此目录中的全部列表；仅应用确定的匹配，待确认项会跳过。</p>
+                <p id="workspace-empty" class="workspace-note" data-i18n="选择左侧列表，然后预览名称与图片变更。">选择左侧列表，然后预览名称与图片变更。</p>
                 <div class="table-toolbar">
                     <div class="filter-group">
-                        <button class="filter-btn active" type="button" data-filter="all" data-i18n="全部" onclick="setPreviewFilter('all', this)">全部</button>
-                        <button class="filter-btn" type="button" data-filter="review" data-i18n="需人工确认" onclick="setPreviewFilter('review', this)">需人工确认</button>
-                        <button class="filter-btn" type="button" data-filter="duplicate" data-i18n="重复需处理" onclick="setPreviewFilter('duplicate', this)">重复需处理</button>
-                        <button class="filter-btn" type="button" data-filter="matched" data-i18n="可自动修复" onclick="setPreviewFilter('matched', this)">可自动修复</button>
-                        <button class="filter-btn" type="button" data-filter="ready" data-i18n="无需修复" onclick="setPreviewFilter('ready', this)">无需修复</button>
-                        <button class="filter-btn" type="button" data-filter="completed" data-i18n="已完成" onclick="setPreviewFilter('completed', this)">已完成</button>
-                        <button class="filter-btn" type="button" data-filter="missing-cover" data-i18n="缺封面源" onclick="setPreviewFilter('missing-cover', this)">缺封面源</button>
-                        <button class="filter-btn" type="button" data-filter="edited" data-i18n="已手动编辑" onclick="setPreviewFilter('edited', this)">已手动编辑</button>
+                        <button class="filter-btn active" type="button" data-filter="all" onclick="setPreviewFilter('all', this)"><span data-i18n="全部">全部</span> <strong class="filter-count">0</strong></button>
+                        <button class="filter-btn" type="button" data-filter="review" onclick="setPreviewFilter('review', this)"><span data-i18n="待确认">待确认</span> <strong class="filter-count">0</strong></button>
+                        <button class="filter-btn" type="button" data-filter="duplicate" onclick="setPreviewFilter('duplicate', this)"><span data-i18n="重复需处理">重复需处理</span> <strong class="filter-count">0</strong></button>
+                        <button class="filter-btn" type="button" data-filter="matched" onclick="setPreviewFilter('matched', this)"><span data-i18n="可应用">可应用</span> <strong class="filter-count">0</strong></button>
+                        <button class="filter-btn" type="button" data-filter="ready" onclick="setPreviewFilter('ready', this)"><span data-i18n="无需修复">无需修复</span> <strong class="filter-count">0</strong></button>
+                        <button class="filter-btn" type="button" data-filter="completed" onclick="setPreviewFilter('completed', this)"><span data-i18n="已完成">已完成</span> <strong class="filter-count">0</strong></button>
+                        <button class="filter-btn" type="button" data-filter="missing-cover" onclick="setPreviewFilter('missing-cover', this)"><span data-i18n="缺封面源">缺封面源</span> <strong class="filter-count">0</strong></button>
+                        <button class="filter-btn" type="button" data-filter="edited" onclick="setPreviewFilter('edited', this)"><span data-i18n="已手动编辑">已手动编辑</span> <strong class="filter-count">0</strong></button>
                     </div>
                     <div class="toolbar-tools">
-                        <button class="btn btn-muted" id="filter-toggle-btn" type="button" title="收起/展开筛选项" onclick="toggleFilterBar()" aria-pressed="false">
+                        <button class="btn btn-muted" id="filter-toggle-btn" type="button" title="收起/展开筛选项" onclick="toggleFilterBar()" aria-expanded="false">
                             <svg viewBox="0 0 24 24" style="width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 2;"><path d="M4 5h16l-6 7v5l-4 2v-7z"></path></svg>
                             <span data-i18n="筛选">筛选</span>
                         </button>
                         <div class="search-field">
-                            <input type="text" id="preview-search" data-i18n-placeholder="搜索游戏名 / rom 名称" placeholder="搜索游戏名 / rom 名称" oninput="renderPreviewTable(currentChanges)">
+                            <input aria-label="搜索游戏名或 ROM 名称" type="text" id="preview-search" data-i18n-placeholder="搜索游戏名 / rom 名称" placeholder="搜索游戏名 / rom 名称" oninput="renderPreviewTable(currentChanges)">
                             <span class="search-symbol">⌕</span>
                         </div>
                     </div>
@@ -2935,21 +2789,11 @@
                     </div>
                     <div class="apply-summary-actions">
                         <button class="btn btn-muted" type="button" onclick="cancelApplySummary()" data-i18n="取消">取消</button>
-                        <button class="btn btn-success" type="button" onclick="applyChanges(true)" data-i18n="确认应用">确认应用</button>
+                        <button id="confirm-apply-button" class="btn btn-success" type="button" onclick="applyChanges(true)" data-i18n="确认应用">确认应用</button>
                     </div>
                 </div>
 
-                <section class="library-browser" id="library-browser">
-                    <div class="library-browser-header">
-                        <div>
-                            <h2 data-i18n="检测到的游戏列表">检测到的游戏列表</h2>
-                            <p class="library-browser-summary" id="library-browser-summary" data-i18n="扫描后按主机名称显示 .lpl 游戏列表">扫描后按主机名称显示 .lpl 游戏列表</p>
-                        </div>
-                    </div>
-                    <div class="playlist-list playlist-system-list" id="scanned-playlists">
-                        <div class="playlist-empty" data-i18n="扫描后显示 .lpl 游戏列表">扫描后显示 .lpl 游戏列表</div>
-                    </div>
-                </section>
+
 
                 <div class="preview-area" id="preview-area" hidden>
                     <div class="empty-state" id="preview-empty">
@@ -2983,9 +2827,10 @@
                         </table>
                     </div>
                 </div>
+                </div>
             </section>
 
-            <aside class="inspector">
+            <aside class="inspector" id="inspector-panel">
                 <div class="inspector-header">
                     <h2 class="inspector-title" data-i18n="修复预览">修复预览</h2>
                     <button class="btn btn-small btn-muted" type="button" onclick="closeInspector()" title="关闭详情">×</button>
@@ -3072,7 +2917,7 @@
             </aside>
         </main>
 
-        <section class="bottom-dock">
+        <section class="bottom-dock" aria-label="任务进度">
             <div class="dock-section">
                 <h2 class="dock-title">
                     <span class="dock-title-main"><span data-i18n="任务进度">任务进度</span> <span id="inline-progress-label">待处理</span></span>
@@ -3237,6 +3082,107 @@
         </div>
     </aside>
 
+        <dialog id="path-settings" aria-labelledby="path-settings-title">
+        <header><h2 id="path-settings-title" data-i18n="路径设置">路径设置</h2><button class="btn btn-muted" type="button" onclick="document.getElementById('path-settings').close()" data-i18n="完成">完成</button></header>
+                    <section class="device-panel">
+                        <h2 class="section-title" data-i18n="设备与目录">设备与目录</h2>
+                        <div class="form-group">
+                            <label for="retroarch_root" data-i18n="连接目标">连接目标</label>
+                            <div class="input-group">
+                                <input type="text" id="retroarch_root" data-input-control placeholder="/path/to/RetroArch">
+                                <button class="btn btn-small btn-muted" onclick="openFilePicker('retroarch_root', true)" title="选择 RetroArch 目录" data-input-control type="button" data-i18n="浏览">浏览</button>
+                            </div>
+                        </div>
+                        <div class="device-actions">
+
+                            <button class="btn" id="scan-device-btn" onclick="scanDevice(false)" data-i18n="扫描目录" type="button">扫描目录</button>
+                        </div>
+                        <div class="device-summary" id="device-summary">等待扫描 RetroArch 目录</div>
+
+                        <details class="directory-details">
+                            <summary data-i18n="目录详情">目录详情</summary>
+                            <div class="detected-list">
+                                <div class="detected-row">
+                                    <div class="detected-icon">PL</div>
+                                    <div>
+                                        <div class="detected-label" data-i18n="游戏列表目录">游戏列表目录</div>
+                                        <div class="detected-path" id="device-playlists-dir">未检测</div>
+                                    </div>
+                                </div>
+                                <div class="detected-row">
+                                    <div class="detected-icon">IMG</div>
+                                    <div>
+                                        <div class="detected-label" data-i18n="封面缩略图目录">封面缩略图目录</div>
+                                        <div class="detected-path" id="device-thumbnails-dir">未检测</div>
+                                    </div>
+                                </div>
+                                <div class="detected-row">
+                                    <div class="detected-icon">CFG</div>
+                                    <div>
+                                        <div class="detected-label" data-i18n="配置文件">配置文件</div>
+                                        <div class="detected-path" id="device-config-file">未检测</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </details>
+
+                    </section>
+
+                    <section class="config-panel">
+                        <div id="single-tab" class="tab-content active">
+                            <h2 class="section-title" data-i18n="单项配置">单项配置</h2>
+                            <div class="form-group">
+                                <label for="playlist_path" data-i18n="游戏列表路径">游戏列表路径</label>
+                                <div class="input-group">
+                                    <input type="text" id="playlist_path" data-input-control placeholder="/path/to/playlist.lpl">
+                                    <button class="btn btn-small btn-muted" onclick="openFilePicker('playlist_path', false)" title="选择文件" data-input-control type="button" data-i18n="浏览">浏览</button>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="system_name" data-i18n="系统名称">系统名称</label>
+                                <select id="system_name" data-input-control>
+                                    <option value="">加载中...</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="thumbnails_dir" data-i18n="缩略图保存路径">缩略图保存路径</label>
+                                <div class="input-group">
+                                    <input type="text" id="thumbnails_dir" data-input-control placeholder="/path/to/retroarch/thumbnails">
+                                    <button class="btn btn-small btn-muted" onclick="openFilePicker('thumbnails_dir', true)" title="选择目录" data-input-control type="button" data-i18n="浏览">浏览</button>
+                                </div>
+                            </div>
+
+                            <div class="option-list">
+                            </div>
+                        </div>
+
+                        <div id="batch-tab" class="tab-content">
+                            <h2 class="section-title" data-i18n="批量配置">批量配置</h2>
+                            <div class="form-group">
+                                <label for="batch_dir" data-i18n="游戏列表目录">游戏列表目录</label>
+                                <div class="input-group">
+                                    <input type="text" id="batch_dir" data-input-control placeholder="/path/to/retroarch/playlists">
+                                    <button class="btn btn-small btn-muted" onclick="openFilePicker('batch_dir', true)" title="选择目录" data-input-control type="button" data-i18n="浏览">浏览</button>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="batch_thumbnails_dir" data-i18n="缩略图目录">缩略图目录</label>
+                                <div class="input-group">
+                                    <input type="text" id="batch_thumbnails_dir" data-input-control placeholder="/path/to/retroarch/thumbnails">
+                                    <button class="btn btn-small btn-muted" onclick="openFilePicker('batch_thumbnails_dir', true)" title="选择目录" data-input-control type="button" data-i18n="浏览">浏览</button>
+                                </div>
+                            </div>
+
+                            <div class="option-list">
+                                <label><input id="batch-option-backup" type="checkbox" checked> <span data-i18n="每个 playlist 自动备份">每个 playlist 自动备份</span></label>
+                                <label><input id="batch-option-continue" type="checkbox" checked> <span data-i18n="遇到错误继续处理下一个">遇到错误继续处理下一个</span></label>
+                            </div>
+                        </div>
+                    </section>    </dialog>
+<script src="/assets/workflow.js"></script>
     <script>
         let currentTargetInputId = '';
         let isDirectoryMode = false;
@@ -3254,6 +3200,26 @@
         let selectedLibrarySystem = '';
 
         const UI_EN = {
+            "选择左侧列表，然后预览名称与图片变更。": "Choose a list on the left, then preview name and artwork changes.",
+            "整理你的 RetroArch 游戏库": "Organize your RetroArch library",
+            "先预览名称与图片变更，确认后再应用。": "Preview name and artwork changes before applying.",
+            "支持 RetroArch、SD 卡或 playlists 目录。": "Choose a RetroArch, SD card or playlists folder.",
+            "手动选择文件或路径": "Choose a file or path manually",
+            "当前游戏库": "Current library",
+            "更换目录": "Change folder",
+            "路径设置": "Path settings",
+            "选择游戏库": "Choose library",
+            "应用变更": "Apply changes",
+            "可应用": "Ready to apply",
+            "任务与恢复": "Tasks & restore",
+            "工具": "Tools",
+            "完成": "Done",
+            "自定义数据路径": "Custom data paths",
+            "浏览": "Browse",
+            "处理全部列表": "Process all lists",
+            "处理此目录中的全部列表；仅应用确定的匹配，待确认项会跳过。": "Process every list in this folder. Only certain matches are applied; review items are skipped.",
+            "关闭": "Close",
+
             "数据库": "Database",
             "任务": "Tasks",
             "恢复": "Restore",
@@ -3443,6 +3409,8 @@
         };
 
         function switchTab(tab, target) {
+            if (workbench.operation) return;
+            invalidateWorkbenchPreview();
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             if (target) target.classList.add('active');
 
@@ -3451,6 +3419,7 @@
 
             const logPlaceholder = document.getElementById('log-placeholder');
             if (logPlaceholder) logPlaceholder.style.display = currentChanges.length ? 'none' : 'block';
+            renderWorkbench();
         }
 
         async function loadConfig() {
@@ -3470,9 +3439,9 @@
 
                 updateWorkflowLabels();
                 loadStats();
-                if (config.retroarch_root) {
-                    scanDevice(false);
-                }
+                // A remembered path is offered explicitly; do not scan a disconnected device on launch.
+                document.getElementById('playlist_path').value = '';
+                renderWorkbench();
             } catch (error) {
                 showStatus('加载配置失败', 'error');
             }
@@ -3780,7 +3749,7 @@
         function getProcessingOptions() {
             return {
                 write_names: document.getElementById('repair-mode')?.value !== 'artwork',
-                download_thumbnails: document.getElementById('option-download-thumbnails')?.checked !== false
+                download_thumbnails: document.getElementById('repair-mode').value !== 'names'
             };
         }
 
@@ -3789,7 +3758,7 @@
                 backup: document.getElementById('batch-option-backup')?.checked !== false,
                 continue_on_error: document.getElementById('batch-option-continue')?.checked !== false,
                 write_names: document.getElementById('repair-mode')?.value !== 'artwork',
-                download_thumbnails: document.getElementById('batch-option-download-thumbnails')?.checked !== false
+                download_thumbnails: document.getElementById('repair-mode').value !== 'names'
             };
         }
 
@@ -3804,6 +3773,11 @@
                 return;
             }
 
+            if (!beginWorkbenchOperation('scan')) return;
+            invalidateWorkbenchPreview();
+            currentDeviceScan = null;
+            for (const id of ['playlist_path','batch_dir','thumbnails_dir','batch_thumbnails_dir']) document.getElementById(id).value = '';
+            document.getElementById('path-settings').close();
             scanBtn.disabled = true;
             defaultBtn.disabled = true;
             setInlineProgress(5, uiText('扫描中'), uiText('正在扫描 RetroArch 目录'), uiText('当前：读取 playlists'));
@@ -3842,9 +3816,7 @@
                     ? (playlistCount ? 'RetroArch directory detected' : 'No game lists found')
                     : (scan.message || '扫描完成');
                 showStatus(scanStatusMessage, playlistCount ? 'success' : 'error');
-                if (playlistCount) {
-                    await previewFirstPlaylistForSystem(selectedLibrarySystem);
-                }
+
             } catch (error) {
                 currentDeviceScan = null;
                 renderDeviceScan(null);
@@ -3853,6 +3825,7 @@
             } finally {
                 scanBtn.disabled = false;
                 defaultBtn.disabled = false;
+                endWorkbenchOperation();
             }
         }
 
@@ -4011,6 +3984,7 @@
             caption.appendChild(count);
 
             container.appendChild(caption);
+            for (const { playlist, index } of items) container.appendChild(buildPlaylistCard(playlist, index));
         }
 
         function buildPlaylistCard(playlist, index) {
@@ -4071,6 +4045,7 @@
         }
 
         async function selectScannedPlaylist(index) {
+            if (workbench.operation) return;
             const playlist = currentDeviceScan?.playlists?.[index];
             if (!playlist) return;
             if (!playlist.valid) {
@@ -4078,6 +4053,7 @@
                 return;
             }
 
+            invalidateWorkbenchPreview();
             document.getElementById('playlist_path').value = playlist.path;
             if (currentDeviceScan?.directories?.playlists) {
                 document.getElementById('batch_dir').value = currentDeviceScan.directories.playlists;
@@ -4090,8 +4066,7 @@
             document.getElementById('system_name').value = playlist.system || '';
             updateWorkflowLabels();
             renderDeviceScan(currentDeviceScan);
-            await saveConfig('single');
-            await previewTask();
+            renderWorkbench();
         }
 
         function ensureSystemOption(systemName) {
@@ -4261,7 +4236,7 @@
             const panel = document.querySelector('.main-panel');
             const button = document.getElementById('filter-toggle-btn');
             const compact = panel.classList.toggle('filters-compact');
-            button.setAttribute('aria-pressed', String(compact));
+            button.setAttribute('aria-expanded', String(!compact));
             button.title = compact ? '展开筛选项' : '收起筛选项';
             showStatus(compact ? '已收起非当前筛选项' : '已展开全部筛选项', 'info');
         }
@@ -4320,7 +4295,9 @@
         }
 
         function selectFile(path) {
+            invalidateWorkbenchPreview();
             document.getElementById(currentTargetInputId).value = path;
+            if (currentTargetInputId === 'rom_name_cn_path') document.getElementById('batch_rom_name_cn_path').value = path;
             closeModal();
 
             if (currentTargetInputId === 'playlist_path') {
@@ -4333,6 +4310,7 @@
         }
 
         function selectCurrentDir() {
+            invalidateWorkbenchPreview();
             document.getElementById(currentTargetInputId).value = currentPath;
             closeModal();
             if (currentTargetInputId === 'retroarch_root') {
@@ -4342,79 +4320,8 @@
         }
 
         async function executeTask(mode) {
-            if (mode === 'single') {
-                const playlistPath = document.getElementById('playlist_path').value;
-                const systemName = document.getElementById('system_name').value;
-                const thumbnailsDir = document.getElementById('thumbnails_dir').value;
-                const options = getProcessingOptions();
-
-                if (!playlistPath || !systemName || (options.download_thumbnails && !thumbnailsDir)) {
-                    showStatus(options.download_thumbnails ? '请填写游戏列表、系统和缩略图目录' : '请填写游戏列表和系统', 'error');
-                    return;
-                }
-
-                const saved = await saveConfig(mode);
-                if (!saved) return;
-
-                showStatus('正在直接运行...', 'success');
-                showLogPanel('single');
-                setInlineProgress(5, '分析中', '正在分析游戏列表', '当前：读取 playlist');
-
-                const logView = document.getElementById('single-log-view');
-                logView.innerHTML = '<strong>运行日志：</strong><br>开始直接运行...<br>';
-
-                try {
-                    logView.innerHTML += '正在分析游戏列表...<br>';
-                    const previewResponse = await fetch('/api/playlist/preview', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ playlist_path: playlistPath, system_name: systemName, thumbnails_dir: thumbnailsDir })
-                    });
-                    const previewData = await previewResponse.json();
-                    if (previewData.error) throw new Error(previewData.error);
-
-                    currentChanges = preparePreviewChanges(previewData.changes || []);
-                    lastAppliedChangeKeys = new Set();
-                    lastDownloadSummary = null;
-                    setDownloadSummary(null);
-                    updateSummary(currentChanges);
-                    renderPreviewTable(currentChanges);
-
-                    const includedChanges = getIncludedChanges();
-                    if (!includedChanges.length) throw new Error('没有可应用的修复项，请先补齐中文名或封面源');
-
-                    const applyMessage = options.download_thumbnails ? '正在应用更改并下载封面' : '正在应用更改（跳过下载）';
-                    logView.innerHTML += `分析完成，共 ${currentChanges.length} 个游戏，已勾选 ${includedChanges.length} 项<br>`;
-                    setInlineProgress(50, '应用中', applyMessage, `当前：${includedChanges.length} 项待处理`);
-
-                    const applyResponse = await fetch('/api/playlist/apply', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            playlist_path: playlistPath,
-                            changes: includedChanges.map(change => ({ ...change, review_confirmed: true })),
-                            thumbnails_dir: thumbnailsDir,
-                            options
-                        })
-                    });
-                    const applyData = await applyResponse.json();
-                    if (applyData.error) throw new Error(applyData.error);
-
-                    if (applyData.job_id) {
-                        rememberAppliedChanges(includedChanges, options);
-                        logView.innerHTML += options.download_thumbnails ? '后台任务已启动，正在下载封面...<br>' : '后台任务已启动，将跳过缩略图下载...<br>';
-                        trackProgress(applyData.job_id);
-                    } else {
-                        alert('Error starting job: ' + (applyData.error || 'Unknown error'));
-                    }
-                } catch (error) {
-                    showStatus('运行失败: ' + error.message, 'error');
-                    logView.innerHTML += `<br><span style="color:red">错误: ${escapeHtml(error.message)}</span><br>`;
-                    alert('错误: ' + error.message);
-                    setInlineProgress(0, '失败', '运行失败', error.message);
-                }
-                return;
-            }
+            if (mode === 'single') return previewTask();
+            if (workbench.operation) return;
 
             if (mode === 'batch') {
                 const batchDir = document.getElementById('batch_dir').value;
@@ -4431,8 +4338,11 @@
                     return;
                 }
 
+                if (!await desktopConfirm(workbenchText('处理目录中的全部列表？每个修改的列表会先备份，待确认项会跳过。', 'Process all lists in this folder? Changed lists are backed up; review items are skipped.'))) return;
+                if (!beginWorkbenchOperation('apply')) return;
+                workbench.hasTask = true;
                 const saved = await saveConfig(mode);
-                if (!saved) return;
+                if (!saved) { endWorkbenchOperation(); return; }
 
                 showLogPanel('batch');
                 setInlineProgress(2, '启动中', '正在启动批量处理', '当前：扫描游戏列表目录');
@@ -4454,20 +4364,17 @@
                     if (data.job_id) {
                         trackProgress(data.job_id, 'batch');
                     } else {
-                        alert('Error starting batch job: ' + (data.error || 'Unknown error'));
+                        throw new Error(data.error || 'Missing job ID');
                     }
                 } catch (error) {
                     alert('Error: ' + error.message);
                     setInlineProgress(0, '失败', '批量处理启动失败', error.message);
+                    endWorkbenchOperation();
                 }
             }
         }
 
-        initializeDisplayPreferences();
-
-        loadSystems().then(() => {
-            loadConfig();
-        });
+        // Desktop entry initializes after all dialogs and inputs have been parsed.
 
         async function loadSystems() {
             try {
@@ -4521,10 +4428,14 @@
                 return;
             }
 
+            if (!beginWorkbenchOperation('preview')) return;
+            invalidateWorkbenchPreview();
+            const previewKey = workbenchInputKey();
             showStatus('正在分析游戏列表...', 'success');
             setInlineProgress(8, '分析中', '正在分析游戏列表', '当前：生成预览');
 
             try {
+                if (!await saveConfig('single')) throw new Error(uiText('读取失败'));
                 const response = await fetch('/api/playlist/preview', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -4535,6 +4446,7 @@
                 if (data.error) throw new Error(data.error);
 
                 currentChanges = preparePreviewChanges(data.changes || []);
+                workbench.previewKey = previewKey;
                 lastAppliedChangeKeys = new Set();
                 lastDownloadSummary = null;
                 setDownloadSummary(null);
@@ -4551,6 +4463,8 @@
             } catch (error) {
                 showStatus('预览失败: ' + error.message, 'error');
                 setInlineProgress(0, '失败', '预览失败', '当前：请检查路径和系统');
+            } finally {
+                endWorkbenchOperation();
             }
         }
 
@@ -4723,6 +4637,7 @@
         }
 
         function getCoverStatusInfo(change) {
+            if (document.getElementById('repair-mode').value === 'names') return {className:'skipped', label:workbenchText('本次不处理', 'Not requested'), title:workbenchText('仅修复名称，图片保持不变', 'Names only; artwork is unchanged')};
             if (!change.thumbnail_source) {
                 if (hasExistingCover(change)) {
                     return {
@@ -4847,6 +4762,7 @@
         }
 
         async function applyChanges(confirmed = false) {
+            if (!workbenchSnapshot().canApply) return;
             const playlistPath = document.getElementById('playlist_path').value;
             const thumbnailsDir = document.getElementById('thumbnails_dir').value;
 
@@ -4878,6 +4794,9 @@
                 return;
             }
 
+            if (!beginWorkbenchOperation('apply')) return;
+            workbench.hasTask = true;
+            renderWorkbench();
             hideApplySummary();
             const applyMessage = options.download_thumbnails ? '正在应用更改并下载封面' : '正在应用更改（跳过下载）';
             showStatus(applyMessage + '...', 'success');
@@ -4906,11 +4825,12 @@
                     rememberAppliedChanges(includedChanges, options);
                     trackProgress(data.job_id);
                 } else {
-                    alert('Error starting job: ' + (data.error || 'Unknown error'));
+                    throw new Error(data.error || 'Missing job ID');
                 }
             } catch (error) {
                 alert('Error: ' + error.message);
                 setInlineProgress(0, '失败', '应用更改失败', error.message);
+                endWorkbenchOperation();
             }
         }
 
@@ -5196,6 +5116,10 @@
         }
 
         function trackProgress(jobId, mode = 'single') {
+            workbench.jobId = jobId;
+            workbench.operation = 'apply';
+            workbench.hasTask = true;
+            renderWorkbench();
             const eventSource = new EventSource(`/api/progress?job_id=${jobId}`);
             const logView = document.getElementById(mode === 'batch' ? 'batch-log-view' : 'single-log-view');
             const detailSummary = document.getElementById('detail-summary-main');
@@ -5208,6 +5132,7 @@
                     if (detailSummary) detailSummary.textContent = `任务失败：${data.error}`;
                     setInlineProgress(0, '失败', '任务失败', data.error);
                     eventSource.close();
+                    workbench.jobId = null; endWorkbenchOperation();
                     return;
                 }
 
@@ -5238,6 +5163,8 @@
                         ? getAppliedSummaryText(data.result?.applied_count || 0)
                         : uiText('修复完成');
                     if (detailSummary) detailSummary.textContent = '任务完成，日志和下载明细已更新。';
+                    workbench.applied = data.status === 'completed';
+                    workbench.jobId = null; endWorkbenchOperation();
                     if (data.status === 'cancelled') {
                         setInlineProgress(0, '已取消', '任务已取消', '已完成的结果会保留，可在任务中重试图片');
                         showStatus('任务已取消，已完成的结果会保留', 'info');
@@ -5247,12 +5174,13 @@
                     eventSource.close();
                     setInlineProgress(0, '失败', '任务失败', data.error || '未知错误');
                     if (detailSummary) detailSummary.textContent = `任务失败：${data.error || '未知错误'}`;
+                    workbench.jobId = null; endWorkbenchOperation();
                 }
             };
 
             eventSource.onerror = function () {
                 console.error('EventSource failed for progress tracking.');
-                eventSource.close();
+                // EventSource reconnects automatically. Keep write controls locked until a terminal event.
                 if (detailSummary) detailSummary.textContent = '连接断开，无法追踪进度。';
                 setInlineProgress(0, '断开', '进度连接断开', '当前：请稍后刷新任务状态');
                 if (logView) logView.innerHTML += `<span style="color:orange">连接断开，无法追踪进度。</span><br>`;
@@ -5260,20 +5188,11 @@
         }
 
         function setPreviewFilter(filter, target) {
-            const shouldInvertSelection = filter === 'all'
-                && currentPreviewFilter === 'all'
-                && target?.classList.contains('active')
-                && currentChanges.length > 0;
-
-            if (shouldInvertSelection) {
-                invertVisibleSelection();
-                return;
-            }
-
             currentPreviewFilter = filter;
             document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
             if (target) target.classList.add('active');
             renderPreviewTable(currentChanges);
+            renderWorkbench();
         }
 
         function invertVisibleSelection() {
@@ -5305,9 +5224,9 @@
             ].some(value => (value || '').toLowerCase().includes(query));
 
             if (!matchesQuery) return false;
-            if (currentPreviewFilter === 'review') return info.kind === 'review';
+            if (currentPreviewFilter === 'review') return ['review', 'duplicate'].includes(info.kind);
             if (currentPreviewFilter === 'duplicate') return info.kind === 'duplicate';
-            if (currentPreviewFilter === 'matched') return isAutoRepairKind(info.kind);
+            if (currentPreviewFilter === 'matched') return isActionableChange(change);
             if (currentPreviewFilter === 'ready') return info.kind === 'ready';
             if (currentPreviewFilter === 'completed') return info.kind === 'completed';
             if (currentPreviewFilter === 'missing-cover') return !change.thumbnail_source;
@@ -5379,6 +5298,7 @@
             if (change.pending_override || info.source === 'manual-edit') {
                 return [uiText('待保存本地修正'), change.match_reason || info.reason || ''].filter(Boolean).join(' · ');
             }
+            if (document.getElementById('repair-mode').value === 'names' && ['rename', 'ready'].includes(info.kind)) return workbenchText('仅检查显示名称，图片保持不变', 'Only display names are checked; artwork is unchanged');
             if (info.kind === 'ready') return uiText('中文名、封面源和封面已就绪');
             if (info.kind === 'download') return uiText('中文名和封面源已就绪，仅需下载封面');
             if (info.kind === 'rename') return uiText('封面已存在，仅需写入中文名');
@@ -5460,15 +5380,6 @@
                 if (info.kind === 'completed') completed += 1;
             });
 
-            document.getElementById('summary-total').textContent = changes.length;
-            document.getElementById('summary-matched').textContent = matched;
-            document.getElementById('summary-ready').textContent = ready;
-            document.getElementById('summary-completed').textContent = completed;
-            document.getElementById('summary-review').textContent = review;
-            document.getElementById('summary-duplicate').textContent = duplicate;
-            document.getElementById('step-preview').textContent = currentUILanguage === 'en'
-                ? `${changes.length || 0} items, ${enabled} selected, ${review} need review`
-                : `${changes.length || 0} 项，${enabled} 项已勾选，${review} 项需人工确认`;
             document.getElementById('dock-plan-count').textContent = currentUILanguage === 'en'
                 ? `${enabled} ready · ${review} to review`
                 : `${enabled} 可应用 · ${review} 待校对`;
@@ -5478,6 +5389,7 @@
                 : getRepairSummaryText(enabled, matched, review, changes.length, ready, completed);
             updateReviewProgress(changes.length, review, enabled, ready, completed);
             setProgressCardTotals(changes.length || 0, 0);
+            renderWorkbench();
         }
 
         function getAppliedSummaryText(applied) {
@@ -5841,16 +5753,7 @@
             return `${count} ${uiText(label)}`;
         }
 
-        function updateWorkflowLabels() {
-            const device = document.getElementById('retroarch_root').value;
-            const playlist = document.getElementById('playlist_path').value;
-            const system = document.getElementById('system_name').value;
-            document.getElementById('step-device').textContent = device ? shortPath(device) : uiText('等待扫描 RetroArch 目录');
-            document.getElementById('step-playlist').textContent = playlist ? shortPath(playlist) : uiText('等待选择 .lpl 文件');
-            if (!currentChanges.length) {
-                document.getElementById('step-preview').textContent = system ? `${uiText('系统：')}${system}` : uiText('等待生成修复计划');
-            }
-        }
+        function updateWorkflowLabels() { renderWorkbench(); }
 
         function shortPath(path) {
             if (!path) return '';
@@ -5888,17 +5791,21 @@
                 .replace(/>/g, '&gt;');
         }
 
-        document.addEventListener('input', (event) => {
-            if (['retroarch_root', 'playlist_path', 'system_name', 'thumbnails_dir', 'rom_name_cn_path'].includes(event.target.id)) {
-                updateWorkflowLabels();
+        function handleContextChange(event) {
+            if (event.target.matches('[data-input-control]')) {
+                if (event.target.id === 'rom_name_cn_path') document.getElementById('batch_rom_name_cn_path').value = event.target.value;
+                invalidateWorkbenchPreview();
+                if (event.target.id === 'retroarch_root') {
+                    currentDeviceScan = null;
+                    document.getElementById('playlist_path').value = '';
+                    document.getElementById('batch_dir').value = '';
+                    renderDeviceScan(null);
+                }
+                renderWorkbench();
             }
-        });
-
-        document.addEventListener('change', (event) => {
-            if (['retroarch_root', 'playlist_path', 'system_name', 'thumbnails_dir', 'rom_name_cn_path'].includes(event.target.id)) {
-                updateWorkflowLabels();
-            }
-        });
+        }
+        document.addEventListener('input', handleContextChange);
+        document.addEventListener('change', handleContextChange);
 
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape') {
@@ -5912,8 +5819,24 @@
     </script>
     <dialog id="desktop-dialog" aria-labelledby="desktop-title">
         <header><h2 id="desktop-title" data-i18n="PLCN 管理">PLCN 管理</h2><button class="btn btn-muted" onclick="document.getElementById('desktop-dialog').close()" type="button">关闭</button></header>
-        <nav class="desktop-toolbar"><button class="btn" onclick="openDesktop('data')" data-i18n="名称数据库">名称数据库</button><button class="btn" onclick="openDesktop('tasks')" data-i18n="任务">任务</button><button class="btn" onclick="openDesktop('history')" data-i18n="恢复历史">恢复历史</button></nav>
-        <p id="desktop-message" role="status"></p><div id="desktop-content"></div>
+        <nav class="desktop-toolbar" aria-label="管理页面"><button data-desktop-view="data" class="btn" onclick="openDesktop('data')" data-i18n="名称数据库">名称数据库</button><button data-desktop-view="tasks" class="btn" onclick="openDesktop('tasks')" data-i18n="任务">任务</button><button data-desktop-view="history" class="btn" onclick="openDesktop('history')" data-i18n="恢复历史">恢复历史</button></nav>
+        <p id="desktop-message" role="status"></p><div id="desktop-content"></div><details id="data-source-settings"><summary data-i18n="自定义数据路径">自定义数据路径</summary>
+
+                            <div class="form-group">
+                                <label for="rom_name_cn_path" data-i18n="rom-name-cn 路径">rom-name-cn 路径</label>
+                                <div class="input-group">
+                                    <input type="text" id="rom_name_cn_path" data-input-control placeholder="data/rom-name-cn">
+                                    <button class="btn btn-small btn-muted" onclick="openFilePicker('rom_name_cn_path', true)" title="选择目录" data-input-control type="button" data-i18n="浏览">浏览</button>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="batch_rom_name_cn_path" data-i18n="rom-name-cn 路径">rom-name-cn 路径</label>
+                                <div class="input-group">
+                                    <input type="text" id="batch_rom_name_cn_path" data-input-control placeholder="data/rom-name-cn">
+                                    <button class="btn btn-small btn-muted" onclick="openFilePicker('batch_rom_name_cn_path', true)" title="选择目录" data-input-control type="button" data-i18n="浏览">浏览</button>
+                                </div>
+                            </div></details>
     </dialog>
     <script src="/assets/desktop.js"></script>
 </body>

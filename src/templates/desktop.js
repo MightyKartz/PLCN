@@ -2,6 +2,7 @@
 const desktopDialog = document.getElementById('desktop-dialog');
 let desktopPoll = null;
 let desktopView = 'data';
+let desktopDataJobId = null;
 const desktopText = (zh, en) => currentUILanguage === 'en' ? en : zh;
 
 function desktopConfirm(message) {
@@ -53,6 +54,13 @@ function desktopButton(parent, text, action) {
 
 async function openDesktop(view = 'data') {
     desktopView = view;
+    document.getElementById('tools-menu').open = false;
+    document.getElementById('desktop-message').textContent = '';
+    document.querySelectorAll('[data-desktop-view]').forEach(button => {
+        button.classList.toggle('active', button.dataset.desktopView === view);
+        button.setAttribute('aria-pressed', String(button.dataset.desktopView === view));
+    });
+    document.getElementById('data-source-settings').hidden = view !== 'data';
     if (!desktopDialog.open) desktopDialog.showModal();
     clearTimeout(desktopPoll);
     await refreshDesktop();
@@ -68,24 +76,32 @@ async function refreshDesktop() {
             const state = await desktopRequest('/api/data');
             body.replaceChildren();
             desktopElement('h3', desktopText('名称数据库', 'Name database'), body);
-            desktopElement('p', desktopText('当前来源：', 'Active source: ') + state.source, body);
+            desktopElement('strong', state.source_kind === 'bundled' ? desktopText('内置名称库 · 可离线使用', 'Bundled names · available offline') : state.active ? desktopText('已启用数据包 · 可离线使用', 'Active data pack · available offline') : desktopText('自定义名称库', 'Custom name database'), body);
+            const sourceDetails = desktopElement('details', undefined, body);
+            desktopElement('summary', desktopText('查看来源路径', 'Show source path'), sourceDetails);
+            desktopElement('p', state.source, sourceDetails);
             desktopElement('p', state.active ? `${state.active.revision} · ${state.active.created_at}` : desktopText('使用内置或自定义 CSV；可以完全离线使用。', 'Bundled or custom CSV data; available offline.'), body);
-            desktopButton(body, desktopText('检查更新', 'Check updates'), () => desktopDataTask('/api/data/check'));
-            desktopButton(body, desktopText('下载并比较', 'Download and compare'), () => desktopDataTask('/api/data/fetch'));
+            desktopButton(body, desktopText('检查更新', 'Check updates'), () => desktopDataTask('/api/data/check')).disabled = Boolean(workbench.operation);
+            desktopButton(body, desktopText('下载并比较', 'Download and compare'), () => desktopDataTask('/api/data/fetch')).disabled = Boolean(workbench.operation);
+            if (desktopDataJobId) await renderDataTask(body);
             if (state.can_rollback) desktopButton(body, desktopText('回滚数据源', 'Roll back data'), async () => {
+                assertWorkbenchIdle();
                 if (!await desktopConfirm(desktopText('恢复上一次名称数据源？人工规则会保留。', 'Restore the previous data source? Manual corrections are preserved.'))) return;
                 await desktopRequest('/api/data/rollback', {}); await desktopReloadSource(); await refreshDesktop();
             });
-            desktopElement('p', desktopText('更新不会自动启用。检查任务中的增删及译名变化后再选择数据包；条目增加不代表准确率提升。', 'Updates are not activated automatically. Review record changes in Tasks before selecting a pack.'), body);
+            desktopElement('p', desktopText('更新不会自动启用。先检查新增、移除和译名变化，再选择是否启用。', 'Updates are not activated automatically. Review added, removed and renamed entries before activation.'), body);
             for (const pack of state.packs) {
                 const entry = desktopElement('div', undefined, body); entry.className = 'desktop-entry';
                 desktopElement('strong', `${pack.revision.slice(0, 16)} · ${pack.records} ${desktopText('条', 'records')} · ${pack.untranslated} ${desktopText('未翻译', 'untranslated')}`, entry);
-                desktopElement('p', pack.path, entry);
+                const packDetails = desktopElement('details', undefined, entry);
+                desktopElement('summary', desktopText('数据包路径', 'Pack path'), packDetails);
+                desktopElement('p', pack.path, packDetails);
                 desktopButton(entry, desktopText('与当前数据比较', 'Compare with active data'), async () => {
-                    await desktopRequest('/api/data/compare', { pack: pack.path }); await openDesktop('tasks');
+                    await desktopDataTask('/api/data/compare', { pack: pack.path });
                 });
                 if (pack.active) desktopElement('span', desktopText('正在使用', 'Active'), entry);
                 else desktopButton(entry, desktopText('启用', 'Activate'), async () => {
+                    assertWorkbenchIdle();
                     if (!await desktopConfirm(desktopText('启用此数据包并清除当前预览？人工规则会保留。', 'Activate this pack and clear the current preview? Manual corrections are preserved.'))) return;
                     await desktopRequest('/api/data/activate', { pack: pack.path });
                     await desktopReloadSource(); await refreshDesktop();
@@ -105,6 +121,7 @@ async function refreshDesktop() {
                     desktopElement('p', desktopText('备份：', 'Backup: ') + record.backup, entry);
                     if (record.restored_at) desktopElement('span', desktopText('已恢复', 'Restored'), entry);
                     else desktopButton(entry, desktopText('恢复此次修改', 'Restore this change'), async () => {
+                        assertWorkbenchIdle();
                         if (!await desktopConfirm(desktopText('恢复此列表到修复前状态？当前文件也会先备份。', 'Restore the playlist to its previous state? The current file will be backed up.'))) return;
                         await desktopRequest('/api/history/restore', { id: record.id });
                         desktopClearPreview(); await refreshDesktop();
@@ -115,7 +132,7 @@ async function refreshDesktop() {
                 desktopElement('p', desktopText('关闭浏览器不会停止服务。取消在安全步骤边界生效，已完成的结果会保留。', 'Closing the browser does not stop PLCN. Cancellation takes effect at safe boundaries and keeps completed work.'), body);
                 for (const job of state.jobs) {
                     const entry = desktopElement('div', undefined, body); entry.className = 'desktop-entry';
-                    desktopElement('strong', `${job.status} · ${job.progress}/${job.total}`, entry);
+                    desktopElement('strong', `${desktopJobStatus(job.status)} · ${job.progress}/${job.total}`, entry);
                     desktopElement('p', job.error || job.message, entry);
                     if (['pending', 'running'].includes(job.status)) desktopButton(entry, desktopText('取消任务', 'Cancel task'), async () => {
                         await desktopRequest('/api/jobs/cancel', { job_id: job.id }); await refreshDesktop();
@@ -144,21 +161,55 @@ async function refreshDesktop() {
                 clearTimeout(desktopPoll);
                 if (state.active_jobs) desktopPoll = setTimeout(refreshDesktop, 2000);
             }
-            desktopElement('h3', desktopText('应用数据', 'Application data'), body);
-            desktopElement('p', state.data_dir, body);
-            desktopButton(body, desktopText('打开数据目录', 'Open data folder'), () => desktopRequest('/api/fs/open', { path: state.data_dir }));
+            const appDetails = desktopElement('details', undefined, body);
+            desktopElement('summary', desktopText('应用数据与日志', 'Application data and logs'), appDetails);
+            desktopElement('p', state.data_dir, appDetails);
+            desktopButton(appDetails, desktopText('打开数据目录', 'Open data folder'), () => desktopRequest('/api/fs/open', { path: state.data_dir }));
         }
     } catch (error) { document.getElementById('desktop-message').textContent = error.message; }
 }
 
-async function desktopDataTask(route) {
-    await desktopRequest(route, {});
-    await openDesktop('tasks');
+function assertWorkbenchIdle() {
+    if (workbench.operation) throw new Error(desktopText('请等待当前操作完成。', 'Wait for the current operation to finish.'));
+}
+
+function desktopJobStatus(status) {
+    const labels = {pending: ['等待中', 'Pending'], running: ['处理中', 'Running'], completed: ['已完成', 'Completed'], failed: ['失败', 'Failed'], cancelled: ['已取消', 'Cancelled']};
+    return labels[status] ? desktopText(...labels[status]) : status;
+}
+
+async function renderDataTask(body) {
+    const state = await desktopRequest('/api/desktop');
+    const job = state.jobs.find(job => job.id === desktopDataJobId);
+    if (!job) return;
+    const entry = desktopElement('section', undefined, body); entry.className = 'desktop-entry';
+    entry.setAttribute('aria-live', 'polite');
+    desktopElement('strong', desktopJobStatus(job.status), entry);
+    desktopElement('p', job.error || job.message, entry);
+    const result = job.result || {};
+    if (result.revision) desktopElement('p', desktopText('上游版本：', 'Upstream revision: ') + result.revision.slice(0, 12), entry);
+    if (result.comparison) {
+        const c = result.comparison;
+        desktopElement('p', desktopText(`新增 ${c.added} · 移除 ${c.removed} · 译名变化 ${c.changed} · 未翻译 ${c.untranslated}`, `Added ${c.added} · Removed ${c.removed} · Renamed ${c.changed} · Untranslated ${c.untranslated}`), entry);
+    }
+    clearTimeout(desktopPoll);
+    if (['pending', 'running'].includes(job.status)) {
+        desktopButton(entry, desktopText('取消任务', 'Cancel task'), async () => {
+            await desktopRequest('/api/jobs/cancel', {job_id: job.id}); await refreshDesktop();
+        });
+        desktopPoll = setTimeout(refreshDesktop, 2000);
+    }
+}
+
+async function desktopDataTask(route, payload = {}) {
+    assertWorkbenchIdle();
+    const data = await desktopRequest(route, payload);
+    desktopDataJobId = data.job_id;
+    await openDesktop('data');
 }
 
 function desktopClearPreview() {
-    currentChanges = []; selectedChangeIndex = -1;
-    hideApplySummary(); clearInspector(); renderPreviewTable([]); updateSummary([]);
+    invalidateWorkbenchPreview();
 }
 
 async function desktopReloadSource() {
@@ -193,13 +244,18 @@ openFilePicker = async function(inputId, directoryMode) {
 };
 
 function setRepairMode() {
-    const value = document.getElementById('repair-mode').value;
-    for (const id of ['option-download-thumbnails', 'batch-option-download-thumbnails']) document.getElementById(id).checked = value !== 'names';
     hideApplySummary();
     if (currentChanges.length) {
         desktopClearPreview();
         showStatus(desktopText('操作类型已改变，请重新预览。', 'Operation changed. Generate a new preview.'), 'info');
     }
+    renderWorkbench();
+}
+
+function openPathSettings() {
+    document.getElementById('tools-menu').open = false;
+    document.getElementById('path-settings').showModal();
+    renderWorkbench();
 }
 
 async function initializeDesktop() {
@@ -208,7 +264,9 @@ async function initializeDesktop() {
         const button = document.getElementById('continue-library');
         button.hidden = !config.retroarch_root;
         button.onclick = () => { document.getElementById('retroarch_root').value = config.retroarch_root; scanDevice(false); };
-        if (config.retroarch_root) document.getElementById('desktop-welcome-text').textContent = desktopText('已记住上次目录。设备未连接时可以选择其他目录。', 'Your previous folder is remembered. Choose another folder if the device is disconnected.');
+        if (config.retroarch_root) button.title = config.retroarch_root;
+        renderWorkbench();
     } catch (error) { showStatus(error.message, 'error'); }
 }
-initializeDesktop();
+initializeDisplayPreferences();
+loadSystems().then(loadConfig).then(initializeDesktop);
