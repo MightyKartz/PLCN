@@ -10,7 +10,8 @@ class Translator:
         self.system_name = system_name
         
         # Initialize Database
-        self.db = DatabaseManager(db_path=db_path)
+        from data_pack import open_database
+        self.db = open_database(rom_name_cn_path, db_path=db_path)
         
         # Check if we need to import data
         # For simplicity, we can check if the translations table is empty
@@ -28,7 +29,8 @@ class Translator:
         self.libretro_db = None
         if system_name:
             # Store DBs in a subdirectory of local_db_path
-            self.libretro_db = LibretroDB(os.path.dirname(rom_name_cn_path)) 
+            # Packs are immutable; DAT caches remain in the writable runtime directory.
+            self.libretro_db = LibretroDB(os.path.join(os.getcwd(), 'data'))
             # Try to load the DAT file for this system
             print(f"Initializing LibretroDB for {system_name}...")
             self.libretro_db.load_system_dat(system_name)
@@ -46,34 +48,38 @@ class Translator:
         Returns a tuple: (translated_text, standard_english_name)
         If no translation found, returns (text, text).
         """
+        self.last_match_source = 'fallback'
         if not text:
             return text, text
             
         # 1. Exact match (English -> Chinese)
         chinese = self.db.search_by_english(text, system=self.system_name)
         if chinese:
+            self.last_match_source = 'exact'
             return chinese, text
             
         # 2. Reverse lookup (Chinese -> English)
         english = self.db.search_by_chinese(text, system=self.system_name)
         if english:
+            self.last_match_source = 'exact'
             return text, english
             
         # 3. Normalized match (Alias lookup)
         norm_text = self.normalize_name(text)
         chinese, english = self.db.search_by_normalized_alias(norm_text, system=self.system_name)
         if chinese and english:
+            self.last_match_source = 'exact_alias'
             return chinese, english
 
-        # 4. Cross-system exact normalized alias.
-        # Arcade DAT names often differ only by region from console ports in rom-name-cn.
-        # Prefer an exact normalized title from any system before fuzzy matching so variants
-        # like "Strikers 1945 II" do not inherit "Strikers 1945 Plus".
-        if self.system_name:
-            chinese, english = self.db.search_by_normalized_alias(norm_text)
-            if chinese and english:
-                return chinese, english
-            
+        # Arcade ports can suggest a translation, but must never silently become
+        # a confirmed identity or replace the arcade DAT thumbnail title.
+        if self.system_name and any(value in self.system_name for value in ('Arcade', 'FBNeo', 'MAME')):
+            rows = self.db.get_connection().execute('SELECT DISTINCT t.chinese_name, t.system FROM aliases a JOIN translations t ON a.english_name=t.english_name AND a.system=t.system WHERE a.normalized_alias=? AND t.chinese_name<>\'\' ORDER BY t.system, t.chinese_name', (norm_text,)).fetchall()
+            if rows:
+                self.last_match_source = 'cross_system_candidate'
+                self.last_translation_candidates = list(dict.fromkeys(row[0] for row in rows))
+                return rows[0][0], text
+
         # 5. Alias / Acronym handling (Hardcoded fallbacks)
         # SRWF -> Super Robot Taisen F
         acronyms = {
@@ -83,6 +89,7 @@ class Translator:
         }
         
         if norm_text in acronyms:
+            self.last_match_source = 'curated_alias'
             standard_english = acronyms[norm_text]
             # Try to find Chinese translation for this standard English name in DB
             chinese = self.db.search_by_english(standard_english, system=self.system_name)
@@ -102,12 +109,14 @@ class Translator:
         if any(ord(c) >= 128 for c in text):
              result = self.db.fuzzy_search_by_chinese(text, system=self.system_name)
              if result:
+                 self.last_match_source = 'fuzzy_candidate'
                  standard_cn, english = result
                  return standard_cn, english
         else:
              # Otherwise try English fuzzy search
              fuzzy_cn = self.db.fuzzy_search_by_english(norm_text, system=self.system_name)
              if fuzzy_cn:
+                 self.last_match_source = 'fuzzy_candidate'
                  return fuzzy_cn, text
 
         # 7. Try LibretroDB for standard English name

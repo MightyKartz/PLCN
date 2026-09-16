@@ -4,10 +4,19 @@ import urllib.request
 import urllib.parse
 import xml.etree.ElementTree as ET
 import re
+from safe_io import atomic_write_bytes
 
 class LibretroDB:
     # No system mappings needed - main DAT files contain all games
     SYSTEM_MAPPINGS = {}
+
+    @staticmethod
+    def _download_to(url, target_path):
+        with urllib.request.urlopen(url, timeout=15) as response:
+            content = response.read(64 * 1024 * 1024 + 1)
+        if not content or len(content) > 64 * 1024 * 1024:
+            raise ValueError('DAT 下载内容为空或超过大小限制')
+        atomic_write_bytes(target_path, content)
     
     def __init__(self, storage_path):
         self.storage_path = storage_path
@@ -35,7 +44,7 @@ class LibretroDB:
         if specific_url:
             print(f"Downloading DAT for {system_name} from specific URL: {specific_url}...")
             try:
-                urllib.request.urlretrieve(specific_url, target_path)
+                self._download_to(specific_url, target_path)
                 print(f"Downloaded to {target_path}")
                 return True
             except Exception as e:
@@ -70,7 +79,7 @@ class LibretroDB:
         for url in base_urls:
             print(f"Trying to download DAT for {system_name} from {url}...")
             try:
-                urllib.request.urlretrieve(url, target_path)
+                self._download_to(url, target_path)
                 print(f"Downloaded to {target_path}")
                 return True
             except Exception as e:

@@ -6,7 +6,18 @@ PLCN 是一个面向 RetroArch 用户的本地游戏列表中文化与缩略图�
 
 > 当前实现是 RetroArch 外部的本地辅助工具，不是运行在 RetroArch 内部的插件，也不会修改 RetroArch 程序本体。
 
-## 最新版本：v3.1.1
+## 开发分支更新（尚未发布）
+
+- 保留全部列表条目，取消隐式去重；CLI、批量与 UI 统一跳过未经核对的风险项。
+- 写回采用协作锁、快照检查、备份、原子替换和读回验证；ADB 增加暂存与远端备份验证。
+- 名称与别名按平台隔离，混合列表按各条目的 `db_name` 匹配；普通 CSV 缓存按内容指纹分开。
+- 新增 `data build/fetch/inspect/compare/activate/rollback`，支持固定上游版本、校验、离线使用和回滚。
+- 分别检查封面、截图、标题图，复用已有英文名图片，识别损坏文件并阻止图片文件名冲突。
+- 本地服务仅监听回环地址，增加会话及同源检查；端口被占用时自动选择空闲端口。
+
+实施记录见 [实施计划](DOC/IMPLEMENTATION_PLAN.md)，操作说明见 [数据包与安全写回](DOC/DATA_PACKS.md)。
+
+## 已发布版本：v3.1.1
 
 - 修复普通 ROM 列表扫描时，`gba中文游戏`、`中文游戏`、`游戏合集` 等中文父目录名被误写成所有游戏名称的问题。
 - 修复已被旧版本污染的游戏列表：如果当前 label 已经变成泛化目录名，重新预览时会回到 ROM 文件名和数据库匹配结果。
@@ -79,7 +90,7 @@ PLCN 是一个面向 RetroArch 用户的本地游戏列表中文化与缩略图�
 3. **预览与校对**：
    - 先生成预览，检查当前名称、写入名称、封面源英文名、封面状态和修复状态。
    - 可取消勾选不准备写回的行，未勾选项不会进入应用和下载流程。
-   - 对不确定项直接编辑写入名称或封面源；状态满足条件后再加入应用队列。
+   - 对不确定项编辑写入名称或封面源，核对后点击“已核对，加入应用”，再检查最终摘要。CLI 和批量任务默认跳过需复核项。
 
 4. **应用与下载**：
    - 确认后写回 `.lpl` 文件。
@@ -89,7 +100,7 @@ PLCN 是一个面向 RetroArch 用户的本地游戏列表中文化与缩略图�
 ### 本地数据说明
 
 - `manual_overrides.json` 只保存在本机，未配置时位于 PLCN 启动目录；可通过本地配置指定其他路径。
-- 覆盖记录包含 system、ROM 路径/文件名、CRC、写入名称、封面源和更新时间；同一 system 内优先按 CRC 命中，CRC 缺失时按 ROM 文件名命中。
+- 覆盖记录包含 system、ROM 路径/文件名、CRC、写入名称、封面源和更新时间；同一 system 内优先按有效 CRC 命中，CRC 缺失时按 ROM 文件名命中，两条有效 CRC 不同时禁止文件名回退。
 - 该文件用于保留人工校正结果，不会启用云同步、在线匹配或外部刮削。
 
 ### 从源码运行
@@ -121,12 +132,14 @@ python3 src/plcn.py \
 - RetroArch 目录扫描集中在 `src/retroarch_scanner.py`，当前支持本地/挂载目录浅层扫描和 ADB 授权设备扫描；SSH/SFTP 远程连接仍在后续计划中。
 - Web UI 目前位于 `src/templates/plcn.html`，是单文件模板，后续需要继续拆分和强化可维护性。
 - 后续优化路线见 [DOC/OPTIMIZATION_PLAN.md](DOC/OPTIMIZATION_PLAN.md)。
+- 本轮实现与验收记录见 [DOC/IMPLEMENTATION_PLAN.md](DOC/IMPLEMENTATION_PLAN.md)；较早路线中的实现事实以该记录为准。
 
 常用验证命令：
 
 ```bash
 python3 -m pytest -q
 python3 -m py_compile src/*.py
+python3 scripts/check_ui_js.py
 git diff --check
 ```
 

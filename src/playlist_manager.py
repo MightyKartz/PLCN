@@ -1,5 +1,8 @@
 import json
 import os
+from pathlib import Path
+import hashlib
+from safe_io import atomic_write_json
 
 class PlaylistManager:
     def __init__(self, playlist_path):
@@ -12,9 +15,14 @@ class PlaylistManager:
         if not os.path.exists(self.playlist_path):
             raise FileNotFoundError(f"Playlist file not found: {self.playlist_path}")
         
-        with open(self.playlist_path, 'r', encoding='utf-8') as f:
-            self.data = json.load(f)
-            self.items = self.data.get('items', [])
+        raw = Path(self.playlist_path).read_bytes()
+        self.loaded_digest = hashlib.sha256(raw).hexdigest()
+        self.data = json.loads(raw.decode('utf-8-sig'))
+        if not isinstance(self.data, dict) or not isinstance(self.data.get('items'), list):
+            raise ValueError('游戏列表必须是包含 items 数组的 JSON 文件')
+        self.items = self.data['items']
+        if any(not isinstance(item, dict) for item in self.items):
+            raise ValueError('游戏列表条目必须是 JSON 对象')
 
     def save(self, output_path=None):
         """Saves the playlist to the file."""
@@ -22,8 +30,10 @@ class PlaylistManager:
         # Update items in self.data before saving
         self.data['items'] = self.items
         
-        with open(target_path, 'w', encoding='utf-8') as f:
-            json.dump(self.data, f, indent=4, ensure_ascii=False)
+        same_file = Path(target_path).resolve() == Path(self.playlist_path).resolve()
+        atomic_write_json(target_path, self.data, self.loaded_digest if same_file else None)
+        if same_file:
+            self.loaded_digest = hashlib.sha256(Path(target_path).read_bytes()).hexdigest()
 
     def update_label(self, entry_index, new_label):
         """Updates the label of a specific entry."""

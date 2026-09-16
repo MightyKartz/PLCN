@@ -421,10 +421,11 @@ def test_unicode_fixture_snapshot_matching_accepts_nfc_nfd_equivalents():
     assert plcn.proposal_matches_item(proposal, item) is True
 
 
-def test_duplicate_entries_fixture_deduplicates_before_building_proposals():
+def test_duplicate_entries_fixture_preserves_original_rows():
     changes = analyze_fixture("duplicate_entries.lpl", "Nintendo - Game Boy Advance")
 
-    assert len(changes) == 1
+    assert len(changes) == 2
+    assert [change["index"] for change in changes] == [0, 1]
     assert changes[0]["path"].endswith("F-Zero - Maximum Velocity (USA, Europe).gba")
     assert changes[0]["new_label"] == "F-Zero-极速传说"
 
@@ -636,7 +637,8 @@ def test_existing_boxart_lookup_indexes_local_named_boxarts(tmp_path):
     thumbnails_dir = tmp_path / "thumbnails"
     boxarts = thumbnails_dir / "Nintendo - Super Nintendo Entertainment System" / "Named_Boxarts"
     boxarts.mkdir(parents=True)
-    (boxarts / "超级马里奥世界.png").write_bytes(b"")
+    from PIL import Image
+    Image.new("RGB", (1, 1)).save(boxarts / "超级马里奥世界.png")
 
     lookup = plcn.build_existing_boxart_lookup(
         str(thumbnails_dir),

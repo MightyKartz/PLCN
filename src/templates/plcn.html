@@ -2824,7 +2824,7 @@
                                 <label class="option-disabled" title="当前匹配策略由后端统一决定"><input id="option-auto-high-confidence" type="checkbox" checked disabled> <span data-i18n="自动使用高置信度结果">自动使用高置信度结果</span></label>
                                 <label><input id="option-download-thumbnails" type="checkbox" checked> <span data-i18n="下载缺失的封面和截图">下载缺失的封面和截图</span></label>
                                 <label class="option-disabled" title="当前后端默认优先使用本地缓存和 rom-name-cn 数据"><input id="option-prefer-local-db" type="checkbox" checked disabled> <span data-i18n="优先使用本地数据库">优先使用本地数据库</span></label>
-                                <label class="option-disabled" title="重复条目处理仍由游戏列表去重逻辑决定，自动重命名将在后续版本实现"><input id="option-auto-rename-duplicates" type="checkbox" disabled> <span data-i18n="处理重复条目时自动重命名">处理重复条目时自动重命名</span></label>
+                                <label class="option-disabled" title="保留全部原始条目；图片名称冲突需人工核对，自动重命名尚未实现"><input id="option-auto-rename-duplicates" type="checkbox" disabled> <span data-i18n="处理重复条目时自动重命名">处理重复条目时自动重命名</span></label>
                             </div>
 
                             <div class="sidebar-actions">
@@ -3049,6 +3049,7 @@
                         </div>
                         <div class="inspector-actions">
                             <button class="btn btn-success" id="save-local-override" onclick="saveSelectedOverride()" data-i18n="保存为本地修正规则" type="button" disabled>保存为本地修正规则</button>
+                            <button class="btn" id="confirm-reviewed" onclick="confirmReviewedChange()" type="button" disabled>已核对，加入应用</button>
                             <button class="btn btn-ghost" id="open-thumb-folder" onclick="openThumbnailFolder()" data-i18n="打开封面文件夹" type="button">打开封面文件夹</button>
                         </div>
                     </div>
@@ -3429,11 +3430,11 @@
                 document.getElementById('playlist_path').value = config.single_playlist_path || '';
                 document.getElementById('system_name').value = config.single_system_name || '';
                 document.getElementById('thumbnails_dir').value = config.single_thumbnails_dir || '';
-                document.getElementById('rom_name_cn_path').value = config.single_rom_name_cn_path || 'data/rom-name-cn';
+                document.getElementById('rom_name_cn_path').value = config.rom_name_cn_path || config.single_rom_name_cn_path || 'data/rom-name-cn';
 
                 document.getElementById('batch_dir').value = config.batch_dir || '';
                 document.getElementById('batch_thumbnails_dir').value = config.batch_thumbnails_dir || '';
-                document.getElementById('batch_rom_name_cn_path').value = config.batch_rom_name_cn_path || 'data/rom-name-cn';
+                document.getElementById('batch_rom_name_cn_path').value = config.rom_name_cn_path || config.batch_rom_name_cn_path || 'data/rom-name-cn';
 
                 updateWorkflowLabels();
                 loadStats();
@@ -3636,7 +3637,8 @@
         }
 
         function isActionableChange(change) {
-            return isAutoRepairKind(getMatchInfo(change).kind);
+            return isAutoRepairKind(getMatchInfo(change).kind)
+                || (getMatchInfo(change).kind === 'reviewed' && Boolean(String(change.new_label || '').trim()));
         }
 
         function shouldAutoSelectChange(change) {
@@ -3644,7 +3646,10 @@
         }
 
         function needsCoverDownload(change, info = getMatchInfo(change)) {
-            return ['matched', 'download'].includes(info.kind) && !hasExistingCover(change) && Boolean(change.thumbnail_source);
+            if (change.artwork && change.thumbnail_source) {
+                return Object.values(change.artwork).some(item => item.status !== 'exists');
+            }
+            return ['matched', 'download', 'reviewed'].includes(info.kind) && !hasExistingCover(change) && Boolean(change.thumbnail_source);
         }
 
         function applyCompletedJobToPreview(result) {
@@ -3691,6 +3696,15 @@
                 if (!lastAppliedDownloadEnabled) {
                     change.cover_download_status = 'skipped-download';
                     return;
+                }
+
+                for (const detail of summary?.details || []) {
+                    if (detail.game !== change.new_label || detail.system !== change.system || !detail.type) continue;
+                    change.artwork ||= {};
+                    change.artwork[detail.type] = {
+                        status: detail.status === 'failed' ? 'failed' : (detail.path ? 'exists' : 'missing'),
+                        path: detail.path || null, message: detail.message || ''
+                    };
                 }
 
                 const boxartResult = findBoxartDownloadResult(change, summary);
@@ -4328,7 +4342,7 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             playlist_path: playlistPath,
-                            changes: includedChanges,
+                            changes: includedChanges.map(change => ({ ...change, review_confirmed: true })),
                             thumbnails_dir: thumbnailsDir,
                             options
                         })
@@ -4829,7 +4843,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         playlist_path: playlistPath,
-                        changes: includedChanges,
+                        changes: includedChanges.map(change => ({ ...change, review_confirmed: true })),
                         thumbnails_dir: thumbnailsDir,
                         options
                     })
@@ -5011,7 +5025,7 @@
             const query = normalizeSearchQuery(document.getElementById('search-input').value);
             if (!query) return;
 
-            const system = document.getElementById('system_name').value;
+            const system = currentChanges[currentSearchRowIndex]?.system || document.getElementById('system_name').value;
             const resultsDiv = document.getElementById('search-results');
             resultsDiv.innerHTML = '<p>搜索中...</p>';
 
@@ -5280,6 +5294,8 @@
         }
 
         function reclassifyEditedChange(change, reason) {
+            change.review_confirmed = false;
+            change.artwork = null;
             change.match_status = 'review';
             change.match_score = 72;
             change.match_source = 'manual-edit';
@@ -5344,11 +5360,12 @@
                     applied: { kind: 'completed', label: uiText('已完成'), badgeClass: 'success', rowClass: '', color: 'var(--green)', fallbackScore: 100 }
                 };
                 const status = statusMap[change.match_status] || statusMap.review;
+                const reviewed = change.review_confirmed === true && ['review', 'duplicate'].includes(change.match_status);
                 const score = Number(change.match_score);
                 return {
-                    kind: status.kind || (change.match_status in statusMap ? change.match_status : 'review'),
+                    kind: reviewed ? 'reviewed' : status.kind || (change.match_status in statusMap ? change.match_status : 'review'),
                     confidence: Number.isFinite(score) ? Math.max(0, Math.min(100, Math.round(score))) : status.fallbackScore,
-                    label: status.label,
+                    label: reviewed ? (currentUILanguage === 'en' ? 'Manually reviewed' : '已人工核对') : status.label,
                     badgeClass: status.badgeClass,
                     rowClass: status.rowClass,
                     color: status.color,
@@ -5379,7 +5396,7 @@
             let completed = 0;
             changes.forEach(change => {
                 const info = getMatchInfo(change);
-                const isIncluded = change.enabled !== false && isAutoRepairKind(info.kind);
+                const isIncluded = change.enabled !== false && isActionableChange(change);
                 if (isIncluded) enabled += 1;
                 if (isIncluded && needsCoverDownload(change, info)) downloadable += 1;
                 if (isAutoRepairKind(info.kind)) matched += 1;
@@ -5496,6 +5513,13 @@
             document.getElementById('inspector-label').value = change.new_label || '';
             document.getElementById('inspector-thumb').value = change.thumbnail_source || '';
             document.getElementById('inspector-confidence').textContent = `${info.confidence}%（${info.label}） · ${info.reason}`;
+            if (change.artwork) {
+                const kinds = { Named_Boxarts: '封面', Named_Snaps: '截图', Named_Titles: '标题图' };
+                const statuses = { exists: '已存在', reusable: '可复用', invalid: '文件损坏', missing: '待下载', missing_source: '缺少来源', failed: '失败' };
+                document.getElementById('inspector-confidence').textContent += ' · ' + Object.entries(change.artwork)
+                    .map(([kind, item]) => `${kinds[kind] || kind}：${statuses[item.status] || item.status}`).join(' / ');
+            }
+            document.getElementById('confirm-reviewed').disabled = !['review', 'duplicate'].includes(change.match_status) || !String(change.new_label || '').trim();
             const searchButton = document.getElementById('search-selected-thumb-btn');
             if (searchButton) searchButton.disabled = false;
             const saveOverrideButton = document.getElementById('save-local-override');
@@ -5512,6 +5536,7 @@
         }
 
         function clearInspector() {
+            document.getElementById('confirm-reviewed').disabled = true;
             selectedChangeIndex = -1;
             const cover = document.getElementById('cover-preview');
             const coverImage = document.getElementById('cover-image');
@@ -5547,6 +5572,18 @@
             renderPreviewTable(currentChanges);
             selectPreviewRow(selectedChangeIndex);
             updateSummary(currentChanges);
+        }
+
+        function confirmReviewedChange() {
+            const change = currentChanges[selectedChangeIndex];
+            if (!change || !String(change.new_label || '').trim()) return;
+            change.review_confirmed = true;
+            change.enabled = true;
+            hideApplySummary();
+            renderPreviewTable(currentChanges);
+            updateSummary(currentChanges);
+            selectPreviewRow(selectedChangeIndex);
+            showStatus('已加入应用队列，提交前仍可检查变更摘要', 'success');
         }
 
         function canSaveSelectedOverride(change = currentChanges[selectedChangeIndex]) {
@@ -5676,7 +5713,7 @@
         }
 
         function sanitizeFilename(name) {
-            return (name || '').replace(/[&*/:`<>?\\|]/g, '_');
+            return (name || '').replace(/[&*/:`<>?\\|"\x00-\x1f]/g, '_');
         }
 
         function showLogPanel(mode) {

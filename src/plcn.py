@@ -18,6 +18,8 @@ from thumbnail_downloader import ThumbnailDownloader
 from rom_fingerprint import build_rom_match_candidates
 from match_evidence import CONFLICT_REASON, build_match_diagnostics
 from manual_overrides import find_override, load_overrides
+from safe_io import file_lock
+from artwork_resolver import ArtworkResolver, THUMBNAIL_TYPES, sanitize_filename, valid_image_file, validate_system
 import webbrowser
 import server
 import subprocess
@@ -43,6 +45,7 @@ class ChangeProposal:
     original_label: str
     original_item_label: str
     original_db_name: str
+    original_item_snapshot: Dict[str, Any]
     path: str
     crc32: Optional[str]
     new_label: str
@@ -69,63 +72,15 @@ def load_config():
             return json.load(f)
     return {}
 
-def has_disc_descriptor_siblings(items):
-    """Detect cue/bin-style sibling entries that must stay aligned through preview and apply."""
-    groups = {}
-    for item in items:
-        label = item.get('label') or ''
-        path = item.get('path') or ''
-        if not label or not path:
-            continue
-        _stem, ext = os.path.splitext(path.split("#", 1)[0].lower())
-        groups.setdefault(label, set()).add(ext)
-    return any(
-        ".cue" in extensions and extensions.intersection({".bin", ".img"})
-        for extensions in groups.values()
-    )
 
-def kill_process_on_port(port):
-    """Kill any process using the specified port."""
-    try:
-        # Find process using the port
-        result = subprocess.run(
-            ['lsof', '-ti', f':{port}'],
-            capture_output=True,
-            text=True
-        )
-        if result.stdout.strip():
-            pids = result.stdout.strip().split('\n')
-            for pid in pids:
-                subprocess.run(['kill', '-9', pid])
-            print(f"Killed process(es) on port {port}")
-    except Exception as e:
-        # Ignore errors (no process on port, etc.)
-        pass
 
 def main():
-    # Auto-launch UI if no arguments provided (e.g., double-click on macOS)
-    if len(sys.argv) == 1:
-        print("No arguments provided. Starting Web UI...")
-        # Clean up any existing process on the port
-        kill_process_on_port(server.PORT)
-        
-        url = f"http://localhost:{server.PORT}"
-        print(f"Opening {url}")
-        webbrowser.open(url)
-        server.run_server()
+    if len(sys.argv) > 1 and sys.argv[1] == 'data':
+        from data_pack import main as data_main
+        data_main(sys.argv[2:])
         return
-    
-    # Check for 'ui' subcommand
-    if len(sys.argv) > 1 and sys.argv[1] == 'ui':
-        print("Starting Web UI...")
-        
-        # Clean up any existing process on the port
-        kill_process_on_port(server.PORT)
-        
-        url = f"http://localhost:{server.PORT}"
-        print(f"Opening {url}")
-        webbrowser.open(url)
-        server.run_server()
+    if len(sys.argv) == 1 or sys.argv[1] == 'ui':
+        server.run_server(open_browser=True)
         return
 
     config = load_config()
@@ -135,7 +90,7 @@ def main():
     parser.add_argument("--playlist", help="Path to the RetroArch playlist file (.lpl)")
     parser.add_argument("--system", help="System name (e.g., 'Sega - Saturn')")
     parser.add_argument("--thumbnails-dir", help="Directory to save thumbnails")
-    parser.add_argument("--rom-name-cn-path", default="data/rom-name-cn", help="Path to rom-name-cn repository")
+    parser.add_argument("--rom-name-cn-path", help="Path to rom-name-cn repository")
     parser.add_argument("--batch-dir", help="Directory containing multiple .lpl files for batch processing")
 
     args = parser.parse_args()
@@ -272,18 +227,6 @@ def build_proposal_id(system_name, index, path, original_item_label, original_db
     ])
     return hashlib.sha1(raw.encode('utf-8')).hexdigest()[:16]
 
-def timestamped_backup_path(playlist_path):
-    timestamp = time.strftime("%Y%m%d-%H%M%S")
-    candidate = f"{playlist_path}.bak-{timestamp}"
-    if not os.path.exists(candidate):
-        return candidate
-
-    counter = 1
-    while True:
-        candidate = f"{playlist_path}.bak-{timestamp}-{counter:02d}"
-        if not os.path.exists(candidate):
-            return candidate
-        counter += 1
 
 def disc_sibling_key(path):
     if not path:
@@ -321,9 +264,7 @@ def has_disc_descriptor_siblings(items):
     )
 
 def sanitize_thumbnail_filename(name):
-    for char in ['&', '*', '/', ':', '<', '>', '?', '\\', '|']:
-        name = (name or '').replace(char, '_')
-    return name
+    return sanitize_filename(name)
 
 def local_thumbnail_path(thumbnails_dir, system_name, label, type_name="Named_Boxarts"):
     if not thumbnails_dir or not label:
@@ -399,7 +340,9 @@ def find_existing_boxart(thumbnails_dir, system_name, *labels, lookup=None):
                     if serial and remote_path.startswith("/"):
                         return True, f"adb://{serial}{remote_path}"
                     return True, remote_path
-                return True, os.path.join(base_path, filename) if base_path else filename
+                local_path = os.path.join(base_path, filename) if base_path else filename
+                if valid_image_file(local_path):
+                    return True, local_path
         return False, None
 
     try:
@@ -416,7 +359,7 @@ def find_existing_boxart(thumbnails_dir, system_name, *labels, lookup=None):
 
     for label in labels:
         path = local_thumbnail_path(thumbnails_dir, system_name, label)
-        if path and os.path.exists(path):
+        if path and valid_image_file(path):
             return True, path
     return False, None
 
@@ -477,6 +420,7 @@ def build_change_proposal(index, item, display_label, new_label, thumbnail_sourc
         original_label=display_label,
         original_item_label=original_item_label,
         original_db_name=original_db_name,
+        original_item_snapshot=dict(item),
         path=path,
         crc32=item.get('crc32'),
         new_label=new_label,
@@ -496,6 +440,9 @@ def build_change_proposal(index, item, display_label, new_label, thumbnail_sourc
     ).to_dict()
 
 def proposal_matches_item(change, item):
+    snapshot = change.get('original_item_snapshot')
+    if snapshot is not None and normalize_value(json.dumps(snapshot, sort_keys=True, ensure_ascii=False)) != normalize_value(json.dumps(item, sort_keys=True, ensure_ascii=False)):
+        return False
     expected_label = change.get('original_item_label')
     expected_db_name = change.get('original_db_name')
     expected_path = change.get('path')
@@ -505,6 +452,8 @@ def proposal_matches_item(change, item):
     if expected_label is not None and normalize_value(item.get('label')) != normalize_value(expected_label):
         return False
     if expected_db_name and normalize_value(item.get('db_name')) != normalize_value(expected_db_name):
+        return False
+    if 'crc32' in change and normalize_value(item.get('crc32')) != normalize_value(change.get('crc32')):
         return False
     return True
 
@@ -595,20 +544,18 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
     
     # Initialize components
     playlist_manager = PlaylistManager(playlist_path)
-    translator = Translator(rom_name_cn_path, normalized_system)
+    playlist_system = system_name
+    translators = {}
+    artwork_resolvers = {}
+    lookups = {}
+    translator = None
+    artwork_resolver = None
     
-    # Deduplicate items (in memory for analysis), but preserve disc descriptor
-    # rows where RetroArch playlists contain both a .cue and its .bin/.img sibling.
-    if has_disc_descriptor_siblings(playlist_manager.get_items()):
-        removed_count = 0
-    else:
-        removed_count = playlist_manager.deduplicate_items()
-        if removed_count > 0:
-            print(f"Removed {removed_count} duplicate entries")
+    # Preserve every row and its original index. Renaming never implies deletion.
 
     items = playlist_manager.get_items()
     proposed_changes = []
-    boxart_lookup = build_existing_boxart_lookup(thumbnails_dir, system_name)
+    boxart_lookup = None
     manual_overrides = load_overrides(manual_overrides_path) if manual_overrides_path else []
 
     def add_proposal(index, item, display_label, new_label, thumbnail_source, match_source, match_reason, match_diagnostics=None):
@@ -619,6 +566,12 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
             item.get('label') or '',
             lookup=boxart_lookup,
         )
+        artwork = None
+        if artwork_resolver:
+            artwork = artwork_resolver.resolve_all(new_label, source=thumbnail_source)
+            boxart = artwork['Named_Boxarts']
+            cover_exists = boxart['status'] == 'exists'
+            cover_path = boxart['path']
         proposal = build_change_proposal(
             index=index,
             item=item,
@@ -637,6 +590,17 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
             proposal["match_score"] = 100
             if proposal["match_status"] == "review":
                 proposal["match_status"] = "matched"
+        elif getattr(translator, 'last_match_source', '') in {'fuzzy_candidate', 'cross_system_candidate'}:
+            proposal['match_status'] = 'review'
+            proposal['needs_review'] = True
+            proposal['match_score'] = min(proposal['match_score'], 72)
+            proposal['match_reason'] += '；中文译名来自模糊或跨系统候选，需要人工确认'
+            proposal['translation_candidates'] = getattr(translator, 'last_translation_candidates', [])
+        if artwork:
+            proposal['artwork'] = artwork
+            if proposal['match_status'] == 'ready' and any(value['status'] != 'exists' for value in artwork.values()):
+                proposal['match_status'] = 'download'
+                proposal['match_reason'] = '名称已就绪，仍有图片需要补齐'
         proposed_changes.append(proposal)
 
     def build_rom_match_diagnostics(rom_matches, dat_result, matched_candidate=None, matched_source=None):
@@ -750,11 +714,6 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
         if chinese and english:
             return english
 
-        if translator.system_name:
-            chinese, english = translator.db.search_by_normalized_alias(normalized)
-            if chinese and english:
-                return english
-
         if translator.libretro_db:
             standard_name = translator.libretro_db.get_standard_name(candidate)
             if standard_name:
@@ -831,6 +790,21 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
             proposal["needs_review"] = False
 
     for i, item in enumerate(items):
+        db_name = str(item.get('db_name') or '').replace('\\', '/').rsplit('/', 1)[-1]
+        system_name = os.path.splitext(db_name)[0] if db_name and db_name != 'DETECT' else playlist_system
+        validate_system(system_name)
+        normalized_system = normalize_system_name(system_name)
+        if normalized_system not in translators:
+            translators[normalized_system] = Translator(rom_name_cn_path, normalized_system)
+        translator = translators[normalized_system]
+        translator.last_match_source = ''
+        translator.last_translation_candidates = []
+        if system_name not in lookups:
+            lookups[system_name] = build_existing_boxart_lookup(thumbnails_dir, system_name)
+            if thumbnails_dir and not str(thumbnails_dir).startswith('adb://'):
+                artwork_resolvers[system_name] = ArtworkResolver(thumbnails_dir, system_name)
+        boxart_lookup = lookups[system_name]
+        artwork_resolver = artwork_resolvers.get(system_name)
         original_label = item.get('label')
         path = item.get('path')
         
@@ -1171,6 +1145,18 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
             translation_diagnostics,
         )
 
+    targets = {}
+    for proposal in proposed_changes:
+        key = (proposal['system'], sanitize_filename(proposal['new_label']).casefold())
+        targets.setdefault(key, []).append(proposal)
+    for group in targets.values():
+        if len({row.get('thumbnail_source') for row in group}) > 1:
+            for proposal in group:
+                proposal.update(match_status='review', needs_review=True, match_score=60)
+                proposal['match_reason'] += '；不同图片源会写入同名文件，请保留地区或版本信息'
+    for translator in translators.values():
+        if hasattr(translator.db, 'close'):
+            translator.db.close()
     return proposed_changes
 
 def writeback_record(change, item=None, reason=None):
@@ -1246,6 +1232,13 @@ def applied_record_verified(record, items):
     return False
 
 def apply_changes(playlist_path, changes, thumbnails_dir, backup=True, progress_callback=None, download_thumbnails=True):
+    if not isinstance(changes, list) or any(not isinstance(change, dict) for change in changes):
+        raise ValueError('changes 必须是变更对象数组')
+    with file_lock(playlist_path):
+        return _apply_changes_locked(playlist_path, changes, thumbnails_dir, backup, progress_callback, download_thumbnails)
+
+
+def _apply_changes_locked(playlist_path, changes, thumbnails_dir, backup=True, progress_callback=None, download_thumbnails=True):
     """
     Applies the changes to the playlist and downloads thumbnails.
     """
@@ -1264,20 +1257,20 @@ def apply_changes(playlist_path, changes, thumbnails_dir, backup=True, progress_
     }
 
     playlist_manager = PlaylistManager(playlist_path)
-    # Keep apply-time item ordering consistent with analysis while preserving disc
-    # descriptor/media siblings that RetroArch may intentionally list separately.
-    if not has_disc_descriptor_siblings(playlist_manager.get_items()):
-        playlist_manager.deduplicate_items()
+    # Match against the full original playlist, including intentional duplicates.
 
     downloader = ThumbnailDownloader(thumbnails_dir)
     candidate_applied = []
 
     for change in changes:
+        if (change.get('needs_review') or change.get('match_status') in {'review', 'duplicate'}) and change.get('review_confirmed') is not True:
+            writeback['skipped'].append(writeback_record(change, reason='review_required'))
+            continue
         index = change.get('index')
         new_label = change.get('new_label')
         target_path = change.get('path')
 
-        if not new_label:
+        if not isinstance(new_label, str) or not new_label.strip():
             writeback["skipped"].append(writeback_record(change, reason="missing_new_label"))
             continue
 
@@ -1419,7 +1412,7 @@ def apply_changes(playlist_path, changes, thumbnails_dir, backup=True, progress_
 
 def process_playlist(playlist_path, system_name, thumbnails_dir, rom_name_cn_path):
     print(f"Analyzing playlist: {playlist_path}")
-    changes = analyze_playlist(playlist_path, system_name, rom_name_cn_path)
+    changes = analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_dir, manual_overrides_path=server.configured_overrides_path())
     
     print(f"Applying {len(changes)} changes...")
     apply_changes(playlist_path, changes, thumbnails_dir)
