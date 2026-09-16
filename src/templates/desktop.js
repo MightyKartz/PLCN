@@ -247,14 +247,21 @@ async function quitDesktop() {
 
 const builtInFilePicker = openFilePicker;
 openFilePicker = async function(inputId, directoryMode) {
+    const returnFocus = document.activeElement;
+    if (!beginWorkbenchOperation('pick')) return;
     showStatus(desktopText('正在打开系统选择器…', 'Opening system picker…'), 'info');
+    let selected;
     try {
-        const selected = await desktopRequest('/api/desktop/pick', { kind: directoryMode ? 'directory' : 'file', initial: document.getElementById(inputId).value });
-        if (selected.path) { currentTargetInputId = inputId; selectFile(selected.path); }
+        selected = await desktopRequest('/api/desktop/pick', { kind: directoryMode ? 'directory' : 'file', initial: document.getElementById(inputId).value });
     } catch (error) {
+        endWorkbenchOperation();
         showStatus(desktopText('系统选择器不可用，已切换到内置浏览。', 'System picker unavailable; using the built-in browser.'), 'info');
-        builtInFilePicker(inputId, directoryMode);
+        builtInFilePicker(inputId, directoryMode, returnFocus);
+        return;
     }
+    endWorkbenchOperation();
+    returnFocus?.focus();
+    if (selected.path) { currentTargetInputId = inputId; selectFile(selected.path); }
 };
 
 function setRepairMode() {

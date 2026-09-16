@@ -1,4 +1,11 @@
 /* Desktop controls share the existing workbench's palette and spacing. */
+.file-picker-dialog { width: min(720px, calc(100vw - 32px)); max-width: none; max-height: calc(100dvh - 32px); padding: 0; border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); background: var(--surface); }
+.file-picker-dialog::backdrop { background: rgba(15, 24, 38, 0.45); }
+.file-picker-dialog .modal-content { width: 100%; margin: 0; max-height: calc(100dvh - 34px); border: 0; box-shadow: none; }
+.file-picker-dialog .file-item { width: 100%; text-align: left; font: inherit; color: inherit; background: transparent; border: 0; border-bottom: 1px solid var(--border); }
+.file-picker-dialog .file-item:hover { background: var(--primary-soft); }
+.file-picker-dialog .file-item:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+.file-picker-dialog .close { border: 0; background: transparent; }
 .desktop-toolbar { display: flex; flex-wrap: wrap; gap: 6px; }
 .desktop-welcome { margin: 0 0 16px; padding: 14px; border: 1px solid var(--line, #dde3ea); border-radius: 10px; }
 .desktop-welcome p { font-size: 13px; line-height: 1.6; color: var(--muted, #627086); margin: 8px 0; }

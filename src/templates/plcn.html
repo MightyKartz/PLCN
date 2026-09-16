@@ -2978,11 +2978,11 @@
         <div id="status" class="status"></div>
     </div>
 
-    <div id="fileModal" class="modal">
+    <dialog id="fileModal" class="file-picker-dialog" aria-labelledby="modalTitle" onclose="fileListVersion++; filePickerReturnFocus?.focus()">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="modalTitle">选择文件</h3>
-                <span class="close" onclick="closeModal()">&times;</span>
+                <button class="close" id="file-picker-close" type="button" aria-label="关闭文件选择器" onclick="closeModal()">&times;</button>
             </div>
             <div id="currentPath"></div>
             <div class="modal-body">
@@ -2993,7 +2993,7 @@
                 <button class="btn btn-muted" onclick="closeModal()" type="button">取消</button>
             </div>
         </div>
-    </div>
+    </dialog>
 
     <div id="docs-modal" class="modal">
         <div class="modal-content">
@@ -3187,6 +3187,8 @@
         let currentTargetInputId = '';
         let isDirectoryMode = false;
         let currentPath = '.';
+        let fileListVersion = 0;
+        let filePickerReturnFocus = null;
         let currentChanges = [];
         let currentPreviewFilter = 'all';
         let selectedChangeIndex = -1;
@@ -4241,45 +4243,58 @@
             showStatus(compact ? '已收起非当前筛选项' : '已展开全部筛选项', 'info');
         }
 
-        function openFilePicker(inputId, directoryMode) {
+        function openFilePicker(inputId, directoryMode, returnFocus = document.activeElement) {
+            filePickerReturnFocus = returnFocus;
             currentTargetInputId = inputId;
             isDirectoryMode = directoryMode;
 
-            document.getElementById('modalTitle').textContent = directoryMode ? '选择目录' : '选择文件';
+            document.getElementById('modalTitle').textContent = directoryMode ? workbenchText('选择目录', 'Choose folder') : workbenchText('选择文件', 'Choose file');
+            document.getElementById('file-picker-close').setAttribute('aria-label', workbenchText('关闭文件选择器', 'Close file picker'));
             document.getElementById('selectDirBtn').style.display = directoryMode ? 'inline-flex' : 'none';
-            document.getElementById('fileModal').style.display = 'block';
+            document.getElementById('fileModal').showModal();
 
             const currentVal = document.getElementById(inputId).value;
             loadFileList(currentVal || '.');
         }
 
         function closeModal() {
-            document.getElementById('fileModal').style.display = 'none';
+            fileListVersion++;
+            document.getElementById('fileModal').close();
         }
 
         async function loadFileList(path) {
+            const version = ++fileListVersion;
+            const listEl = document.getElementById('fileList');
+            const selectDir = document.getElementById('selectDirBtn');
+            selectDir.disabled = true;
+            listEl.textContent = workbenchText('正在读取目录…', 'Loading folder…');
             try {
                 const response = await fetch(`/api/fs/list?path=${encodeURIComponent(path)}`);
                 const data = await response.json();
+                if (version !== fileListVersion || !document.getElementById('fileModal').open) return;
 
                 if (data.error) {
-                    if (path !== '.') loadFileList('.');
+                    if (path !== '.') await loadFileList('.');
+                    else listEl.textContent = data.error;
                     return;
                 }
 
                 currentPath = data.current_path;
                 document.getElementById('currentPath').textContent = currentPath;
 
-                const listEl = document.getElementById('fileList');
                 listEl.innerHTML = '';
+                selectDir.disabled = false;
 
                 data.items.forEach(item => {
                     const li = document.createElement('li');
-                    li.className = 'file-item';
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'file-item';
                     const icon = item.is_dir ? 'DIR' : 'FILE';
-                    li.innerHTML = `<span class="file-icon">${icon}</span> <span>${escapeHtml(item.name)}</span>`;
+                    button.innerHTML = `<span class="file-icon">${icon}</span> <span>${escapeHtml(item.name)}</span>`;
+                    button.disabled = isDirectoryMode && !item.is_dir;
 
-                    li.onclick = () => {
+                    button.onclick = () => {
                         if (item.is_dir) {
                             loadFileList(item.path);
                         } else if (!isDirectoryMode) {
@@ -4287,9 +4302,10 @@
                         }
                     };
 
-                    listEl.appendChild(li);
+                    li.appendChild(button); listEl.appendChild(li);
                 });
             } catch (error) {
+                if (version === fileListVersion && document.getElementById('fileModal').open) listEl.textContent = workbenchText('读取目录失败：', 'Could not read folder: ') + error.message;
                 console.error('Error loading file list:', error);
             }
         }
@@ -5823,7 +5839,8 @@
 
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape') {
-                closeModal();
+                // Let the browser cancel only the topmost modal dialog.
+                if (document.querySelector('dialog[open]')) return;
                 closeSearchModal();
                 closeProjectDocs();
                 toggleDetailsDrawer(false);
