@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import app_paths
 from libretro_db import LibretroDB
 from database import DatabaseManager
 
@@ -30,7 +31,7 @@ class Translator:
         if system_name:
             # Store DBs in a subdirectory of local_db_path
             # Packs are immutable; DAT caches remain in the writable runtime directory.
-            self.libretro_db = LibretroDB(os.path.join(os.getcwd(), 'data'))
+            self.libretro_db = LibretroDB(str(app_paths.dat_storage()))
             # Try to load the DAT file for this system
             print(f"Initializing LibretroDB for {system_name}...")
             self.libretro_db.load_system_dat(system_name)

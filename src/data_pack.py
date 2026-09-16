@@ -16,6 +16,8 @@ from datetime import datetime, timezone
 
 from safe_io import atomic_write_json, file_digest, file_lock
 
+import app_paths
+
 SCHEMA_VERSION = 2
 UPSTREAM = 'yingw/rom-name-cn'
 
@@ -146,19 +148,21 @@ def compare_packs(before, after):
             'untranslated': sum(not value for value in new.values())}
 
 
-def activate_pack(pack, config_path='config.json'):
+def activate_pack(pack, config_path=None):
+    config_path = config_path or app_paths.config_path()
     manifest = validate_pack(pack)
     with file_lock(config_path):
         config = json.loads(Path(config_path).read_text(encoding='utf-8')) if Path(config_path).exists() else {}
         source = str(Path(pack).resolve() / 'rom-name-cn')
         if config.get('rom_name_cn_path') != source:
-            config['previous_rom_name_cn_path'] = config.get('rom_name_cn_path') or str(Path('data/rom-name-cn').resolve())
+            config['previous_rom_name_cn_path'] = config.get('rom_name_cn_path') or str(app_paths.default_source())
             config['rom_name_cn_path'] = source
             atomic_write_json(config_path, config)
     return manifest
 
 
-def rollback_pack(config_path='config.json'):
+def rollback_pack(config_path=None):
+    config_path = config_path or app_paths.config_path()
     with file_lock(config_path):
         config = json.loads(Path(config_path).read_text(encoding='utf-8'))
         previous = config.get('previous_rom_name_cn_path')
@@ -206,7 +210,7 @@ def fetch_pack(output, ref='master'):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description='PLCN translation data packs')
-    parser.add_argument('--config', default='config.json')
+    parser.add_argument('--config', default=str(app_paths.config_path()))
     commands = parser.add_subparsers(dest='command', required=True)
     build = commands.add_parser('build')
     build.add_argument('--source', required=True)

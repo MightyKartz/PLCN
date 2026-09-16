@@ -13,6 +13,7 @@ class ThumbnailDownloader:
     def __init__(self, thumbnails_dir, max_workers=5):
         self.thumbnails_dir = thumbnails_dir
         self.max_workers = max_workers
+        self.cancel_check = None
         
         # Setup session with retry
         from requests.adapters import HTTPAdapter
@@ -88,6 +89,10 @@ class ThumbnailDownloader:
         
         results = []
         for type_name in self.THUMBNAIL_TYPES:
+            if self.cancel_check and self.cancel_check():
+                results.append({'type': type_name, 'game': game_chinese_name, 'source': game_english_name,
+                                'system': system, 'status': 'skipped', 'reason': 'cancelled', 'message': '已取消'})
+                continue
             url = f"{self.BASE_URL}/{urllib.parse.quote(system)}/{type_name}/{urllib.parse.quote(server_filename)}"
             
             # Target directory

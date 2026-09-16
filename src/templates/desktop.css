@@ -1,0 +1,17 @@
+/* Desktop controls share the existing workbench's palette and spacing. */
+.desktop-toolbar { display: flex; flex-wrap: wrap; gap: 6px; }
+.desktop-welcome { margin: 0 0 16px; padding: 14px; border: 1px solid var(--line, #dde3ea); border-radius: 10px; }
+.desktop-welcome p { font-size: 13px; line-height: 1.6; color: var(--muted, #627086); margin: 8px 0; }
+.desktop-welcome button { margin: 4px 4px 0 0; }
+.desktop-advanced > summary { cursor: pointer; padding: 12px 0; font-weight: 600; }
+#desktop-dialog { width: min(850px, 92vw); max-height: 86vh; overflow: auto; border: 1px solid #aeb8c6; border-radius: 14px; padding: 24px; color: var(--text, #203047); background: var(--panel, #fff); }
+#desktop-dialog::backdrop { background: #10243e66; }
+body[data-theme="dark"] #desktop-dialog { background: #192536; color: #ebf1f8; }
+#desktop-dialog header { display: flex; justify-content: space-between; gap: 20px; align-items: center; }
+#desktop-dialog h2 { font-size: 20px; margin: 0; }
+#desktop-dialog h3 { margin-top: 24px; }
+#desktop-dialog p { line-height: 1.6; overflow-wrap: anywhere; }
+#desktop-dialog pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-height: 1.5; max-height: 220px; overflow: auto; }
+.desktop-entry { margin: 10px 0; padding: 12px; border: 1px solid var(--line, #dde3ea); border-radius: 8px; }
+.desktop-entry button { margin: 6px 6px 0 0; }
+#desktop-message { min-height: 24px; margin: 10px 0; color: var(--blue, #1769e8); }

@@ -34,3 +34,5 @@ data/libretro-db/dat/*.dat
 plcn.db
 manual_overrides.json
 *.plcn-lock
+build/
+dist/

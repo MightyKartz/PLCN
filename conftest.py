@@ -1,8 +1,13 @@
 """Run regression tests with isolated caches and small, deterministic DAT data."""
+import os
+import tempfile
 import sys
 from pathlib import Path
 
 import pytest
+
+_test_home = tempfile.TemporaryDirectory(prefix="plcn-tests-")
+os.environ["PLCN_HOME"] = _test_home.name
 
 sys.path.insert(0, str(Path(__file__).parent / 'src'))
 

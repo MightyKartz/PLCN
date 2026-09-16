@@ -1,97 +1,37 @@
-name: Build and Release
+name: Prepare desktop release draft
 
 on:
   push:
-    tags:
-      - 'v*'
+    tags: ['v*']
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  build:
-    name: Build for ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        include:
-          - os: ubuntu-latest
-            artifact_name: plcn
-            asset_name: plcn-linux
-          - os: windows-latest
-            artifact_name: plcn.exe
-            asset_name: plcn-windows.exe
-          - os: macos-latest
-            artifact_name: plcn
-            asset_name: plcn-macos
+  packages:
+    uses: ./.github/workflows/desktop.yml
 
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.9'
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-
-    - name: Setup LibretroDB
-      shell: bash
-      run: |
-        echo "Cloning libretro-database..."
-        git clone --depth 1 https://github.com/libretro/libretro-database.git temp_db
-        
-        echo "Copying DAT files using Python script..."
-        python scripts/copy_dats.py
-
-
-    - name: Build with PyInstaller
-      run: |
-        pyinstaller plcn.spec
-
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ matrix.asset_name }}
-        path: dist/${{ matrix.artifact_name }}
-
-  release:
-    needs: build
+  release-draft:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: packages
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-    - uses: actions/checkout@v4
-
-    - name: Download All Artifacts
-      uses: actions/download-artifact@v4
-
-    - name: Package Artifacts
-      run: |
-        # Rename and set permissions
-        mv plcn-linux/plcn PLCN-Linux
-        mv plcn-macos/plcn PLCN-macOS
-        mv plcn-windows.exe/plcn.exe PLCN-Windows.exe
-        chmod +x PLCN-Linux
-        chmod +x PLCN-macOS
-        
-        # Package with tar.gz to preserve permissions
-        tar -czf PLCN-Linux-x64.tar.gz PLCN-Linux
-        tar -czf PLCN-macOS-x64.tar.gz PLCN-macOS
-        
-        # Windows doesn't need tar (no permissions)
-        # Just rename for clarity
-        mv PLCN-Windows.exe PLCN-Windows-x64.exe
-
-    - name: Create Release
-      uses: softprops/action-gh-release@v1
-      with:
-        body_path: RELEASE_NOTES.md
-        files: |
-          PLCN-Linux-x64.tar.gz
-          PLCN-macOS-x64.tar.gz
-          PLCN-Windows-x64.exe
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: PLCN-*-unsigned
+          merge-multiple: true
+          path: release-artifacts
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          prerelease: true
+          name: '${{ github.ref_name }} desktop preview (unsigned)'
+          body: |
+            Windows installer/portable ZIP and macOS Intel/Apple Silicon DMGs.
+            These are unsigned preview artifacts. Complete signing/notarization and
+            manual installation/file-picker/device validation before a public stable release.
+            See DOC/DESKTOP_GUIDE.md for the release checklist.
+          files: release-artifacts/*

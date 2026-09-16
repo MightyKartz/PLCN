@@ -7,9 +7,10 @@ import re
 from contextlib import nullcontext, closing
 from pathlib import Path
 from safe_io import file_lock
+import app_paths
 
 class DatabaseManager:
-    DB_FILE = os.path.join('.plcn_runtime', 'plcn.db')
+    DB_FILE = str(app_paths.cache_dir() / 'plcn.db')
     
     
     # System mappings for known discrepancies

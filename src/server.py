@@ -14,6 +14,8 @@ import hmac
 import re
 from http.cookies import SimpleCookie
 from safe_io import file_lock, atomic_write_json
+from task_control import TaskCancelled, checkpoint
+import app_paths
 from manual_overrides import (
     build_override_entry,
     default_overrides_path,
@@ -23,7 +25,7 @@ from manual_overrides import (
 )
 
 PORT = 7777
-CONFIG_FILE = "config.json"
+CONFIG_FILE = str(app_paths.config_path())
 SESSION_TOKEN = secrets.token_urlsafe(32)
 
 def get_base_path():
@@ -118,11 +120,17 @@ from http.server import BaseHTTPRequestHandler
 class JobManager:
     def __init__(self):
         self.jobs = {}
+        self.cancel_events = {}
+        self.contexts = {}
+        self.stopping = False
         self.lock = threading.Lock()
 
     def create_job(self):
         job_id = str(uuid.uuid4())
         with self.lock:
+            if self.stopping:
+                raise RuntimeError('PLCN 正在退出')
+            self.cancel_events[job_id] = threading.Event()
             self.jobs[job_id] = {
                 'status': 'pending',
                 'progress': 0,
@@ -144,15 +152,34 @@ class JobManager:
     def complete_job(self, job_id, result=None):
         with self.lock:
             if job_id in self.jobs:
-                self.jobs[job_id]['status'] = 'completed'
+                self.jobs[job_id]['status'] = 'cancelled' if self.cancel_events[job_id].is_set() else 'completed'
                 self.jobs[job_id]['result'] = result
                 self.jobs[job_id]['progress'] = self.jobs[job_id]['total']
 
     def fail_job(self, job_id, error):
         with self.lock:
             if job_id in self.jobs:
-                self.jobs[job_id]['status'] = 'failed'
+                self.jobs[job_id]['status'] = 'cancelled' if isinstance(error, TaskCancelled) else 'failed'
                 self.jobs[job_id]['error'] = str(error)
+
+    def cancelled(self, job_id):
+        return self.cancel_events[job_id].is_set()
+
+    def cancel(self, job_id):
+        with self.lock:
+            if job_id not in self.jobs:
+                raise ValueError('任务不存在')
+            if self.jobs[job_id]['status'] in ('pending', 'running'):
+                self.cancel_events[job_id].set()
+                self.jobs[job_id]['message'] = '正在取消，将在安全步骤边界停止'
+
+    def active(self):
+        with self.lock:
+            return any(job['status'] in ('pending', 'running') for job in self.jobs.values())
+
+    def snapshot(self):
+        with self.lock:
+            return [dict(job, id=key) for key, job in reversed(list(self.jobs.items()))][:30]
 
     def get_job(self, job_id):
         with self.lock:
@@ -189,20 +216,32 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
         if not self.authorize(bootstrap=path == '/'):
             return
         query_params = urllib.parse.parse_qs(parsed_path.query)
+        import desktop_api
+        try:
+            if desktop_api.get(self, path, job_manager, CONFIG_FILE):
+                return
+        except Exception as error:
+            desktop_api.reply(self, {'error': str(error)}, 400)
+            return
 
         if path == "/":
             self.path = "/plcn.html"
             return self.serve_template()
+        elif path in ('/assets/desktop.js', '/assets/desktop.css'):
+            filename = path.rsplit('/', 1)[-1]
+            content = (app_paths.resource_root() / 'src' / 'templates' / filename).read_bytes()
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/javascript; charset=utf-8' if filename.endswith('.js') else 'text/css; charset=utf-8')
+            self.end_headers()
+            self.wfile.write(content)
         elif path == "/api/config":
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
             
-            if os.path.exists(CONFIG_FILE):
-                with open(CONFIG_FILE, 'r') as f:
-                    self.wfile.write(f.read().encode())
-            else:
-                self.wfile.write(b"{}")
+            config = load_server_config()
+            config.setdefault('rom_name_cn_path', str(app_paths.default_source()))
+            self.wfile.write(json.dumps(config, ensure_ascii=False).encode('utf-8'))
             return
         elif path == "/api/stats":
             self.get_stats()
@@ -292,7 +331,7 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                     config = json.load(f)
 
             base_path = os.getcwd()
-            rom_db_path = config.get("rom_name_cn_path") or config.get("single_rom_name_cn_path") or "data/rom-name-cn"
+            rom_db_path = config.get("rom_name_cn_path") or config.get("single_rom_name_cn_path") or str(app_paths.default_source())
             if getattr(sys, 'frozen', False) and not os.path.isabs(rom_db_path):
                 rom_db_path = os.path.join(sys._MEIPASS, rom_db_path)
 
@@ -311,7 +350,7 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                 except Exception as e:
                     database_error = str(e)
 
-            dat_dir = os.path.join(base_path, "data", "libretro-db", "dat")
+            dat_dir = str(app_paths.dat_storage() / "libretro-db" / "dat")
             if getattr(sys, 'frozen', False):
                 dat_dir = os.path.join(sys._MEIPASS, "data", "libretro-db", "dat")
             dat_count = len(glob.glob(os.path.join(dat_dir, "*.dat"))) if os.path.exists(dat_dir) else 0
@@ -412,7 +451,7 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                 with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
                     config = json.load(f)
             
-            rom_db_path = config.get("rom_name_cn_path", "data/rom-name-cn")
+            rom_db_path = config.get("rom_name_cn_path", str(app_paths.default_source()))
             if getattr(sys, 'frozen', False) and not os.path.isabs(rom_db_path):
                 rom_db_path = os.path.join(sys._MEIPASS, rom_db_path)
             
@@ -497,10 +536,10 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
             # Load config to get rom_name_cn_path
             config = {}
             if os.path.exists(CONFIG_FILE):
-                with open(CONFIG_FILE, 'r') as f:
+                with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
                     config = json.load(f)
             
-            rom_name_cn_path = config.get("rom_name_cn_path", "data/rom-name-cn")
+            rom_name_cn_path = config.get("rom_name_cn_path", str(app_paths.default_source()))
             print(f"DEBUG search_db: Original rom_name_cn_path = {rom_name_cn_path}")
             print(f"DEBUG search_db: sys.frozen = {getattr(sys, 'frozen', False)}")
             print(f"DEBUG search_db: sys._MEIPASS = {getattr(sys, '_MEIPASS', 'Not set')}")
@@ -524,7 +563,7 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
             try:
                 # Local search remains available even when no DAT is cached.
                 results = db.search_by_keyword(keyword, system=system, limit=30)
-                dat = LibretroDB(os.path.join(os.getcwd(), 'data'))
+                dat = LibretroDB(str(app_paths.dat_storage()))
                 if dat.load_system_dat(system):
                     names = dat.search(keyword, limit=30)
                     exact = dat.get_standard_name(keyword)
@@ -575,7 +614,7 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
             except BrokenPipeError:
                 break
 
-            if job['status'] in ['completed', 'failed']:
+            if job['status'] in ['completed', 'failed', 'cancelled']:
                 break
             
             time.sleep(0.5)
@@ -592,6 +631,14 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                 raise ValueError()
         except ValueError:
             self.send_error(413)
+            return
+        import desktop_api
+        if self.path in desktop_api.POST_ROUTES:
+            try:
+                payload = json.loads(self.rfile.read(length))
+                desktop_api.post(self, self.path, payload, job_manager, CONFIG_FILE)
+            except Exception as error:
+                desktop_api.reply(self, {'error': str(error)}, 400)
             return
         if self.path == "/api/overrides/save":
             content_length = int(self.headers['Content-Length'])
@@ -695,9 +742,9 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                 
                 config = {}
                 if os.path.exists(CONFIG_FILE):
-                    with open(CONFIG_FILE, 'r') as f:
+                    with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
                         config = json.load(f)
-                rom_name_cn_path = config.get("rom_name_cn_path", "data/rom-name-cn")
+                rom_name_cn_path = config.get("rom_name_cn_path", str(app_paths.default_source()))
                 manual_overrides_path = configured_overrides_path(config)
                 if getattr(sys, 'frozen', False) and not os.path.isabs(rom_name_cn_path):
                      rom_name_cn_path = os.path.join(sys._MEIPASS, rom_name_cn_path)
@@ -744,9 +791,11 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                 thumbnails_dir = data.get('thumbnails_dir')
                 options = data.get('options') or {}
                 download_thumbnails = options.get('download_thumbnails', True)
+                write_names = options.get('write_names', True)
                 
                 # Create Job
                 job_id = job_manager.create_job()
+                job_manager.contexts[job_id] = {'thumbnails_dir': thumbnails_dir}
                 
                 def run_job(jid, p_path, chgs, t_dir, should_download):
                     from contextlib import ExitStack
@@ -775,7 +824,7 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                             job_manager.update_job(jid, 0, len(chgs or []), "正在读取实机游戏列表...")
                             import hashlib
                             lock_name = hashlib.sha256(p_path.encode('utf-8')).hexdigest()
-                            resources.enter_context(file_lock(os.path.join('.plcn_runtime', 'locks', lock_name)))
+                            resources.enter_context(file_lock(app_paths.cache_dir() / 'locks' / lock_name))
                             staging_dir = resources.enter_context(tempfile.TemporaryDirectory(prefix='plcn-adb-'))
                             effective_playlist_path = materialize_adb_file(p_path, cache_dir=staging_dir)
                             with open(effective_playlist_path, encoding='utf-8-sig') as original:
@@ -789,7 +838,8 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                             chgs,
                             effective_thumbnails_dir,
                             progress_callback=progress_cb,
-                            download_thumbnails=should_download
+                            download_thumbnails=should_download, cancel_check=lambda: job_manager.cancelled(jid),
+                            write_names=write_names, record_history=not remote_playlist
                         )
                         summary, apply_summary = split_plcn_apply_result(apply_result)
 
@@ -844,11 +894,12 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                 data = json.loads(post_data)
                 batch_dir = data.get('batch_dir')
                 thumbnails_dir = data.get('thumbnails_dir')
-                rom_name_cn_path = data.get('rom_name_cn_path') or load_server_config().get('rom_name_cn_path') or "data/rom-name-cn"
+                rom_name_cn_path = data.get('rom_name_cn_path') or load_server_config().get('rom_name_cn_path') or str(app_paths.default_source())
                 options = data.get('options') or {}
                 backup = options.get('backup', True)
                 continue_on_error = options.get('continue_on_error', True)
                 download_thumbnails = options.get('download_thumbnails', True)
+                write_names = options.get('write_names', True)
                 
                 # Handle PyInstaller path for rom_name_cn_path
                 if getattr(sys, 'frozen', False) and not os.path.isabs(rom_name_cn_path):
@@ -856,6 +907,7 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
 
                 # Create Job
                 job_id = job_manager.create_job()
+                job_manager.contexts[job_id] = {'thumbnails_dir': thumbnails_dir}
                 
                 def run_batch_job(jid, b_dir, t_dir, r_path, use_backup, keep_going, should_download):
                     try:
@@ -877,6 +929,8 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                         errors = []
 
                         for i, playlist_path in enumerate(playlist_files):
+                            if job_manager.cancelled(jid):
+                                break
                             filename = os.path.basename(playlist_path)
                             job_manager.update_job(jid, i, total_files, f"Processing {filename}...")
                             
@@ -894,7 +948,8 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                                     changes,
                                     t_dir,
                                     backup=use_backup,
-                                    download_thumbnails=should_download
+                                    download_thumbnails=should_download, cancel_check=lambda: job_manager.cancelled(jid),
+                                    write_names=write_names
                                 )
                                 summary, _apply_summary = split_plcn_apply_result(apply_result)
                                 summary = annotate_download_summary_paths(
@@ -904,6 +959,8 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                                 )
                                 summaries.append(summary)
                                 
+                            except TaskCancelled:
+                                break
                             except Exception as e:
                                 print(f"Error processing {filename}: {e}")
                                 errors.append(f"{filename}: {e}")
@@ -912,7 +969,7 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                                 
                         merged_summary = ThumbnailDownloader.merge_summaries(summaries)
                         job_manager.complete_job(jid, {
-                            "processed_count": total_files,
+                            "processed_count": len(summaries),
                             "errors": errors,
                             "download_summary": merged_summary
                         })
@@ -957,31 +1014,30 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(b"Template not found")
 
 def run_server(open_browser=False):
-    # Change to the directory where we want to store config.json
-    if getattr(sys, 'frozen', False):
-        # If frozen, use the executable's directory
-        exe_dir = os.path.dirname(sys.executable)
-        os.chdir(exe_dir)
-    else:
-        # Development mode: use project root
-        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        os.chdir(project_root)
-    
-    print(f"DEBUG: sys.frozen = {getattr(sys, 'frozen', False)}")
-    if getattr(sys, 'frozen', False):
-        print(f"DEBUG: sys._MEIPASS = {getattr(sys, '_MEIPASS', 'Not Found')}")
-    print(f"DEBUG: TEMPLATE_DIR = {TEMPLATE_DIR}")
-    if os.path.exists(TEMPLATE_DIR):
-        print(f"DEBUG: Contents of TEMPLATE_DIR: {os.listdir(TEMPLATE_DIR)}")
-    else:
-        print(f"DEBUG: TEMPLATE_DIR does not exist!")
+    from app_runtime import InstanceLock
+    instance = InstanceLock(app_paths.user_data_dir())
+    if not instance.acquire():
+        url = instance.existing_url()
+        if open_browser:
+            import webbrowser
+            webbrowser.open(url)
+        return url
+    try:
+        app_paths.initialize()
+        return _serve_instance(instance, open_browser)
+    finally:
+        instance.close()
 
+
+def _serve_instance(instance, open_browser):
     try:
         httpd = http.server.ThreadingHTTPServer(('127.0.0.1', PORT), ConfigHandler)
     except OSError:
         httpd = http.server.ThreadingHTTPServer(('127.0.0.1', 0), ConfigHandler)
     with httpd:
         url = f'http://127.0.0.1:{httpd.server_address[1]}'
+        httpd.instance_id = secrets.token_urlsafe(24)
+        instance.publish(url, httpd.instance_id)
         print(f'Starting server at {url}')
         if open_browser:
             import webbrowser

@@ -24,7 +24,9 @@ import webbrowser
 import server
 import subprocess
 
-CONFIG_FILE = "config.json"
+import app_paths
+
+CONFIG_FILE = str(app_paths.config_path())
 
 
 @dataclass(frozen=True)
@@ -68,13 +70,14 @@ class ChangeProposal:
 
 def load_config():
     if os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE, 'r') as f:
+        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
     return {}
 
 
 
 def main():
+    app_paths.initialize()
     if len(sys.argv) > 1 and sys.argv[1] == 'data':
         from data_pack import main as data_main
         data_main(sys.argv[2:])
@@ -103,7 +106,7 @@ def main():
         if getattr(sys, 'frozen', False):
             rom_name_cn_path = os.path.join(sys._MEIPASS, "data", "rom-name-cn")
         else:
-            rom_name_cn_path = "data/rom-name-cn"
+            rom_name_cn_path = str(app_paths.default_source())
     
     # Check for batch mode
     batch_dir = args.batch_dir or config.get("batch_dir")
@@ -1231,19 +1234,21 @@ def applied_record_verified(record, items):
             return True
     return False
 
-def apply_changes(playlist_path, changes, thumbnails_dir, backup=True, progress_callback=None, download_thumbnails=True):
+def apply_changes(playlist_path, changes, thumbnails_dir, backup=True, progress_callback=None, download_thumbnails=True, cancel_check=None, write_names=True, record_history=True):
+    from task_control import checkpoint
+    checkpoint(cancel_check)
     if not isinstance(changes, list) or any(not isinstance(change, dict) for change in changes):
         raise ValueError('changes 必须是变更对象数组')
     with file_lock(playlist_path):
-        return _apply_changes_locked(playlist_path, changes, thumbnails_dir, backup, progress_callback, download_thumbnails)
+        return _apply_changes_locked(playlist_path, changes, thumbnails_dir, backup, progress_callback, download_thumbnails, cancel_check, write_names, record_history)
 
 
-def _apply_changes_locked(playlist_path, changes, thumbnails_dir, backup=True, progress_callback=None, download_thumbnails=True):
+def _apply_changes_locked(playlist_path, changes, thumbnails_dir, backup=True, progress_callback=None, download_thumbnails=True, cancel_check=None, write_names=True, record_history=True):
     """
     Applies the changes to the playlist and downloads thumbnails.
     """
     backup_path = None
-    if backup:
+    if backup and write_names:
         import shutil
         backup_path = timestamped_backup_path(playlist_path)
         shutil.copy2(playlist_path, backup_path)
@@ -1260,6 +1265,7 @@ def _apply_changes_locked(playlist_path, changes, thumbnails_dir, backup=True, p
     # Match against the full original playlist, including intentional duplicates.
 
     downloader = ThumbnailDownloader(thumbnails_dir)
+    downloader.cancel_check = cancel_check
     candidate_applied = []
 
     for change in changes:
@@ -1329,6 +1335,9 @@ def _apply_changes_locked(playlist_path, changes, thumbnails_dir, backup=True, p
             target_item = current_item
             target_index = index
 
+        if not write_names:
+            new_label = target_item.get('label') or new_label
+            change = dict(change, new_label=new_label)
         target_item['label'] = new_label
         record = writeback_record(change, target_item)
         record["actual_index"] = target_index
@@ -1341,7 +1350,9 @@ def _apply_changes_locked(playlist_path, changes, thumbnails_dir, backup=True, p
         else:
             print(f"Updated label at index {target_index} to '{new_label}'")
 
-    if candidate_applied:
+    from task_control import checkpoint
+    checkpoint(cancel_check)
+    if candidate_applied and write_names:
         playlist_manager.save(playlist_path)
         print(f"Saved updated playlist to {playlist_path}")
 
@@ -1360,6 +1371,13 @@ def _apply_changes_locked(playlist_path, changes, thumbnails_dir, backup=True, p
             failed_record = dict(record)
             failed_record["reason"] = "readback_mismatch"
             writeback["failed"].append(failed_record)
+
+    if record_history and write_names and writeback['applied'] and backup_path:
+        try:
+            from repair_history import record_write
+            writeback['history_id'] = record_write(playlist_path, backup_path, len(writeback['applied']))
+        except Exception as error:
+            writeback['history_warning'] = str(error)
 
     download_tasks = [
         (record.get("system"), record.get("thumbnail_source"), record.get("new_label"))

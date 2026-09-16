@@ -123,7 +123,8 @@ def upsert_override(entries, entry, now=None):
 
 
 def default_overrides_path(config_dir=None):
-    base_dir = config_dir or os.getcwd()
+    from app_paths import user_data_dir
+    base_dir = config_dir or user_data_dir()
     return os.path.join(base_dir, "manual_overrides.json")
 
 

@@ -10,6 +10,8 @@ def main():
     if not scripts:
         raise RuntimeError('No inline scripts found')
     subprocess.run(['node', '--check'], input='\n'.join(scripts), encoding='utf-8', check=True)
+    for script in page.parent.glob('*.js'):
+        subprocess.run(['node', '--check', str(script)], check=True)
     print(f'JavaScript syntax OK ({len(scripts)} inline script blocks)')
 
 

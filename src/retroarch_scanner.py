@@ -433,7 +433,9 @@ def _scan_adb_target(target_path, candidates, adb_runner=None):
     }
 
 
-def materialize_adb_file(uri, cache_dir=".plcn_runtime/adb", adb_runner=None):
+def materialize_adb_file(uri, cache_dir=None, adb_runner=None):
+    from app_paths import cache_dir as runtime_cache
+    cache_dir = cache_dir or runtime_cache() / "adb"
     serial, remote_path = parse_adb_uri(uri)
     if not remote_path:
         raise ValueError("ADB URI must include a remote file path")

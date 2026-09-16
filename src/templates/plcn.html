@@ -2649,6 +2649,7 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="/assets/desktop.css">
 </head>
 
 <body>
@@ -2692,6 +2693,12 @@
                 <strong id="stat-dat-count">--</strong>
             </div>
             <div class="utility-group" aria-label="工具">
+                <div class="desktop-toolbar">
+                    <button class="btn btn-muted" type="button" onclick="openDesktop('data')">数据库</button>
+                    <button class="btn btn-muted" type="button" onclick="openDesktop('tasks')">任务</button>
+                    <button class="btn btn-muted" type="button" onclick="openDesktop('history')">恢复</button>
+                    <button class="btn btn-muted" type="button" onclick="quitDesktop()">退出</button>
+                </div>
                 <button class="btn btn-muted top-toggle" id="language-display-btn" type="button" onclick="toggleUILanguage()" title="切换界面语言" aria-label="切换界面语言">
                     <svg class="ui-language-icon" data-icon="ui-to-en" width="20" height="20" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 1 0 20"></path><path d="M12 2a14.5 14.5 0 0 0 0 20"></path><path d="M2 12h20"></path></svg>
                 </button>
@@ -2704,6 +2711,14 @@
         <main class="workspace">
             <aside class="sidebar">
                 <div class="sidebar-scroll">
+                    <section class="desktop-welcome">
+                        <strong>选择游戏库 → 预览 → 应用修复</strong>
+                        <p id="desktop-welcome-text">选择 RetroArch 或 SD 卡目录，自动识别列表和图片路径。首次使用建议先处理一个列表。</p>
+                        <button class="btn" type="button" onclick="openFilePicker('retroarch_root', true)">选择游戏目录</button>
+                        <button class="btn btn-muted" id="continue-library" type="button" hidden>继续上次目录</button>
+                        <p><label for="repair-mode">本次操作</label></p>
+                        <select id="repair-mode" onchange="setRepairMode()"><option value="both">修复名称并补全图片</option><option value="names">仅修复名称</option><option value="artwork">仅补全图片（保留当前名称）</option></select>
+                    </section>
                     <section class="device-panel">
                         <h2 class="section-title" data-i18n="设备与目录">设备与目录</h2>
                         <div class="form-group">
@@ -2786,7 +2801,7 @@
                         </div>
                     </section>
 
-                    <section class="config-panel">
+                    <section class="config-panel"><details class="desktop-advanced"><summary>高级配置与手动路径</summary>
                         <div id="single-tab" class="tab-content active">
                             <h2 class="section-title" data-i18n="单项配置">单项配置</h2>
                             <div class="form-group">
@@ -2869,7 +2884,7 @@
                                 <button class="btn btn-success" onclick="executeTask('batch')" data-i18n="开始批量处理" type="button">开始批量处理</button>
                             </div>
                         </div>
-                    </section>
+                    </details></section>
                 </div>
             </aside>
 
@@ -3044,7 +3059,7 @@
                             </div>
                         </div>
                         <div class="confidence-line">
-                            <span data-i18n="匹配置信度">匹配置信度</span>
+                            <span data-i18n="匹配依据">匹配依据</span>
                             <strong id="inspector-confidence">--</strong>
                         </div>
                         <div class="inspector-actions">
@@ -3532,10 +3547,19 @@
         }
 
         function preparePreviewChanges(changes) {
-            return (changes || []).map(change => ({
-                ...change,
-                enabled: shouldAutoSelectChange(change)
-            }));
+            return (changes || []).map(original => {
+                const change = { ...original };
+                if (document.getElementById('repair-mode')?.value === 'artwork') {
+                    change.new_label = change.original_item_label || change.original_label;
+                    change.artwork = null;
+                    clearCoverState(change);
+                    if (!change.needs_review && ['matched', 'rename', 'ready', 'download'].includes(change.match_status) && change.thumbnail_source) {
+                        change.match_status = 'download';
+                        change.match_reason = '保留当前名称，检查并补全三类图片（已有有效图片会跳过）';
+                    }
+                }
+                return { ...change, enabled: shouldAutoSelectChange(change) };
+            });
         }
 
         function getIncludedChanges() {
@@ -3682,6 +3706,7 @@
                     return;
                 }
 
+                if (appliedRecord?.new_label) change.new_label = appliedRecord.new_label;
                 change.applied = true;
                 change.match_status = 'applied';
                 change.match_score = 100;
@@ -3731,6 +3756,7 @@
 
         function getProcessingOptions() {
             return {
+                write_names: document.getElementById('repair-mode')?.value !== 'artwork',
                 download_thumbnails: document.getElementById('option-download-thumbnails')?.checked !== false
             };
         }
@@ -3739,6 +3765,7 @@
             return {
                 backup: document.getElementById('batch-option-backup')?.checked !== false,
                 continue_on_error: document.getElementById('batch-option-continue')?.checked !== false,
+                write_names: document.getElementById('repair-mode')?.value !== 'artwork',
                 download_thumbnails: document.getElementById('batch-option-download-thumbnails')?.checked !== false
             };
         }
@@ -4874,6 +4901,7 @@
                 duplicate: 0,
                 downloads: 0,
                 skipped: Math.max(0, currentChanges.length - changes.length),
+                writeNames: options.write_names !== false,
                 downloadEnabled: options.download_thumbnails !== false
             };
 
@@ -4918,7 +4946,7 @@
             const downloadText = summary.downloadEnabled
                 ? `将下载 ${summary.downloads} 个封面`
                 : '跳过下载';
-            return `将写回游戏列表：${summary.selected} 项已选，${summary.autoRepair} 可自动修复，${summary.ready} 无需修复，${summary.completed} 已完成，${summary.review} 需人工确认，${summary.duplicate} 重复项，${summary.skipped} 项跳过。${downloadText}。`;
+            return `${summary.writeNames ? '将写回游戏列表' : '仅补全图片，保留当前名称'}：${summary.selected} 项已选，${summary.autoRepair} 可自动修复，${summary.ready} 无需修复，${summary.completed} 已完成，${summary.review} 需人工确认，${summary.duplicate} 重复项，${summary.skipped} 项跳过。${downloadText}。`;
         }
 
         function openSearchModal(rowIndex) {
@@ -5174,7 +5202,7 @@
                     }
                 }
 
-                if (data.status === 'completed') {
+                if (data.status === 'completed' || data.status === 'cancelled') {
                     if (logView) logView.innerHTML += `<span style="color:#58d68d">所有操作完成！</span><br>`;
                     eventSource.close();
                     setInlineProgress(100, '完成', '所有操作完成', '当前：可检查输出文件');
@@ -5187,7 +5215,10 @@
                         ? getAppliedSummaryText(lastAppliedChangeKeys.size || data.result?.applied_count || 0)
                         : uiText('修复完成');
                     if (detailSummary) detailSummary.textContent = '任务完成，日志和下载明细已更新。';
-                    showStatus('应用更改完成', 'success');
+                    if (data.status === 'cancelled') {
+                        setInlineProgress(0, '已取消', '任务已取消', '已完成的结果会保留，可在任务中重试图片');
+                        showStatus('任务已取消，已完成的结果会保留', 'info');
+                    } else showStatus('应用更改完成', 'success');
                 } else if (data.status === 'failed') {
                     if (logView) logView.innerHTML += `<span style="color:red">失败: ${escapeHtml(data.error)}</span><br>`;
                     eventSource.close();
@@ -5512,7 +5543,7 @@
             document.getElementById('inspector-url').textContent = coverSource;
             document.getElementById('inspector-label').value = change.new_label || '';
             document.getElementById('inspector-thumb').value = change.thumbnail_source || '';
-            document.getElementById('inspector-confidence').textContent = `${info.confidence}%（${info.label}） · ${info.reason}`;
+            document.getElementById('inspector-confidence').textContent = `${info.label} · ${info.reason}`;
             if (change.artwork) {
                 const kinds = { Named_Boxarts: '封面', Named_Snaps: '截图', Named_Titles: '标题图' };
                 const statuses = { exists: '已存在', reusable: '可复用', invalid: '文件损坏', missing: '待下载', missing_source: '缺少来源', failed: '失败' };
@@ -5855,6 +5886,12 @@
             }
         });
     </script>
+    <dialog id="desktop-dialog" aria-labelledby="desktop-title">
+        <header><h2 id="desktop-title">PLCN 管理</h2><button class="btn btn-muted" onclick="document.getElementById('desktop-dialog').close()" type="button">关闭</button></header>
+        <nav class="desktop-toolbar"><button class="btn" onclick="openDesktop('data')">名称数据库</button><button class="btn" onclick="openDesktop('tasks')">任务</button><button class="btn" onclick="openDesktop('history')">恢复历史</button></nav>
+        <p id="desktop-message" role="status"></p><div id="desktop-content"></div>
+    </dialog>
+    <script src="/assets/desktop.js"></script>
 </body>
 
 </html>

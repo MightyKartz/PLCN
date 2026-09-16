@@ -26,20 +26,17 @@ class LibretroDB:
         
     def get_dat_path(self, system_name):
         """Returns the path to the DAT file for the given system."""
-        # Check if running in frozen mode (PyInstaller)
-        if getattr(sys, 'frozen', False):
-            # Check bundled data first
-            bundled_path = os.path.join(sys._MEIPASS, 'data', 'libretro-db', 'dat', f'{system_name}.dat')
-            if os.path.exists(bundled_path):
-                return bundled_path
-                
-        # Check local data directory
-        return os.path.join(self.dat_dir, f'{system_name}.dat')
-        
+        from app_paths import resource_root
+        cached = os.path.join(self.dat_dir, f'{system_name}.dat')
+        if os.path.isfile(cached):
+            return cached
+        bundled = resource_root() / 'data' / 'libretro-db' / 'dat' / f'{system_name}.dat'
+        return str(bundled) if bundled.is_file() else cached
+
     def download_dat(self, system_name, specific_url=None):
         """Downloads the DAT file for the given system from GitHub, trying multiple locations."""
         
-        target_path = self.get_dat_path(system_name)
+        target_path = os.path.join(self.dat_dir, f'{system_name}.dat')
         
         if specific_url:
             print(f"Downloading DAT for {system_name} from specific URL: {specific_url}...")
