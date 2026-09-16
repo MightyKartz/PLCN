@@ -69,6 +69,14 @@ def test_single_instance_lock_releases_on_close(tmp_path):
     second.close()
 
 
+def test_local_server_owns_its_port_exclusively():
+    # In particular, Windows must reject a second server using SO_REUSEADDR.
+    with server.LocalHTTPServer(('127.0.0.1', 0), server.ConfigHandler) as first:
+        with pytest.raises(OSError):
+            with ThreadingHTTPServer(first.server_address, server.ConfigHandler):
+                pytest.fail('Another process could bind the live instance port')
+
+
 def fixture_playlist(tmp_path):
     path = tmp_path / '中文.lpl'
     path.write_text(json.dumps({'items': [{'path': '/roms/Game.zip', 'label': 'Original'}]}), encoding='utf-8')

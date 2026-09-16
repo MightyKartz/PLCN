@@ -58,6 +58,17 @@ python scripts/package_desktop.py --arch x64 --installer
 
 macOS 在对应架构机器上执行 `python3 scripts/package_desktop.py --arch arm64` 或 `--arch x64`。脚本使用 onedir/app bundle，核对 Python 实际架构，并从临时工作目录启动 `--self-check` 验证资源和写入目录；不支持跨 OS 编译。Linux 继续保留 `plcn.spec` 的 CLI 打包。
 
+构建后可验证实际分发包（CI 对 Windows、macOS 两种架构均执行）：
+
+```bash
+python scripts/smoke_desktop_package.py --installer dist/PLCN-Windows-x64-Setup.exe
+python scripts/smoke_desktop_package.py --dmg dist/PLCN-macOS-arm64.dmg
+```
+
+Windows 验收会静默安装到临时中文路径，运行程序后卸载，检查注册项清理和用户数据保留；若系统已有 PLCN 安装器注册项则拒绝运行，请使用干净测试机。macOS 会只读挂载 DMG，复制应用后卸载镜像，再启动复制出的程序。两者都验证资源、同配置重复启动、不同配置端口隔离和正常退出。所有用户数据使用临时 `PLCN_HOME`，不会修改日常配置。失败时日志目录保留并打印到终端。
+
+便携版本可以使用 `--binary <可执行文件路径>` 做同样的程序验收。`PLCN --no-browser` 可启动服务而不打开浏览器，供自动验收使用。这些检查不覆盖系统文件选择器、Gatekeeper、SmartScreen 或签名验收。
+
 ## 签名与正式发布
 
 桌面 CI 在 Windows x64、macOS Intel、Apple Silicon 上构建，产物明确命名为 `unsigned`。Tag 工作流只创建草稿预发布，保留 Linux CLI；不会直接发布未经人工验收的稳定版本。
