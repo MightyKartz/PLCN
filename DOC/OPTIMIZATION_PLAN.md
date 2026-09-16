@@ -3,6 +3,8 @@
 生成日期：2026-06-02
 最近更新：2026-06-17
 
+> 2026-09-16 实施更新：本文保留早期调研与路线背景。当前实现、阶段完成状态和验证边界请以 [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) 为准；数据包管理和恢复操作见 [DATA_PACKS.md](DATA_PACKS.md)。下面未逐项改写的待办不代表本轮仍全部未完成。
+
 ## 目标
 
 本方案基于当前代码实现制定，目标是把 PLCN 从“可用的本地工具”推进到“越用越准确、可回归测试、可持续维护”的 RetroArch 游戏列表中文化与缩略图匹配工具。
@@ -26,8 +28,8 @@ PLCN 是本地运行工具，不接入 ScreenScraper、Skraper、在线游戏数
 - 主入口：`src/plcn.py`，无参数或 `ui` 子命令会启动本地 Web UI。
 - 本地 Web 服务：`src/server.py`，只在本机运行，提供配置、运行时统计、文件浏览/打开目录、系统列表、预览、应用、批量处理、搜索和进度路由。
 - 设备目录扫描：`src/retroarch_scanner.py` 负责浅层识别本地/挂载 RetroArch 根目录和 ADB 授权设备中的 `playlists`、`thumbnails`、`retroarch.cfg` 和 `.lpl` 摘要。
-- 核心流程：读取 `.lpl` -> 去重 -> 匹配中文名/英文标准名 -> 生成建议变更 -> 用户确认 -> 时间戳备份并写回 -> read-back verification -> 下载缩略图。
-- 数据来源：`data/rom-name-cn`、Libretro DAT、SQLite 缓存 `plcn.db`。
+- 核心流程：读取并保留 `.lpl` 全部条目 -> 按条目系统匹配中文名/英文标准名 -> 生成建议变更 -> 用户确认/风险复核 -> 快照与锁检查 -> 时间戳备份并原子写回 -> read-back verification -> 下载缩略图。
+- 数据来源：`data/rom-name-cn` 或版本化名称数据包、Libretro DAT、按内容指纹隔离的 `.plcn_runtime/catalogs/` 缓存。
 - 人工覆盖：`manual_overrides.json` 是本地人工校正记录，优先于模糊匹配；同一 system 内先按标准化 CRC 命中，CRC 缺失时按 ROM 文件名命中。
 - UI 状态：`src/templates/plcn.html` 是单文件工作台 UI，已接入真实顶部统计、行勾选应用、批量选项和结构化下载汇总，但体量偏大。
 - 测试状态：已有多个 `test_*.py`，但部分测试偏脚本化输出，断言和稳定 fixture 还不足。

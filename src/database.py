@@ -4,16 +4,20 @@ import csv
 import glob
 import json
 import re
+from contextlib import nullcontext, closing
+from pathlib import Path
+from safe_io import file_lock
+import app_paths
 
 class DatabaseManager:
-    DB_FILE = "plcn.db"
+    DB_FILE = str(app_paths.cache_dir() / 'plcn.db')
     
     
     # System mappings for known discrepancies
     SYSTEM_MAPPINGS = {
         # NEC
         "NEC - PC Engine - TurboGrafx 16": ["NEC - PC Engine - TurboGrafx-16"],
-        "NEC - PC Engine CD - TurboGrafx-CD": ["NEC - PC Engine - TurboGrafx-16"], # Map CD to standard PCE CSV
+        "NEC - PC Engine CD - TurboGrafx-CD": ["NEC - PC Engine CD & TurboGrafx CD"], # Map CD to standard PCE CSV
         
         # Sega
         "Sega - Mega Drive - Genesis": ["Sega - Mega Drive - Genesis"],
@@ -44,7 +48,8 @@ class DatabaseManager:
         "SNK - Neo Geo": ["Arcade - NEOGEO"]
     }
 
-    def __init__(self, db_path=None):
+    def __init__(self, db_path=None, read_only=False):
+        self.read_only = read_only
         if db_path:
             self.db_path = db_path
         else:
@@ -53,9 +58,12 @@ class DatabaseManager:
             self.db_path = os.path.join(base_path, self.DB_FILE)
         
         self.conn = None
+        if not read_only:
+            Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         self.english_names_cache = None
         self.chinese_names_cache = None
-        self.init_db()
+        if not read_only:
+            self.init_db()
     
     def expand_system_mapping(self, system):
         """
@@ -70,20 +78,17 @@ class DatabaseManager:
         base_system = system.split('(')[0].strip()
         
         if base_system in self.SYSTEM_MAPPINGS:
-            systems = self.SYSTEM_MAPPINGS[base_system]
+            systems = list(self.SYSTEM_MAPPINGS[base_system])
         else:
             systems = [system]
-            
-        # Always include 'missing_games' system to support manual additions
-        if 'missing_games' not in systems:
-            systems.append('missing_games')
             
         return systems
 
     def get_connection(self):
         if self.conn is None:
-            self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
+            self.conn = sqlite3.connect(Path(self.db_path).resolve().as_uri() + '?mode=ro' if self.read_only else self.db_path, uri=self.read_only, check_same_thread=False)
             self.conn.row_factory = sqlite3.Row
+            self.conn.create_function("system_base", 1, lambda value: re.sub(r"\s*\(\d{8}-\d{6}\).*$", "", value or "").strip())
         return self.conn
 
     def init_db(self):
@@ -91,13 +96,16 @@ class DatabaseManager:
         conn = self.get_connection()
         cursor = conn.cursor()
         
+        migrated = self._migrate_schema(conn)
+
         # Main translation table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS translations (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                english_name TEXT NOT NULL UNIQUE,
+                english_name TEXT NOT NULL,
                 chinese_name TEXT NOT NULL,
-                system TEXT
+                system TEXT NOT NULL DEFAULT '',
+                UNIQUE(system, english_name)
             )
         ''')
         
@@ -108,7 +116,8 @@ class DatabaseManager:
                 alias TEXT NOT NULL,
                 english_name TEXT NOT NULL,
                 normalized_alias TEXT NOT NULL,
-                FOREIGN KEY(english_name) REFERENCES translations(english_name)
+                system TEXT,
+                UNIQUE(system, alias, english_name, normalized_alias)
             )
         ''')
         
@@ -143,160 +152,72 @@ class DatabaseManager:
         except sqlite3.OperationalError:
             print("Warning: FTS5 not supported by this SQLite version. Manual search might be slower.")
 
+        if migrated:
+            try:
+                conn.execute("INSERT INTO translations_fts(translations_fts) VALUES('rebuild')")
+            except sqlite3.OperationalError:
+                pass
+        conn.execute('PRAGMA user_version=2')
         conn.commit()
 
-    def import_csvs(self, rom_name_cn_path):
-        """Imports data from CSV files into the database."""
-        if not os.path.exists(rom_name_cn_path):
-            print(f"Error: CSV path not found: {rom_name_cn_path}")
+    def _migrate_schema(self, conn):
+        existing = conn.execute("SELECT sql FROM sqlite_master WHERE name='translations'").fetchone()
+        if not existing or 'english_name TEXT NOT NULL UNIQUE' not in existing[0]:
             return
+        with file_lock(self.db_path):
+            from datetime import datetime
+            backup = self.db_path + '.bak-schema1-' + datetime.now().strftime('%Y%m%d-%H%M%S-%f')
+            with closing(sqlite3.connect(backup)) as target:
+                conn.backup(target)
+            with conn:
+                conn.execute('BEGIN IMMEDIATE')
+                for trigger in ['translations_ai', 'translations_ad', 'translations_au']:
+                    conn.execute('DROP TRIGGER IF EXISTS ' + trigger)
+                conn.execute('DROP TABLE IF EXISTS translations_fts')
+                conn.execute("CREATE TABLE translations_v2 (id INTEGER PRIMARY KEY AUTOINCREMENT, english_name TEXT NOT NULL, chinese_name TEXT NOT NULL, system TEXT NOT NULL DEFAULT '', UNIQUE(system, english_name))")
+                conn.execute("INSERT INTO translations_v2 SELECT id, english_name, chinese_name, COALESCE(system, '') FROM translations")
+                alias_exists = conn.execute("SELECT 1 FROM sqlite_master WHERE name='aliases'").fetchone()
+                if alias_exists:
+                    conn.execute('CREATE TABLE aliases_v2 (id INTEGER PRIMARY KEY AUTOINCREMENT, alias TEXT NOT NULL, english_name TEXT NOT NULL, normalized_alias TEXT NOT NULL, system TEXT, UNIQUE(system, alias, english_name, normalized_alias))')
+                    conn.execute('INSERT OR IGNORE INTO aliases_v2 SELECT a.id, a.alias, a.english_name, a.normalized_alias, t.system FROM aliases a JOIN translations_v2 t ON a.english_name=t.english_name')
+                    conn.execute('DROP TABLE aliases')
+                    conn.execute('ALTER TABLE aliases_v2 RENAME TO aliases')
+                conn.execute('DROP TABLE translations')
+                conn.execute('ALTER TABLE translations_v2 RENAME TO translations')
+            print(f'Database migrated; backup: {backup}')
+            return True
 
-        print(f"Importing CSVs from {rom_name_cn_path} into SQLite...")
+    def import_csvs(self, rom_name_cn_path, commit=True):
+        """Import complete records without inventing translations for blank fields."""
+        from itertools import chain
         conn = self.get_connection()
-        cursor = conn.cursor()
-        
-        # Invalidate cache
-        self.english_names_cache = None
-        self.chinese_names_cache = None
-        
-        # 1. Load Aliases from JSON if exists
-        alias_file = os.path.join(rom_name_cn_path, "name_alias(Chinese).json")
-        if os.path.exists(alias_file):
-            try:
-                with open(alias_file, 'r', encoding='utf-8') as f:
-                    aliases_data = json.load(f)
-                    pass
-            except Exception as e:
-                print(f"Error loading alias file: {e}")
-
-        # 2. Load CSVs
-        csv_files = glob.glob(os.path.join(rom_name_cn_path, "*.csv"))
         count = 0
-        
-        for csv_file in csv_files:
-            try:
-                # Determine system from filename
-                system_name = os.path.splitext(os.path.basename(csv_file))[0]
-                
-                with open(csv_file, 'r', encoding='utf-8-sig') as f:
-                    reader = csv.reader(f)
-                    
-                    # Read first row to detect format
-                    first_row = next(reader, None)
-                    if not first_row:
+        self.english_names_cache = self.chinese_names_cache = None
+        with conn if commit else nullcontext():
+            for csv_file in sorted(Path(rom_name_cn_path).glob('*.csv')):
+                system = re.sub(r'\s*\(\d{8}-\d{6}\).*$', '', csv_file.stem).strip()
+                with csv_file.open(encoding='utf-8-sig', newline='') as handle:
+                    reader = csv.reader(handle)
+                    first = next(reader, [])
+                    if not first:
                         continue
-                    
-                    # Detect CSV format based on header or column count
-                    is_3_column_arcade = False
-                    if len(first_row) >= 3 and ('MAME' in first_row[0] or 'mame' in first_row[0].lower()):
-                        # 3-column arcade format: MAME Name, EN Name, CN Name
-                        is_3_column_arcade = True
-                        # Skip header row
-                    elif first_row[0] == "Name EN" or "Name" in first_row[0]:
-                        # 2-column format with header: Name EN, Name CN
-                        # Skip header row
-                        pass
-                    else:
-                        # No header, rewind by using first row as data
-                        # For 2-column format
-                        if len(first_row) >= 2:
-                            english_name = first_row[0].strip()
-                            chinese_name = first_row[1].strip()
-                            if not chinese_name:
-                                chinese_name = english_name
-                            
-                            if english_name:
-                                try:
-                                    cursor.execute('''
-                                        INSERT OR IGNORE INTO translations (english_name, chinese_name, system)
-                                        VALUES (?, ?, ?)
-                                    ''', (english_name, chinese_name, system_name))
-                                    norm_name = self.normalize_name(english_name)
-                                    cursor.execute('''
-                                        INSERT OR IGNORE INTO aliases (alias, english_name, normalized_alias)
-                                        VALUES (?, ?, ?)
-                                    ''', (english_name, english_name, norm_name))
-                                    count += 1
-                                except sqlite3.Error:
-                                    pass
-                    
-                    # Process remaining rows
-                    for row in reader:
-                        # Skip empty rows or comments
-                        if not row or not row[0] or row[0].strip().startswith('#'):
+                    arcade = len(first) >= 3 and 'mame' in first[0].lower()
+                    header = first[0].strip() == 'Name EN' or arcade
+                    for row in reader if header else chain([first], reader):
+                        if not row or not row[0].strip() or row[0].startswith('#'):
                             continue
-
-                        if is_3_column_arcade:
-                            # 3-column: MAME Name, EN Name, CN Name
-                            if len(row) >= 3:
-                                mame_name = row[0].strip()
-                                english_name = row[1].strip()
-                                chinese_name = row[2].strip()
-                                if not chinese_name:
-                                    chinese_name = english_name
-                                
-                                if mame_name and english_name:
-                                    try:
-                                        # Store EN Name as english_name, CN Name as chinese_name
-                                        cursor.execute('''
-                                            INSERT OR IGNORE INTO translations (english_name, chinese_name, system)
-                                            VALUES (?, ?, ?)
-                                        ''', (english_name, chinese_name, system_name))
-                                        
-                                        # Add english name as alias
-                                        norm_name = self.normalize_name(english_name)
-                                        cursor.execute('''
-                                            INSERT OR IGNORE INTO aliases (alias, english_name, normalized_alias)
-                                            VALUES (?, ?, ?)
-                                        ''', (english_name, english_name, norm_name))
-                                        
-                                        # Also add MAME name as alias pointing to the english name
-                                        norm_mame = self.normalize_name(mame_name)
-                                        cursor.execute('''
-                                            INSERT OR IGNORE INTO aliases (alias, english_name, normalized_alias)
-                                            VALUES (?, ?, ?)
-                                        ''', (mame_name, english_name, norm_mame))
-                                        
-                                        count += 1
-                                    except sqlite3.Error:
-                                        pass
-                        else:
-                            # 2-column format: Name EN, Name CN
-                            if len(row) >= 2:
-                                english_name = row[0].strip()
-                                chinese_name = row[1].strip()
-                                if not chinese_name:
-                                    chinese_name = english_name
-                                
-                                if english_name:
-                                    try:
-                                        cursor.execute('''
-                                            INSERT OR IGNORE INTO translations (english_name, chinese_name, system)
-                                            VALUES (?, ?, ?)
-                                        ''', (english_name, chinese_name, system_name))
-                                        
-                                        norm_name = self.normalize_name(english_name)
-                                        cursor.execute('''
-                                            INSERT OR IGNORE INTO aliases (alias, english_name, normalized_alias)
-                                            VALUES (?, ?, ?)
-                                        ''', (english_name, english_name, norm_name))
-                                        
-                                        count += 1
-                                    except sqlite3.Error:
-                                        pass
-            except Exception as e:
-                print(f"Error processing {csv_file}: {e}")
-        
-        # Rebuild FTS index if needed (though triggers handle new inserts, existing data might need sync if table was empty but FTS wasn't)
-        # For simplicity, we assume fresh import populates triggers.
-        # If we want to be safe:
-        try:
-            cursor.execute("INSERT INTO translations_fts(translations_fts) VALUES('rebuild')")
-        except:
-            pass
-            
-        conn.commit()
-        print(f"Imported {count} entries into database.")
+                        if len(row) < (3 if arcade else 2):
+                            raise ValueError(f'Malformed CSV row: {csv_file.name}:{reader.line_num}')
+                        english, chinese = (row[1].strip(), row[2].strip()) if arcade else (row[0].strip(), row[1].strip())
+                        if not english:
+                            continue
+                        conn.execute('INSERT INTO translations (english_name, chinese_name, system) VALUES (?, ?, ?) ON CONFLICT(system, english_name) DO UPDATE SET chinese_name=excluded.chinese_name', (english, chinese, system))
+                        conn.execute('DELETE FROM aliases WHERE english_name=? AND system=?', (english, system))
+                        for alias in dict.fromkeys([english, row[0].strip()] if arcade else [english]):
+                            conn.execute('INSERT INTO aliases (alias, english_name, normalized_alias, system) VALUES (?, ?, ?, ?)', (alias, english, self.normalize_name(alias), system))
+                        count += 1
+        print(f'Imported {count} records into database.')
+        return count
 
     def normalize_name(self, name):
         """
@@ -328,16 +249,16 @@ class DatabaseManager:
             systems = self.expand_system_mapping(system)
             if len(systems) > 1:
                 # Multiple systems: use OR condition
-                placeholders = ' OR '.join(['system LIKE ?' for _ in systems])
+                placeholders = ' OR '.join(['system_base(system) = ?' for _ in systems])
                 query = f'SELECT chinese_name FROM translations WHERE english_name = ? AND ({placeholders})'
-                params = [english_name] + [f'{s}%' for s in systems]
+                params = [english_name] + [s for s in systems]
                 cursor.execute(query, params)
             else:
-                cursor.execute('SELECT chinese_name FROM translations WHERE english_name = ? AND system LIKE ?', (english_name, f'{systems[0]}%'))
+                cursor.execute('SELECT chinese_name FROM translations WHERE english_name = ? AND system_base(system) = ?', (english_name, systems[0]))
         else:
             cursor.execute('SELECT chinese_name FROM translations WHERE english_name = ?', (english_name,))
-        row = cursor.fetchone()
-        return row['chinese_name'] if row else None
+        names = {row['chinese_name'] for row in cursor.fetchall()}
+        return next(iter(names)) if len(names) == 1 else None
 
     def search_by_chinese(self, chinese_name, system=None):
         cursor = self.get_connection().cursor()
@@ -345,18 +266,18 @@ class DatabaseManager:
             systems = self.expand_system_mapping(system)
             if len(systems) > 1:
                 # Multiple systems: use OR condition
-                placeholders = ' OR '.join(['system LIKE ?' for _ in systems])
+                placeholders = ' OR '.join(['system_base(system) = ?' for _ in systems])
                 query = f'SELECT english_name FROM translations WHERE chinese_name = ? AND ({placeholders})'
-                params = [chinese_name] + [f'{s}%' for s in systems]
+                params = [chinese_name] + [s for s in systems]
                 print(f"      DB Query: chinese_name='{chinese_name}', systems={systems}")
                 cursor.execute(query, params)
             else:
                 print(f"      DB Query: chinese_name='{chinese_name}', system LIKE '{systems[0]}%'")
-                cursor.execute('SELECT english_name FROM translations WHERE chinese_name = ? AND system LIKE ?', (chinese_name, f'{systems[0]}%'))
+                cursor.execute('SELECT english_name FROM translations WHERE chinese_name = ? AND system_base(system) = ?', (chinese_name, systems[0]))
         else:
             cursor.execute('SELECT english_name FROM translations WHERE chinese_name = ?', (chinese_name,))
-        row = cursor.fetchone()
-        result = row['english_name'] if row else None
+        names = {row['english_name'] for row in cursor.fetchall()}
+        result = next(iter(names)) if len(names) == 1 else None
         if result:
             print(f"      DB Result: Found '{result}'")
         else:
@@ -370,36 +291,38 @@ class DatabaseManager:
             systems = self.expand_system_mapping(system)
             if len(systems) > 1:
                 # Multiple systems: use OR condition
-                placeholders = ' OR '.join(['t.system LIKE ?' for _ in systems])
+                placeholders = ' OR '.join(['system_base(t.system) = ?' for _ in systems])
                 query = f'''
                     SELECT t.chinese_name, t.english_name 
                     FROM aliases a
                     JOIN translations t ON a.english_name = t.english_name
+                    AND (a.system = t.system OR (a.system IS NULL AND (SELECT COUNT(*) FROM translations u WHERE u.english_name=a.english_name)=1))
                     WHERE a.normalized_alias = ? AND ({placeholders})
-                    LIMIT 1
                 '''
-                params = [normalized_name] + [f'{s}%' for s in systems]
+                params = [normalized_name] + [s for s in systems]
                 cursor.execute(query, params)
             else:
                 query = '''
                     SELECT t.chinese_name, t.english_name 
                     FROM aliases a
                     JOIN translations t ON a.english_name = t.english_name
-                    WHERE a.normalized_alias = ? AND t.system LIKE ?
-                    LIMIT 1
+                    AND (a.system = t.system OR (a.system IS NULL AND (SELECT COUNT(*) FROM translations u WHERE u.english_name=a.english_name)=1))
+                    WHERE a.normalized_alias = ? AND system_base(t.system) = ?
                 '''
-                cursor.execute(query, (normalized_name, f'{systems[0]}%'))
+                cursor.execute(query, (normalized_name, systems[0]))
         else:
             query = '''
                 SELECT t.chinese_name, t.english_name 
                 FROM aliases a
                 JOIN translations t ON a.english_name = t.english_name
+                    AND (a.system = t.system OR (a.system IS NULL AND (SELECT COUNT(*) FROM translations u WHERE u.english_name=a.english_name)=1))
                 WHERE a.normalized_alias = ?
-                LIMIT 1
             '''
             cursor.execute(query, (normalized_name,))
-        row = cursor.fetchone()
-        return (row['chinese_name'], row['english_name']) if row else (None, None)
+        matches = {(row['chinese_name'], row['english_name']) for row in cursor.fetchall()}
+        # Removing region/version tags can collapse distinct releases. Such a
+        # match is a candidate, never a deterministic identity lookup.
+        return next(iter(matches)) if len(matches) == 1 else (None, None)
 
     def fuzzy_search_by_english(self, query, threshold=50, system=None):
         """
@@ -420,12 +343,12 @@ class DatabaseManager:
         if system:
             systems = self.expand_system_mapping(system)
             if len(systems) > 1:
-                placeholders = ' OR '.join(['system LIKE ?' for _ in systems])
+                placeholders = ' OR '.join(['system_base(system) = ?' for _ in systems])
                 query_sql = f'SELECT english_name, chinese_name FROM translations WHERE {placeholders}'
-                params = [f'{s}%' for s in systems]
+                params = [s for s in systems]
                 cursor.execute(query_sql, params)
             else:
-                cursor.execute('SELECT english_name, chinese_name FROM translations WHERE system LIKE ?', (f'{systems[0]}%',))
+                cursor.execute('SELECT english_name, chinese_name FROM translations WHERE system_base(system) = ?', (systems[0],))
         else:
             cursor.execute('SELECT english_name, chinese_name FROM translations')
         
@@ -473,12 +396,12 @@ class DatabaseManager:
         if system:
             systems = self.expand_system_mapping(system)
             if len(systems) > 1:
-                placeholders = ' OR '.join(['system LIKE ?' for _ in systems])
+                placeholders = ' OR '.join(['system_base(system) = ?' for _ in systems])
                 query_sql = f'SELECT chinese_name FROM translations WHERE {placeholders}'
-                params = [f'{s}%' for s in systems]
+                params = [s for s in systems]
                 cursor.execute(query_sql, params)
             else:
-                cursor.execute('SELECT chinese_name FROM translations WHERE system LIKE ?', (f'{systems[0]}%',))
+                cursor.execute('SELECT chinese_name FROM translations WHERE system_base(system) = ?', (systems[0],))
         else:
             cursor.execute('SELECT chinese_name FROM translations')
         
@@ -524,12 +447,12 @@ class DatabaseManager:
             if system:
                 systems = self.expand_system_mapping(system)
                 if len(systems) > 1:
-                    placeholders = ' OR '.join(['system LIKE ?' for _ in systems])
+                    placeholders = ' OR '.join(['system_base(system) = ?' for _ in systems])
                     query = f'SELECT chinese_name, english_name, system FROM translations WHERE {placeholders}'
-                    params = [f'{s}%' for s in systems]
+                    params = [s for s in systems]
                     cursor.execute(query, params)
                 else:
-                    cursor.execute('SELECT chinese_name, english_name, system FROM translations WHERE system LIKE ?', (f'{systems[0]}%',))
+                    cursor.execute('SELECT chinese_name, english_name, system FROM translations WHERE system_base(system) = ?', (systems[0],))
             else:
                 cursor.execute('SELECT chinese_name, english_name, system FROM translations')
             
@@ -547,28 +470,25 @@ class DatabaseManager:
             print(f"DEBUG search_by_keyword: Top 5 matches: {matches[:5]}")
             
             # Build results from matches
-            for match_name, score, _ in matches:
+            for match_name, score, candidate_index in matches:
                 if score >= 65:  # Use threshold (lowered from 70)
-                    # Find the corresponding record
-                    for cn, en, sys in candidates:
-                        if cn == match_name:
-                            results.append({
-                                'chinese_name': cn,
-                                'english_name': en,
-                                'system': sys
-                            })
-                            break
+                    cn, en, matched_system = candidates[candidate_index]
+                    results.append({
+                        'chinese_name': cn,
+                        'english_name': en,
+                        'system': matched_system
+                    })
         else:
             # Build English names cache (optionally filtered by system)
             if system:
                 systems = self.expand_system_mapping(system)
                 if len(systems) > 1:
-                    placeholders = ' OR '.join(['system LIKE ?' for _ in systems])
+                    placeholders = ' OR '.join(['system_base(system) = ?' for _ in systems])
                     query = f'SELECT english_name, chinese_name, system FROM translations WHERE {placeholders}'
-                    params = [f'{s}%' for s in systems]
+                    params = [s for s in systems]
                     cursor.execute(query, params)
                 else:
-                    cursor.execute('SELECT english_name, chinese_name, system FROM translations WHERE system LIKE ?', (f'{systems[0]}%',))
+                    cursor.execute('SELECT english_name, chinese_name, system FROM translations WHERE system_base(system) = ?', (systems[0],))
             else:
                 cursor.execute('SELECT english_name, chinese_name, system FROM translations')
             

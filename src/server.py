@@ -9,6 +9,13 @@ import shlex
 import subprocess
 import sqlite3
 import tempfile
+import secrets
+import hmac
+import re
+from http.cookies import SimpleCookie
+from safe_io import file_lock, atomic_write_json
+from task_control import TaskCancelled, checkpoint
+import app_paths
 from manual_overrides import (
     build_override_entry,
     default_overrides_path,
@@ -18,7 +25,8 @@ from manual_overrides import (
 )
 
 PORT = 7777
-CONFIG_FILE = "config.json"
+CONFIG_FILE = str(app_paths.config_path())
+SESSION_TOKEN = secrets.token_urlsafe(32)
 
 def get_base_path():
     if getattr(sys, 'frozen', False):
@@ -112,11 +120,17 @@ from http.server import BaseHTTPRequestHandler
 class JobManager:
     def __init__(self):
         self.jobs = {}
+        self.cancel_events = {}
+        self.contexts = {}
+        self.stopping = False
         self.lock = threading.Lock()
 
     def create_job(self):
         job_id = str(uuid.uuid4())
         with self.lock:
+            if self.stopping:
+                raise RuntimeError('PLCN 正在退出')
+            self.cancel_events[job_id] = threading.Event()
             self.jobs[job_id] = {
                 'status': 'pending',
                 'progress': 0,
@@ -138,15 +152,34 @@ class JobManager:
     def complete_job(self, job_id, result=None):
         with self.lock:
             if job_id in self.jobs:
-                self.jobs[job_id]['status'] = 'completed'
+                self.jobs[job_id]['status'] = 'cancelled' if self.cancel_events[job_id].is_set() else 'completed'
                 self.jobs[job_id]['result'] = result
                 self.jobs[job_id]['progress'] = self.jobs[job_id]['total']
 
     def fail_job(self, job_id, error):
         with self.lock:
             if job_id in self.jobs:
-                self.jobs[job_id]['status'] = 'failed'
+                self.jobs[job_id]['status'] = 'cancelled' if isinstance(error, TaskCancelled) else 'failed'
                 self.jobs[job_id]['error'] = str(error)
+
+    def cancelled(self, job_id):
+        return self.cancel_events[job_id].is_set()
+
+    def cancel(self, job_id):
+        with self.lock:
+            if job_id not in self.jobs:
+                raise ValueError('任务不存在')
+            if self.jobs[job_id]['status'] in ('pending', 'running'):
+                self.cancel_events[job_id].set()
+                self.jobs[job_id]['message'] = '正在取消，将在安全步骤边界停止'
+
+    def active(self):
+        with self.lock:
+            return any(job['status'] in ('pending', 'running') for job in self.jobs.values())
+
+    def snapshot(self):
+        with self.lock:
+            return [dict(job, id=key) for key, job in reversed(list(self.jobs.items()))][:30]
 
     def get_job(self, job_id):
         with self.lock:
@@ -155,24 +188,60 @@ class JobManager:
 job_manager = JobManager()
 
 class ConfigHandler(http.server.SimpleHTTPRequestHandler):
+    def authorize(self, bootstrap=False):
+        host = self.headers.get('Host', '')
+        expected = {f'127.0.0.1:{self.server.server_address[1]}', f'localhost:{self.server.server_address[1]}'}
+        origin = self.headers.get('Origin')
+        if host not in expected or (origin and origin != 'http://' + host) or self.headers.get('Sec-Fetch-Site') == 'cross-site':
+            self.send_error(403, 'Only same-origin local requests are allowed')
+            return False
+        if bootstrap:
+            return True
+        try:
+            cookies = SimpleCookie(self.headers.get('Cookie', ''))
+            token = cookies['plcn_session'].value if 'plcn_session' in cookies else ''
+        except Exception:
+            token = ''
+        if not hmac.compare_digest(token, SESSION_TOKEN):
+            self.send_error(403, 'Open the PLCN page to start a local session')
+            return False
+        return True
+
+    def do_HEAD(self):
+        self.send_error(405)
+
     def do_GET(self):
         parsed_path = urllib.parse.urlparse(self.path)
         path = parsed_path.path
+        if not self.authorize(bootstrap=path == '/'):
+            return
         query_params = urllib.parse.parse_qs(parsed_path.query)
+        import desktop_api
+        try:
+            if desktop_api.get(self, path, job_manager, CONFIG_FILE):
+                return
+        except Exception as error:
+            desktop_api.reply(self, {'error': str(error)}, 400)
+            return
 
         if path == "/":
             self.path = "/plcn.html"
             return self.serve_template()
+        elif path in ('/assets/desktop.js', '/assets/desktop.css'):
+            filename = path.rsplit('/', 1)[-1]
+            content = (app_paths.resource_root() / 'src' / 'templates' / filename).read_bytes()
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/javascript; charset=utf-8' if filename.endswith('.js') else 'text/css; charset=utf-8')
+            self.end_headers()
+            self.wfile.write(content)
         elif path == "/api/config":
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
             
-            if os.path.exists(CONFIG_FILE):
-                with open(CONFIG_FILE, 'r') as f:
-                    self.wfile.write(f.read().encode())
-            else:
-                self.wfile.write(b"{}")
+            config = load_server_config()
+            config.setdefault('rom_name_cn_path', str(app_paths.default_source()))
+            self.wfile.write(json.dumps(config, ensure_ascii=False).encode('utf-8'))
             return
         elif path == "/api/stats":
             self.get_stats()
@@ -212,7 +281,7 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(b"data: " + json.dumps({"done": True}).encode() + b"\n\n")
         else:
             # Default behavior for other files (e.g., static assets)
-            return super().do_GET()
+            self.send_error(404)
 
     def list_files(self, path):
         # Simple file system browser API
@@ -262,11 +331,12 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                     config = json.load(f)
 
             base_path = os.getcwd()
-            rom_db_path = config.get("rom_name_cn_path") or config.get("single_rom_name_cn_path") or "data/rom-name-cn"
+            rom_db_path = config.get("rom_name_cn_path") or config.get("single_rom_name_cn_path") or str(app_paths.default_source())
             if getattr(sys, 'frozen', False) and not os.path.isabs(rom_db_path):
                 rom_db_path = os.path.join(sys._MEIPASS, rom_db_path)
 
-            db_path = os.path.join(base_path, "plcn.db")
+            from data_pack import catalog_path, cache_path
+            db_path = str(catalog_path(rom_db_path) or cache_path(rom_db_path))
             database_count = 0
             database_ready = os.path.exists(db_path)
             database_error = None
@@ -280,10 +350,10 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                 except Exception as e:
                     database_error = str(e)
 
-            dat_dir = os.path.join(base_path, "data", "libretro-db", "dat")
-            if getattr(sys, 'frozen', False):
-                dat_dir = os.path.join(sys._MEIPASS, "data", "libretro-db", "dat")
-            dat_count = len(glob.glob(os.path.join(dat_dir, "*.dat"))) if os.path.exists(dat_dir) else 0
+            dat_dir = str(app_paths.dat_storage() / "libretro-db" / "dat")
+            bundled_dat = app_paths.resource_root() / 'data' / 'libretro-db' / 'dat'
+            dat_count = len({os.path.basename(file) for folder in (dat_dir, str(bundled_dat))
+                             for file in glob.glob(os.path.join(folder, '*.dat'))})
             csv_count = len(glob.glob(os.path.join(rom_db_path, "*.csv"))) if os.path.exists(rom_db_path) else 0
             offline_available = (database_count > 0 or csv_count > 0) and dat_count > 0
 
@@ -378,10 +448,10 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
         try:
             config = {}
             if os.path.exists(CONFIG_FILE):
-                with open(CONFIG_FILE, 'r') as f:
+                with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
                     config = json.load(f)
             
-            rom_db_path = config.get("rom_name_cn_path", "data/rom-name-cn")
+            rom_db_path = config.get("rom_name_cn_path", str(app_paths.default_source()))
             if getattr(sys, 'frozen', False) and not os.path.isabs(rom_db_path):
                 rom_db_path = os.path.join(sys._MEIPASS, rom_db_path)
             
@@ -392,7 +462,9 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                 for f in files:
                     # Filename without extension is the system name
                     name = os.path.splitext(os.path.basename(f))[0]
-                    systems.append(name)
+                    name = re.sub(r'\s*\(\d{8}-\d{6}\).*$', '', name).strip()
+                    if name != 'missing_games' and name not in systems:
+                        systems.append(name)
             
             # Add mapped systems from DatabaseManager
             from database import DatabaseManager
@@ -464,10 +536,10 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
             # Load config to get rom_name_cn_path
             config = {}
             if os.path.exists(CONFIG_FILE):
-                with open(CONFIG_FILE, 'r') as f:
+                with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
                     config = json.load(f)
             
-            rom_name_cn_path = config.get("rom_name_cn_path", "data/rom-name-cn")
+            rom_name_cn_path = config.get("rom_name_cn_path", str(app_paths.default_source()))
             print(f"DEBUG search_db: Original rom_name_cn_path = {rom_name_cn_path}")
             print(f"DEBUG search_db: sys.frozen = {getattr(sys, 'frozen', False)}")
             print(f"DEBUG search_db: sys._MEIPASS = {getattr(sys, '_MEIPASS', 'Not set')}")
@@ -482,94 +554,37 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                 csv_files = glob.glob(os.path.join(rom_name_cn_path, "*.csv"))
                 print(f"DEBUG search_db: Found {len(csv_files)} CSV files")
 
-            # Manual search now ONLY uses LibretroDB for comprehensive game coverage
-            results = []
-            
             if not system:
-                self.send_response(400)
-                self.send_header("Content-type", "application/json")
-                self.end_headers()
-                self.wfile.write(json.dumps({"error": "System parameter required for search"}).encode())
+                self.send_error(400, 'System parameter required')
                 return
-            
-            print(f"DEBUG search_db: Searching LibretroDB for keyword='{keyword}', system='{system}'")
-            
+            from data_pack import open_database
+            from libretro_db import LibretroDB
+            db = open_database(rom_name_cn_path)
             try:
-                # Create LibretroDB instance
-                from libretro_db import LibretroDB
-                storage_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
-                libretro_db = LibretroDB(storage_path)
-                
-                # Load DAT file for the specified system
-                print(f"DEBUG search_db: Loading DAT for system '{system}'...")
-                if libretro_db.load_system_dat(system):
-                    print(f"DEBUG search_db: DAT loaded successfully, searching...")
-                    exact_standard_name = libretro_db.get_standard_name(keyword)
-                    libretro_results = []
-                    if exact_standard_name:
-                        libretro_results.append(exact_standard_name)
-                    for name in libretro_db.search(keyword, limit=50):
-                        if name not in libretro_results:
-                            libretro_results.append(name)
-                    
-                    print(f"DEBUG search_db: Found {len(libretro_results)} matches in LibretroDB")
-                    
-                    # Initialize DatabaseManager
-                    from database import DatabaseManager
-                    db_manager = DatabaseManager()
-                    conn = db_manager.get_connection()
-                    cursor = conn.cursor()
-                    
-                    # Track added English names to avoid duplicates
-                    added_names = set()
-                    
-                    # 1. Process LibretroDB results
-                    for name in libretro_results:
-                        # Look up Chinese translation
-                        cursor.execute("SELECT chinese_name FROM translations WHERE english_name = ?", (name,))
-                        row = cursor.fetchone()
-                        chinese_name = row[0] if row else ""
-                        
-                        results.append({
-                            'english_name': name,
-                            'chinese_name': chinese_name,
-                            'system': system
-                        })
-                        added_names.add(name)
-                        
-                    # 2. Search Local Database (includes missing_games.csv)
-                    # This allows finding games that are NOT in LibretroDB but are in our local files
-                    print(f"DEBUG search_db: Searching local DB for '{keyword}'...")
-                    local_results = db_manager.search_by_keyword(keyword, system=system, limit=20)
-                    print(f"DEBUG search_db: Found {len(local_results)} matches in local DB")
-                    
-                    for item in local_results:
-                        if item['english_name'] not in added_names:
-                            results.append({
-                                'english_name': item['english_name'],
-                                'chinese_name': item['chinese_name'],
-                                'system': system
-                            })
-                            added_names.add(item['english_name'])
-                            
-                else:
-                    print(f"ERROR search_db: Failed to load DAT for system '{system}'")
-                    
-            except Exception as e:
-                import traceback
-                print(f"ERROR searching LibretroDB: {e}")
-                print(traceback.format_exc())
-
-            
+                # Local search remains available even when no DAT is cached.
+                results = db.search_by_keyword(keyword, system=system, limit=30)
+                dat = LibretroDB(str(app_paths.dat_storage()))
+                if dat.load_system_dat(system):
+                    names = dat.search(keyword, limit=30)
+                    exact = dat.get_standard_name(keyword)
+                    if exact:
+                        names = [exact] + [name for name in names if name != exact]
+                    known = {row['english_name'] for row in results}
+                    for name in names:
+                        if name not in known:
+                            results.append({'english_name': name, 'chinese_name': db.search_by_english(name, system) or '', 'system': system})
+                            known.add(name)
+            finally:
+                db.close()
             self.send_response(200)
-            self.send_header("Content-type", "application/json")
+            self.send_header('Content-type', 'application/json')
             self.end_headers()
-            self.wfile.write(json.dumps({"results": results}).encode())
-        except Exception as e:
+            self.wfile.write(json.dumps({'results': results}, ensure_ascii=False).encode('utf-8'))
+        except Exception as error:
             self.send_response(500)
-            self.send_header("Content-type", "application/json")
+            self.send_header('Content-type', 'application/json')
             self.end_headers()
-            self.wfile.write(json.dumps({"error": str(e)}).encode())
+            self.wfile.write(json.dumps({'error': str(error)}).encode('utf-8'))
 
     def stream_progress(self, job_id):
         self.send_response(200)
@@ -599,12 +614,32 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
             except BrokenPipeError:
                 break
 
-            if job['status'] in ['completed', 'failed']:
+            if job['status'] in ['completed', 'failed', 'cancelled']:
                 break
             
             time.sleep(0.5)
 
     def do_POST(self):
+        if not self.authorize():
+            return
+        if self.headers.get_content_type() != 'application/json':
+            self.send_error(415, 'Expected application/json')
+            return
+        try:
+            length = int(self.headers.get('Content-Length', '0'))
+            if not 0 < length <= 32 * 1024 * 1024:
+                raise ValueError()
+        except ValueError:
+            self.send_error(413)
+            return
+        import desktop_api
+        if self.path in desktop_api.POST_ROUTES:
+            try:
+                payload = json.loads(self.rfile.read(length))
+                desktop_api.post(self, self.path, payload, job_manager, CONFIG_FILE)
+            except Exception as error:
+                desktop_api.reply(self, {'error': str(error)}, 400)
+            return
         if self.path == "/api/overrides/save":
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
@@ -614,8 +649,9 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                 config = load_server_config()
                 path = configured_overrides_path(config)
                 entry = build_override_entry(data)
-                entries = upsert_override(load_overrides(path), entry, now=entry.get("updated_at"))
-                save_overrides(path, entries)
+                with file_lock(path):
+                    entries = upsert_override(load_overrides(path), entry, now=entry.get("updated_at"))
+                    save_overrides(path, entries)
 
                 self.send_response(200)
                 self.send_header("Content-type", "application/json")
@@ -681,9 +717,9 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
             
             try:
                 config_data = json.loads(post_data)
-                merged_config = merge_server_config(config_data)
-                with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
-                    json.dump(merged_config, f, indent=4, ensure_ascii=False)
+                with file_lock(CONFIG_FILE):
+                    merged_config = merge_server_config(config_data)
+                    atomic_write_json(CONFIG_FILE, merged_config)
                 self.send_response(200)
                 self.send_header("Content-type", "application/json")
                 self.end_headers()
@@ -706,9 +742,9 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                 
                 config = {}
                 if os.path.exists(CONFIG_FILE):
-                    with open(CONFIG_FILE, 'r') as f:
+                    with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
                         config = json.load(f)
-                rom_name_cn_path = config.get("rom_name_cn_path", "data/rom-name-cn")
+                rom_name_cn_path = config.get("rom_name_cn_path", str(app_paths.default_source()))
                 manual_overrides_path = configured_overrides_path(config)
                 if getattr(sys, 'frozen', False) and not os.path.isabs(rom_name_cn_path):
                      rom_name_cn_path = os.path.join(sys._MEIPASS, rom_name_cn_path)
@@ -755,15 +791,22 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                 thumbnails_dir = data.get('thumbnails_dir')
                 options = data.get('options') or {}
                 download_thumbnails = options.get('download_thumbnails', True)
+                write_names = options.get('write_names', True)
                 
                 # Create Job
                 job_id = job_manager.create_job()
+                job_manager.contexts[job_id] = {'thumbnails_dir': thumbnails_dir}
                 
                 def run_job(jid, p_path, chgs, t_dir, should_download):
+                    from contextlib import ExitStack
+                    with ExitStack() as resources:
+                        return run_apply_job(resources, jid, p_path, chgs, t_dir, should_download)
+
+                def run_apply_job(resources, jid, p_path, chgs, t_dir, should_download):
                     try:
                         import plcn
                         from retroarch_scanner import (
-                            backup_adb_file,
+                            verified_push_adb_playlist,
                             is_adb_uri,
                             materialize_adb_file,
                             push_adb_directory,
@@ -779,25 +822,31 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
 
                         if remote_playlist:
                             job_manager.update_job(jid, 0, len(chgs or []), "正在读取实机游戏列表...")
-                            effective_playlist_path = materialize_adb_file(p_path)
+                            import hashlib
+                            lock_name = hashlib.sha256(p_path.encode('utf-8')).hexdigest()
+                            resources.enter_context(file_lock(app_paths.cache_dir() / 'locks' / lock_name))
+                            staging_dir = resources.enter_context(tempfile.TemporaryDirectory(prefix='plcn-adb-'))
+                            effective_playlist_path = materialize_adb_file(p_path, cache_dir=staging_dir)
+                            with open(effective_playlist_path, encoding='utf-8-sig') as original:
+                                expected_remote = json.load(original)
 
                         if remote_playlist and remote_thumbnails:
-                            effective_thumbnails_dir = tempfile.mkdtemp(prefix="plcn-adb-thumbnails-")
+                            effective_thumbnails_dir = resources.enter_context(tempfile.TemporaryDirectory(prefix='plcn-adb-thumbnails-'))
 
                         apply_result = plcn.apply_changes(
                             effective_playlist_path,
                             chgs,
                             effective_thumbnails_dir,
                             progress_callback=progress_cb,
-                            download_thumbnails=should_download
+                            download_thumbnails=should_download, cancel_check=lambda: job_manager.cancelled(jid),
+                            write_names=write_names, record_history=not remote_playlist
                         )
                         summary, apply_summary = split_plcn_apply_result(apply_result)
 
                         remote_backup = None
-                        if remote_playlist:
-                            job_manager.update_job(jid, len(chgs or []), len(chgs or []), "正在备份并写回实机游戏列表...")
-                            remote_backup = backup_adb_file(p_path)
-                            push_adb_file(effective_playlist_path, p_path)
+                        if remote_playlist and apply_summary and apply_summary.get('applied'):
+                            job_manager.update_job(jid, len(chgs or []), len(chgs or []), "正在备份并验证实机游戏列表...")
+                            remote_backup = verified_push_adb_playlist(effective_playlist_path, p_path, expected_remote)
 
                         if remote_playlist and remote_thumbnails and should_download:
                             job_manager.update_job(jid, len(chgs or []), len(chgs or []), "正在推送缩略图到实机...")
@@ -845,11 +894,12 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                 data = json.loads(post_data)
                 batch_dir = data.get('batch_dir')
                 thumbnails_dir = data.get('thumbnails_dir')
-                rom_name_cn_path = data.get('rom_name_cn_path') or "data/rom-name-cn"
+                rom_name_cn_path = data.get('rom_name_cn_path') or load_server_config().get('rom_name_cn_path') or str(app_paths.default_source())
                 options = data.get('options') or {}
                 backup = options.get('backup', True)
                 continue_on_error = options.get('continue_on_error', True)
                 download_thumbnails = options.get('download_thumbnails', True)
+                write_names = options.get('write_names', True)
                 
                 # Handle PyInstaller path for rom_name_cn_path
                 if getattr(sys, 'frozen', False) and not os.path.isabs(rom_name_cn_path):
@@ -857,6 +907,7 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
 
                 # Create Job
                 job_id = job_manager.create_job()
+                job_manager.contexts[job_id] = {'thumbnails_dir': thumbnails_dir}
                 
                 def run_batch_job(jid, b_dir, t_dir, r_path, use_backup, keep_going, should_download):
                     try:
@@ -878,6 +929,8 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                         errors = []
 
                         for i, playlist_path in enumerate(playlist_files):
+                            if job_manager.cancelled(jid):
+                                break
                             filename = os.path.basename(playlist_path)
                             job_manager.update_job(jid, i, total_files, f"Processing {filename}...")
                             
@@ -885,7 +938,7 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                             
                             try:
                                 # 1. Analyze
-                                changes = plcn.analyze_playlist(playlist_path, system_name, r_path)
+                                changes = plcn.analyze_playlist(playlist_path, system_name, r_path, t_dir, manual_overrides_path=configured_overrides_path())
                                 
                                 # 2. Apply (with backup)
                                 # We pass a dummy progress callback or None, as we track file-level progress here.
@@ -895,7 +948,8 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                                     changes,
                                     t_dir,
                                     backup=use_backup,
-                                    download_thumbnails=should_download
+                                    download_thumbnails=should_download, cancel_check=lambda: job_manager.cancelled(jid),
+                                    write_names=write_names
                                 )
                                 summary, _apply_summary = split_plcn_apply_result(apply_result)
                                 summary = annotate_download_summary_paths(
@@ -905,6 +959,8 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                                 )
                                 summaries.append(summary)
                                 
+                            except TaskCancelled:
+                                break
                             except Exception as e:
                                 print(f"Error processing {filename}: {e}")
                                 errors.append(f"{filename}: {e}")
@@ -913,7 +969,7 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                                 
                         merged_summary = ThumbnailDownloader.merge_summaries(summaries)
                         job_manager.complete_job(jid, {
-                            "processed_count": total_files,
+                            "processed_count": len(summaries),
                             "errors": errors,
                             "download_summary": merged_summary
                         })
@@ -947,6 +1003,9 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                 content = f.read()
                 self.send_response(200)
                 self.send_header("Content-type", "text/html")
+                self.send_header('Set-Cookie', f'plcn_session={SESSION_TOKEN}; HttpOnly; SameSite=Strict; Path=/')
+                self.send_header('Cache-Control', 'no-store')
+                self.send_header('X-Frame-Options', 'DENY')
                 self.end_headers()
                 self.wfile.write(content)
         except FileNotFoundError:
@@ -954,29 +1013,35 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(b"Template not found")
 
-def run_server():
-    # Change to the directory where we want to store config.json
-    if getattr(sys, 'frozen', False):
-        # If frozen, use the executable's directory
-        exe_dir = os.path.dirname(sys.executable)
-        os.chdir(exe_dir)
-    else:
-        # Development mode: use project root
-        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        os.chdir(project_root)
-    
-    print(f"DEBUG: sys.frozen = {getattr(sys, 'frozen', False)}")
-    if getattr(sys, 'frozen', False):
-        print(f"DEBUG: sys._MEIPASS = {getattr(sys, '_MEIPASS', 'Not Found')}")
-    print(f"DEBUG: TEMPLATE_DIR = {TEMPLATE_DIR}")
-    if os.path.exists(TEMPLATE_DIR):
-        print(f"DEBUG: Contents of TEMPLATE_DIR: {os.listdir(TEMPLATE_DIR)}")
-    else:
-        print(f"DEBUG: TEMPLATE_DIR does not exist!")
+def run_server(open_browser=False):
+    from app_runtime import InstanceLock
+    instance = InstanceLock(app_paths.user_data_dir())
+    if not instance.acquire():
+        url = instance.existing_url()
+        if open_browser:
+            import webbrowser
+            webbrowser.open(url)
+        return url
+    try:
+        app_paths.initialize()
+        return _serve_instance(instance, open_browser)
+    finally:
+        instance.close()
 
-    print(f"Starting server at http://localhost:{PORT}")
-    socketserver.TCPServer.allow_reuse_address = True
-    with socketserver.TCPServer(("", PORT), ConfigHandler) as httpd:
+
+def _serve_instance(instance, open_browser):
+    try:
+        httpd = http.server.ThreadingHTTPServer(('127.0.0.1', PORT), ConfigHandler)
+    except OSError:
+        httpd = http.server.ThreadingHTTPServer(('127.0.0.1', 0), ConfigHandler)
+    with httpd:
+        url = f'http://127.0.0.1:{httpd.server_address[1]}'
+        httpd.instance_id = secrets.token_urlsafe(24)
+        instance.publish(url, httpd.instance_id)
+        print(f'Starting server at {url}')
+        if open_browser:
+            import webbrowser
+            webbrowser.open(url)
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:

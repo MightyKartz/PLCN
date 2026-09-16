@@ -1,7 +1,10 @@
 import os
 import requests
 import urllib.parse
+from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from artwork_resolver import artwork_path, sanitize_filename, valid_image_file, valid_png
+from safe_io import atomic_write_bytes, file_lock
 
 class ThumbnailDownloader:
     BASE_URL = "https://thumbnails.libretro.com"
@@ -10,6 +13,7 @@ class ThumbnailDownloader:
     def __init__(self, thumbnails_dir, max_workers=5):
         self.thumbnails_dir = thumbnails_dir
         self.max_workers = max_workers
+        self.cancel_check = None
         
         # Setup session with retry
         from requests.adapters import HTTPAdapter
@@ -69,6 +73,12 @@ class ThumbnailDownloader:
         return merged
 
     def download_thumbnail(self, system, game_english_name, game_chinese_name):
+        # Serialize duplicate target names, including separate PLCN processes.
+        target = artwork_path(self.thumbnails_dir, system, game_chinese_name)
+        with file_lock(target):
+            return self._download_thumbnail_locked(system, game_english_name, game_chinese_name)
+
+    def _download_thumbnail_locked(self, system, game_english_name, game_chinese_name):
         """
         Downloads thumbnails for a single game.
         Returns a list of structured results.
@@ -79,6 +89,10 @@ class ThumbnailDownloader:
         
         results = []
         for type_name in self.THUMBNAIL_TYPES:
+            if self.cancel_check and self.cancel_check():
+                results.append({'type': type_name, 'game': game_chinese_name, 'source': game_english_name,
+                                'system': system, 'status': 'skipped', 'reason': 'cancelled', 'message': '已取消'})
+                continue
             url = f"{self.BASE_URL}/{urllib.parse.quote(system)}/{type_name}/{urllib.parse.quote(server_filename)}"
             
             # Target directory
@@ -89,7 +103,7 @@ class ThumbnailDownloader:
             target_filename = self.sanitize_filename(game_chinese_name) + ".png"
             target_path = os.path.join(target_dir, target_filename)
             
-            if os.path.exists(target_path):
+            if valid_image_file(target_path):
                 results.append({
                     "type": type_name,
                     "game": game_chinese_name,
@@ -102,13 +116,26 @@ class ThumbnailDownloader:
                 })
                 continue
 
+            # Reuse the canonical English image when renaming a playlist label.
+            existing_source = artwork_path(self.thumbnails_dir, system, game_english_name, type_name)
+            if existing_source != Path(target_path) and valid_image_file(existing_source):
+                atomic_write_bytes(target_path, existing_source.read_bytes())
+                results.append({'type': type_name, 'game': game_chinese_name, 'source': game_english_name,
+                                'system': system, 'status': 'success', 'reason': 'reused_local',
+                                'message': '已复用本地图片', 'path': target_path, 'url': url})
+                continue
+
             # print(f"Downloading {type_name} for {game_english_name}...")
             try:
                 # Use session with retry
                 response = self.session.get(url, timeout=10)
                 if response.status_code == 200:
-                    with open(target_path, 'wb') as f:
-                        f.write(response.content)
+                    if len(response.content) > 32 * 1024 * 1024 or not valid_png(response.content):
+                        results.append({'type': type_name, 'game': game_chinese_name, 'source': game_english_name,
+                                        'system': system, 'status': 'failed', 'reason': 'invalid_image',
+                                        'message': '服务器返回了无效图片', 'path': target_path, 'url': url})
+                        continue
+                    atomic_write_bytes(target_path, response.content)
                     results.append({
                         "type": type_name,
                         "game": game_chinese_name,
@@ -126,6 +153,7 @@ class ThumbnailDownloader:
                         "source": game_english_name,
                         "system": system,
                         "status": "failed",
+                        "reason": 'not_found' if response.status_code == 404 else 'http_error',
                         "message": f"HTTP {response.status_code}",
                         "path": target_path,
                         "url": url
@@ -137,6 +165,7 @@ class ThumbnailDownloader:
                     "source": game_english_name,
                     "system": system,
                     "status": "failed",
+                    "reason": 'network_or_io_error',
                     "message": str(e),
                     "path": target_path,
                     "url": url
@@ -148,9 +177,30 @@ class ThumbnailDownloader:
         Downloads thumbnails for multiple games in parallel.
         tasks: List of tuples (system, game_english_name, game_chinese_name)
         """
-        print(f"Starting batch download for {len(tasks)} items with {self.max_workers} threads...")
-
-        summary = self.empty_summary(len(tasks))
+        # A playlist can contain the same ROM more than once. Download shared
+        # artwork once; never let different sources race to the same filename.
+        grouped = {}
+        for task in tasks:
+            system, en_name, cn_name = task
+            key = str(artwork_path(self.thumbnails_dir, system, cn_name)).casefold()
+            grouped.setdefault(key, []).append(task)
+        safe_tasks = []
+        summary = self.empty_summary(len(grouped))
+        for group in grouped.values():
+            system, en_name, cn_name = group[0]
+            if len({row[1] for row in group}) == 1:
+                safe_tasks.append(group[0])
+                continue
+            for kind in self.THUMBNAIL_TYPES:
+                summary['types'][kind]['failed'] += 1
+                summary['total']['failed'] += 1
+                summary['details'].append({
+                    'type': kind, 'game': cn_name, 'source': en_name, 'system': system,
+                    'status': 'failed', 'reason': 'filename_collision',
+                    'message': '多个图片来源对应同一文件名，请为不同版本保留不同名称'
+                })
+        tasks = safe_tasks
+        print(f"Starting batch download for {len(tasks)} unique targets with {self.max_workers} threads...")
 
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             # Submit all tasks
@@ -222,7 +272,4 @@ class ThumbnailDownloader:
         Replaces illegal characters with underscores, matching RetroArch's behavior.
         """
         # List of characters to replace
-        illegal_chars = ['&', '*', '/', ':', '<', '>', '?', '\\', '|']
-        for char in illegal_chars:
-            name = name.replace(char, '_')
-        return name
+        return sanitize_filename(name)

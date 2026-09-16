@@ -3,6 +3,7 @@ import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
+from safe_io import atomic_write_json
 
 
 EMPTY_CRC_VALUES = {"", "detect", "none", "null", "unknown", "00000000"}
@@ -22,19 +23,15 @@ def normalize_crc(value):
     if raw.lower().startswith("0x"):
         raw = raw[2:]
 
-    compact = re.sub(r"[^0-9a-fA-F]", "", raw)
-    if raw.casefold() in EMPTY_CRC_VALUES or compact.casefold() in EMPTY_CRC_VALUES:
+    if raw.casefold() in EMPTY_CRC_VALUES or not re.fullmatch(r'[0-9a-fA-F]{8}', raw):
         return ""
-    return compact.upper()
+    return raw.upper()
 
 
 def rom_filename_from_path(path):
     if not path:
         return ""
-    filename = os.path.basename(str(path))
-    if "#" in filename:
-        filename = filename.split("#", 1)[0]
-    return filename
+    return str(path).split('#', 1)[0].replace('\\', '/').rsplit('/', 1)[-1]
 
 
 def load_overrides(path):
@@ -57,9 +54,7 @@ def save_overrides(path, entries):
     path = Path(path)
     if path.parent:
         path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as f:
-        json.dump(entries or [], f, ensure_ascii=False, indent=2)
-        f.write("\n")
+    atomic_write_json(path, entries or [])
 
 
 def override_system_key(value):
@@ -95,6 +90,9 @@ def find_override(entries, system, item):
         for entry in entries or []:
             if override_system_key(entry.get("system")) != system_key:
                 continue
+            entry_crc = normalize_crc(entry.get('crc32'))
+            if item_crc and entry_crc and item_crc != entry_crc:
+                continue
             entry_filename = entry.get("rom_filename") or rom_filename_from_path(entry.get("rom_path"))
             if override_filename_key(entry_filename) == item_filename:
                 return entry
@@ -125,7 +123,8 @@ def upsert_override(entries, entry, now=None):
 
 
 def default_overrides_path(config_dir=None):
-    base_dir = config_dir or os.getcwd()
+    from app_paths import user_data_dir
+    base_dir = config_dir or user_data_dir()
     return os.path.join(base_dir, "manual_overrides.json")
 
 

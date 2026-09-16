@@ -6,7 +6,20 @@ PLCN is a local RetroArch game-list localization and thumbnail matching tool. It
 
 > Current implementation note: PLCN is an external local helper for RetroArch playlists and thumbnail folders. It is not an in-RetroArch plugin and does not modify RetroArch itself.
 
-## Latest Version: v3.1.1
+## Development changes (not yet released)
+
+The desktop preview adds a no-console launcher, OS-owned single-instance lock, per-user state with legacy migration, native file selection, data management, cooperative cancellation, local image retry and guarded playlist restore. CI builds Windows installer/portable ZIP and macOS Intel/Apple Silicon DMGs. Artifacts are unsigned previews; signing and real desktop validation are still required. See [desktop guide](DOC/DESKTOP_GUIDE.md).
+
+- Preserve every playlist entry; no implicit deduplication. CLI and batch workflows skip proposals that require manual review. In the UI, review edits and choose “已核对，加入应用” before the final apply summary.
+- Use cooperative locks, snapshot checks, backups, atomic replacement, and readback verification. ADB writes verify staged uploads and remote backups before replacement.
+- Scope translations and aliases by platform; resolve mixed playlists using each entry's `db_name`. CSV caches are isolated by source content fingerprint.
+- Add `data build/fetch/inspect/compare/activate/rollback` for pinned, validated, offline data packs. Updates preserve manual corrections and require explicit activation.
+- Validate boxarts, screenshots, and title images independently; reuse local English artwork and reject conflicting destinations.
+- Bind the service to loopback with session and same-origin checks. An occupied port selects a free port instead of terminating another process.
+
+See the [implementation record](DOC/IMPLEMENTATION_PLAN.md) and [data-pack/writeback guide](DOC/DATA_PACKS.md) (Chinese). From the repository root: `python src/plcn.py data --help`. JavaScript syntax checks require Node.js: `python scripts/check_ui_js.py`.
+
+## Released Version: v3.1.1
 
 - Fixed regular ROM playlist scans where Chinese parent folders such as `gba中文游戏`, `中文游戏`, or `游戏合集` could be written as every game's display name.
 - Fixed playlists already polluted by older versions: when the current label is a generic collection folder name, preview now repairs it from the ROM filename and database match.

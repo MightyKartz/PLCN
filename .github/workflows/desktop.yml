@@ -1,0 +1,62 @@
+name: Desktop packages
+
+on:
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-cli:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -r requirements.txt
+      - run: python -m PyInstaller --noconfirm plcn.spec
+      - run: ./dist/plcn --help
+      - run: tar -czf dist/PLCN-Linux-x64.tar.gz -C dist plcn
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PLCN-Linux-x64-unsigned
+          path: dist/PLCN-Linux-x64.tar.gz
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            arch: x64
+          - os: macos-15-intel
+            arch: x64
+          - os: macos-15
+            arch: arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -r requirements.txt pytest
+      - run: python -m pytest -q -rs
+      - name: Install Windows installer compiler
+        if: runner.os == 'Windows'
+        run: choco install innosetup --no-progress -y
+      - name: Build and smoke test Windows package
+        if: runner.os == 'Windows'
+        run: python scripts/package_desktop.py --arch ${{ matrix.arch }} --installer
+      - name: Build and smoke test macOS bundle
+        if: runner.os == 'macOS'
+        run: python scripts/package_desktop.py --arch ${{ matrix.arch }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PLCN-${{ runner.os }}-${{ matrix.arch }}-unsigned
+          path: |
+            dist/*.dmg
+            dist/*.zip
+            dist/*Setup.exe
+          if-no-files-found: error
