@@ -69,6 +69,14 @@ def test_single_instance_lock_releases_on_close(tmp_path):
     second.close()
 
 
+def test_local_server_owns_its_port_exclusively():
+    # In particular, Windows must reject a second server using SO_REUSEADDR.
+    with server.LocalHTTPServer(('127.0.0.1', 0), server.ConfigHandler) as first:
+        with pytest.raises(OSError):
+            with ThreadingHTTPServer(first.server_address, server.ConfigHandler):
+                pytest.fail('Another process could bind the live instance port')
+
+
 def fixture_playlist(tmp_path):
     path = tmp_path / '中文.lpl'
     path.write_text(json.dumps({'items': [{'path': '/roms/Game.zip', 'label': 'Original'}]}), encoding='utf-8')
@@ -147,6 +155,8 @@ def test_desktop_endpoints_and_shutdown_refuses_active_work(tmp_path, desktop_ho
             client.get(url, timeout=3).raise_for_status()
             assert client.get(url + '/api/instance', timeout=3).json()['instance_id'] == 'test-instance'
             assert client.get(url + '/assets/desktop.js', timeout=3).status_code == 200
+            assert client.get(url + '/assets/workflow.js', timeout=3).status_code == 200
+            assert client.get(url + '/api/data', timeout=3).json()['source_kind'] == 'bundled'
             picked = client.post(url + '/api/desktop/pick', json={'kind': 'directory'}, timeout=3).json()
             assert picked['path'].endswith('选择目录')
             job = jobs.create_job()

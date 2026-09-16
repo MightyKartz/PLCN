@@ -14,6 +14,7 @@ def main():
     parser.add_argument('--initial', default='')
     parser.add_argument('--result')
     parser.add_argument('--self-check', action='store_true')
+    parser.add_argument('--no-browser', action='store_true', help='Start the local service without opening a browser')
     args = parser.parse_args()
     if args.pick:
         from native_dialog import helper_pick
@@ -43,7 +44,7 @@ def main():
         sys.stdout = sys.stderr = log
         try:
             import server
-            server.run_server(open_browser=True)
+            server.run_server(open_browser=not args.no_browser)
         except Exception:
             traceback.print_exc()
             try:

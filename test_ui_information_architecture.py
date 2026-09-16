@@ -114,8 +114,9 @@ def test_primary_labels_are_clear():
     assert "仅改中文名" in html
     assert "修复并下载" in html
     assert "已完成" in html
-    assert 'id="summary-ready"' in html
-    assert 'id="summary-completed"' in html
+    assert 'class="filter-count"' in html
+    assert 'id="summary-ready"' not in html
+    assert 'id="summary-completed"' not in html
     assert 'data-filter="ready"' in html
     assert 'data-filter="completed"' in html
     assert "shouldAutoSelectChange" in html

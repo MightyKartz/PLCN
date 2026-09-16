@@ -41,6 +41,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - run: python -m pip install -r requirements.txt pytest
       - run: python -m pytest -q -rs
       - name: Install Windows installer compiler
@@ -52,6 +55,12 @@ jobs:
       - name: Build and smoke test macOS bundle
         if: runner.os == 'macOS'
         run: python scripts/package_desktop.py --arch ${{ matrix.arch }}
+      - name: Install, run and uninstall Windows Setup
+        if: runner.os == 'Windows'
+        run: python scripts/smoke_desktop_package.py --installer dist/PLCN-Windows-x64-Setup.exe
+      - name: Mount DMG, install and run macOS app
+        if: runner.os == 'macOS'
+        run: python scripts/smoke_desktop_package.py --dmg dist/PLCN-macOS-${{ matrix.arch }}.dmg
       - uses: actions/upload-artifact@v4
         with:
           name: PLCN-${{ runner.os }}-${{ matrix.arch }}-unsigned

@@ -49,7 +49,7 @@ def get(handler, path, jobs, config_path):
         active = None
         if data_pack.catalog_path(source):
             active = data_pack.validate_pack(source.parent)
-        reply(handler, {'source': str(source), 'active': active, 'packs': packs,
+        reply(handler, {'source': str(source), 'source_kind': 'bundled' if source.resolve() == app_paths.default_source().resolve() else 'custom', 'active': active, 'packs': packs,
                         'can_rollback': bool(config.get('previous_rom_name_cn_path'))})
     else:
         return False

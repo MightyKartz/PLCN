@@ -1,5 +1,6 @@
 import http.server
 import socketserver
+import socket
 import json
 import os
 import sys
@@ -27,6 +28,17 @@ from manual_overrides import (
 PORT = 7777
 CONFIG_FILE = str(app_paths.config_path())
 SESSION_TOKEN = secrets.token_urlsafe(32)
+
+
+class LocalHTTPServer(http.server.ThreadingHTTPServer):
+    # Windows SO_REUSEADDR can let another instance bind the same address,
+    # sending a browser to the wrong profile instead of using a free port.
+    allow_reuse_address = os.name != 'nt'
+
+    def server_bind(self):
+        if os.name == 'nt':
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
 
 def get_base_path():
     if getattr(sys, 'frozen', False):
@@ -227,7 +239,7 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
         if path == "/":
             self.path = "/plcn.html"
             return self.serve_template()
-        elif path in ('/assets/desktop.js', '/assets/desktop.css'):
+        elif path in ('/assets/desktop.js', '/assets/desktop.css', '/assets/workflow.js'):
             filename = path.rsplit('/', 1)[-1]
             content = (app_paths.resource_root() / 'src' / 'templates' / filename).read_bytes()
             self.send_response(200)
@@ -1031,9 +1043,9 @@ def run_server(open_browser=False):
 
 def _serve_instance(instance, open_browser):
     try:
-        httpd = http.server.ThreadingHTTPServer(('127.0.0.1', PORT), ConfigHandler)
+        httpd = LocalHTTPServer(('127.0.0.1', PORT), ConfigHandler)
     except OSError:
-        httpd = http.server.ThreadingHTTPServer(('127.0.0.1', 0), ConfigHandler)
+        httpd = LocalHTTPServer(('127.0.0.1', 0), ConfigHandler)
     with httpd:
         url = f'http://127.0.0.1:{httpd.server_address[1]}'
         httpd.instance_id = secrets.token_urlsafe(24)

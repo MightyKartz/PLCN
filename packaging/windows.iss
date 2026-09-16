@@ -9,6 +9,7 @@ AppPublisher=MightyKartz
 AppPublisherURL=https://github.com/MightyKartz/PLCN
 DefaultDirName={localappdata}\Programs\PLCN
 DefaultGroupName=PLCN
+AllowNoIcons=yes
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
