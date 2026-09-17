@@ -501,7 +501,11 @@ def apply_independent(manifest, directory, token, receipt):
         backups = write_selected_images(manifest, directory, token, receipt)
         for asset in manifest['companions']:
             if digest(read_target(asset['target'])) != asset['digest']:
-                write_target(asset['target'], (directory / asset['cache']).read_bytes(), None)
+                try:
+                    write_target(asset['target'], (directory / asset['cache']).read_bytes(), None)
+                except OSError as error:
+                    # Windows can reject a name like `Title 2.png` when `Title.png` already exists.
+                    print(f'Warning: Could not copy companion artwork: {error}')
         playlist_backup = playlist_path + '.bak-' + token
         if not completed:
             try:
