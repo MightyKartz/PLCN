@@ -828,4 +828,4 @@ def test_archive_member_used_for_chinese_label_artwork_source(tmp_path):
     assert changes[0]['thumbnail_source'] == 'Bikkuriman World (Japan)'
     assert changes[0]['new_label'] == '仙魔大战'
     assert changes[0]['path'] == item['path']
-    assert json.loads(path.read_text())['items'] == [item]
+    assert json.loads(path.read_text(encoding='utf-8'))['items'] == [item]
