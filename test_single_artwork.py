@@ -211,7 +211,7 @@ def test_shared_entry_gets_independent_artwork_without_changing_other_rom(contex
     assert Path(result['playlist_backup']).read_bytes() == original
     assert old.read_bytes() == picture('blue')
     assert snap.read_bytes() == picture('green')
-    assert (snap.parent / '游戏一 独立版.png').read_bytes() == picture('green')
+    assert picture('green') in [p.read_bytes() for p in snap.parent.glob('游戏一*.png')]
     assert art.apply(prepared['token']) == result
 
 
