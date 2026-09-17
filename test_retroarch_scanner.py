@@ -181,6 +181,7 @@ def test_adb_command_error_is_not_discovery_output(monkeypatch):
 def test_root_probe_keeps_match_when_later_directories_are_absent(tmp_path, monkeypatch):
     import os
     import subprocess
+    from pathlib import Path
     from types import SimpleNamespace
     import retroarch_scanner as scanner
     root = tmp_path / 'RetroArch with spaces'
@@ -194,7 +195,9 @@ def test_root_probe_keeps_match_when_later_directories_are_absent(tmp_path, monk
             return SimpleNamespace(returncode=0, stdout=str(root) + '\n', stderr='')
         return run(['/bin/sh', '-c', command[4]], **kwargs)
     monkeypatch.setattr(scanner.subprocess, 'run', run_probe)
-    assert scanner._find_adb_root('test-device') == (str(root), str(root / 'playlists').replace(os.sep, '/'))
+    found_root, found_playlists = scanner._find_adb_root('test-device')
+    assert found_root == str(root)
+    assert Path(found_playlists) == root / 'playlists'
 
 
 def test_auto_scan_reports_connected_device_without_playlists():

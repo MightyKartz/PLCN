@@ -234,10 +234,19 @@ def image_status(path):
 def existing_rom_target(payload, target):
     """RetroArch 1.20 tries the ROM basename before the playlist label."""
     name = sanitize_filename(rom_title(payload.get('rom_path')))
-    alias = target.rsplit('/', 1)[0] + '/' + name + '.png'
-    if not name or alias == target:
+    if not name:
         return None
-    content = read_target(alias)
+    if is_adb_uri(target):
+        alias = target.rsplit('/', 1)[0] + '/' + name + '.png'
+        if alias == target:
+            return None
+        content = read_target(alias)
+    else:
+        alias_path = Path(target).parent / (name + '.png')
+        alias = str(alias_path)
+        if alias_path == Path(target):
+            return None
+        content = read_target(alias)
     if content is None:
         return None
     playlist, _ = load_entry(payload)
