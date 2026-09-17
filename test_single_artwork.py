@@ -283,7 +283,7 @@ def test_rom_named_artwork_is_previewed_and_updated_with_label_image(context, re
         share_names(context)
         context = {**context, 'new_label': '独立名称'}
     prepared = art.preview(context)
-    assert Path(prepared['rom_target']['target']).name == 'one.png'
+    assert Path(prepared['rom_target']).name == 'one.png'
     result = art.apply(prepared['token'])
     assert alias.read_bytes() == Path(result['target']).read_bytes()
     assert (root / ('one.png.bak-' + prepared['token'])).read_bytes() == picture('green')
