@@ -818,3 +818,14 @@ def test_apply_changes_preserves_ps1_cue_bin_siblings_during_apply(tmp_path):
     saved = json.loads(playlist_path.read_text(encoding="utf-8"))
     assert [item["path"] for item in saved["items"]] == [cue_item["path"], bin_item["path"]]
     assert [item["label"] for item in saved["items"]] == ["最终幻想战略版", "最终幻想战略版"]
+
+
+def test_archive_member_used_for_chinese_label_artwork_source(tmp_path):
+    path = tmp_path / 'pce.lpl'
+    item = {'label': '仙魔大战', 'path': '/roms/仙魔大战 (日版).zip#Bikkuriman World (Japan).pce', 'db_name': 'NEC - PC Engine - TurboGrafx 16.lpl'}
+    path.write_text(json.dumps({'items': [item]}, ensure_ascii=False), encoding='utf-8')
+    changes = plcn.analyze_playlist(str(path), 'NEC - PC Engine - TurboGrafx 16', ROM_NAME_CN_PATH)
+    assert changes[0]['thumbnail_source'] == 'Bikkuriman World (Japan)'
+    assert changes[0]['new_label'] == '仙魔大战'
+    assert changes[0]['path'] == item['path']
+    assert json.loads(path.read_text())['items'] == [item]

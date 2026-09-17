@@ -1,6 +1,28 @@
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
 const {deriveWorkbenchState} = require('../src/templates/workflow.js');
+const {downloadTaskOutcome} = require('../src/templates/workflow.js');
+const {repairActionStatus} = require('../src/templates/workflow.js');
+test('identified review and duplicate rows need no individual confirmation', () => {
+    const game = {match_status:'review',needs_review:true,new_label:'游戏',original_item_label:'游戏',thumbnail_source:'Game (Japan)'};
+    assert.equal(repairActionStatus(game), 'download');
+    assert.equal(repairActionStatus({...game,match_status:'duplicate'}), 'download');
+    assert.equal(repairActionStatus({...game,new_label:'新名称'}), 'matched');
+    assert.equal(repairActionStatus({...game,cover_exists:true}), 'ready');
+    assert.equal(repairActionStatus({...game,cover_exists:true,artwork:{Named_Boxarts:{status:'exists'},Named_Snaps:{status:'missing'}}}), 'download');
+    assert.equal(repairActionStatus({...game,thumbnail_source:''}), 'incomplete');
+    assert.equal(repairActionStatus({...game,new_label:''}), 'incomplete');
+    assert.equal(repairActionStatus({...game,new_label:'新名称',thumbnail_source:''}, 'names'), 'rename');
+    assert.equal(repairActionStatus({...game,applied:true}), 'applied');
+});
+test('finished transport does not report success when images failed or task was cancelled', () => {
+    const partial = downloadTaskOutcome('completed', {total:{failed:27}});
+    assert.equal(partial.complete, false);
+    assert.equal(partial.label, '部分完成');
+    assert.match(partial.message, /27/);
+    assert.equal(downloadTaskOutcome('cancelled', {total:{failed:0}}).complete, false);
+    assert.equal(downloadTaskOutcome('completed', {total:{failed:0,success:27}}).complete, true);
+});
 const ready = {operation: null, previewKey: 'a', inputKey: 'a', playlist: 'test.lpl', system: 'GBA', selected: 1, thumbnails: 'images', download: true};
 
 test('first launch never claims a completed step or enables writes', () => {
@@ -144,4 +166,16 @@ test('Escape defers to the browser while a modal is open instead of closing its 
     assert.equal(closed,0);
     active=false;handler({key:'Escape'});
     assert.equal(closed,4);
+});
+
+test('reloading config preserves the current image directories when playlist inputs reset', () => {
+    const values={single_playlist_path:'one.lpl',single_system_name:'GBA',single_thumbnails_dir:'single-images',batch_thumbnails_dir:'batch-images',rom_name_cn_path:'data/rom-name-cn'};
+    const elements={}; const element=id=>elements[id]||={value:'',classList:{add:()=>{},remove:()=>{},toggle:()=>{}},style:{},textContent:'',setAttribute:()=>{},disabled:false,hidden:false};
+    const context={fetch:async()=>({json:async()=>values}),document:{getElementById:element},loadStats:()=>{},renderWorkbench:()=>{},showStatus:()=>{}, uiText:x=>x};
+    vm.createContext(context);
+    vm.runInContext(page.slice(page.indexOf('        async function loadConfig('),page.indexOf('        async function loadStats(')),context);
+    return context.loadConfig().then(()=>{
+        assert.equal(element('thumbnails_dir').value,'single-images');
+        assert.equal(element('batch_thumbnails_dir').value,'batch-images');
+    });
 });

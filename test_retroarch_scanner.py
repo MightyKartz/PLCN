@@ -154,3 +154,53 @@ def test_materialize_adb_file_writes_remote_playlist_to_cache(tmp_path):
 
     assert local_path.endswith("SNES.lpl")
     assert json.loads(open(local_path, encoding="utf-8").read()) == {"version": "1.5", "items": []}
+
+
+def test_disconnected_adb_target_does_not_create_fake_playlist():
+    calls = []
+    def disconnected(args, timeout=10):
+        calls.append(args)
+        if args == ['devices', '-l']:
+            return 'List of devices attached\n'
+        return "adb: device 'offline' not found\n"
+    scan = scan_retroarch_target('adb://offline/sdcard/RetroArch', local_candidates=[], adb_runner=disconnected)
+    assert scan['connected'] is False
+    assert scan['status'] == 'not_found'
+    assert scan['playlists'] == []
+    assert scan['totals']['items'] == 0
+    assert all(call == ['devices', '-l'] for call in calls)
+
+
+def test_adb_command_error_is_not_discovery_output(monkeypatch):
+    from types import SimpleNamespace
+    import retroarch_scanner
+    monkeypatch.setattr(retroarch_scanner.subprocess, 'run', lambda *args, **kwargs: SimpleNamespace(returncode=1, stdout='', stderr='adb: device not found'))
+    assert retroarch_scanner._run_adb(['devices', '-l']) == ''
+
+
+def test_root_probe_keeps_match_when_later_directories_are_absent(tmp_path, monkeypatch):
+    import subprocess
+    import retroarch_scanner as scanner
+    root = tmp_path / 'RetroArch with spaces'
+    (root / 'playlists').mkdir(parents=True)
+    monkeypatch.setattr(scanner, 'ADB_RETROARCH_ROOTS', [str(root), str(tmp_path / 'missing')])
+    run = subprocess.run
+    def run_probe(command, **kwargs):
+        assert command[:4] == ['adb', '-s', 'test-device', 'shell']
+        # Exercise real shell exit status, not a canned successful ADB response.
+        return run(['/bin/sh', '-c', command[4]], **kwargs)
+    monkeypatch.setattr(scanner.subprocess, 'run', run_probe)
+    assert scanner._find_adb_root('test-device') == (str(root), str(root / 'playlists'))
+
+
+def test_auto_scan_reports_connected_device_without_playlists():
+    def no_library(args, timeout=10):
+        if args == ['devices', '-l']:
+            return 'List of devices attached\nserial\tdevice model:Handheld\n'
+        return ''
+    scan = scan_retroarch_target(local_candidates=[], adb_runner=no_library)
+    assert scan['connected'] is True
+    assert scan['status'] == 'no_playlists'
+    assert scan['device']['serial'] == 'serial'
+    assert scan['playlists'] == []
+    assert '未找到 .lpl' in scan['message']

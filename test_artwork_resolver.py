@@ -58,10 +58,26 @@ def test_download_rejects_html_then_repairs_invalid_images(tmp_path):
     assert valid_image_file(target)
 
 
-def test_not_found_has_distinct_reason(tmp_path):
+def test_not_found_has_distinct_reason(tmp_path, monkeypatch):
+    monkeypatch.setattr('single_artwork.catalog_names', lambda *args: [])
     downloader = ThumbnailDownloader(str(tmp_path))
     downloader.session.get = lambda *a, **kw: SimpleNamespace(status_code=404)
     assert all(row['reason'] == 'not_found' for row in downloader.download_thumbnail('NES', 'Game', '中文'))
+
+
+def test_missing_catalog_spelling_retries_verified_name_and_keeps_target(tmp_path, monkeypatch):
+    from urllib.parse import unquote
+    monkeypatch.setattr('single_artwork.catalog_names', lambda *args: ['Out Run (Japan)'])
+    downloader = ThumbnailDownloader(str(tmp_path))
+    calls = []
+    def get(url, **kwargs):
+        calls.append(unquote(url))
+        return SimpleNamespace(status_code=200, content=png()) if calls[-1].endswith('/Out Run (Japan).png') else SimpleNamespace(status_code=404)
+    downloader.session.get = get
+    results = downloader.download_thumbnail('NEC - PC Engine - TurboGrafx 16', 'OutRun (Japan) (En)', '户外大飙车')
+    assert len(calls) == 6
+    assert all(row['status'] == 'success' and row['gallery_source'] == 'Out Run (Japan)' for row in results)
+    assert all(Path(row['path']).name == '户外大飙车.png' and valid_image_file(row['path']) for row in results)
 
 
 def test_batch_coalesces_duplicates_and_rejects_colliding_sources(tmp_path):

@@ -16,6 +16,7 @@ from playlist_manager import PlaylistManager
 from translator import Translator
 from thumbnail_downloader import ThumbnailDownloader
 from rom_fingerprint import build_rom_match_candidates
+from rom_paths import rom_filename, rom_title
 from match_evidence import CONFLICT_REASON, build_match_diagnostics
 from manual_overrides import find_override, load_overrides
 from safe_io import file_lock
@@ -565,13 +566,14 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
         cover_exists, cover_path = find_existing_boxart(
             thumbnails_dir,
             system_name,
+            rom_title(item.get('path')),
             new_label,
             item.get('label') or '',
             lookup=boxart_lookup,
         )
         artwork = None
         if artwork_resolver:
-            artwork = artwork_resolver.resolve_all(new_label, source=thumbnail_source)
+            artwork = artwork_resolver.resolve_all(new_label, source=thumbnail_source, rom_path=item.get('path'))
             boxart = artwork['Named_Boxarts']
             cover_exists = boxart['status'] == 'exists'
             cover_path = boxart['path']
@@ -653,20 +655,10 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
         return any('\u4e00' <= char <= '\u9fff' for char in (value or ''))
 
     def filename_stem_from_path(value):
-        if not value:
-            return None
-        basename = os.path.basename(value)
-        if '#' in basename:
-            basename = basename.split('#')[0]
-        return os.path.splitext(basename)[0] or None
+        return rom_title(value) or None
 
     def filename_from_path(value):
-        if not value:
-            return None
-        basename = os.path.basename(value)
-        if '#' in basename:
-            basename = basename.split('#')[0]
-        return basename or None
+        return rom_filename(value) or None
 
     def evidence_system_hint(value):
         if "Super Nintendo" in (value or ""):
@@ -814,10 +806,7 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
         # Extract ROM name for display (filename without extension)
         display_label = original_label
         if path:
-            basename = os.path.basename(path)
-            if '#' in basename:
-                basename = basename.split('#')[0]
-            display_label = os.path.splitext(basename)[0]
+            display_label = rom_title(path)
         
         new_label = original_label
         thumbnail_source = None
@@ -1042,7 +1031,7 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
         candidates = []
         ignored_parent_note = None
         if path:
-            filename_no_ext = os.path.splitext(os.path.basename(path))[0]
+            filename_no_ext = rom_title(path)
             if filename_no_ext: candidates.append(filename_no_ext)
         if original_label and original_label not in candidates and not is_generic_collection_label(original_label):
             candidates.append(original_label)
@@ -1269,9 +1258,6 @@ def _apply_changes_locked(playlist_path, changes, thumbnails_dir, backup=True, p
     candidate_applied = []
 
     for change in changes:
-        if (change.get('needs_review') or change.get('match_status') in {'review', 'duplicate'}) and change.get('review_confirmed') is not True:
-            writeback['skipped'].append(writeback_record(change, reason='review_required'))
-            continue
         index = change.get('index')
         new_label = change.get('new_label')
         target_path = change.get('path')

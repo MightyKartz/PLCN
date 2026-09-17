@@ -114,11 +114,12 @@ def _run_adb(args, timeout=10, adb_runner=None):
     except (FileNotFoundError, subprocess.TimeoutExpired):
         return ""
     if result.returncode != 0:
-        return result.stdout or result.stderr or ""
+        # Command diagnostics must never become discovered device paths.
+        return ""
     return result.stdout
 
 
-def list_adb_devices(adb_runner=None):
+def list_adb_devices(adb_runner=None, include_unavailable=False):
     output = _run_adb(["devices", "-l"], timeout=8, adb_runner=adb_runner)
     devices = []
     for line in output.splitlines():
@@ -126,7 +127,7 @@ def list_adb_devices(adb_runner=None):
         if not line or line.startswith("List of devices"):
             continue
         parts = line.split()
-        if len(parts) < 2 or parts[1] != "device":
+        if len(parts) < 2 or parts[1] not in ({'device', 'offline', 'unauthorized'} if include_unavailable else {'device'}):
             continue
         meta = {}
         for token in parts[2:]:
@@ -138,6 +139,7 @@ def list_adb_devices(adb_runner=None):
             "model": meta.get("model", ""),
             "device": meta.get("device", ""),
             "transport": "adb",
+            **({'state': parts[1]} if include_unavailable else {}),
         })
     return devices
 
@@ -299,10 +301,10 @@ def _find_adb_root(serial, requested_path="", adb_runner=None):
     quoted_roots = " ".join(shlex.quote(path) for path in ADB_RETROARCH_ROOTS)
     script = (
         f"for p in {quoted_roots}; do "
-        "[ -d \"$p/playlists\" ] && echo \"$p\"; "
+        "if [ -d \"$p/playlists\" ]; then echo \"$p\"; fi; "
         "done; "
         "for p in /storage/*/RetroArch /storage/*/retroarch; do "
-        "[ -d \"$p/playlists\" ] && echo \"$p\"; "
+        "if [ -d \"$p/playlists\" ]; then echo \"$p\"; fi; "
         "done"
     )
     found = _adb_first_line(_adb_shell(serial, script, adb_runner=adb_runner))
@@ -328,7 +330,7 @@ def _find_adb_config(serial, root, adb_runner=None):
         "/storage/emulated/0/Android/data/com.retroarch.ra64/files/retroarch.cfg",
     ]
     quoted = " ".join(shlex.quote(path) for path in candidates if path)
-    script = f"for c in {quoted}; do [ -f \"$c\" ] && echo \"$c\" && break; done"
+    script = f"for c in {quoted}; do if [ -f \"$c\" ]; then echo \"$c\"; break; fi; done"
     return _adb_first_line(_adb_shell(serial, script, adb_runner=adb_runner))
 
 
@@ -402,6 +404,15 @@ def _scan_adb_target(target_path, candidates, adb_runner=None):
     serial, requested_path = parse_adb_uri(target_path)
     devices = {device["serial"]: device for device in list_adb_devices(adb_runner=adb_runner)}
     device = devices.get(serial, {"serial": serial, "model": "", "device": "", "transport": "adb"})
+    if serial not in devices:
+        return {
+            "connected": False, "transport": "adb", "device": device,
+            "target_path": target_path, "root_path": "", "status": "not_found",
+            "message": "设备未连接或未授权，请重新连接设备并允许 USB 调试后重试。",
+            "directories": {"playlists": None, "thumbnails": None, "config": None},
+            "playlists": [], "totals": {"playlists": 0, "items": 0},
+            "candidates": candidates,
+        }
 
     root, playlists_dir = _find_adb_root(serial, requested_path, adb_runner=adb_runner)
     thumbnails_dir = _find_adb_thumbnails(serial, root, adb_runner=adb_runner)
@@ -528,10 +539,15 @@ def scan_retroarch_target(target_path=None, *, local_candidates=None, adb_runner
             if scan["connected"] and scan["playlists"]:
                 scan["candidates"] = candidates
                 return scan
+        connected_scan = None
         for candidate in adb_candidate_list:
             scan = _scan_adb_target(candidate["path"], candidates, adb_runner=adb_runner)
             if scan["connected"] and scan["playlists"]:
                 return scan
+            if scan["connected"]:
+                connected_scan = scan
+        if connected_scan:
+            return connected_scan
         return {
             "connected": False,
             "target_path": "",

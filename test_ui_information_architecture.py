@@ -19,7 +19,8 @@ def test_primary_labels_are_clear():
     assert "封面源英文名" in html
     assert 'data-i18n="推荐中文名"' not in html
     assert 'data-i18n="官方英文名"' not in html
-    assert "需人工确认" in html
+    assert "待补充名称或图片源" in html
+    assert "需人工确认" not in html
     assert "UI：中文" in html
     assert "缺封面源" in html
     assert "已手动编辑" in html
@@ -64,7 +65,7 @@ def test_primary_labels_are_clear():
     assert "&& isEditedChange(change)" in html
     assert "重新预览后应用" in html
     assert "savedChange.enabled = false" in html
-    assert "previewFirstPlaylistForSystem" in html
+    assert "selectFirstPlaylistForSystem" in html
     assert "setLibraryBrowserVisible" in html
     assert "setLibraryBrowserVisible(false)" not in html
     assert "setLibraryBrowserVisible(true)" in html
@@ -92,7 +93,7 @@ def test_primary_labels_are_clear():
     assert "border: 0 !important" in html
     assert "vector-effect: non-scaling-stroke" in html
     assert "getSystemAbbreviation(groupName)" in html
-    assert "previewFirstPlaylistForSystem(groupName)" in html
+    assert "selectFirstPlaylistForSystem(groupName)" in html
     assert "'N64'" in html
     assert "'NDS'" in html
     assert "'Wii'" in html

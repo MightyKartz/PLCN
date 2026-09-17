@@ -1,17 +1,25 @@
-# PLCN v3.1.1 中文父目录名称修复
+# PLCN v3.2.0 设备游戏库工作台
 
 ## 中文更新
 
-- 修复普通 ROM 列表扫描时，`gba中文游戏`、`中文游戏`、`游戏合集` 等中文父目录名被误写成所有游戏名称的问题。
-- 修复已被旧版本污染的游戏列表：如果当前 label 已经变成泛化目录名，重新预览时会回到 ROM 文件名和数据库匹配结果。
-- 调整匹配优先级：ROM 文件名、已有有效 label、Libretro DAT 和本地中文库优先，中文集合目录只作为弱线索，不再覆盖游戏身份。
-- 保留 v3.1 状态驱动修复工作台、封面状态即时刷新、“写入名称 / 封面源英文名”拆分显示和 FBNeo/Arcade 匹配增强。
-- 新增 GBA 中文父目录和已污染 label 的回归测试，防止扫描后整组游戏显示成同一个目录名。
+- 新的本地欢迎页会列出已连接 Android 设备、最近使用和本地游戏库目录，启动时不再因自动扫描卡住。
+- 选择主机后直接浏览当前游戏列表，显示封面、游戏名称、ROM 文件名，并支持搜索、缺图与需检查筛选。
+- 单游戏补图可自动识别英文名并搜索 Libretro 官方图库，也可导入本地图片；写入前预览，替换旧图时自动备份。
+- 图片读取和写入按 RetroArch 的 ROM 文件名优先规则同步，避免改名后 PLCN 与掌机内显示不一致。
+- 支持为共用图片名称的游戏设置独立名称；不再共用后也可单独改名，列表写入前会创建备份。
+- 批量整理保留在右上角菜单中；任务取消、下载失败和部分完成状态区分得更清楚。
+- 修复 ADB 识别、PCE 官方图库名称显示、压缩包内 ROM 文件名展示和切换列表后的路径恢复问题。
+- 写回继续使用协作锁、快照检查、备份、原子替换和读回验证；ADB 写入暂存并校验远端内容。
+- 桌面预览 CI 构建 Windows 安装包/便携 ZIP、macOS Intel 与 Apple Silicon DMG；产物仍为未签名预览。
 
 ## English Updates
 
-- Fixed regular ROM playlist scans where Chinese parent folders such as `gba中文游戏`, `中文游戏`, or `游戏合集` could be written as every game's display name.
-- Fixed playlists already polluted by older versions: when the current label is a generic collection folder name, preview now repairs it from the ROM filename and database match.
-- Adjusted matching priority so ROM filenames, valid existing labels, Libretro DAT evidence, and the local Chinese database win over generic Chinese collection folders.
-- Preserved the v3.1 status-driven repair workbench, immediate cover-state refresh, separated **Write Name / Cover Source Name** fields, and FBNeo/Arcade matching improvements.
-- Added regression coverage for GBA Chinese parent folders and polluted labels so a whole scanned list cannot collapse to one folder name again.
+- The new home page lists connected Android devices, recent folders, and local game-library directories without blocking startup on an automatic scan.
+- Selecting a system opens its current game list directly, with artwork, playlist names, ROM filenames, search, and missing/problem image filters.
+- Single-game artwork repair can identify an English title and search the official Libretro library, or import a local image. It previews before writing and backs up replaced artwork.
+- Artwork lookup and updates follow RetroArch's ROM-filename-first local matching order so PLCN and the handheld show the same image after renaming.
+- Games sharing one artwork name can receive independent playlist labels; non-shared entries can also be renamed from the artwork dialog. Playlist writes are backed up.
+- Batch repair moved into the top-right Organize menu, and task cancellation, failed downloads, and partial completion are reported distinctly.
+- Fixed ADB detection, PCE official-library title lookup, archive-member ROM filename display, and thumbnail-path recovery after returning to the game list.
+- Writes keep cooperative locks, snapshot checks, backups, atomic replacement, and readback verification. ADB writes stage and verify remote files.
+- Desktop preview CI builds a Windows installer/portable ZIP and macOS Intel/Apple Silicon DMGs. These artifacts remain unsigned previews.

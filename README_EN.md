@@ -6,20 +6,28 @@ PLCN is a local RetroArch game-list localization and thumbnail matching tool. It
 
 > Current implementation note: PLCN is an external local helper for RetroArch playlists and thumbnail folders. It is not an in-RetroArch plugin and does not modify RetroArch itself.
 
-## Development changes (not yet released)
+## Latest Release: v3.2.0
 
-The desktop preview adds a no-console launcher, OS-owned single-instance lock, per-user state with legacy migration, native file selection, data management, cooperative cancellation, local image retry and guarded playlist restore. CI builds Windows installer/portable ZIP and macOS Intel/Apple Silicon DMGs. Artifacts are unsigned previews; signing and real desktop validation are still required. See [desktop guide](DOC/DESKTOP_GUIDE.md).
+v3.2.0 brings device connection, game browsing, batch repair, and single-game artwork repair into the local Web UI. The home page shows connected Android devices, recent folders, and local libraries. Selecting a system opens its current game list immediately, and each row can repair missing or incorrect box art, screenshots, and title images from the official Libretro thumbnail library or a local image.
 
-- Preserve every playlist entry; no implicit deduplication. CLI and batch workflows skip proposals that require manual review. In the UI, review edits and choose “已核对，加入应用” before the final apply summary.
-- Use cooperative locks, snapshot checks, backups, atomic replacement, and readback verification. ADB writes verify staged uploads and remote backups before replacement.
-- Scope translations and aliases by platform; resolve mixed playlists using each entry's `db_name`. CSV caches are isolated by source content fingerprint.
-- Add `data build/fetch/inspect/compare/activate/rollback` for pinned, validated, offline data packs. Updates preserve manual corrections and require explicit activation.
-- Validate boxarts, screenshots, and title images independently; reuse local English artwork and reject conflicting destinations.
-- Bind the service to loopback with session and same-origin checks. An occupied port selects a free port instead of terminating another process.
+### Screenshots
 
-See the [implementation record](DOC/IMPLEMENTATION_PLAN.md) and [data-pack/writeback guide](DOC/DATA_PACKS.md) (Chinese). From the repository root: `python src/plcn.py data --help`. JavaScript syntax checks require Node.js: `python scripts/check_ui_js.py`.
+![Open a library](DOC/assets/library-home.png)
 
-## Released Version: v3.1.1
+![Game library](DOC/assets/game-library.png)
+
+![Single-game artwork repair](DOC/assets/artwork-dialog.png)
+
+![RetroArch result](DOC/assets/retroarch-output.jpg)
+
+- The home page lists connected devices, recent folders, and local directories without blocking startup on an automatic scan.
+- The current game list shows artwork, the playlist name, the ROM filename, and missing-image status with search and filters.
+- Single-game repair can identify or select an official Libretro artwork name, or import a local image. It previews before writing and backs up replaced images.
+- Artwork lookup follows RetroArch's ROM-filename-first local matching order, preventing different images in PLCN and on the handheld.
+- Playlist and artwork writes use cooperative locks, snapshot checks, backups, atomic replacement, and readback verification. ADB writes stage and verify remote files.
+- Desktop preview builds include a Windows installer/portable ZIP and macOS Intel/Apple Silicon DMGs. Artifacts remain unsigned previews.
+
+## Previous Release: v3.1.1
 
 - Fixed regular ROM playlist scans where Chinese parent folders such as `gba中文游戏`, `中文游戏`, or `游戏合集` could be written as every game's display name.
 - Fixed playlists already polluted by older versions: when the current label is a generic collection folder name, preview now repairs it from the ROM filename and database match.
@@ -43,6 +51,7 @@ See the [implementation record](DOC/IMPLEMENTATION_PLAN.md) and [data-pack/write
 - **Local data cache**: Uses SQLite to cache translation and matching data.
 - **Local manual overrides**: Manual corrections can be saved to the local `manual_overrides.json` file and prioritized in later previews.
 - **Cross-platform packaging**: Distributed for Windows, macOS, and Linux through PyInstaller builds.
+- **Single-game artwork and naming**: Open the artwork dialog from a game row, search the official Libretro library, or import a local PNG/JPEG/WebP image. Existing ROM-named artwork is updated too, and replaced files are backed up.
 
 ## Installation
 

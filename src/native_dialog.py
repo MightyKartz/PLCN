@@ -15,7 +15,12 @@ def helper_pick(kind, initial=''):
     root.withdraw()
     root.attributes('-topmost', True)
     try:
-        options = {'parent': root, 'title': 'PLCN — 选择游戏列表' if kind == 'file' else 'PLCN — 选择目录'}
+        options = {'title': 'PLCN — 选择游戏列表' if kind == 'file' else 'PLCN — 选择目录'}
+        # On macOS, a parent makes the native panel a sheet attached to that
+        # window. Our hidden helper window has no usable on-screen position;
+        # let macOS place a standalone panel instead of an off-screen sheet.
+        if sys.platform != 'darwin':
+            options['parent'] = root
         if initial and Path(initial).is_dir():
             options['initialdir'] = initial
         if kind == 'file':

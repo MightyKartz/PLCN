@@ -2714,17 +2714,19 @@
         <main class="workspace">
             <aside class="sidebar">
                 <div class="sidebar-scroll">
-                    <section class="library-heading"><h2 data-i18n="当前游戏库">当前游戏库</h2><p id="library-location"></p>
-                        <button class="btn btn-muted" data-input-control type="button" onclick="openFilePicker('retroarch_root', true)" data-i18n="更换目录">更换目录</button>
-                        <button class="btn btn-muted" type="button" onclick="openPathSettings()" data-i18n="路径设置">路径设置</button>
+                    <section class="library-heading"><div class="library-heading-row"><h2 data-i18n="当前游戏库">当前游戏库</h2><details class="library-manage"><summary aria-label="管理游戏库" data-i18n="管理">管理</summary><div class="library-manage-menu">
+                        <button class="btn btn-muted" data-input-control type="button" onclick="this.closest('details').open = false; openFilePicker('retroarch_root', true)" data-i18n="更换目录">更换目录</button>
+                        <button class="btn btn-muted" type="button" onclick="this.closest('details').open = false; openPathSettings()" data-i18n="路径设置">路径设置</button><button class="btn btn-muted" type="button" data-input-control id="home-back" onclick="showLibraryHome()">打开其他游戏库</button></div></details></div><p id="library-location"></p>
                     </section>
                 <section class="library-browser" id="library-browser">
                     <div class="library-browser-header">
                         <div>
-                            <h2 data-i18n="检测到的游戏列表">检测到的游戏列表</h2>
+                            <h2 data-i18n="主机">主机</h2>
                             <p class="library-browser-summary" id="library-browser-summary" data-i18n="扫描后按主机名称显示 .lpl 游戏列表">扫描后按主机名称显示 .lpl 游戏列表</p>
                         </div>
                     </div>
+                    <input id="library-system-search" class="library-system-search" type="search" aria-label="搜索主机" placeholder="搜索主机" oninput="filterLibrarySystems()">
+                    <p id="library-system-empty" class="artwork-help" hidden></p>
                     <div class="playlist-list playlist-system-list" id="scanned-playlists">
                         <div class="playlist-empty" data-i18n="扫描后显示 .lpl 游戏列表">扫描后显示 .lpl 游戏列表</div>
                     </div>
@@ -2734,13 +2736,14 @@
 
             <section class="main-panel filters-compact">
                 <section class="desktop-welcome" id="library-onboarding">
-                    <h1 data-i18n="整理你的 RetroArch 游戏库">整理你的 RetroArch 游戏库</h1>
-                    <p data-i18n="先预览名称与图片变更，确认后再应用。">先预览名称与图片变更，确认后再应用。</p>
-                    <button class="btn" data-input-control type="button" onclick="openFilePicker('retroarch_root', true)" data-i18n="选择游戏目录">选择游戏目录</button>
-                    <button class="btn btn-muted" data-input-control id="scan-default-btn" onclick="scanDevice(true)" data-i18n="自动检测" type="button">自动检测</button>
-                    <button class="btn btn-muted" data-input-control id="continue-library" type="button" hidden data-i18n="继续上次目录">继续上次目录</button>
-                    <p id="desktop-welcome-text" data-i18n="支持 RetroArch、SD 卡或 playlists 目录。">支持 RetroArch、SD 卡或 playlists 目录。</p>
-                    <button class="btn btn-muted" type="button" onclick="openPathSettings()" data-i18n="手动选择文件或路径">手动选择文件或路径</button>
+                    <header class="home-intro"><h1 id="home-title">打开游戏库</h1><p id="home-description"></p></header>
+                    <p id="home-message" role="alert" hidden></p>
+                    <section class="home-section" aria-labelledby="home-devices-title">
+                        <div class="home-section-heading"><h2 id="home-devices-title">已连接设备与目录</h2><button class="btn btn-muted" id="scan-default-btn" onclick="refreshLibrarySources()" type="button">重新检测</button></div>
+                        <div id="home-devices" aria-live="polite"></div>
+                    </section>
+                    <section class="home-section" aria-labelledby="home-recent-title"><div class="home-section-heading"><h2 id="home-recent-title">最近使用</h2></div><div id="home-recent"></div></section>
+                    <section class="home-local" aria-labelledby="home-local-title"><div><h2 id="home-local-title">本地游戏库</h2><p id="home-local-description"></p></div><div class="home-local-actions"><button class="btn btn-muted" data-input-control id="home-local-open" type="button" onclick="openFilePicker('retroarch_root', true)">打开本地目录</button><button class="home-path-link" data-input-control id="home-manual-open" type="button" onclick="enterLibraryPath()">手动输入路径</button></div></section>
                 </section>
                 <div class="workbench-content">
                 <ol class="workflow-strip" aria-label="修复流程">
@@ -2750,19 +2753,40 @@
                 </ol>
                 <div class="panel-header">
                     <h1 class="panel-title" id="workspace-title">选择游戏列表</h1>
-                    <div class="operation-choice"><label for="repair-mode" data-i18n="本次操作">本次操作</label><select data-input-control id="repair-mode" onchange="setRepairMode()"><option value="both" data-i18n="修复名称并补全图片">修复名称并补全图片</option><option value="names" data-i18n="仅修复名称">仅修复名称</option><option value="artwork" data-i18n="仅补全图片（保留当前名称）">仅补全图片（保留当前名称）</option></select></div>
+
                     <div class="panel-actions">
-                        <button id="preview-button" class="btn" onclick="previewTask()" disabled data-i18n="预览变更" type="button">预览变更</button>
+                        <button id="browse-games-button" class="btn btn-muted" type="button" onclick="invalidateWorkbenchPreview()" hidden>返回游戏列表</button>
+                        <details id="organize-menu"><summary class="btn btn-muted">批量整理</summary><div class="organize-menu-content"><div class="operation-choice"><label for="repair-mode" data-i18n="本次操作">本次操作</label><select data-input-control id="repair-mode" onchange="setRepairMode()"><option value="both" data-i18n="修复名称并补全图片">修复名称并补全图片</option><option value="names" data-i18n="仅修复名称">仅修复名称</option><option value="artwork" data-i18n="仅补全图片（保留当前名称）">仅补全图片（保留当前名称）</option></select></div><button id="preview-button" class="btn" onclick="previewTask()" disabled data-i18n="预览变更" type="button">预览变更</button></div></details>
                         <button id="apply-button" class="btn btn-success" onclick="applyChanges()" disabled type="button">应用已选修复</button>
                         <button id="batch-start-button" class="btn" type="button" onclick="executeTask('batch')" hidden disabled data-i18n="处理全部列表">处理全部列表</button>
                     </div>
                 </div>
-                <p id="batch-explanation" class="workspace-note" hidden data-i18n="处理此目录中的全部列表；仅应用确定的匹配，待确认项会跳过。">处理此目录中的全部列表；仅应用确定的匹配，待确认项会跳过。</p>
+                <p id="batch-explanation" class="workspace-note" hidden data-i18n="处理此目录中的全部列表，自动应用已识别的名称和图片源。">处理此目录中的全部列表，自动应用已识别的名称和图片源。</p>
                 <p id="workspace-empty" class="workspace-note" data-i18n="选择左侧列表，然后预览名称与图片变更。">选择左侧列表，然后预览名称与图片变更。</p>
+                <section id="game-library" class="game-library" aria-label="当前游戏列表" hidden>
+                    <div class="game-library-toolbar">
+                        <input id="game-library-search" type="search" oninput="filterGameLibrary()">
+                        <div class="game-library-filters" role="group" aria-label="图片筛选">
+                            <button id="game-library-filter-all" type="button" onclick="setGameLibraryFilter('all')"></button>
+                            <button id="game-library-filter-missing" type="button" onclick="setGameLibraryFilter('missing')"></button>
+                            <button id="game-library-filter-problem" type="button" onclick="setGameLibraryFilter('problem')"></button>
+                        </div>
+                        <p id="game-library-status" role="status"></p>
+                        <p id="game-library-note" class="sr-only"></p>
+                    </div>
+                    <div class="game-library-scroll">
+                        <button id="game-library-retry" class="btn btn-muted" type="button" onclick="retryGameLibrary()" hidden></button>
+                        <table id="game-library-table" class="game-library-table" hidden>
+                            <thead><tr><th id="game-library-heading-0" scope="col"></th><th id="game-library-heading-1" scope="col"></th><th id="game-library-heading-2" scope="col"></th><th id="game-library-heading-3" scope="col"></th></tr></thead>
+                            <tbody id="game-library-rows"></tbody>
+                        </table>
+                        <button id="game-library-more" class="btn btn-muted" type="button" onclick="gameLibrary.limit += 100; renderGameLibrary()" hidden></button>
+                    </div>
+                </section>
                 <div class="table-toolbar">
                     <div class="filter-group">
                         <button class="filter-btn active" type="button" data-filter="all" onclick="setPreviewFilter('all', this)"><span data-i18n="全部">全部</span> <strong class="filter-count">0</strong></button>
-                        <button class="filter-btn" type="button" data-filter="review" onclick="setPreviewFilter('review', this)"><span data-i18n="待确认">待确认</span> <strong class="filter-count">0</strong></button>
+                        <button class="filter-btn" type="button" data-filter="review" onclick="setPreviewFilter('review', this)"><span data-i18n="待补充">待补充</span> <strong class="filter-count">0</strong></button>
                         <button class="filter-btn" type="button" data-filter="duplicate" onclick="setPreviewFilter('duplicate', this)"><span data-i18n="重复需处理">重复需处理</span> <strong class="filter-count">0</strong></button>
                         <button class="filter-btn" type="button" data-filter="matched" onclick="setPreviewFilter('matched', this)"><span data-i18n="可应用">可应用</span> <strong class="filter-count">0</strong></button>
                         <button class="filter-btn" type="button" data-filter="ready" onclick="setPreviewFilter('ready', this)"><span data-i18n="无需修复">无需修复</span> <strong class="filter-count">0</strong></button>
@@ -2909,7 +2933,7 @@
                         </div>
                         <div class="inspector-actions">
                             <button class="btn btn-success" id="save-local-override" onclick="saveSelectedOverride()" data-i18n="保存为本地修正规则" type="button" disabled>保存为本地修正规则</button>
-                            <button class="btn" id="confirm-reviewed" onclick="confirmReviewedChange()" type="button" disabled>已核对，加入应用</button>
+                            <button class="btn" id="confirm-reviewed" onclick="confirmReviewedChange()" type="button" disabled hidden>加入应用</button>
                             <button class="btn btn-ghost" id="open-thumb-folder" onclick="openThumbnailFolder()" data-i18n="打开封面文件夹" type="button">打开封面文件夹</button>
                         </div>
                     </div>
@@ -3208,6 +3232,8 @@
             "支持 RetroArch、SD 卡或 playlists 目录。": "Choose a RetroArch, SD card or playlists folder.",
             "手动选择文件或路径": "Choose a file or path manually",
             "当前游戏库": "Current library",
+            "管理": "Manage",
+            "主机": "Systems",
             "更换目录": "Change folder",
             "路径设置": "Path settings",
             "选择游戏库": "Choose library",
@@ -3219,7 +3245,7 @@
             "自定义数据路径": "Custom data paths",
             "浏览": "Browse",
             "处理全部列表": "Process all lists",
-            "处理此目录中的全部列表；仅应用确定的匹配，待确认项会跳过。": "Process every list in this folder. Only certain matches are applied; review items are skipped.",
+            "处理此目录中的全部列表，自动应用已识别的名称和图片源。": "Process every list in this folder using the identified names and artwork sources.",
             "关闭": "Close",
 
             "数据库": "Database",
@@ -3282,7 +3308,7 @@
             '游戏库扫描': 'Game Library Scan',
             '全部': 'All',
             '可自动修复': 'Auto Repair',
-            '需人工确认': 'Needs Review',
+            '待补充信息': 'Missing information',
             '重复需处理': 'Duplicates',
             '无需修复': 'No Repair Needed',
             '已就绪': 'Ready',
@@ -3363,11 +3389,12 @@
             '等待生成修复计划': 'Waiting to build repair plan',
             '请选择系统...': 'Choose system...',
             '系统：': 'System: ',
-            '待确认': 'Needs Review',
+            '待补充': 'Missing information',
+            '待确认': 'Missing information',
             '待应用': 'Ready',
             '已分析': 'Analyzed',
             '当前：等待人工确认': 'Current: waiting for review',
-            '项需人工确认': 'need review',
+            '项待补充信息': 'need information',
             '项可应用': 'ready to apply',
             '已选': 'Selected',
             '项': 'items',
@@ -3439,10 +3466,14 @@
                 document.getElementById('batch_thumbnails_dir').value = config.batch_thumbnails_dir || '';
                 document.getElementById('batch_rom_name_cn_path').value = config.rom_name_cn_path || config.batch_rom_name_cn_path || 'data/rom-name-cn';
 
-                updateWorkflowLabels();
                 loadStats();
                 // A remembered path is offered explicitly; do not scan a disconnected device on launch.
                 document.getElementById('playlist_path').value = '';
+                document.getElementById('batch_dir').value = '';
+                if (config.single_thumbnails_dir && !document.getElementById('thumbnails_dir').value)
+                    document.getElementById('thumbnails_dir').value = config.single_thumbnails_dir;
+                if (config.batch_thumbnails_dir && !document.getElementById('batch_thumbnails_dir').value)
+                    document.getElementById('batch_thumbnails_dir').value = config.batch_thumbnails_dir;
                 renderWorkbench();
             } catch (error) {
                 showStatus('加载配置失败', 'error');
@@ -3776,6 +3807,7 @@
             }
 
             if (!beginWorkbenchOperation('scan')) return;
+            libraryHome.openError = '';
             invalidateWorkbenchPreview();
             currentDeviceScan = null;
             for (const id of ['playlist_path','batch_dir','thumbnails_dir','batch_thumbnails_dir']) document.getElementById(id).value = '';
@@ -3796,7 +3828,7 @@
                 renderDeviceScan(scan);
 
                 if (scan.root_path) rootInput.value = scan.root_path;
-                if (scan.directories?.playlists) document.getElementById('batch_dir').value = scan.directories.playlists;
+                if (scan.playlists?.length && scan.directories?.playlists) document.getElementById('batch_dir').value = scan.directories.playlists;
                 if (scan.directories?.thumbnails) {
                     document.getElementById('thumbnails_dir').value = scan.directories.thumbnails;
                     document.getElementById('batch_thumbnails_dir').value = scan.directories.thumbnails;
@@ -3818,16 +3850,22 @@
                     ? (playlistCount ? 'RetroArch directory detected' : 'No game lists found')
                     : (scan.message || '扫描完成');
                 showStatus(scanStatusMessage, playlistCount ? 'success' : 'error');
+                if (!playlistCount) libraryHome.openError = (targetPath ? shortPath(targetPath) + '：' : '') + scanStatusMessage;
+                else await rememberOpenedLibrary(scan);
 
             } catch (error) {
                 currentDeviceScan = null;
                 renderDeviceScan(null);
                 setInlineProgress(0, uiText('扫描失败'), uiText('无法扫描 RetroArch 目录'), error.message);
                 showStatus(`${uiText('扫描失败')}: ${error.message}`, 'error');
+                libraryHome.openError = `${uiText('扫描失败')}: ${error.message}`;
             } finally {
                 scanBtn.disabled = false;
                 defaultBtn.disabled = false;
                 endWorkbenchOperation();
+                if (currentDeviceScan?.connected && selectedLibrarySystem) {
+                    await selectFirstPlaylistForSystem(selectedLibrarySystem);
+                }
             }
         }
 
@@ -3881,7 +3919,7 @@
             return initials.slice(0, 8) || compact.slice(0, 8) || name;
         }
 
-        async function previewFirstPlaylistForSystem(systemName) {
+        async function selectFirstPlaylistForSystem(systemName) {
             const playlists = currentDeviceScan?.playlists || [];
             const index = playlists.findIndex((playlist) => getPlaylistSystemName(playlist) === systemName && playlist.valid);
             if (index >= 0) {
@@ -3924,7 +3962,7 @@
             if (librarySummary) {
                 const systemCount = currentUILanguage === 'en' ? `${groups.size} systems` : `${groups.size} 个主机`;
                 librarySummary.textContent = playlistCount
-                    ? `${formatGameListCount(playlistCount)} · ${formatGameCount(itemCount)} · ${systemCount}`
+                    ? `${systemCount} · ${formatGameCount(itemCount)}`
                     : uiText('扫描后按主机名称显示 .lpl 游戏列表');
             }
 
@@ -3936,7 +3974,7 @@
             const preferredSystem = findPreferredLibrarySystem(groups);
             selectedLibrarySystem = groups.has(selectedLibrarySystem) ? selectedLibrarySystem : preferredSystem;
             renderLibrarySystemTabs(list, groups);
-            renderSelectedLibraryList(list, groups);
+            filterLibrarySystems();
         }
 
         function findPreferredLibrarySystem(groups) {
@@ -3957,19 +3995,45 @@
                 const tabButton = document.createElement('button');
                 tabButton.type = 'button';
                 tabButton.className = `playlist-system-tab${groupName === selectedLibrarySystem ? ' active' : ''}`;
-                tabButton.textContent = getSystemAbbreviation(groupName);
+                const group = document.createElement('div');
+                group.className = 'library-system-group';
+                group.dataset.search = (groupName + ' ' + getSystemAbbreviation(groupName)).toLowerCase();
+                const abbreviation = document.createElement('strong');
+                abbreviation.textContent = getSystemAbbreviation(groupName);
+                const name = document.createElement('span'); name.className = 'system-display-name';
+                name.textContent = groupName.replace(/^[^-]+ - /, '');
+                const count = document.createElement('span'); count.className = 'system-game-count';
+                count.textContent = items.reduce((total, item) => total + (Number(item.playlist.item_count) || 0), 0);
+                tabButton.append(abbreviation, name, count);
                 tabButton.title = groupName;
                 tabButton.setAttribute('aria-label', groupName);
                 tabButton.setAttribute('aria-pressed', String(groupName === selectedLibrarySystem));
                 tabButton.onclick = () => {
                     selectedLibrarySystem = groupName;
                     renderDeviceScan(currentDeviceScan);
-                    previewFirstPlaylistForSystem(groupName);
+                    selectFirstPlaylistForSystem(groupName);
                 };
-                tabs.appendChild(tabButton);
+                group.appendChild(tabButton);
+                if (groupName === selectedLibrarySystem && (items.length > 1 || !items[0].playlist.valid)) renderSelectedLibraryList(group, groups);
+                tabs.appendChild(group);
             });
 
             container.appendChild(tabs);
+        }
+
+        function filterLibrarySystems() {
+            const search = document.getElementById('library-system-search');
+            const query = search.value.trim().toLowerCase();
+            search.placeholder = currentUILanguage === 'en' ? 'Search systems' : '搜索主机';
+            search.setAttribute('aria-label', search.placeholder);
+            let count = 0;
+            document.querySelectorAll('.library-system-group').forEach(group => {
+                group.hidden = !group.dataset.search.includes(query);
+                if (!group.hidden) count++;
+            });
+            const empty = document.getElementById('library-system-empty');
+            empty.hidden = count > 0 || !query;
+            empty.textContent = currentUILanguage === 'en' ? 'No matching systems' : '没有匹配的主机';
         }
 
         function renderSelectedLibraryList(container, groups) {
@@ -4350,7 +4414,7 @@
                 const backupNote = options.backup
                     ? workbenchText('每个修改的列表会先备份。', 'Changed lists will be backed up.')
                     : workbenchText('自动备份已关闭。', 'Automatic backups are disabled.');
-                if (!await desktopConfirm(workbenchText('处理此目录中的全部列表：', 'Process all lists in: ') + batchDir + '\n' + backupNote + workbenchText('待确认项会跳过。', ' Review items will be skipped.'))) return;
+                if (!await desktopConfirm(workbenchText('处理此目录中的全部列表：', 'Process all lists in: ') + batchDir + '\n' + backupNote + workbenchText('无需逐项确认。', ' No per-item confirmation is required.'))) return;
                 if (!beginWorkbenchOperation('apply')) return;
                 workbench.hasTask = true;
                 const saved = await saveConfig(mode);
@@ -4837,7 +4901,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         playlist_path: playlistPath,
-                        changes: includedChanges.map(change => ({ ...change, review_confirmed: true })),
+                        changes: includedChanges.map(change => ({ ...change })),
                         thumbnails_dir: thumbnailsDir,
                         options
                     })
@@ -4911,12 +4975,12 @@
                 const downloadText = summary.downloadEnabled
                     ? `${summary.downloads} covers will be downloaded`
                     : 'downloads skipped';
-                return `${summary.selected} selected: ${summary.autoRepair} auto repair, ${summary.ready} no repair needed, ${summary.completed} completed, ${summary.review} need review, ${summary.duplicate} duplicates, ${summary.skipped} skipped. ${downloadText}.`;
+                return `${summary.selected} selected: ${summary.autoRepair} auto repair, ${summary.ready} no repair needed, ${summary.completed} completed, ${summary.review} need information, ${summary.duplicate} duplicates, ${summary.skipped} skipped. ${downloadText}.`;
             }
             const downloadText = summary.downloadEnabled
                 ? `将下载 ${summary.downloads} 个封面`
                 : '跳过下载';
-            return `${summary.writeNames ? '将写回游戏列表' : '仅补全图片，保留当前名称'}：${summary.selected} 项已选，${summary.autoRepair} 可自动修复，${summary.ready} 无需修复，${summary.completed} 已完成，${summary.review} 需人工确认，${summary.duplicate} 重复项，${summary.skipped} 项跳过。${downloadText}。`;
+            return `${summary.writeNames ? '将写回游戏列表' : '仅补全图片，保留当前名称'}：${summary.selected} 项已选，${summary.autoRepair} 可自动修复，${summary.ready} 无需修复，${summary.completed} 已完成，${summary.review} 待补充信息，${summary.duplicate} 重复项，${summary.skipped} 项跳过。${downloadText}。`;
         }
 
         function openSearchModal(rowIndex) {
@@ -5178,24 +5242,26 @@
                 }
 
                 if (data.status === 'completed' || data.status === 'cancelled') {
-                    if (logView) logView.innerHTML += `<span style="color:#58d68d">所有操作完成！</span><br>`;
+                    const outcome = downloadTaskOutcome(data.status, data.result?.download_summary);
+                    if (logView) logView.innerHTML += `<span style="color:${outcome.complete ? '#58d68d' : '#f5b041'}">${escapeHtml(outcome.message)}</span><br>`;
                     eventSource.close();
-                    setInlineProgress(100, '完成', '所有操作完成', '当前：可检查输出文件');
                     lastDownloadSummary = data.result?.download_summary || null;
-                    setDownloadSummary(lastDownloadSummary);
                     if (mode === 'single' && data.result) applyCompletedJobToPreview(data.result);
+                    setDownloadSummary(lastDownloadSummary);
                     showDownloadDetails(false);
-                    document.getElementById('dock-download-count').textContent = '下载任务完成';
+                    document.getElementById('dock-download-count').textContent = outcome.label;
                     document.getElementById('repair-summary-inline').textContent = mode === 'single'
                         ? getAppliedSummaryText(data.result?.applied_count || 0)
                         : uiText('修复完成');
-                    if (detailSummary) detailSummary.textContent = '任务完成，日志和下载明细已更新。';
-                    workbench.applied = data.status === 'completed';
+                    if (detailSummary) detailSummary.textContent = outcome.message;
+                    workbench.applied = outcome.complete;
                     workbench.jobId = null; endWorkbenchOperation();
+                    setInlineProgress(outcome.cancelled ? 0 : 100, outcome.label, outcome.message,
+                        `${data.result?.applied_count || 0} 项名称已写回 · 图片 ${lastDownloadSummary?.total?.success || 0} 成功 / ${outcome.failed} 失败`);
                     if (data.status === 'cancelled') {
                         setInlineProgress(0, '已取消', '任务已取消', '已完成的结果会保留，可在任务中重试图片');
                         showStatus('任务已取消，已完成的结果会保留', 'info');
-                    } else showStatus('应用更改完成', 'success');
+                    } else showStatus(outcome.message, outcome.complete ? 'success' : 'error');
                 } else if (data.status === 'failed') {
                     if (logView) logView.innerHTML += `<span style="color:red">失败: ${escapeHtml(data.error)}</span><br>`;
                     eventSource.close();
@@ -5302,7 +5368,7 @@
             change.match_reason = reason;
             change.needs_review = true;
             change.pending_override = true;
-            change.enabled = false;
+            change.enabled = isActionableChange(change);
         }
 
         function markChangeEdited(index, reason, editedKey = '') {
@@ -5359,17 +5425,18 @@
                     download: { label: uiText('仅下载封面'), badgeClass: 'success', rowClass: '', color: 'var(--green)', fallbackScore: 94 },
                     rename: { label: uiText('仅改中文名'), badgeClass: 'success', rowClass: '', color: 'var(--green)', fallbackScore: 96 },
                     ready: { label: uiText('无需修复'), badgeClass: 'ready', rowClass: 'row-ready', color: 'var(--muted)', fallbackScore: 100 },
-                    review: { label: uiText('需人工确认'), badgeClass: 'warning', rowClass: 'row-warning', color: 'var(--amber)', fallbackScore: 72 },
+                    review: { label: uiText('待补充信息'), badgeClass: 'warning', rowClass: 'row-warning', color: 'var(--amber)', fallbackScore: 72 },
                     duplicate: { label: uiText('重复需处理'), badgeClass: 'danger', rowClass: 'row-danger', color: 'var(--red)', fallbackScore: 99 },
                     applied: { kind: 'completed', label: uiText('已完成'), badgeClass: 'success', rowClass: '', color: 'var(--green)', fallbackScore: 100 }
                 };
-                const status = statusMap[change.match_status] || statusMap.review;
-                const reviewed = change.review_confirmed === true && ['review', 'duplicate'].includes(change.match_status);
+                const action = repairActionStatus(change, document.getElementById('repair-mode').value);
+                const actionKind = action === 'incomplete' ? 'review' : action;
+                const status = statusMap[actionKind] || statusMap.review;
                 const score = Number(change.match_score);
                 return {
-                    kind: reviewed ? 'reviewed' : status.kind || (change.match_status in statusMap ? change.match_status : 'review'),
+                    kind: status.kind || actionKind,
                     confidence: Number.isFinite(score) ? Math.max(0, Math.min(100, Math.round(score))) : status.fallbackScore,
-                    label: reviewed ? (currentUILanguage === 'en' ? 'Manually reviewed' : '已人工核对') : status.label,
+                    label: action === 'incomplete' ? workbenchText('待补充名称或图片源', 'Name or artwork source missing') : status.label,
                     badgeClass: status.badgeClass,
                     rowClass: status.rowClass,
                     color: status.color,
@@ -5381,7 +5448,7 @@
             return {
                 kind: 'review',
                 confidence: 0,
-                label: uiText('需人工确认'),
+                label: uiText('待补充信息'),
                 badgeClass: 'warning',
                 rowClass: 'row-warning',
                 color: 'var(--amber)',
@@ -5423,6 +5490,10 @@
         }
 
         function getAppliedSummaryText(applied) {
+            const failed = Number(lastDownloadSummary?.total?.failed) || 0;
+            if (failed) return currentUILanguage === 'en'
+                ? `${applied} entries processed · ${failed} images failed`
+                : `${applied} 项已处理 · ${failed} 张图片失败，需重新补图`;
             if (!lastAppliedWriteNames) return currentUILanguage === 'en' ? `${applied} items processed; names unchanged` : `${applied} 项图片已处理，名称保持不变`;
             return currentUILanguage === 'en'
                 ? `${uiText('修复完成')} · ${applied} ${uiText('项已写回')}`
@@ -5432,8 +5503,8 @@
         function getRepairSummaryText(enabled, matched, review, total, ready = 0, completed = 0) {
             if (!total) return uiText('已选 0 项 · 等待游戏库');
             return currentUILanguage === 'en'
-                ? `Selected ${enabled} · ${matched} auto repair · ${ready} no repair needed · ${completed} completed · ${review} need review`
-                : `已选 ${enabled} 项 · ${matched} 可自动修复 · ${ready} 无需修复 · ${completed} 已完成 · ${review} 需人工确认`;
+                ? `Selected ${enabled} · ${matched} auto repair · ${ready} no repair needed · ${completed} completed · ${review} need information`
+                : `已选 ${enabled} 项 · ${matched} 可自动修复 · ${ready} 无需修复 · ${completed} 已完成 · ${review} 待补充信息`;
         }
 
         function updateReviewProgress(total, review, enabled, ready = 0, completed = 0) {
@@ -5452,7 +5523,7 @@
                     20,
                     uiText('待确认'),
                     currentUILanguage === 'en' ? `Analyzed ${total}` : `已分析 ${total} 项`,
-                    currentUILanguage === 'en' ? `Current: ${review} need review` : `当前：${review} 项需人工确认`
+                    currentUILanguage === 'en' ? `Current: ${review} need information` : `当前：${review} 项待补充信息`
                 );
             } else {
                 if (!enabled && ready + completed >= total) {
@@ -5760,7 +5831,7 @@
                 const failed = Number(stats.failed) || 0;
                 const skipped = Number(stats.skipped) || 0;
                 const total = success + failed + skipped;
-                const completed = success + skipped;
+                const completed = success + failed + skipped;
                 const percent = total ? Math.round((completed / total) * 100) : 0;
 
                 document.getElementById(`sum-${key}-ok`).textContent = formatDownloadOutcome(success, '成功');
@@ -5869,6 +5940,31 @@
                                 </div>
                             </div></details>
     </dialog>
+    <dialog id="artwork-dialog" aria-labelledby="artwork-title">
+        <header><h2 id="artwork-title"></h2><button id="artwork-close" class="btn btn-muted" type="button" onclick="closeArtworkDialog()"></button></header>
+        <p id="artwork-game"></p>
+        <p id="artwork-scope" class="artwork-help"></p>
+        <section id="artwork-shared" hidden><p id="artwork-shared-message"></p><ul id="artwork-shared-games"></ul><label id="artwork-new-label-title" for="artwork-new-label">当前游戏的独立名称</label><input id="artwork-new-label" type="text" oninput="artworkIndependentNameChanged()"><p id="artwork-shared-help" class="artwork-help"></p></section>
+        <label id="artwork-kind-label" for="artwork-kind"></label>
+        <select id="artwork-kind" onchange="discoverArtwork()"><option value="Named_Boxarts">封面</option><option value="Named_Snaps">游戏截图</option><option value="Named_Titles">标题图</option></select>
+        <p id="artwork-identity" class="artwork-help" role="status"></p>
+        <div id="artwork-names"></div>
+        <label id="artwork-source-label" for="artwork-source"></label>
+        <div class="artwork-source-controls"><input id="artwork-source" type="text" oninput="artworkSearchChanged()" onkeydown="if(event.key === 'Enter') searchArtwork()"><button id="artwork-search" class="btn btn-muted" type="button" onclick="searchArtwork()"></button><button id="artwork-preview" class="btn btn-muted" type="button" onclick="previewArtwork()"></button></div>
+        <div id="artwork-results"></div>
+        <label id="artwork-upload-label" for="artwork-upload"></label>
+        <input id="artwork-upload" type="file" accept="image/png,image/jpeg,image/webp" onchange="importArtwork(this.files[0])">
+        <p id="artwork-message" role="status" aria-live="polite"></p>
+        <div id="artwork-comparison" hidden>
+            <div class="artwork-current"><h3 id="artwork-current-label"></h3><img id="artwork-current-image" alt=""><p id="artwork-current-empty"></p></div>
+            <div id="artwork-candidate" hidden><h3 id="artwork-candidate-label"></h3><img id="artwork-candidate-image" alt=""><p id="artwork-candidate-caption"></p></div>
+            <p id="artwork-target"></p>
+        </div>
+        <footer><button id="artwork-confirm" class="btn" type="button" onclick="confirmArtwork()" disabled></button></footer>
+    </dialog>
+    <script src="/assets/library.js"></script>
+    <script src="/assets/artwork.js"></script>
+    <script src="/assets/welcome.js"></script>
     <script src="/assets/desktop.js"></script>
 </body>
 

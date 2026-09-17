@@ -11,9 +11,13 @@ import repair_history
 from task_control import checkpoint
 
 POST_ROUTES = {
+    '/api/library/recent',
     '/api/desktop/pick', '/api/desktop/shutdown', '/api/jobs/cancel', '/api/jobs/retry',
     '/api/data/check', '/api/data/fetch', '/api/data/compare', '/api/data/activate', '/api/data/rollback',
     '/api/history/restore',
+    '/api/artwork/search', '/api/artwork/preview', '/api/artwork/apply',
+    '/api/artwork/status', '/api/artwork/resolve',
+    '/api/artwork/context',
 }
 
 
@@ -27,7 +31,10 @@ def reply(handler, data, status=200):
 
 
 def get(handler, path, jobs, config_path):
-    if path == '/api/instance':
+    if path == '/api/library/sources':
+        from library_sources import discover
+        reply(handler, discover(config_path))
+    elif path == '/api/instance':
         reply(handler, {'instance_id': getattr(handler.server, 'instance_id', None)})
     elif path == '/api/desktop':
         reply(handler, {'data_dir': str(app_paths.user_data_dir()), 'cache_dir': str(app_paths.cache_dir()),
@@ -94,7 +101,30 @@ def compare_active(pack, config_path):
 def post(handler, path, payload, jobs, config_path):
     if not isinstance(payload, dict):
         raise ValueError('请求必须是 JSON 对象')
-    if path == '/api/desktop/pick':
+    if path == '/api/library/recent':
+        from library_sources import remember
+        reply(handler, remember(payload, config_path))
+    elif path == '/api/artwork/context':
+        from single_artwork import entry_context
+        reply(handler, entry_context(payload))
+    elif path == '/api/artwork/resolve':
+        from artwork_identity import resolve
+        reply(handler, resolve(payload, config_path))
+    elif path == '/api/artwork/status':
+        from single_artwork import image_status
+        reply(handler, image_status(str(payload.get('path') or '')))
+    elif path in {'/api/artwork/search', '/api/artwork/preview'}:
+        import single_artwork
+        action = single_artwork.search if path.endswith('/search') else single_artwork.preview
+        reply(handler, action(payload))
+    elif path == '/api/artwork/apply':
+        from single_artwork import apply
+        token = payload.get('token')
+        def write_image(jid):
+            checkpoint(lambda: jobs.cancelled(jid))
+            return apply(token)
+        reply(handler, {'job_id': background(jobs, '更新单个游戏图片', write_image)})
+    elif path == '/api/desktop/pick':
         from native_dialog import pick
         selected = pick(payload.get('kind', 'directory'), payload.get('initial', ''))
         reply(handler, {'path': selected})

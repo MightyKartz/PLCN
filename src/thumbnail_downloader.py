@@ -128,7 +128,15 @@ class ThumbnailDownloader:
             # print(f"Downloading {type_name} for {game_english_name}...")
             try:
                 # Use session with retry
+                matched = None
                 response = self.session.get(url, timeout=10)
+                if response.status_code == 404 and not (self.cancel_check and self.cancel_check()):
+                    from single_artwork import catalog_names
+                    from gallery_names import matching_gallery_name
+                    matched = matching_gallery_name(system, game_english_name, catalog_names(system, type_name))
+                    if matched and matched != game_english_name and not (self.cancel_check and self.cancel_check()):
+                        url = f"{self.BASE_URL}/{urllib.parse.quote(system, safe='')}/{type_name}/{urllib.parse.quote(self.sanitize_filename(matched) + '.png', safe='')}"
+                        response = self.session.get(url, timeout=10)
                 if response.status_code == 200:
                     if len(response.content) > 32 * 1024 * 1024 or not valid_png(response.content):
                         results.append({'type': type_name, 'game': game_chinese_name, 'source': game_english_name,
@@ -142,7 +150,8 @@ class ThumbnailDownloader:
                         "source": game_english_name,
                         "system": system,
                         "status": "success",
-                        "message": "下载成功",
+                        "message": "已匹配官方图库并下载" if matched else "下载成功",
+                        "gallery_source": matched or game_english_name,
                         "path": target_path,
                         "url": url
                     })

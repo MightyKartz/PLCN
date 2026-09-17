@@ -239,7 +239,7 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
         if path == "/":
             self.path = "/plcn.html"
             return self.serve_template()
-        elif path in ('/assets/desktop.js', '/assets/desktop.css', '/assets/workflow.js'):
+        elif path in ('/assets/desktop.js', '/assets/desktop.css', '/assets/workflow.js', '/assets/library.js', '/assets/artwork.js', '/assets/welcome.js'):
             filename = path.rsplit('/', 1)[-1]
             content = (app_paths.resource_root() / 'src' / 'templates' / filename).read_bytes()
             self.send_response(200)
@@ -268,6 +268,26 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
         elif path == "/api/playlist/detect":
             target_path = query_params.get('path', [''])[0]
             self.detect_system(target_path)
+        elif path == '/api/artwork/thumbnail':
+            from single_artwork import catalog_image
+            try:
+                content = catalog_image(query_params.get('system', [''])[0], query_params.get('kind', [''])[0], query_params.get('name', [''])[0])
+                self.send_response(200)
+                self.send_header('Content-Type', 'image/png')
+                self.send_header('Content-Length', str(len(content)))
+                self.end_headers()
+                self.wfile.write(content)
+            except (OSError, ValueError, RuntimeError) as error:
+                desktop_api.reply(self, {'error': str(error)}, 400)
+        elif path == "/api/playlist/items":
+            from playlist_browser import read_playlist
+            try:
+                result = read_playlist(query_params.get('path', [''])[0],
+                                       query_params.get('system', [''])[0],
+                                       query_params.get('thumbnails', [''])[0])
+                desktop_api.reply(self, result)
+            except (OSError, ValueError, RuntimeError) as error:
+                desktop_api.reply(self, {'error': str(error)}, 400)
         elif path == "/api/search":
             keyword = query_params.get('query', [''])[0]
             system = query_params.get('system', [None])[0]
@@ -447,7 +467,7 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
             content_type = mimetypes.guess_type(target_path)[0] or "image/png"
             self.send_response(200)
             self.send_header("Content-type", content_type)
-            self.send_header("Cache-Control", "max-age=300")
+            self.send_header("Cache-Control", "no-store")
             self.send_header("Content-Length", str(len(content)))
             self.end_headers()
             self.wfile.write(content)

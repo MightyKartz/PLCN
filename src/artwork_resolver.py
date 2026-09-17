@@ -1,5 +1,6 @@
 """Local artwork resolution, shared naming rules, and image validation."""
 import io
+from rom_paths import rom_title
 import os
 from pathlib import Path
 import re
@@ -56,10 +57,10 @@ class ArtworkResolver:
             self.files[kind] = {p.name: p for p in directory.glob('*.png') if p.is_file()}
         self.validity = {}
 
-    def resolve(self, label, kind='Named_Boxarts', source=None, rom_path=None, use_filename=False):
+    def resolve(self, label, kind='Named_Boxarts', source=None, rom_path=None, use_filename=True):
         names = []
         if use_filename and rom_path:
-            names.append(os.path.splitext(str(rom_path).split('#', 1)[0].replace('\\', '/').rsplit('/', 1)[-1])[0])
+            names.append(rom_title(rom_path))
         names.append(label)
         # A short label can be used directly by RetroArch. A canonical source
         # image must be copied to the new label before it is reported as ready.

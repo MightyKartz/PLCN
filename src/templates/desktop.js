@@ -280,14 +280,8 @@ function openPathSettings() {
 }
 
 async function initializeDesktop() {
-    try {
-        const config = await desktopRequest('/api/config');
-        const button = document.getElementById('continue-library');
-        button.hidden = !config.retroarch_root;
-        button.onclick = () => { document.getElementById('retroarch_root').value = config.retroarch_root; scanDevice(false); };
-        if (config.retroarch_root) button.title = config.retroarch_root;
-        renderWorkbench();
-    } catch (error) { showStatus(error.message, 'error'); }
+    renderWorkbench();
+    await refreshLibrarySources();
 }
 initializeDisplayPreferences();
 loadSystems().then(loadConfig).then(initializeDesktop);

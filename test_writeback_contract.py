@@ -30,15 +30,13 @@ def test_rename_does_not_delete_unselected_same_label_rom(tmp_path):
     assert result['custom'] == 'preserved'
 
 
-def test_review_requires_explicit_confirmation(tmp_path):
+def test_identified_proposal_applies_without_per_item_confirmation(tmp_path):
     path, items = playlist(tmp_path)
     change = {'index': 0, 'path': items[0]['path'], 'new_label': '中文', 'needs_review': True}
     result = plcn.apply_changes(str(path), [change], str(tmp_path), download_thumbnails=False)
-    assert result['apply']['skipped'][0]['reason'] == 'review_required'
-    assert json.loads(path.read_text())['items'] == items
-    change['review_confirmed'] = True
-    result = plcn.apply_changes(str(path), [change], str(tmp_path), download_thumbnails=False)
     assert len(result['apply']['applied']) == 1
+    assert json.loads(path.read_text())['items'][0]['label'] == '中文'
+    assert json.loads(path.read_text())['items'][1] == items[1]
 
 
 def test_atomic_save_failure_preserves_original(tmp_path, monkeypatch):
