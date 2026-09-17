@@ -13,7 +13,7 @@ sys.path.append(os.path.join(os.getcwd(), "src"))
 import plcn
 
 
-FIXTURE_DIR = Path(__file__).resolve().parent / "tests" / "fixtures" / "playlists"
+FIXTURE_DIR = Path(__file__).resolve().parents[1] / "fixtures" / "playlists"
 ROM_NAME_CN_PATH = "data/rom-name-cn"
 EXPECTED_AOF3 = "Art of Fighting 3 - The Path of the Warrior / Art of Fighting - Ryuuko no Ken Gaiden"
 REQUIRED_PROPOSAL_FIELDS = {
