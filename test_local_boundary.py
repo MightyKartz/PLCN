@@ -9,8 +9,8 @@ def test_translator_has_no_llm_or_online_matching_path():
     assert "Fallback to LLM" not in source
 
 
-def test_docs_do_not_present_llm_as_matching_direction():
-    doc = Path("DOC/DOC1.md").read_text(encoding="utf-8")
+def test_readme_does_not_present_llm_as_matching_direction():
+    doc = Path("README.md").read_text(encoding="utf-8")
 
     assert "LLM API" not in doc
     assert "LLM 辅助匹配" not in doc

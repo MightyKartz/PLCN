@@ -2,15 +2,13 @@
 
 GitHub 默认显示中文版 README；英文版请点击：[English README](README_EN.md)。
 
-PLCN 是一个面向 RetroArch 用户的本地游戏列表中文化与缩略图匹配工具。它当前以 Python CLI + 本地 Web UI 的形式运行，会读取 `.lpl` 游戏列表，基于本地中文名称数据和 Libretro 数据库生成可校对的中文显示名、标准英文缩略图来源，并在确认后写回游戏列表、下载封面/截图/标题图。
+PLCN 是 RetroArch 的本地游戏列表中文化与图片管理工具。它读取 `.lpl` 游戏列表，生成可校对的中文显示名和官方英文图片源，并在确认后写回游戏列表、下载封面、截图和标题图。
 
-> 当前实现是 RetroArch 外部的本地辅助工具，不是运行在 RetroArch 内部的插件，也不会修改 RetroArch 程序本体。
+> PLCN 是 RetroArch 外部的本地辅助工具，不会修改 RetroArch 程序本体。
 
 ## 最新版本：v3.2.0
 
-v3.2.0 把设备连接、游戏浏览、批量整理和单游戏补图集中到本地 Web 界面：启动后优先显示已连接的 Android 设备、最近目录和本地目录；选择主机即可直接查看当前游戏列表，并在需要时使用官方 Libretro 图库或本地图片修复封面、截图和标题图。
-
-### 项目截图
+v3.2.0 集中提供设备连接、游戏浏览、批量整理和单游戏补图。启动后可选择已连接的 Android 设备、最近目录或本地目录；选择主机后直接查看当前游戏列表，并可从 Libretro 官方图库或本地图片修复封面、截图和标题图。
 
 ![打开游戏库](DOC/assets/library-home.png)
 
@@ -18,148 +16,75 @@ v3.2.0 把设备连接、游戏浏览、批量整理和单游戏补图集中到�
 
 ![单游戏补图](DOC/assets/artwork-dialog.png)
 
-![RetroArch 实际效果](DOC/assets/retroarch-output.jpg)
-
-- 欢迎页列出已连接设备、最近使用和本地目录，避免启动时自动扫描卡住。
-- 当前游戏列表直接显示封面、游戏名称、ROM 文件名和缺图状态，支持搜索和缺图筛选。
-- 单游戏补图可识别或选择 Libretro 官方图库名称，也可导入本地图片；写入前预览，写入时备份旧图。
-- 图片匹配与 RetroArch 的读取顺序保持一致，优先处理 ROM 文件名图片，避免 PLCN 与掌机内显示不一致。
-- 名称或图片写入使用协作锁、快照检查、备份、原子替换和读回验证；ADB 写入会暂存并校验。
-- 桌面预览包含 Windows 安装包/便携 ZIP 和 macOS Intel/Apple Silicon DMG；当前产物仍为未签名预览。
-
-## 历史版本：v3.1.1
-
-- 修复普通 ROM 列表扫描时，`gba中文游戏`、`中文游戏`、`游戏合集` 等中文父目录名被误写成所有游戏名称的问题。
-- 修复已被旧版本污染的游戏列表：如果当前 label 已经变成泛化目录名，重新预览时会回到 ROM 文件名和数据库匹配结果。
-- 调整匹配优先级：ROM 文件名、已有有效 label、Libretro DAT 和本地中文库优先，中文集合目录只作为弱线索，不再覆盖游戏身份。
-- 保留 v3.1 状态驱动修复工作台、封面状态即时刷新、“写入名称 / 封面源英文名”拆分显示和 FBNeo/Arcade 匹配增强。
-- 新增 GBA 中文父目录和已污染 label 的回归测试，防止扫描后整组游戏显示成同一个目录名。
+- 首页列出已连接设备、最近使用和本地目录。
+- 游戏列表显示封面、游戏名称、ROM 文件名、缺图和需检查状态。
+- 单游戏补图支持搜索官方图库、导入本地图片、修改名称；写入前预览，替换旧图时自动备份。
+- 图片匹配遵循 RetroArch 的 ROM 文件名优先规则，避免 PLCN 与掌机内显示不一致。
+- 名称和图片写入使用备份、快照检查、原子替换和读回验证；ADB 写入会先暂存并校验。
+- 桌面安装包支持 Windows、macOS Intel/Apple Silicon 和 Linux；macOS/Windows 当前未签名，首次打开可能需要手动允许。
 
 ## 主要功能
 
-- **游戏列表中文化**：读取 RetroArch `.lpl` 文件，将游戏显示名匹配为中文名称。
-- **RetroArch 目录扫描**：Web UI 可扫描本地 RetroArch 根目录、`playlists` 目录、已挂载设备目录，或已通过 ADB 授权连接的 Android 掌机/设备，列出检测到的 `.lpl` 游戏列表。
-- **匹配与校对工作台**：Web UI 支持单个游戏列表和批量处理，提供预览、变更表、行级勾选、右侧详情、运行日志和真实下载结果概览。
-- **智能缩略图下载**：
-  - 即使 ROM 文件名或游戏列表标签为中文，也会尝试反查标准英文名称。
-  - 从官方 Libretro 缩略图服务器下载 `Named_Boxarts`、`Named_Snaps`、`Named_Titles`。
-  - 结合 `libretro-database` 修正常见命名差异，降低缩略图匹配失败率。
-  - 普通 ROM 列表会优先使用 ROM 文件名和数据库证据，避免 `gba中文游戏` 这类集合目录名覆盖每个游戏的显示名称。
-  - 对 FBNeo/Arcade 游戏会优先使用 `.lpl` 中的 ROM 路径、zip 短名、RetroArch `crc32` 字段、本地 zip 内部 CRC 和 DAT 校验值别名解析标准标题，减少街机短名导致的封面源错误。
-  - 保持本地离线优先，不集成 ScreenScraper/Skraper API；匹配诊断会说明是 DAT 命中、ROM 指纹不可读，还是需要人工确认。
-- **批量处理**：支持一次处理目录中的多个 `.lpl` 游戏列表。
-- **本地数据缓存**：使用 SQLite 缓存翻译数据与匹配结果，减少重复解析成本。
-- **本地人工覆盖**：手动校正可保存到本机 `manual_overrides.json`，用于下次预览时优先应用已确认的写入名称和封面源。
-- **跨平台打包**：通过 PyInstaller 面向 Windows、macOS 和 Linux 分发。
-- **单游戏补图与改名**：从当前游戏列表打开补图窗口，搜索 Libretro 官方图库或导入本地 PNG/JPEG/WebP；已有 ROM 文件名图片会同步更新，覆盖前自动备份。
+- **游戏列表中文化**：读取 `.lpl` 文件，将游戏显示名匹配为中文名称。
+- **设备与目录扫描**：扫描本地 RetroArch 根目录、`playlists` 目录、已挂载 SD 卡或已授权的 ADB Android 设备。
+- **匹配与校对**：预览写入名称、封面源英文名、封面状态和修复状态；可逐行勾选或编辑。
+- **智能缩略图下载**：从 Libretro 官方服务器下载封面、截图和标题图，支持常见命名差异与 FBNeo/Arcade 别名。
+- **单游戏补图与改名**：从游戏行打开补图窗口，搜索官方图库或导入本地 PNG/JPEG/WebP。
+- **批量处理**：一次处理目录中的多个 `.lpl` 文件。
+- **本地缓存与人工覆盖**：手动校正保存在本机 `manual_overrides.json`，下次预览优先应用。
+- **跨平台分发**：提供 Windows、macOS 和 Linux 构建。
 
-## 安装说明
+## 安装
 
-请从 [Releases](https://github.com/MightyKartz/PLCN/releases) 页面下载对应平台的最新版本。
+从 [Releases](https://github.com/MightyKartz/PLCN/releases) 下载对应平台的最新版本：
 
-- **Windows**：下载 `PLCN-Windows-x64.exe`
-- **macOS**：下载 `PLCN-macOS-x64.tar.gz`
-- **Linux**：下载 `PLCN-Linux-x64.tar.gz`
+- **Windows**：`PLCN-Windows-x64.exe`
+- **macOS**：`PLCN-macOS-x64.tar.gz`
+- **Linux**：`PLCN-Linux-x64.tar.gz`
+
+macOS/Linux 解压后运行 `chmod +x PLCN-macOS` 或 `chmod +x PLCN-Linux`。macOS 首次打开如提示无法验证开发者，请在“系统设置 > 隐私与安全性”中允许。
 
 ## 使用方法
 
-### 快速开始
+1. 启动程序后，在首页选择已连接设备、最近目录或本地目录。
+2. 选择主机查看当前游戏列表，使用搜索和缺图筛选定位游戏。
+3. 使用右上角“批量整理”预览名称与图片修复建议；也可以打开单个游戏的补图窗口。
+4. 核对写入名称和图片源后确认应用；PLCN 会写回列表并下载图片。
 
-1. **下载并解压**：从 [Releases](https://github.com/MightyKartz/PLCN/releases) 下载最新版本。
-
-2. **赋予执行权限**（macOS/Linux）：
-
-   ```bash
-   # macOS，先解压 PLCN-macOS-x64.tar.gz
-   chmod +x PLCN-macOS
-
-   # Linux，先解压 PLCN-Linux-x64.tar.gz
-   chmod +x PLCN-Linux
-   ```
-
-   > **macOS 安全提示**：首次运行时，如果遇到“无法打开，因为无法验证开发者”的提示，请前往 **系统设置 > 隐私与安全性**，选择允许打开。
-
-3. **运行程序**：
-   - **Windows**：双击 `PLCN-Windows-x64.exe` 或在命令行运行。
-   - **macOS**：双击 `PLCN-macOS` 或在终端运行 `./PLCN-macOS`。
-   - **Linux**：在终端运行 `./PLCN-Linux`。
-
-   程序会自动在默认浏览器中打开 Web UI。
-
-### Web UI 操作
-
-1. **扫描设备与目录**：
-   - 在左侧“设备与目录”中选择 RetroArch 根目录、`playlists` 目录，或已挂载 SD 卡/掌机中的 RetroArch 目录。
-   - 点击“自动检测”可优先扫描常见本地/挂载目录；如果 Android 设备已完成 ADB 授权，也会自动识别 `/sdcard/RetroArch` 等常见路径。
-   - 点击“扫描目录”后，PLCN 会检测游戏列表目录、缩略图目录和 `retroarch.cfg`，并列出发现的 `.lpl` 文件。
-   - 选择一个游戏列表后，系统名、游戏列表路径和缩略图目录会自动填入并生成预览。
-
-2. **配置目录与系统**：
-   - 单项修复：也可以手动选择一个 `.lpl` 文件、对应系统（如 `Sony - PlayStation`）和缩略图保存目录。
-   - 批量修复：选择包含多个 `.lpl` 文件的目录和缩略图保存目录。
-
-3. **预览与校对**：
-   - 先生成预览，检查当前名称、写入名称、封面源英文名、封面状态和修复状态。
-   - 可取消勾选不准备写回的行，未勾选项不会进入应用和下载流程。
-   - 对不确定项编辑写入名称或封面源，核对后点击“已核对，加入应用”，再检查最终摘要。CLI 和批量任务默认跳过需复核项。
-
-4. **应用与下载**：
-   - 确认后写回 `.lpl` 文件。
-   - 自动下载匹配的封面、游戏截图和标题图。
-   - 在进度区查看日志、成功/失败/跳过统计和下载明细。
-
-### 本地数据说明
-
-- `manual_overrides.json` 只保存在本机，未配置时位于 PLCN 用户数据目录；可通过本地配置指定其他路径。
-- 覆盖记录包含 system、ROM 路径/文件名、CRC、写入名称、封面源和更新时间；同一 system 内优先按有效 CRC 命中，CRC 缺失时按 ROM 文件名命中，两条有效 CRC 不同时禁止文件名回退。
-- 该文件用于保留人工校正结果，不会启用云同步、在线匹配或外部刮削。
-
-### 从源码运行
+## 从源码运行
 
 ```bash
 pip install -r requirements.txt
-
-# 无参数启动本地 Web UI
 python3 src/plcn.py
-
-# 或显式启动 Web UI
-python3 src/plcn.py ui
-
-# 单个游戏列表命令行处理
-python3 src/plcn.py \
-  --playlist "/path/to/playlist.lpl" \
-  --system "Sony - PlayStation" \
-  --thumbnails-dir "/path/to/RetroArch/thumbnails"
-
-# 批量处理目录中的 .lpl 文件
-python3 src/plcn.py \
-  --batch-dir "/path/to/playlists" \
-  --thumbnails-dir "/path/to/RetroArch/thumbnails"
 ```
 
-## 开发状态
+命令行单个列表：
 
-- 当前核心链路集中在 `src/plcn.py`、`src/server.py`、`src/database.py`、`src/translator.py`、`src/libretro_db.py` 和 `src/thumbnail_downloader.py`。
-- RetroArch 目录扫描集中在 `src/retroarch_scanner.py`，当前支持本地/挂载目录浅层扫描和 ADB 授权设备扫描；SSH/SFTP 远程连接仍在后续计划中。
-- Web UI 目前位于 `src/templates/plcn.html`，是单文件模板，后续需要继续拆分和强化可维护性。
-- 后续优化路线见 [DOC/OPTIMIZATION_PLAN.md](DOC/OPTIMIZATION_PLAN.md)。
-- 本轮实现与验收记录见 [DOC/IMPLEMENTATION_PLAN.md](DOC/IMPLEMENTATION_PLAN.md)；较早路线中的实现事实以该记录为准。
+```bash
+python3 src/plcn.py   --playlist "/path/to/playlist.lpl"   --system "Sony - PlayStation"   --thumbnails-dir "/path/to/RetroArch/thumbnails"
+```
 
-常用验证命令：
+批量处理：
+
+```bash
+python3 src/plcn.py   --batch-dir "/path/to/playlists"   --thumbnails-dir "/path/to/RetroArch/thumbnails"
+```
+
+## 本地数据
+
+- `manual_overrides.json` 只保存在本机，用于保留人工校正结果。
+- 不启用云同步、在线匹配或外部刮削；本地数据优先。
+- 详细操作见 [桌面使用指南](DOC/DESKTOP_GUIDE.md)。
+
+## 开发
 
 ```bash
 python3 -m pytest -q
-python3 -m py_compile src/*.py
+python3 -m compileall -q src
 python3 scripts/check_ui_js.py
 git diff --check
 ```
 
-如果改动 `src/templates/plcn.html`，还需要对内联 JavaScript 做语法检查；发布前的完整检查命令见 [RELEASE_GUIDE.md](RELEASE_GUIDE.md)。
+## 致谢
 
-## 致谢与鸣谢
-
-特别感谢 **yingw** 提供的详尽 ROM 名称翻译数据库：
-
-- [rom-name-cn](https://github.com/yingw/rom-name-cn)
-
-本项目使用了 `rom-name-cn` 的数据，为成千上万的怀旧游戏提供中文翻译基础。
+感谢 [rom-name-cn](https://github.com/yingw/rom-name-cn) 提供的 ROM 中文名称数据。
