@@ -503,8 +503,8 @@ def apply_independent(manifest, directory, token, receipt):
             if digest(read_target(asset['target'])) != asset['digest']:
                 try:
                     write_target(asset['target'], (directory / asset['cache']).read_bytes(), None)
-                except OSError as error:
-                    # Windows can reject a name like `Title 2.png` when `Title.png` already exists.
+                except (OSError, RuntimeError) as error:
+                    # A missing companion image is expected when the read-only check raced another writer.
                     print(f'Warning: Could not copy companion artwork: {error}')
         playlist_backup = playlist_path + '.bak-' + token
         if not completed:
