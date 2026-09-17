@@ -499,13 +499,16 @@ def apply_independent(manifest, directory, token, receipt):
         atomic_write_json(receipt, manifest)
         # The selected image is managed with its existing ROM alias as one resumable operation.
         backups = write_selected_images(manifest, directory, token, receipt)
+        companion_errors = []
         for asset in manifest['companions']:
             if digest(read_target(asset['target'])) != asset['digest']:
                 try:
                     write_target(asset['target'], (directory / asset['cache']).read_bytes(), None)
                 except (OSError, RuntimeError) as error:
-                    # A missing companion image is expected when the read-only check raced another writer.
-                    print(f'Warning: Could not copy companion artwork: {error}')
+                    # Keep the selected image and name update; report unwritten companion images.
+                    companion_errors.append(str(error))
+        if companion_errors:
+            print('Warning: Could not copy companion artwork: ' + ' | '.join(companion_errors))
         playlist_backup = playlist_path + '.bak-' + token
         if not completed:
             try:
@@ -514,7 +517,7 @@ def apply_independent(manifest, directory, token, receipt):
                 raise RuntimeError('独立图片已准备，游戏列表写入未确认；可重试查询。备份位置：' + playlist_backup) from error
         result = {'target': manifest['target'], 'backup': backups[0] if backups else None, 'playlist_backup': playlist_backup,
                   'index': manifest['index'], 'playlist_path': playlist_path, 'label': manifest['label'],
-                  'new_label': manifest['new_label'], 'kind': manifest['kind'],
+                  'new_label': manifest['new_label'], 'kind': manifest['kind'], 'companion_warnings': companion_errors,
                   'image_url': '/api/thumbnail/preview?path=' + quote(manifest['target'], safe='') + '&v=after-' + token}
         if manifest.get('online'):
             try:
