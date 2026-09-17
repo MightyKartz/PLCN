@@ -134,4 +134,4 @@ def test_browser_matches_retroarch_rom_filename_priority(tmp_path, monkeypatch, 
             'type': 'adb', 'serial': 'device', 'base_path': '/images/SNES/' + k,
             'filenames': {p.name for p in boxarts.iterdir()} if k == 'Named_Boxarts' else set()})
     result = read_playlist('adb://device/SNES.lpl' if remote else str(playlist), 'SNES', 'adb://device/images' if remote else str(root))
-    assert result['items'][0]['image_path'].endswith('/火焰之纹章4.png')
+    assert Path(result['items'][0]['image_path']).name == '火焰之纹章4.png'

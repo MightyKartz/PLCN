@@ -102,7 +102,7 @@ def test_stale_review_cannot_write(context, change):
 
 def test_colliding_image_names_reject_single_game_action(context):
     path = Path(context['playlist_path'])
-    data = json.loads(path.read_text())
+    data = json.loads(path.read_text(encoding='utf-8'))
     data['items'][1]['label'] = data['items'][0]['label']
     path.write_text(json.dumps(data))
     with pytest.raises(ValueError, match='共用'):
@@ -186,7 +186,7 @@ def test_status_separates_missing_damaged_and_disconnected(context, monkeypatch)
 
 def share_names(context):
     path = Path(context['playlist_path'])
-    data = json.loads(path.read_text())
+    data = json.loads(path.read_text(encoding='utf-8'))
     data['items'][1]['label'] = data['items'][0]['label']
     path.write_text(json.dumps(data))
     return path, path.read_bytes(), data
@@ -205,7 +205,7 @@ def test_shared_entry_gets_independent_artwork_without_changing_other_rom(contex
     assert path.read_bytes() == original
     assert not Path(prepared['target']).exists()
     result = art.apply(prepared['token'])
-    updated = json.loads(path.read_text())
+    updated = json.loads(path.read_text(encoding='utf-8'))
     assert updated['items'][0] == {**data['items'][0], 'label': '游戏一 独立版'}
     assert updated['items'][1] == data['items'][1]
     assert Path(result['playlist_backup']).read_bytes() == original
@@ -238,7 +238,7 @@ def test_independent_rename_detects_playlist_change_without_overwriting_it(conte
     path.write_text(json.dumps(data))
     with pytest.raises(RuntimeError, match='列表已改变'):
         art.apply(prepared['token'])
-    assert json.loads(path.read_text()) == data
+    assert json.loads(path.read_text(encoding='utf-8')) == data
     assert not Path(prepared['target']).exists()
 
 
@@ -333,7 +333,7 @@ def test_rom_image_sync_recovers_when_second_write_is_interrupted(context, monke
 
 def test_rom_alias_used_by_another_label_is_not_silently_overwritten(context):
     path = Path(context['playlist_path'])
-    data = json.loads(path.read_text())
+    data = json.loads(path.read_text(encoding='utf-8'))
     data['items'][1]['label'] = 'one'
     path.write_text(json.dumps(data))
     alias = Path(context['thumbnails']) / 'GBA/Named_Boxarts/one.png'

@@ -420,7 +420,7 @@ def apply(token):
     directory = app_paths.cache_dir() / 'artwork-previews'
     path = directory / (token + '.json')
     with file_lock(path):
-        manifest = json.loads(path.read_text())
+        manifest = json.loads(path.read_text(encoding='utf-8'))
         if manifest.get('result'):
             return manifest['result']
         if time.time() - manifest['created'] > 1800:
