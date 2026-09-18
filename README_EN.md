@@ -6,7 +6,7 @@ PLCN is a local RetroArch game-list localization and artwork management tool. It
 
 > PLCN is an external local helper. It does not modify RetroArch itself.
 
-## Latest Release: v3.2.0
+## Latest Release: v3.2.1
 
 v3.2.0 combines device connection, game browsing, batch repair, and single-game artwork repair. At startup, choose a connected Android device, a recent folder, or a local directory. Selecting a system opens its current game list, and each row can repair missing or incorrect artwork from the official Libretro thumbnail library or a local image.
 
