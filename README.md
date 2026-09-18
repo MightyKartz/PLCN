@@ -42,7 +42,9 @@ v3.2.0 集中提供设备连接、游戏浏览、批量整理和单游戏补图�
 - **macOS**：`PLCN-macOS-x64.tar.gz`
 - **Linux**：`PLCN-Linux-x64.tar.gz`
 
-macOS/Linux 解压后运行 `chmod +x PLCN-macOS` 或 `chmod +x PLCN-Linux`。macOS 首次打开如提示无法验证开发者，请在“系统设置 > 隐私与安全性”中允许。
+普通用户无需安装 Xcode、Node.js 或执行许可命令。Windows 运行安装包；macOS 解压后双击；Linux 解压后运行。当前 macOS/Windows 构建未签名，首次打开可能需要在系统安全设置中允许。
+
+发布版本由 GitHub Actions 自动打包；本机源码运行不需要打包环境。
 
 ## 使用方法
 
@@ -53,10 +55,14 @@ macOS/Linux 解压后运行 `chmod +x PLCN-macOS` 或 `chmod +x PLCN-Linux`。ma
 
 ## 从源码运行
 
+适合开发或本机验证，无需 Xcode：
+
 ```bash
 pip install -r requirements.txt
 python3 src/plcn.py
 ```
+
+正式安装包由 GitHub Actions 在发布时生成。只有维护者在本机手动打包 macOS DMG 时才需要本机 Xcode 许可。
 
 命令行单个列表：
 

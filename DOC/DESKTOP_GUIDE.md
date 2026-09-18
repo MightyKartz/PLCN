@@ -53,6 +53,8 @@ Linux 使用 XDG 用户数据/缓存目录。`PLCN_HOME` 可显式指定独立�
 
 ## 从源码与本地打包
 
+正式用户直接使用 GitHub Release 中的安装包，不需要安装 Xcode、Node.js 或接受任何 SDK 许可。下面的打包命令只面向维护者；CI 已包含许可和依赖环境。若本机 macOS 手动构建，`lipo`/PyInstaller 可能要求先在本机同意 Xcode license，这是开发打包步骤，不是用户安装步骤。
+
 ```powershell
 # Windows，项目根目录
 .\venv\Scripts\python.exe src\plcn.py ui

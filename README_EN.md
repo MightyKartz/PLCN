@@ -42,7 +42,9 @@ Download the latest release for your platform from [Releases](https://github.com
 - **macOS**: `PLCN-macOS-x64.tar.gz`
 - **Linux**: `PLCN-Linux-x64.tar.gz`
 
-On macOS/Linux, extract the archive and run `chmod +x PLCN-macOS` or `chmod +x PLCN-Linux`. If macOS says the developer cannot be verified, allow the app in **System Settings > Privacy & Security**.
+Users do not need Xcode, Node.js, or license commands. On Windows run the installer; on macOS extract and double-click; on Linux extract and run. Current macOS/Windows builds are unsigned, so the first launch may need a manual allowance in system security settings.
+
+Release packages are built by GitHub Actions; running from source does not require a packaging environment.
 
 ## Usage
 
@@ -53,10 +55,14 @@ On macOS/Linux, extract the archive and run `chmod +x PLCN-macOS` or `chmod +x P
 
 ## Run from source
 
+For development or local verification; Xcode is not required:
+
 ```bash
 pip install -r requirements.txt
 python3 src/plcn.py
 ```
+
+Release packages are built by GitHub Actions. A local Xcode license is only needed when a maintainer manually builds a macOS DMG on their own machine.
 
 Single playlist from the command line:
 
