@@ -786,7 +786,7 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
             proposal["needs_review"] = False
 
     for i, item in enumerate(items):
-        disc_key = disc_group(path := item.get('path'), item.get('label'))
+        disc_key = disc_group(path := item.get('path'), item.get('label'), [entry.get('path') for entry in items])
         if disc_key and disc_key in preferred_disc and preferred_disc[disc_key] != i:
             continue
         db_name = str(item.get('db_name') or '').replace('\\', '/').rsplit('/', 1)[-1]
