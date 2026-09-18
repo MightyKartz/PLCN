@@ -54,7 +54,7 @@ def restore(entry_id):
             original = json.loads(content.decode('utf-8-sig'))
             if not isinstance(original, dict) or not isinstance(original.get('items'), list):
                 raise ValueError('备份不是有效游戏列表')
-            before_restore = str(target) + '.before-restore-' + uuid.uuid4().hex[:12] + '.bak'
+            before_restore = str(backup.parent / (backup.name + '.before-restore-' + uuid.uuid4().hex[:12] + '.bak'))
             shutil.copy2(target, before_restore)
             atomic_write_bytes(target, content, expected_digest=entry['after_sha256'])
             if file_digest(target) != entry['backup_sha256']:

@@ -1,4 +1,5 @@
 import argparse
+from pathlib import Path
 from dataclasses import asdict, dataclass
 from datetime import datetime
 import hashlib
@@ -462,8 +463,11 @@ def proposal_matches_item(change, item):
     return True
 
 def timestamped_backup_path(playlist_path):
-    base_path = f"{playlist_path}.bak-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
-    backup_path = base_path
+    backup_dir = app_paths.user_data_dir() / 'playlist-backups'
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    name = Path(playlist_path).name
+    base_path = backup_dir / f"{name}.bak-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+    backup_path = str(base_path)
     suffix = 1
     while os.path.exists(backup_path):
         backup_path = f"{base_path}-{suffix}"

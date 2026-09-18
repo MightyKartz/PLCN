@@ -2,9 +2,11 @@ import json
 import os
 import re
 import sys
+from pathlib import Path
 
 sys.path.append(os.path.join(os.getcwd(), "src"))
 
+import app_paths
 import plcn
 
 
@@ -116,7 +118,7 @@ def test_apply_changes_creates_timestamped_backup_file(tmp_path, monkeypatch):
         download_thumbnails=False,
     )
 
-    backups = list(tmp_path.glob(f"{playlist_path.name}.bak-*"))
+    backups = list(Path(app_paths.user_data_dir() / "playlist-backups").glob(f"{playlist_path.name}.bak-*"))
     assert len(backups) == 1
     assert re.search(r"\.lpl\.bak-\d{8}-\d{6}$", backups[0].name)
     assert read_playlist(backups[0])["items"][0]["label"] == "Contra (USA)"

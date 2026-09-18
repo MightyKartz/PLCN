@@ -10,6 +10,7 @@ import pytest
 
 sys.path.append(os.path.join(os.getcwd(), "src"))
 
+import app_paths
 import plcn
 
 
@@ -708,7 +709,7 @@ def test_apply_changes_returns_writeback_summary_and_timestamped_backup(tmp_path
         download_thumbnails=False,
     )
 
-    backups = list(tmp_path.glob("Nintendo - Super Nintendo Entertainment System.lpl.bak-*"))
+    backups = list(Path(app_paths.user_data_dir() / "playlist-backups").glob("Nintendo - Super Nintendo Entertainment System.lpl.bak-*"))
     assert len(backups) == 1
     assert re.search(r"\.bak-\d{8}-\d{6}$", str(backups[0]))
 
