@@ -102,14 +102,6 @@ def test_playlist_fixtures_capture_accuracy_loop_contract():
                     "needs_review": False,
                     "evidence_chain_contains": ["Final Fantasy Tactics (USA).cue", "cue", "rom-name-cn"],
                 },
-                {
-                    "new_label": "最终幻想战略版",
-                    "thumbnail_source": "Final Fantasy Tactics (USA)",
-                    "match_source": "rom-name-cn",
-                    "match_score": 96,
-                    "needs_review": False,
-                    "evidence_chain_contains": ["Final Fantasy Tactics (USA).bin", "bin", "rom-name-cn"],
-                },
             ],
         ),
         (
@@ -386,8 +378,8 @@ def test_fbneo_zip_short_name_fixture_uses_dat_rom_evidence_before_label():
 def test_ps1_bin_cue_fixture_prefers_cue_entry_and_rom_translation():
     changes = analyze_fixture("ps1_bin_cue.lpl", "Sony - PlayStation")
 
-    assert len(changes) == 2
-    assert {Path(change["path"]).suffix for change in changes} == {".bin", ".cue"}
+    assert len(changes) == 1
+    assert Path(changes[0]["path"]).suffix == ".cue"
     for change in changes:
         assert change["new_label"] == "最终幻想7 初版"
         assert change["thumbnail_source"] == "Final Fantasy VII (USA) (Disc 1)"

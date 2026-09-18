@@ -16,7 +16,7 @@ from playlist_manager import PlaylistManager
 from translator import Translator
 from thumbnail_downloader import ThumbnailDownloader
 from rom_fingerprint import build_rom_match_candidates
-from rom_paths import rom_filename, rom_title
+from rom_paths import disc_group, preferred_disc_entry, rom_filename, rom_title
 from match_evidence import CONFLICT_REASON, build_match_diagnostics
 from manual_overrides import find_override, load_overrides
 from safe_io import file_lock
@@ -558,6 +558,7 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
     # Preserve every row and its original index. Renaming never implies deletion.
 
     items = playlist_manager.get_items()
+    preferred_disc = preferred_disc_entry(items)
     proposed_changes = []
     boxart_lookup = None
     manual_overrides = load_overrides(manual_overrides_path) if manual_overrides_path else []
@@ -785,6 +786,9 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
             proposal["needs_review"] = False
 
     for i, item in enumerate(items):
+        disc_key = disc_group(path := item.get('path'), item.get('label'))
+        if disc_key and disc_key in preferred_disc and preferred_disc[disc_key] != i:
+            continue
         db_name = str(item.get('db_name') or '').replace('\\', '/').rsplit('/', 1)[-1]
         system_name = os.path.splitext(db_name)[0] if db_name and db_name != 'DETECT' else playlist_system
         validate_system(system_name)

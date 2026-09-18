@@ -135,3 +135,16 @@ def test_browser_matches_retroarch_rom_filename_priority(tmp_path, monkeypatch, 
             'filenames': {p.name for p in boxarts.iterdir()} if k == 'Named_Boxarts' else set()})
     result = read_playlist('adb://device/SNES.lpl' if remote else str(playlist), 'SNES', 'adb://device/images' if remote else str(root))
     assert Path(result['items'][0]['image_path']).name == '火焰之纹章4.png'
+
+
+def test_disc_media_rows_show_one_launchable_entry(tmp_path):
+    path = tmp_path / 'PS1.lpl'
+    items = [
+        {'label': 'Game Disc 1', 'path': '/roms/Game (Disc 1).cue'},
+        {'label': 'Game Track', 'path': '/roms/Game (Disc 1) (Track 1).bin'},
+        {'label': 'Game Disc 2', 'path': '/roms/Game (Disc 2).cue'},
+        {'label': 'Standalone BIN', 'path': '/roms/Single.bin'},
+    ]
+    path.write_text(json.dumps({'items': items}), encoding='utf-8')
+    data = read_playlist(str(path), 'Sony - PlayStation')
+    assert [item['rom_name'] for item in data['items']] == ['Game (Disc 1).cue', 'Single.bin']
