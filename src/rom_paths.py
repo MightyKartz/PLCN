@@ -42,6 +42,5 @@ def preferred_disc_entry(entries):
             continue
         candidates = [pair for pair in group if PurePosixPath(pair[1].get('path', '')).suffix.lower() in {'.m3u', '.cue', '.chd', '.iso', '.gdi'}]
         selected = min(candidates or group, key=lambda pair: (priority.get(PurePosixPath(pair[1].get('path', '')).suffix.lower(), 9), pair[0]))
-        print('DEBUG selected', selected, selected[0], type(selected[0]))
         preferred[key] = selected[0]
     return preferred

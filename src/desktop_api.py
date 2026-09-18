@@ -11,7 +11,7 @@ import repair_history
 from task_control import checkpoint
 
 POST_ROUTES = {
-    '/api/library/recent',
+    '/api/library/recent', '/api/fs/open',
     '/api/desktop/pick', '/api/desktop/shutdown', '/api/jobs/cancel', '/api/jobs/retry',
     '/api/data/check', '/api/data/fetch', '/api/data/compare', '/api/data/activate', '/api/data/rollback',
     '/api/history/restore',
@@ -145,8 +145,6 @@ def post(handler, path, payload, jobs, config_path):
         if not job or job['status'] not in ('completed', 'cancelled', 'failed'):
             raise ValueError('请选择已结束的任务')
         target = jobs.contexts.get(old_id, {}).get('thumbnails_dir')
-        if not target or str(target).startswith('adb://'):
-            raise ValueError('此处仅重试本地图片；ADB 请重新预览后应用')
         details = (job.get('result') or {}).get('download_summary', {}).get('details', [])
         tasks = list(dict.fromkeys((r['system'], r['source'], r['game']) for r in details
                                   if (r.get('status') == 'failed' or r.get('reason') == 'cancelled')

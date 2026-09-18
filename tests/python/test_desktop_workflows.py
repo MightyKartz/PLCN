@@ -200,3 +200,20 @@ def test_desktop_launcher_restores_streams_after_service_exit(desktop_home, monk
     desktop.main()
     assert sys.stdout is stdout and sys.stderr is stderr
     assert 'service completed' in (desktop_home / 'logs/desktop.log').read_text(encoding='utf-8')
+
+
+def test_retry_keeps_adb_thumbnail_target(tmp_path, desktop_home, monkeypatch):
+    jobs = server.JobManager()
+    monkeypatch.setattr(server, 'job_manager', jobs)
+    old = jobs.create_job()
+    jobs.contexts[old] = {'thumbnails_dir': 'adb://device/sdcard/RetroArch/thumbnails'}
+    jobs.complete_job(old, {'download_summary': {'details': [{'system': 'Sony - PlayStation', 'source': 'Game (USA)', 'game': '中文', 'type': 'Named_Boxarts', 'status': 'failed', 'reason': 'not_found'}]}})
+
+    import desktop_api
+    handler = SimpleNamespace(replies=[])
+    def reply(_handler, data, status=200):
+        handler.replies.append((status, data))
+    monkeypatch.setattr(desktop_api, 'reply', reply)
+    desktop_api.post(handler, '/api/jobs/retry', {'job_id': old}, jobs, str(tmp_path / 'config.json'))
+    assert handler.replies[0][1]['job_id']
+    assert jobs.contexts[handler.replies[0][1]['job_id']]['thumbnails_dir'].startswith('adb://')
