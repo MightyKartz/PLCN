@@ -110,7 +110,7 @@ def load(token, system=None, kind=None):
     if not isinstance(token, str) or not re.fullmatch('[0-9a-f]{32}', token):
         raise ValueError('请选择搜索结果中的候选图片')
     try:
-        entry = json.loads((app_paths.cache_dir() / 'secondary-artwork' / (token + '.json')).read_text())
+        entry = json.loads((app_paths.cache_dir() / 'secondary-artwork' / (token + '.json')).read_text(encoding='utf-8'))
     except (OSError, ValueError) as error:
         raise ValueError('候选图片已过期，请重新搜索') from error
     if time.time() - entry['created'] > 86400 or (system is not None and entry['system'] != system) or (kind is not None and entry['kind'] != kind):

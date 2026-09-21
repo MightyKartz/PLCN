@@ -91,7 +91,7 @@ def test_rename_removes_raw_disc_entry_not_other_disc_or_revision(tmp_path):
              {'path': '/ps/Other (Disc 2).cue', 'label': 'Other'}]
     path.write_text(json.dumps({'items': items}))
     result = plcn.apply_changes(str(path), [{'index':1,'path':items[1]['path'],'new_label':'妖精战士2'}], str(tmp_path), download_thumbnails=False)
-    saved = json.loads(path.read_text())['items']
+    saved = json.loads(path.read_text(encoding='utf-8'))['items']
     assert [x['path'] for x in saved] == [x['path'] for x in items[1:]]
     assert saved[0]['label'] == '妖精战士2'
     assert len(result['apply']['applied']) == 1

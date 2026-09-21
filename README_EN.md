@@ -18,7 +18,7 @@ Download a **Release asset**, not the Source code archive. Public downloads do n
 
 GitHub-built Windows/macOS packages currently have no distribution certificate signature; macOS builds are not notarized. System security may block first launch. Consult [Apple](https://support.apple.com/102445) or [Microsoft](https://support.microsoft.com/en-us/windows/security/threat-malware-protection/smart-app-control-frequently-asked-questions). Corporate policies and Smart App Control can prevent execution; disabling protection is not recommended.
 
-Starting with v3.2.4, Windows/macOS packages include ADB. Android USB access still requires USB debugging and authorization on the device; some Windows devices require vendor drivers. Local folders and SD cards do not require ADB.
+Starting with v3.2.5, Windows/macOS packages include ADB. Android USB access still requires USB debugging and authorization on the device; some Windows devices require vendor drivers. Local folders and SD cards do not require ADB.
 
 ## Use
 

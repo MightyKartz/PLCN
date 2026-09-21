@@ -72,7 +72,7 @@ class ImageLinks(HTMLParser):
 def catalog_names(system, kind):
     cache = app_paths.cache_dir() / 'artwork-index' / (digest((system + kind).encode()) + '.json')
     if cache.exists() and time.time() - cache.stat().st_mtime < 3600:
-        return json.loads(cache.read_text())
+        return json.loads(cache.read_text(encoding='utf-8'))
     parser = ImageLinks()
     parser.feed(download(f'{BASE}/{quote(system, safe="")}/{kind}/').decode('utf-8'))
     names = sorted(parser.names)
@@ -385,7 +385,7 @@ def backup_location(target, suffix):
     if target.lower().endswith('.lpl'):
         root = app_paths.user_data_dir() / 'playlist-backups'
         root.mkdir(parents=True, exist_ok=True)
-        return str(root / (target.rsplit('/', 1)[-1] + '.bak-' + suffix))
+        return str(root / (target.replace('\\', '/').rsplit('/', 1)[-1] + '.bak-' + suffix))
     return target + '.bak-' + suffix
 
 

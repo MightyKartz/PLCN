@@ -36,7 +36,7 @@ def test_candidates_preserve_provenance_and_require_scoped_ids(provider):
         with pytest.raises(ValueError):
             secondary.load(token)
     path = secondary.app_paths.cache_dir() / 'secondary-artwork' / (candidate['id'] + '.json')
-    entry = json.loads(path.read_text()); entry['created'] = time.time() - 90000
+    entry = json.loads(path.read_text(encoding='utf-8')); entry['created'] = time.time() - 90000
     path.write_text(json.dumps(entry))
     with pytest.raises(ValueError):
         secondary.load(candidate['id'])

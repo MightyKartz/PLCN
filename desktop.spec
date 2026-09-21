@@ -29,8 +29,8 @@ if sys.platform == 'darwin':
         bundle, name='PLCN.app', bundle_identifier='io.github.mightykartz.plcn',
         info_plist={
             'CFBundleName': 'PLCN', 'CFBundleDisplayName': 'PLCN',
-            'CFBundleShortVersionString': os.environ.get('PLCN_VERSION', '3.2.4'),
-            'CFBundleVersion': os.environ.get('PLCN_VERSION', '3.2.4'),
+            'CFBundleShortVersionString': os.environ.get('PLCN_VERSION', '3.2.5'),
+            'CFBundleVersion': os.environ.get('PLCN_VERSION', '3.2.5'),
             'NSHighResolutionCapable': True,
         },
     )

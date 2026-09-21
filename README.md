@@ -18,7 +18,7 @@ RetroArch 游戏列表中文化与图片管理工具。双击启动，在浏览�
 
 **当前 GitHub 自动构建的 macOS / Windows 包未做发行证书签名，macOS 未公证。** 首次打开可能被系统拦截；请先核对下载来源，再按 [Apple 官方说明](https://support.apple.com/102445) 或 [Windows 安全说明](https://support.microsoft.com/en-us/windows/security/threat-malware-protection/smart-app-control-frequently-asked-questions)处理。企业策略或 Smart App Control 可能阻止运行，不建议关闭系统防护。
 
-从 v3.2.4 起，Windows / macOS 安装包内置 ADB，无需另装命令行工具。连接 Android 掌机仍需开启 USB 调试，并在掌机上允许此电脑；部分 Windows 设备需要厂商 USB 驱动。本地目录和 SD 卡不需要 ADB。
+从 v3.2.5 起，Windows / macOS 安装包内置 ADB，无需另装命令行工具。连接 Android 掌机仍需开启 USB 调试，并在掌机上允许此电脑；部分 Windows 设备需要厂商 USB 驱动。本地目录和 SD 卡不需要 ADB。
 
 ## 使用
 

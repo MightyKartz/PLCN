@@ -124,7 +124,7 @@ def test_dos_bulk_preview_preserves_labels_and_does_not_offer_launcher_downloads
     path = tmp_path / 'DOS.lpl'
     items = [{'label': label, 'path': f'/DOS/{label}.zip#{exe}', 'db_name': 'DOS.lpl'}
              for label, exe in [('仙剑奇侠传', 'JS3.EXE'), ('大航海时代2', 'KOUKAI2.COM')]]
-    path.write_text(json.dumps({'items': items}, ensure_ascii=False))
+    path.write_text(json.dumps({'items': items}, ensure_ascii=False), encoding='utf-8')
     before = path.read_bytes()
     changes = plcn.analyze_playlist(str(path), 'DOS', 'unused')
     assert path.read_bytes() == before

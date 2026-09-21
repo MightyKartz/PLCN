@@ -109,7 +109,7 @@ def test_stale_review_cannot_write(context, change):
     target = Path(prepared['target'])
     if change == 'playlist':
         path = Path(context['playlist_path'])
-        path.write_text(path.read_text().replace('one.gba', 'changed.gba'))
+        path.write_text(path.read_text(encoding='utf-8').replace('one.gba', 'changed.gba'))
     elif change == 'target':
         target.parent.mkdir(parents=True)
         target.write_bytes(picture('blue'))
@@ -383,7 +383,13 @@ def test_disc_artwork_confirm_removes_english_companion(context, rename):
     prepared = art.preview(context)
     assert path.read_bytes() == original
     result = art.apply(prepared['token'])
-    assert len(json.loads(path.read_text())['items']) == 1
-    assert json.loads(path.read_text())['items'][0]['label'] == ('妖精战士2' if rename else '游戏一')
+    assert len(json.loads(path.read_text(encoding='utf-8'))['items']) == 1
+    assert json.loads(path.read_text(encoding='utf-8'))['items'][0]['label'] == ('妖精战士2' if rename else '游戏一')
     assert Path(result['playlist_backup']).parent != path.parent
     assert art.apply(prepared['token']) == result
+
+
+def test_windows_playlist_backup_stays_outside_playlist_folder(tmp_path, monkeypatch):
+    monkeypatch.setattr(art.app_paths, 'user_data_dir', lambda: tmp_path)
+    backup = art.backup_location(r'C:\RetroArch\playlists\SNES.lpl', 'test')
+    assert Path(backup) == tmp_path / 'playlist-backups' / 'SNES.lpl.bak-test'
