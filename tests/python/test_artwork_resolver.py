@@ -65,6 +65,18 @@ def test_not_found_has_distinct_reason(tmp_path, monkeypatch):
     assert all(row['reason'] == 'not_found' for row in downloader.download_thumbnail('NES', 'Game', '中文'))
 
 
+def test_dos_download_uses_unique_gallery_year_and_preserves_chinese_filename(tmp_path, monkeypatch):
+    from urllib.parse import unquote
+    official = 'Uncharted Waters 2 - New Horizons (1995)'
+    monkeypatch.setattr('single_artwork.catalog_names', lambda *args: [official])
+    downloader = ThumbnailDownloader(str(tmp_path))
+    downloader.session.get = lambda url, **kw: (SimpleNamespace(status_code=200, content=png())
+        if unquote(url).endswith('/' + official + '.png') else SimpleNamespace(status_code=404))
+    results = downloader.download_thumbnail('DOS', 'Uncharted Waters 2 - New Horizons', '大航海时代2')
+    assert all(r['status'] == 'success' and r['gallery_source'] == official for r in results)
+    assert all(Path(r['path']).name == '大航海时代2.png' and valid_image_file(r['path']) for r in results)
+
+
 def test_missing_catalog_spelling_retries_verified_name_and_keeps_target(tmp_path, monkeypatch):
     from urllib.parse import unquote
     monkeypatch.setattr('single_artwork.catalog_names', lambda *args: ['Out Run (Japan)'])

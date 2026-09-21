@@ -1,4 +1,5 @@
 import json
+from adb_runtime import adb_executable, subprocess_options
 import os
 import hashlib
 import shlex
@@ -105,7 +106,7 @@ def _run_adb(args, timeout=10, adb_runner=None):
 
     try:
         result = subprocess.run(
-            ["adb"] + list(args),
+            [adb_executable()] + list(args), **subprocess_options(),
             capture_output=True,
             text=True,
             timeout=timeout,

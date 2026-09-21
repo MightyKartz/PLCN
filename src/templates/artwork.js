@@ -8,7 +8,7 @@ function openArtworkDialog(item, autoSearch = true) {
     if (!thumbnails) { openPathSettings(); return; }
     const key = JSON.stringify(gameLibraryInput());
     artworkDialogState = {context: {playlist_path, system, thumbnails, index: item.index, label: item.label, rom_path: item.rom_path},
-        key, version: 0, candidate: null, busy: false, searching: false, applying: false, jobId: null, returnFocus: document.activeElement};
+        key, fromPreview: workbench.previewKey != null, version: 0, candidate: null, busy: false, searching: false, applying: false, jobId: null, returnFocus: document.activeElement};
     if (!beginWorkbenchOperation('artwork')) { artworkDialogState = null; return; }
     const text = workbenchText;
     artworkElement('title').textContent = item.image_url ? text('更换游戏图片', 'Replace game artwork') : text('为这个游戏补图', 'Add artwork for this game');
@@ -23,6 +23,8 @@ function openArtworkDialog(item, autoSearch = true) {
     artworkElement('source-label').textContent = text('搜索官方图库', 'Search official artwork library');
     artworkElement('source').placeholder = text('输入英文游戏名搜索图库', 'Search the library by English game name');
     artworkElement('source').value = '';
+    artworkElement('secondary').hidden = true;
+    artworkElement('secondary').textContent = text('搜索备用来源', 'Search alternate source');
     artworkElement('search').textContent = text('搜索图库', 'Search library');
     artworkElement('preview').textContent = text('预览图片', 'Preview image');
     artworkElement('upload-label').textContent = text('或导入本地图片（PNG / JPEG / WebP，最多 12 MiB）', 'Or import a local image (PNG / JPEG / WebP, up to 12 MiB)');
@@ -38,6 +40,18 @@ function openArtworkDialog(item, autoSearch = true) {
     artworkElement('current-label').textContent = text('当前图片', 'Current image');
     artworkElement('candidate-label').textContent = text('候选图片', 'Candidate image');
     if (autoSearch) return discoverArtwork();
+}
+
+async function openArtworkImport(item) {
+    if (workbench.operation) return;
+    openArtworkDialog(item, false);
+    const state = artworkDialogState;
+    if (!state) return;
+    await discoverArtwork(false);
+    if (artworkDialogState !== state) return;
+    artworkElement('upload').focus();
+    artworkElement('upload').scrollIntoView({block:'center'});
+    artworkElement('message').textContent = workbenchText('选择本地图片后预览，确认后保存。', 'Choose a local image to preview, then confirm to save.');
 }
 
 function currentArtworkRequest(state, version) {
@@ -62,7 +76,7 @@ function artworkBusy(busy) {
     const state = artworkDialogState;
     if (!state) return;
     state.busy = busy;
-    for (const id of ['kind', 'source', 'search', 'preview', 'upload', 'new-label']) artworkElement(id).disabled = busy || Boolean(state.jobId);
+    for (const id of ['kind', 'source', 'search', 'secondary', 'preview', 'upload', 'new-label']) artworkElement(id).disabled = busy || Boolean(state.jobId);
     artworkElement('results').inert = busy || Boolean(state.jobId);
     artworkElement('close').disabled = state.applying || Boolean(state.jobId);
     artworkElement('confirm').disabled = busy || !state.candidate;
@@ -71,14 +85,16 @@ function artworkBusy(busy) {
 }
 
 function artworkSearchChanged() {
+    if (artworkDialogState) artworkDialogState.selectedExternal = null;
     invalidateArtworkCandidate();
     artworkElement('names').replaceChildren();
     artworkElement('identity').textContent = workbenchText('已修改搜索词，请搜索官方图库。', 'Search term changed. Search the official library.');
 }
 
-async function discoverArtwork() {
+async function discoverArtwork(searchAfter = true) {
     const state = artworkDialogState;
     if (!state || state.busy || state.jobId) return;
+    state.selectedExternal = null;
     invalidateArtworkCandidate();
     const version = state.version;
     state.searching = true;
@@ -119,7 +135,7 @@ async function discoverArtwork() {
             artworkElement('source').value = result.query;
             const reason = reasons[result.reason] || ['识别名称', 'Identified title'];
             artworkElement('identity').textContent = workbenchText(...reason) + '：' + result.query;
-            await searchArtwork(true);
+            if (searchAfter) await searchArtwork(true);
         } else if (result.status === 'ambiguous') {
             artworkElement('identity').textContent = workbenchText('找到多个可能的名称，请选择游戏后搜索。', 'Several possible titles found. Choose the game to search.');
             for (const name of result.names) {
@@ -129,14 +145,17 @@ async function discoverArtwork() {
                 artworkElement('names').appendChild(button);
             }
         } else {
-            artworkElement('identity').textContent = workbenchText('尚未识别英文名。请输入英文游戏名搜索，或导入本地图片。', 'English title not identified. Enter a title to search or import an image.');
+            artworkElement('source').value = '';
+            artworkElement('identity').textContent = state.context.system === 'DOS'
+                ? workbenchText('名称未识别：未找到该 DOS 游戏的英文名。请填写游戏全名搜索，或导入本地图片。', 'Title not identified: no English name found for this DOS game. Enter the full game title or import an image.')
+                : workbenchText('尚未识别英文名。请输入英文游戏名搜索，或导入本地图片。', 'English title not identified. Enter a title to search or import an image.');
         }
     } catch (error) {
         if (currentArtworkRequest(state, version)) artworkElement('identity').textContent = workbenchText('名称识别失败：', 'Title lookup failed: ') + error.message;
     } finally { if (currentArtworkRequest(state, version)) state.searching = false; }
 }
 
-async function searchArtwork(automatic = false) {
+async function searchArtwork(automatic = false, provider = 'libretro') {
     const state = artworkDialogState;
     if (!state || state.busy || state.jobId) return;
     invalidateArtworkCandidate();
@@ -150,11 +169,21 @@ async function searchArtwork(automatic = false) {
     state.searching = true;
     artworkElement('message').textContent = workbenchText('正在搜索官方图库，可随时导入本地图片…', 'Searching the official library. You can import an image at any time…');
     try {
-        const result = await desktopRequest('/api/artwork/search', {system: state.context.system, kind: artworkElement('kind').value, query, automatic});
+        state.selectedExternal = null;
+        const kind = artworkElement('kind').value;
+        artworkElement('secondary').hidden = kind !== 'Named_Boxarts';
+        let result = await desktopRequest('/api/artwork/search', {system: state.context.system, kind, query, automatic, provider});
         if (!currentArtworkRequest(state, version)) return;
+        if (!result.total && provider === 'libretro' && kind === 'Named_Boxarts') {
+            artworkElement('message').textContent = workbenchText('官方图库未找到，正在搜索备用来源…', 'No official match. Searching the alternate source…');
+            result = await desktopRequest('/api/artwork/search', {system: state.context.system, kind, query, provider:'wikipedia'});
+            if (!currentArtworkRequest(state, version)) return;
+        }
+        const secondary = result.provider === 'wikipedia';
         artworkElement('message').textContent = result.total
-            ? workbenchText(`找到 ${result.total} 张候选图片，显示前 ${result.names.length} 张。选择图片查看对比。`, `Found ${result.total} images; showing ${result.names.length}. Select one to compare.`)
-            : workbenchText('官方图库暂无匹配图片。可修改英文名重新搜索，或导入本地图片。', 'No matching official artwork. Edit the English title to search again, or import an image.');
+            ? (secondary ? workbenchText('备用配图（非官方图库）：请核对平台、版本和图片类型，选择后预览确认。', 'Alternate artwork (not Libretro): check platform, edition and image type before confirming.')
+                : workbenchText(`找到 ${result.total} 张官方候选图片，选择图片查看对比。`, `Found ${result.total} official images. Select one to compare.`))
+            : workbenchText('图库未找到：可修改名称搜索，或导入本地图片。', 'No gallery match. Edit the title or import an image.');
         for (const candidate of result.candidates || result.names.map(name => ({name}))) {
             const button = document.createElement('button');
             button.className = 'btn btn-muted artwork-option'; button.type = 'button';
@@ -171,8 +200,22 @@ async function searchArtwork(automatic = false) {
             if (candidate.exact) {
                 const badge = document.createElement('small'); badge.textContent = workbenchText('完整名称匹配', 'Exact title match'); button.appendChild(badge);
             }
-            button.onclick = () => { artworkElement('source').value = candidate.name; previewArtwork(); };
-            artworkElement('results').appendChild(button);
+            const detail = document.createElement('small');
+            detail.textContent = [candidate.provider_label || 'Libretro', candidate.platform, candidate.version].filter(Boolean).join(' · ');
+            button.appendChild(detail);
+            button.onclick = () => {
+                artworkElement('source').value = candidate.name;
+                state.selectedExternal = candidate.id ? {id:candidate.id, name:candidate.name, kind:artworkElement('kind').value} : null;
+                previewArtwork();
+            };
+            const card = document.createElement('div'); card.className = 'artwork-result-card';
+            card.appendChild(button);
+            artworkElement('results').appendChild(card);
+            if (candidate.source_page) {
+                const link = document.createElement('a'); link.textContent = workbenchText('查看来源与版本说明', 'View source and edition');
+                link.href = candidate.source_page; link.target = '_blank'; link.rel = 'noopener noreferrer';
+                card.appendChild(link);
+            }
         }
     } catch (error) {
         if (currentArtworkRequest(state, version)) artworkElement('message').textContent = workbenchText('图库搜索失败，可点击“搜索图库”重试：', 'Library search failed. Select Search library to retry: ') + error.message;
@@ -189,12 +232,15 @@ async function previewArtwork(upload = null, pendingState = artworkDialogState) 
         return;
     }
     const version = state.version;
+    const external = state.selectedExternal;
+    const selection = external && external.name === artworkElement('source').value && external.kind === artworkElement('kind').value
+        ? {candidate_id:external.id} : {source:artworkElement('source').value};
     artworkBusy(true);
     artworkElement('message').textContent = workbenchText('正在准备候选图片…', 'Preparing the candidate image…');
     try {
         const result = await desktopRequest('/api/artwork/preview', {...state.context, kind: artworkElement('kind').value,
             ...(state.entryInfo ? {new_label: artworkElement('new-label').value.trim()} : {}),
-            ...(upload || {source: artworkElement('source').value})});
+            ...(upload || selection)});
         if (!currentArtworkRequest(state, version)) return;
         const image = artworkElement('candidate-image');
         image.alt = state.context.label;
@@ -213,7 +259,8 @@ async function previewArtwork(upload = null, pendingState = artworkDialogState) 
             artworkElement('message').textContent = workbenchText('候选图片无法显示，请重新预览。', 'Could not display the candidate. Preview it again.');
         };
         image.src = result.image_url;
-        artworkElement('candidate-caption').textContent = `${result.source} · ${result.width} × ${result.height}`;
+        artworkElement('candidate-caption').textContent = [result.source, `${result.width} × ${result.height}`,
+            result.provenance?.provider_label, result.provenance?.platform, result.provenance?.version].filter(Boolean).join(' · ');
         artworkElement('target').textContent = (result.replacing ? workbenchText('更换并备份旧图：', 'Replace and back up: ') : workbenchText('新增图片：', 'Add image: ')) + result.target;
         artworkElement('candidate').hidden = false;
         artworkElement('comparison').hidden = false;
@@ -297,6 +344,9 @@ async function confirmArtwork() {
                 state.candidate = null;
                 state.updated = true;
                 state.applying = false;
+                // A single-image write may rename the row. Discard proposals
+                // based on its old identity before returning to the game list.
+                if (state.fromPreview) invalidateWorkbenchPreview();
                 artworkBusy(false);
                 closeArtworkDialog();
                 return;

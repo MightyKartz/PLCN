@@ -79,3 +79,73 @@ def test_numbered_rom_aliases_keep_numbers_and_do_not_guess_hacks():
     assert identity.rom_search_alias('SNES', '火焰紋章 4 (日版)') == 'Fire Emblem - Seisen no Keifu'
     assert identity.rom_search_alias('SNES', '火焰之纹章34') is None
     assert identity.rom_search_alias('SNES', '火焰之纹章4改版') is None
+
+
+@pytest.mark.parametrize('label,archive,program,query', [
+    ('三国志4', '三国志4', 'SAN486.COM', 'Romance of the Three Kingdoms IV - Wall of Fire'),
+    ('三国志5威力加强版', '三国志5X', 'CDX.EXE', 'Romance of the Three Kingdoms V with Power Up Kit'),
+    ('三国志英杰传', '三国志英杰传', 'TFDED.COM', 'Three Kingdoms Yingjie Chuan'),
+    ('仙剑奇侠传', '仙剑奇侠传', 'JS3.EXE', 'Sword and Fairy'),
+    ('炎龙骑士团2黄金城之谜', '炎龙骑士团2黄金城之谜', 'FD2.EXE', 'Flame Dragon 2 - Legend of Golden Castle'),
+    ('轩辕剑外传：枫之舞', '轩辕剑外传：枫之舞', 'SWDA.EXE', 'Xuan-Yuan Sword - Dance of the Maple Leaves'),
+    ('金庸群侠传', '金庸群侠传', 'Z.COM', 'Jin Yong Qun Xia Chuan'),
+])
+def test_dos_uses_full_game_names_not_generic_executables(library, label, archive, program, query):
+    result = identity.resolve({**library, 'system': 'DOS', 'label': label,
+                               'rom_path': f'/DOS/{archive}.zip#{program}'})
+    assert result['status'] == 'resolved'
+    assert result['query'] == query
+    unknown = identity.resolve({**library, 'system': 'DOS', 'label': '未知游戏',
+                                'rom_path': f'/DOS/未知游戏.zip#{program}'})
+    assert unknown['status'] == 'unresolved'
+    assert unknown['query'] == ''
+
+
+def test_dos_verified_alias_and_english_archive_are_searchable(library):
+    context = {**library, 'system': 'DOS', 'label': '大航海时代2',
+               'rom_path': '/DOS/大航海时代2.zip#KOUKAI2.COM'}
+    assert identity.resolve(context)['query'] == 'Uncharted Waters 2 - New Horizons (1995)'
+    assert identity.resolve({**context, 'label': '未知', 'rom_path': '/DOS/大航海时代2.7z#KOUKAI2.COM'})['reason'] == 'curated'
+    assert identity.resolve({**context, 'label': '未知', 'rom_path': '/DOS/Uncharted Waters 2 - New Horizons.zip#START.BAT'})['query'] == 'Uncharted Waters 2 - New Horizons'
+    assert identity.resolve({**context, 'label': '未知', 'rom_path': '/DOS/大航海时代2加强版.zip#START.BAT'})['status'] == 'unresolved'
+    assert identity.resolve({**context, 'label': '三国志4 (威力加强版)', 'rom_path': '/DOS/未知.zip#START.BAT'})['status'] == 'unresolved'
+    assert identity.resolve({**context, 'label': '軒轅劍外傳-楓之舞', 'rom_path': '/DOS/未知.zip#START.BAT'})['query'] == 'Xuan-Yuan Sword - Dance of the Maple Leaves'
+
+
+def test_dos_bulk_preview_preserves_labels_and_does_not_offer_launcher_downloads(library, tmp_path, monkeypatch):
+    import plcn
+    from types import SimpleNamespace
+    monkeypatch.setattr(plcn, 'Translator', lambda *args: SimpleNamespace(db=SimpleNamespace()))
+    calls = []
+    def catalog(*args):
+        calls.append(args)
+        return ['Uncharted Waters 2 - New Horizons (1995)', 'Sword and Fairy 2 (1999)']
+    monkeypatch.setattr(art, 'catalog_names', catalog)
+    path = tmp_path / 'DOS.lpl'
+    items = [{'label': label, 'path': f'/DOS/{label}.zip#{exe}', 'db_name': 'DOS.lpl'}
+             for label, exe in [('仙剑奇侠传', 'JS3.EXE'), ('大航海时代2', 'KOUKAI2.COM')]]
+    path.write_text(json.dumps({'items': items}, ensure_ascii=False))
+    before = path.read_bytes()
+    changes = plcn.analyze_playlist(str(path), 'DOS', 'unused')
+    assert path.read_bytes() == before
+    assert [c['new_label'] for c in changes] == [i['label'] for i in items]
+    assert changes[0]['thumbnail_source'] is None
+    assert changes[0]['artwork_identity_status'] == 'resolved'
+    assert changes[0]['artwork_query'] == 'Sword and Fairy'
+    assert changes[0]['artwork_gallery_status'] == 'not_found'
+    assert changes[0]['match_diagnostics']['conflicts'] == []
+    assert '证据冲突' not in changes[0]['match_reason']
+    assert changes[1]['thumbnail_source'] == 'Uncharted Waters 2 - New Horizons (1995)'
+    assert changes[1]['artwork_gallery_status'] == 'matched'
+    assert calls == [('DOS', 'Named_Boxarts')]
+
+    def offline(*args):
+        calls.append(args)
+        raise RuntimeError('offline')
+    calls.clear()
+    monkeypatch.setattr(art, 'catalog_names', offline)
+    changes = plcn.analyze_playlist(str(path), 'DOS', 'unused')
+    assert all(c['artwork_gallery_status'] == 'unavailable' and not c['thumbnail_source'] for c in changes)
+    assert all(c['artwork_query'] for c in changes)
+    assert len(calls) == 1
+    assert path.read_bytes() == before

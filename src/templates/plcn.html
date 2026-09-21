@@ -3754,6 +3754,7 @@
 
                 change.cover_download_status = boxartResult.status;
                 change.cover_download_message = boxartResult.message || '';
+                change.cover_download_reason = boxartResult.reason || '';
                 if (boxartResult.status === 'success' || boxartResult.status === 'skipped') {
                     const coverPath = boxartResult.cover_path || boxartResult.path || '';
                     change.thumbnail_exists = true;
@@ -4658,8 +4659,10 @@
                 inputThumb.type = 'text';
                 inputThumb.className = 'thumb-source-input';
                 inputThumb.setAttribute('aria-label', uiText('封面源英文名') + ': ' + getCurrentItemLabel(change));
-                inputThumb.value = change.thumbnail_source || '';
-                inputThumb.title = change.thumbnail_source || uiText('留空则不下载');
+                inputThumb.value = change.thumbnail_source || change.artwork_query || '';
+                inputThumb.title = change.thumbnail_source || (change.artwork_query
+                    ? workbenchText('已识别的搜索名称；尚未匹配可下载封面', 'Identified search title; no downloadable cover matched') + ': ' + change.artwork_query
+                    : uiText('留空则不下载'));
                 inputThumb.placeholder = uiText('留空则不下载');
                 inputThumb.oninput = (e) => {
                     currentChanges[index].thumbnail_source = e.target.value;
@@ -4673,12 +4676,16 @@
 
                 const btnSearch = document.createElement('button');
                 btnSearch.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path></svg>';
-                btnSearch.title = workbenchText('搜索数据库', 'Search database');
+                btnSearch.title = change.artwork_identity_status
+                    ? workbenchText('搜索官方图库或导入图片', 'Search official artwork or import an image')
+                    : workbenchText('搜索数据库', 'Search database');
                 btnSearch.className = 'mini-btn';
                 btnSearch.type = 'button';
                 btnSearch.onclick = (event) => {
                     event.stopPropagation();
-                    openSearchModal(index);
+                    if (change.artwork_identity_status) {
+                        openArtworkDialog({index: change.index, label: getCurrentItemLabel(change), rom_path: change.path});
+                    } else openSearchModal(index);
                 };
 
                 thumbWrap.appendChild(inputThumb);
@@ -4697,6 +4704,16 @@
                 }
 
                 tdThumb.appendChild(thumbWrap);
+                if (!hasExistingCover(change)) {
+                    const importButton = document.createElement('button');
+                    importButton.type = 'button'; importButton.className = 'btn btn-small btn-muted artwork-import-inline';
+                    importButton.textContent = workbenchText('导入图片', 'Import image');
+                    importButton.onclick = event => {
+                        event.stopPropagation();
+                        openArtworkImport({index:change.index, label:getCurrentItemLabel(change), rom_path:change.path});
+                    };
+                    tdThumb.appendChild(importButton);
+                }
                 tr.appendChild(tdThumb);
 
                 tr.appendChild(buildCoverStatusCell(change));
@@ -4727,17 +4744,24 @@
                         title: currentUILanguage === 'en' ? 'A local cover exists, but cover source is missing' : '本地封面已存在，但缺少封面源'
                     };
                 }
+                if (change.artwork_gallery_status === 'not_found' || change.artwork_gallery_status === 'unavailable') {
+                    return {className: 'missing',
+                        label: change.artwork_gallery_status === 'not_found'
+                            ? workbenchText('图库未找到', 'No gallery match') : workbenchText('图库查询失败', 'Gallery unavailable'),
+                        title: change.match_reason};
+                }
                 return {
                     className: 'missing',
-                    label: uiText('缺少封面源'),
-                    title: uiText('缺少封面源')
+                    label: change.artwork_identity_status === 'unresolved' ? workbenchText('名称未识别', 'Title not identified') : uiText('缺少封面源'),
+                    title: change.artwork_identity_status === 'unresolved' ? workbenchText('请填写英文游戏全名，或在游戏列表中导入本地图片', 'Enter the full English title, or import artwork from the game list') : uiText('缺少封面源')
                 };
             }
 
             if (change.cover_download_status === 'failed') {
                 return {
                     className: 'failed',
-                    label: uiText('下载失败'),
+                    label: change.cover_download_reason === 'not_found' ? workbenchText('图库未找到', 'No gallery match')
+                        : change.cover_download_reason === 'network_error' ? workbenchText('网络连接失败', 'Network error') : uiText('下载失败'),
                     title: change.cover_download_message || uiText('下载失败')
                 };
             }
@@ -4998,6 +5022,7 @@
         function getDefaultSearchQuery(change) {
             const candidates = [
                 change.thumbnail_source,
+                change.artwork_query,
                 change.original_db_name,
                 change.original_item_label,
                 change.original_label,
@@ -5374,6 +5399,10 @@
                 change.cover_download_status = '';
                 change.cover_download_message = '';
             }
+            if (editedKey === 'thumbnail_source' || editedKey === 'both') {
+                change.artwork_query = '';
+                change.artwork_gallery_status = '';
+            }
             reclassifyEditedChange(change, reason);
         }
 
@@ -5384,6 +5413,8 @@
                 return [uiText('待保存本地修正'), change.match_reason || info.reason || ''].filter(Boolean).join(' · ');
             }
             if (document.getElementById('repair-mode').value === 'names' && ['rename', 'ready'].includes(info.kind)) return workbenchText('仅检查显示名称，图片保持不变', 'Only display names are checked; artwork is unchanged');
+            if (!change.thumbnail_source && change.artwork_gallery_status === 'not_found') return workbenchText('名称已识别，可搜索图库或导入本地图片', 'Title identified. Search the library or import an image');
+            if (!change.thumbnail_source && change.artwork_gallery_status === 'unavailable') return workbenchText('名称已识别，请重试图库查询', 'Title identified. Retry the gallery search');
             if (document.getElementById('repair-mode').value === 'artwork') return ['review', 'duplicate'].includes(info.kind)
                 ? workbenchText('图片来源需核对，当前名称保持不变', 'Review the artwork source; current names are preserved')
                 : workbenchText('检查并补全图片，当前名称保持不变', 'Check and complete artwork; current names are preserved');
@@ -5428,7 +5459,8 @@
                 return {
                     kind: status.kind || actionKind,
                     confidence: Number.isFinite(score) ? Math.max(0, Math.min(100, Math.round(score))) : status.fallbackScore,
-                    label: action === 'incomplete' ? workbenchText('待补充名称或图片源', 'Name or artwork source missing') : status.label,
+                    label: action === 'incomplete' ? (change.artwork_identity_status === 'resolved'
+                        ? workbenchText('待补充图片', 'Artwork needed') : workbenchText('待补充名称或图片源', 'Name or artwork source missing')) : status.label,
                     badgeClass: status.badgeClass,
                     rowClass: status.rowClass,
                     color: status.color,
@@ -5944,6 +5976,7 @@
         <label id="artwork-source-label" for="artwork-source"></label>
         <div class="artwork-source-controls"><input id="artwork-source" type="text" oninput="artworkSearchChanged()" onkeydown="if(event.key === 'Enter') searchArtwork()"><button id="artwork-search" class="btn btn-muted" type="button" onclick="searchArtwork()"></button><button id="artwork-preview" class="btn btn-muted" type="button" onclick="previewArtwork()"></button></div>
         <div id="artwork-results"></div>
+        <button id="artwork-secondary" class="btn btn-muted" type="button" hidden onclick="searchArtwork(false, 'wikipedia')">搜索备用来源</button>
         <label id="artwork-upload-label" for="artwork-upload"></label>
         <input id="artwork-upload" type="file" accept="image/png,image/jpeg,image/webp" onchange="importArtwork(this.files[0])">
         <p id="artwork-message" role="status" aria-live="polite"></p>

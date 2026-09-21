@@ -1,6 +1,7 @@
 """Lightweight home-screen discovery and a small history of opened libraries."""
 import json
 import shutil
+from adb_runtime import adb_available
 from pathlib import Path
 
 import app_paths
@@ -78,4 +79,4 @@ def discover(config_path=None, adb_runner=None, local_candidates=None):
             transport = 'local'
         recent.append({**entry, 'status': status, 'transport': transport})
     return {'sources': sources, 'recent': recent,
-            'adb_available': bool(adb_runner or shutil.which('adb'))}
+            'adb_available': bool(adb_runner or adb_available())}

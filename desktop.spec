@@ -1,10 +1,17 @@
 # Desktop bundle. Build independently on each target OS/architecture.
 import os
 import sys
+from pathlib import Path
+
+adb_root = Path("build/platform-tools")
+if not (adb_root / ("adb.exe" if sys.platform == "win32" else "adb")).is_file():
+    raise RuntimeError("Run scripts/prepare_adb.py before packaging")
+adb_binaries = [(str(p), "platform-tools") for p in adb_root.iterdir() if p.name == "adb" or p.suffix.lower() in (".exe", ".dll")]
+adb_notices = [(str(adb_root / name), "platform-tools") for name in ("NOTICE.txt", "source.properties")]
 
 a = Analysis(
-    ['src/desktop.py'], pathex=['src'], binaries=[],
-    datas=[('src/templates', 'src/templates'), ('data/rom-name-cn', 'data/rom-name-cn')],
+    ['src/desktop.py'], pathex=['src'], binaries=adb_binaries,
+    datas=[('src/templates', 'src/templates'), ('data/rom-name-cn', 'data/rom-name-cn')] + adb_notices,
     hiddenimports=['tkinter', 'tkinter.filedialog', 'tkinter.messagebox'],
     hookspath=[], hooksconfig={}, runtime_hooks=[], excludes=[], noarchive=False,
 )
@@ -22,8 +29,8 @@ if sys.platform == 'darwin':
         bundle, name='PLCN.app', bundle_identifier='io.github.mightykartz.plcn',
         info_plist={
             'CFBundleName': 'PLCN', 'CFBundleDisplayName': 'PLCN',
-            'CFBundleShortVersionString': os.environ.get('PLCN_VERSION', '3.2.0'),
-            'CFBundleVersion': os.environ.get('PLCN_VERSION', '3.2.0'),
+            'CFBundleShortVersionString': os.environ.get('PLCN_VERSION', '3.2.4'),
+            'CFBundleVersion': os.environ.get('PLCN_VERSION', '3.2.4'),
             'NSHighResolutionCapable': True,
         },
     )

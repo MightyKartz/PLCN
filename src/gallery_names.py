@@ -31,8 +31,18 @@ def tags(name, languages=True):
 def matching_gallery_name(system, source, names):
     if source in names:
         return source
+    from dos_artwork_names import search_names
+    source_keys = {gallery_title_key(system, name) for name in search_names(system, source)}
+    if system == 'DOS' and not any(re.fullmatch(r'(?:19|20)\d{2}', tag) for tag in tags(source)):
+        # An omitted release year may match one unique DOS entry. Preserve all
+        # other tags and refuse ambiguity, even across different release years.
+        candidates = [name for name in names
+                      if gallery_title_key(system, name) in source_keys
+                      and tuple(t for t in tags(name) if not re.fullmatch(r'(?:19|20)\d{2}', t)) == tags(source)]
+        if candidates:
+            return candidates[0] if len(candidates) == 1 else None
     candidates = [name for name in names
-                  if gallery_title_key(system, name) == gallery_title_key(system, source)
+                  if gallery_title_key(system, name) in source_keys
                   and tags(name, languages=False) == tags(source, languages=False)]
     exact_tags = [name for name in candidates if tags(name) == tags(source)]
     if exact_tags:

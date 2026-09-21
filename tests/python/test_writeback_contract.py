@@ -81,3 +81,17 @@ def test_crc_conflict_cannot_fall_back_to_filename():
 
 def test_crc_change_invalidates_proposal():
     assert not plcn.proposal_matches_item({'crc32': '11111111'}, {'crc32': '22222222'})
+
+
+def test_rename_removes_raw_disc_entry_not_other_disc_or_revision(tmp_path):
+    path = tmp_path / 'PS.lpl'
+    items = [{'path': '/ps/Arc (Rev 1).bin', 'label': 'English'},
+             {'path': '/ps/Arc (Rev 1).cue', 'label': 'English'},
+             {'path': '/ps/Arc (Rev 2).bin', 'label': 'English'},
+             {'path': '/ps/Other (Disc 2).cue', 'label': 'Other'}]
+    path.write_text(json.dumps({'items': items}))
+    result = plcn.apply_changes(str(path), [{'index':1,'path':items[1]['path'],'new_label':'妖精战士2'}], str(tmp_path), download_thumbnails=False)
+    saved = json.loads(path.read_text())['items']
+    assert [x['path'] for x in saved] == [x['path'] for x in items[1:]]
+    assert saved[0]['label'] == '妖精战士2'
+    assert len(result['apply']['applied']) == 1

@@ -157,6 +157,11 @@ body[data-theme="dark"] .desktop-welcome p { color: #c0ccdb; }
 #artwork-results .artwork-option { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px; white-space: normal; text-align: center; height: auto; }
 .artwork-option img { width: 100%; height: 110px; object-fit: contain; }
 .artwork-option small { color: var(--primary); }
+.artwork-result-card { display: flex; flex-direction: column; gap: 6px; }
+.artwork-result-card .artwork-option { width: 100%; flex: 1; }
+.artwork-result-card a { font-size: 12px; text-decoration: underline; }
+.artwork-import-inline { margin-top: 6px; }
+#artwork-secondary { margin-top: 10px; }
 #artwork-names { display: flex; flex-wrap: wrap; gap: 8px; }
 #artwork-names .btn { white-space: normal; }
 #artwork-message { line-height: 1.6; overflow-wrap: anywhere; }

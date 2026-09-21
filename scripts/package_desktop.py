@@ -25,6 +25,7 @@ def main():
         raise RuntimeError(f'Runner architecture {actual} does not match artifact label {args.arch}')
     os.chdir(Path(__file__).resolve().parents[1])
     if not args.skip_build:
+        run([sys.executable, 'scripts/prepare_adb.py'])
         run([sys.executable, '-m', 'PyInstaller', '--noconfirm', 'desktop.spec'])
     if sys.platform == 'win32':
         binary = Path('dist/PLCN/PLCN.exe').resolve()
@@ -51,7 +52,7 @@ def main():
         shutil.make_archive(f'dist/PLCN-Windows-{args.arch}-Portable', 'zip', 'dist', 'PLCN')
         if args.installer:
             compiler = shutil.which('ISCC') or r'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
-            run([compiler, '/DAppVersion=' + os.environ.get('PLCN_VERSION', '3.2.0'), 'packaging/windows.iss'])
+            run([compiler, '/DAppVersion=' + os.environ.get('PLCN_VERSION', '3.2.4'), 'packaging/windows.iss'])
 
 
 if __name__ == '__main__':

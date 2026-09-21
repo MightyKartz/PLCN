@@ -17,7 +17,7 @@ from playlist_manager import PlaylistManager
 from translator import Translator
 from thumbnail_downloader import ThumbnailDownloader
 from rom_fingerprint import build_rom_match_candidates
-from rom_paths import disc_group, preferred_disc_entry, rom_filename, rom_title
+from rom_paths import remove_disc_companions, disc_group, preferred_disc_entry, rom_filename, rom_title
 from match_evidence import CONFLICT_REASON, build_match_diagnostics
 from manual_overrides import find_override, load_overrides
 from safe_io import file_lock
@@ -789,6 +789,7 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
             proposal["match_score"] = 100
             proposal["needs_review"] = False
 
+    dos_gallery = {}
     for i, item in enumerate(items):
         disc_key = disc_group(path := item.get('path'), item.get('label'), [entry.get('path') for entry in items])
         if disc_key and disc_key in preferred_disc and preferred_disc[disc_key] != i:
@@ -822,6 +823,45 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
         manual_override = find_override(manual_overrides, system_name, item)
         if manual_override:
             add_manual_override_proposal(i, item, display_label, manual_override)
+            continue
+
+        if normalized_system == 'DOS':
+            from artwork_identity import resolve as resolve_artwork_identity
+            from gallery_names import matching_gallery_name
+            from single_artwork import catalog_names
+            identity = resolve_artwork_identity({'system': 'DOS', 'label': original_label or '',
+                                                 'rom_path': path, 'playlist_path': str(playlist_path),
+                                                 'kind': 'Named_Boxarts'}, name_source=rom_name_cn_path)
+            source = None
+            gallery_status = 'unknown'
+            reason = '名称未识别：请搜索图库或导入本地图片'
+            if identity['status'] == 'resolved':
+                # Check once per preview, including failures. An English search
+                # alias alone must not enqueue a batch of predictable 404s.
+                if not dos_gallery:
+                    try:
+                        dos_gallery['names'] = catalog_names('DOS', 'Named_Boxarts')
+                    except (OSError, ValueError, RuntimeError) as error:
+                        dos_gallery['error'] = str(error)
+                if 'error' in dos_gallery:
+                    gallery_status = 'unavailable'
+                    reason = '名称已识别，但图库查询失败；请重试搜索或导入本地图片'
+                else:
+                    source = matching_gallery_name('DOS', identity['query'], dos_gallery['names'])
+                    gallery_status = 'matched' if source else 'not_found'
+                    reason = '已找到官方 DOS 封面' if source else '名称已识别，官方 DOS 图库未找到匹配封面；可搜索其他名称或导入本地图片'
+            add_proposal(i, item, original_label or display_label, original_label or display_label,
+                         source, 'dos_title', reason, {'evidence_chain': [{
+                             # The full title is a search alias, not a DAT/CRC
+                             # match. Do not invent conflicting ROM evidence
+                             # from the archive filename when no cover exists.
+                             'source': 'exact_alias' if identity['reason'] == 'curated' else 'fallback',
+                             'value': original_label or display_label,
+                             'resolved_name': identity['query'] or original_label or display_label,
+                         }]})
+            proposed_changes[-1]['artwork_identity_status'] = identity['status']
+            proposed_changes[-1]['artwork_query'] = identity['query']
+            proposed_changes[-1]['artwork_gallery_status'] = gallery_status
             continue
         
         # Special handling for FBNeo/Arcade games
@@ -1347,6 +1387,20 @@ def _apply_changes_locked(playlist_path, changes, thumbnails_dir, backup=True, p
     from task_control import checkpoint
     checkpoint(cancel_check)
     if candidate_applied and write_names:
+        original_items = list(playlist_manager.items)
+        playlist_manager.items, removed = remove_disc_companions(
+            playlist_manager.items, [record['path'] for record in candidate_applied])
+        writeback['removed_companions'] = removed
+        retained = []
+        for record in candidate_applied:
+            original_item = original_items[record['actual_index']]
+            new_index = next((i for i, item in enumerate(playlist_manager.items) if item is original_item), None)
+            if new_index is None:
+                writeback['skipped'].append(dict(record, reason='disc_companion_removed'))
+            else:
+                record['actual_index'] = new_index
+                retained.append(record)
+        candidate_applied = retained
         playlist_manager.save(playlist_path)
         print(f"Saved updated playlist to {playlist_path}")
 

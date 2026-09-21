@@ -30,3 +30,14 @@ def test_matching_does_not_switch_regions_revisions_parts_or_platforms():
 def test_explicit_language_variant_wins_over_unannotated_image():
     names = ['Ninja Ryuukenden (Japan)', 'Ninja Ryuukenden (Japan) (En,Ja,Zh)']
     assert matching_gallery_name(PCE, 'Ninja Ryuuken Den (Japan) (En,Ja,Zh)', names) == names[1]
+
+
+def test_dos_missing_year_matches_only_a_unique_release_and_preserves_editions():
+    title = 'Uncharted Waters 2 - New Horizons'
+    assert matching_gallery_name('DOS', title, [title + ' (1995)']) == title + ' (1995)'
+    assert matching_gallery_name('DOS', title, [title + ' (1995)', title + ' (1996)']) is None
+    assert matching_gallery_name('DOS', title + ' (1994)', [title + ' (1995)']) is None
+    assert matching_gallery_name('DOS', title, [title + ' (1995) (Demo)']) is None
+    assert matching_gallery_name('DOS', title, [title + ' (1995) (Japan)']) is None
+    assert matching_gallery_name('DOS', title, ['Uncharted Waters (1990)']) is None
+    assert matching_gallery_name('NES', title, [title + ' (1995)']) is None

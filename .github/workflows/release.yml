@@ -28,10 +28,15 @@ jobs:
         with:
           draft: true
           prerelease: true
-          name: '${{ github.ref_name }} desktop preview (unsigned)'
+          name: 'PLCN ${{ github.ref_name }}'
           body: |
-            Windows installer/portable ZIP and macOS Intel/Apple Silicon DMGs.
-            These are unsigned preview artifacts. Complete signing/notarization and
-            manual installation/file-picker/device validation before a public stable release.
-            See DOC/DESKTOP_GUIDE.md for the release checklist.
+            Download a matching installer below; no Python, Node.js or Xcode needed.
+            Windows/macOS packages include ADB. Android USB debugging authorization
+            and, for some Windows devices, vendor USB drivers are still required.
+
+            These CI packages are not distribution-signed; macOS is not notarized.
+            First-launch security restrictions may apply. See README installation notes.
+
+            Includes DOS artwork aliases/alternate-source previews and same-disc
+            playlist companion cleanup. Backups stay outside the playlists folder.
           files: release-artifacts/*

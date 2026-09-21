@@ -774,7 +774,7 @@ def test_apply_changes_readback_uses_index_not_any_duplicate_path(tmp_path, monk
     assert summary["writeback"]["failed"][0]["reason"] == "readback_mismatch"
 
 
-def test_apply_changes_preserves_ps1_cue_bin_siblings_during_apply(tmp_path):
+def test_apply_changes_removes_ps1_raw_companion_during_apply(tmp_path):
     playlist_path = tmp_path / "Sony - PlayStation.lpl"
     cue_item = {
         "path": "/roms/ps1/Final Fantasy Tactics (USA).cue",
@@ -809,8 +809,8 @@ def test_apply_changes_preserves_ps1_cue_bin_siblings_during_apply(tmp_path):
     )
 
     saved = json.loads(playlist_path.read_text(encoding="utf-8"))
-    assert [item["path"] for item in saved["items"]] == [cue_item["path"], bin_item["path"]]
-    assert [item["label"] for item in saved["items"]] == ["最终幻想战略版", "最终幻想战略版"]
+    assert [item["path"] for item in saved["items"]] == [cue_item["path"]]
+    assert [item["label"] for item in saved["items"]] == ["最终幻想战略版"]
 
 
 def test_archive_member_used_for_chinese_label_artwork_source(tmp_path):

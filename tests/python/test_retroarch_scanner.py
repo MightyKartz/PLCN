@@ -189,7 +189,7 @@ def test_root_probe_keeps_match_when_later_directories_are_absent(tmp_path, monk
     monkeypatch.setattr(scanner, 'ADB_RETROARCH_ROOTS', [str(root), str(tmp_path / 'missing')])
     run = subprocess.run
     def run_probe(command, **kwargs):
-        assert command[:4] == ['adb', '-s', 'test-device', 'shell']
+        assert command[:4] == [scanner.adb_executable(), '-s', 'test-device', 'shell']
         # Exercise real shell exit status, not a canned successful ADB response.
         if os.name == 'nt':
             return SimpleNamespace(returncode=0, stdout=str(root) + '\n', stderr='')

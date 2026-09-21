@@ -163,7 +163,7 @@ class ThumbnailDownloader:
                         "system": system,
                         "status": "failed",
                         "reason": 'not_found' if response.status_code == 404 else 'http_error',
-                        "message": f"HTTP {response.status_code}",
+                        "message": "官方图库未找到匹配图片，请核对完整名称或导入本地图片" if response.status_code == 404 else f"图库请求失败：HTTP {response.status_code}",
                         "path": target_path,
                         "url": url
                     })
@@ -174,7 +174,7 @@ class ThumbnailDownloader:
                     "source": game_english_name,
                     "system": system,
                     "status": "failed",
-                    "reason": 'network_or_io_error',
+                    "reason": 'network_error' if isinstance(e, requests.RequestException) else 'network_or_io_error',
                     "message": str(e),
                     "path": target_path,
                     "url": url

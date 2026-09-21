@@ -27,6 +27,37 @@ function harness(request) {
     return {context, item, elements, input, selectedRepairs};
 }
 
+test('unresolved DOS identity clears old executable text and does not search the gallery', async () => {
+    const calls = [];
+    const {context, elements, input, item} = harness(async url => {
+        calls.push(url);
+        return url.endsWith('/context') ? {shared: []} : {status: 'unresolved', names: [], query: ''};
+    });
+    context.closeArtworkDialog();
+    input[1] = 'DOS';
+    context.openArtworkDialog({...item, label: '金庸群侠传', rom_path: '/DOS/金庸群侠传.zip#Z.COM'}, false);
+    elements['artwork-source'].value = 'Z';
+    await context.discoverArtwork();
+    assert.equal(elements['artwork-source'].value, '');
+    assert.match(elements['artwork-identity'].textContent, /Title not identified/);
+    assert.equal(calls.includes('/api/artwork/search'), false);
+    assert.equal(elements['artwork-confirm'].disabled, true);
+});
+
+test('an empty gallery and a network failure have different messages', async () => {
+    let failed = false;
+    const {context, elements} = harness(async () => {
+        if (failed) throw new Error('Connection timed out');
+        return {names: [], total: 0, candidates: []};
+    });
+    elements['artwork-source'].value = 'Known DOS title';
+    await context.searchArtwork();
+    assert.match(elements['artwork-message'].textContent, /No gallery match/);
+    failed = true;
+    await context.searchArtwork();
+    assert.match(elements['artwork-message'].textContent, /Library search failed.*Connection timed out/);
+});
+
 test('single-game preview never inherits or changes the bulk repair selection', async () => {
     let payload;
     const {context, elements, selectedRepairs} = harness(async (_url, body) => {
@@ -93,6 +124,24 @@ test('duplicate confirmation is locked and successful update changes only the cu
     assert.equal(elements['game-artwork-action-4'].scrolled,true);
     assert.equal(item.artwork_backup,'image.png.bak');
     assert.match(item.artwork_result,/backed up/);
+});
+
+test('artwork opened from repair preview preserves edits on cancel and invalidates them after a write', async () => {
+    const {context, item} = harness(async url => url.endsWith('/apply') ? {job_id:'one'}
+        : {jobs:[{id:'one',status:'completed',result:{target:'new.png',image_url:'/new',new_label:'New name'}}]});
+    context.closeArtworkDialog();
+    context.workbench.previewKey = 'old-playlist';
+    let invalidations = 0;
+    context.invalidateWorkbenchPreview = () => {invalidations++; context.workbench.previewKey=null;};
+    context.openArtworkDialog(item, false);
+    context.closeArtworkDialog();
+    assert.equal(invalidations, 0);
+    context.openArtworkDialog(item, false);
+    context.state().candidate = {token:'token'};
+    await context.confirmArtwork();
+    assert.equal(invalidations, 1);
+    assert.equal(context.workbench.previewKey, null);
+    assert.equal(context.state(), null);
 });
 
 test('polling failure preserves the original job and locks source edits until retry', async () => {
@@ -193,5 +242,51 @@ test('shared artwork shows the affected ROMs and does not reuse the ambiguous la
     elements['artwork-candidate-image'].onload();
     assert.match(elements['artwork-message'].textContent,/rename this entry/);
     context.artworkIndependentNameChanged();
+    assert.equal(elements['artwork-confirm'].disabled,true);
+});
+
+test('official results take priority, fallback candidates require explicit preview and preserve provider id', async () => {
+    let official = true;
+    const calls = [];
+    const {context,elements} = harness(async (url,body) => {
+        calls.push([url,body]);
+        if (url.endsWith('/preview')) return {token:'review',image_url:'/staged',width:10,height:20,
+            source:'Cover',provenance:{provider_label:'Wikipedia',platform:'DOS',version:'1995 cover'}};
+        if (body.provider === 'wikipedia') return {provider:'wikipedia',total:1,names:['Cover'],candidates:[{id:'external',name:'Cover',platform:'DOS',version:'1995 cover'}]};
+        return official ? {total:1,names:['Official'],candidates:[{name:'Official'}]} : {total:0,names:[],candidates:[]};
+    });
+    elements['artwork-source'].value='DOS Game';
+    await context.searchArtwork(true);
+    assert.equal(calls.length,1);
+    assert.equal(calls[0][1].provider,'libretro');
+    official=false; calls.length=0;
+    await context.searchArtwork(true);
+    assert.equal(calls.length,2);
+    assert.equal(calls[1][1].provider,'wikipedia');
+    assert.equal(context.state().candidate,null);
+    assert.equal(elements['artwork-confirm'].disabled,true);
+    elements.created.onclick();
+    await new Promise(resolve=>setImmediate(resolve));
+    assert.equal(calls[2][1].candidate_id,'external');
+    assert.equal(calls[2][1].source,undefined);
+    assert.match(elements['artwork-candidate-caption'].textContent,/Wikipedia.*DOS.*1995 cover/);
+    assert.equal(elements['artwork-confirm'].disabled,true);
+    elements['artwork-candidate-image'].onload();
+    assert.equal(elements['artwork-confirm'].disabled,false);
+    context.artworkSearchChanged();
+    assert.equal(context.state().selectedExternal,null);
+    assert.equal(elements['artwork-confirm'].disabled,true);
+});
+
+test('direct import entry prepares game context without querying either gallery', async () => {
+    const calls=[];
+    const {context,item,elements}=harness(async (url)=>{
+        calls.push(url);
+        return url.endsWith('/context') ? {shared:[]} : {status:'resolved',reason:'curated',query:'Known',names:['Known']};
+    });
+    context.closeArtworkDialog();
+    await context.openArtworkImport(item);
+    assert.deepEqual(calls,['/api/artwork/context','/api/artwork/resolve']);
+    assert.equal(elements['artwork-upload'].focused,true);
     assert.equal(elements['artwork-confirm'].disabled,true);
 });

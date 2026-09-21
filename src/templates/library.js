@@ -158,6 +158,15 @@ function renderGameLibrary() {
         button.disabled = Boolean(workbench.operation) || !item.label;
         button.onclick = () => openArtworkDialog(item);
         actions.appendChild(button);
+        if (hasImageDirectory && !item.image_url) {
+            const importButton = document.createElement('button');
+            importButton.type = 'button'; importButton.className = 'btn btn-small btn-muted artwork-import-inline';
+            importButton.textContent = text('导入图片', 'Import image');
+            importButton.setAttribute('aria-label', importButton.textContent + ' · ' + item.label);
+            importButton.disabled = Boolean(workbench.operation) || !item.label;
+            importButton.onclick = () => openArtworkImport(item);
+            actions.appendChild(importButton);
+        }
         if (item.artwork_result) {
             const result = document.createElement('p'); result.className = 'artwork-row-result';
             result.textContent = item.artwork_result; result.setAttribute('role', 'status');

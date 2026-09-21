@@ -31,8 +31,12 @@ def main():
         import data_pack
         assert (app_paths.resource_root() / 'src/templates/plcn.html').is_file()
         assert app_paths.default_source().is_dir()
+        adb_version = None
+        if getattr(sys, 'frozen', False):
+            from adb_runtime import check_bundled_adb
+            adb_version = check_bundled_adb()
         app_paths.initialize()
-        Path(app_paths.user_data_dir() / 'self-check.json').write_text(json.dumps({'ok': True, 'platform': sys.platform}), encoding='utf-8')
+        Path(app_paths.user_data_dir() / 'self-check.json').write_text(json.dumps({'ok': True, 'platform': sys.platform, 'adb_version': adb_version}), encoding='utf-8')
         return
     log_dir = app_paths.user_data_dir() / 'logs'
     log_dir.mkdir(parents=True, exist_ok=True)

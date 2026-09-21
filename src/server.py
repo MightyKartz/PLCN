@@ -1,4 +1,5 @@
 import http.server
+from adb_runtime import adb_executable, subprocess_options
 import socketserver
 import socket
 import json
@@ -271,7 +272,11 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
         elif path == '/api/artwork/thumbnail':
             from single_artwork import catalog_image
             try:
-                content = catalog_image(query_params.get('system', [''])[0], query_params.get('kind', [''])[0], query_params.get('name', [''])[0])
+                if query_params.get('candidate'):
+                    from secondary_artwork import thumbnail
+                    content = thumbnail(query_params['candidate'][0])
+                else:
+                    content = catalog_image(query_params.get('system', [''])[0], query_params.get('kind', [''])[0], query_params.get('name', [''])[0])
                 self.send_response(200)
                 self.send_header('Content-Type', 'image/png')
                 self.send_header('Content-Length', str(len(content)))
@@ -449,7 +454,7 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                 if not serial or not remote_path:
                     raise FileNotFoundError(target_path)
                 result = subprocess.run(
-                    ["adb", "-s", serial, "exec-out", "sh", "-c", f"cat {shlex.quote(remote_path)}"],
+                    [adb_executable(), "-s", serial, "exec-out", "sh", "-c", f"cat {shlex.quote(remote_path)}"], **subprocess_options(),
                     capture_output=True,
                     timeout=15,
                     check=False,

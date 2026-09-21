@@ -1,4 +1,5 @@
 """Stage one image for review, then write only its verified playlist destination."""
+from adb_runtime import adb_executable, subprocess_options
 import base64
 import errno
 import hashlib
@@ -21,7 +22,7 @@ import requests
 import app_paths
 from artwork_resolver import THUMBNAIL_TYPES, sanitize_filename, validate_system, valid_png
 from playlist_manager import PlaylistManager
-from rom_paths import rom_title
+from rom_paths import rom_title, remove_disc_companions
 from retroarch_scanner import is_adb_uri, materialize_adb_file, parse_adb_uri, push_adb_file
 from safe_io import atomic_write_bytes, atomic_write_json, file_lock
 
@@ -94,24 +95,33 @@ def catalog_image(system, kind, name):
 
 
 def search(payload):
+    if payload.get('provider') == 'wikipedia':
+        from secondary_artwork import search as secondary_search
+        return secondary_search(payload)
+    if payload.get('provider', 'libretro') != 'libretro':
+        raise ValueError('未知图片来源')
     from artwork_identity import title_key, base_title
     from gallery_names import gallery_title_key
+    from dos_artwork_names import search_names
     system = validate_system(payload.get('system', ''))
     kind = validated_kind(payload.get('kind', 'Named_Boxarts'))
     query = str(payload.get('query', '')).strip().casefold()
     if len(query) < 2:
         raise ValueError('请输入至少两个字符，建议使用英文游戏名')
     names = catalog_names(system, kind)
+    queries = search_names(system, query)
     if payload.get('automatic'):
-        matches = [name for name in names if gallery_title_key(system, name) == gallery_title_key(system, query)]
+        keys = {gallery_title_key(system, value) for value in queries}
+        matches = [name for name in names if gallery_title_key(system, name) in keys]
     else:
-        words = re.findall(r'\w+', base_title(query))
-        matches = [name for name in names if words and all(word in re.findall(r'\w+', name.casefold()) for word in words)]
+        word_sets = [re.findall(r'\w+', base_title(value).casefold()) for value in queries]
+        matches = [name for name in names if any(words and all(word in re.findall(r'\w+', name.casefold()) for word in words) for words in word_sets)]
     matches.sort(key=lambda n: (n.casefold() != query, title_key(n) != title_key(query), n))
     shown = matches[:24]
-    return {'names': shown, 'total': len(matches), 'candidates': [
+    return {'names': shown, 'total': len(matches), 'provider': 'libretro', 'candidates': [
         {'name': name, 'image_url': '/api/artwork/thumbnail?system=' + quote(system, safe='') + '&kind=' + kind + '&name=' + quote(name, safe=''),
-         'exact': name.casefold() == query} for name in shown]}
+         'provider': 'libretro', 'provider_label': 'Libretro · 官方图库', 'platform': system,
+         'version': name, 'exact': name.casefold() == query} for name in shown]}
 
 
 def normalize_image(content):
@@ -200,7 +210,7 @@ def read_target(target):
     script = f'if test -f {name}; then test "$(wc -c < {name})" -le {LIMIT} && cat {name}; elif test ! -e {name}; then exit 44; else exit 1; fi'
     # shell -T keeps binary bytes intact and propagates the remote exit status;
     # exec-out can report success for an absent file and hide disconnect errors.
-    result = subprocess.run(['adb', '-s', serial, 'shell', '-T', script], capture_output=True, timeout=25)
+    result = subprocess.run([adb_executable(), '-s', serial, 'shell', '-T', script], capture_output=True, timeout=25, **subprocess_options())
     if result.returncode == 44:
         return None
     if result.returncode or len(result.stdout) > LIMIT:
@@ -209,7 +219,7 @@ def read_target(target):
 
 
 def adb_command(serial, script):
-    result = subprocess.run(['adb', '-s', serial, 'shell', script], capture_output=True, text=True, timeout=25)
+    result = subprocess.run([adb_executable(), '-s', serial, 'shell', script], capture_output=True, text=True, timeout=25, **subprocess_options())
     if result.returncode:
         raise RuntimeError('设备操作失败：' + (result.stderr.strip() or result.stdout.strip() or '请检查连接与权限'))
     return result.stdout
@@ -307,7 +317,13 @@ def preview(payload):
     if rom_target:
         current_target = rom_target['target']
     current_image = read_target(current_target)
-    if payload.get('upload'):
+    provenance = {}
+    if payload.get('candidate_id'):
+        from secondary_artwork import content as secondary_content
+        content, entry = secondary_content(payload['candidate_id'], system, kind)
+        source = entry['name']
+        provenance = {key: entry[key] for key in ('provider', 'provider_label', 'source_page', 'platform', 'version')}
+    elif payload.get('upload'):
         try:
             content = base64.b64decode(payload['upload'], validate=True)
         except (ValueError, TypeError) as error:
@@ -331,19 +347,23 @@ def preview(payload):
     manifest = {key: payload.get(key) for key in ('playlist_path', 'index', 'label', 'rom_path', 'system')}
     manifest.update({'created': time.time(), 'playlist_digest': playlist_digest, 'target': target,
                      'original_digest': digest(existing), 'image_digest': digest(content), 'kind': kind, 'rom_target': rom_target,
-                     'source': source, 'online': not bool(payload.get('upload'))})
-    if renaming:
+                     'source': source, 'online': not bool(payload.get('upload') or payload.get('candidate_id')),
+                     'provenance': provenance})
+    playlist, _ = load_entry(payload)
+    cleaned_items, removed = remove_disc_companions(playlist.items, [payload['rom_path']])
+    if renaming or removed:
         playlist, _ = load_entry(payload)
         if playlist.loaded_digest != playlist_digest:
             raise RuntimeError('游戏列表已改变，请重新预览')
         playlist.items[payload['index']]['label'] = new_label
+        playlist.data['items'], _ = remove_disc_companions(playlist.items, [payload['rom_path']])
         updated = (json.dumps(playlist.data, ensure_ascii=False, indent=2) + '\n').encode('utf-8')
         if len(updated) > LIMIT:
             raise ValueError('此游戏列表过大，请先通过批量整理区分名称')
         atomic_write_bytes(directory / (token + '.lpl'), updated)
-        manifest.update({'new_label': new_label, 'updated_playlist_digest': digest(updated), 'companions': []})
+        manifest.update({'new_label': new_label, 'updated_playlist_digest': digest(updated), 'companions': [], 'cleanup_only': not renaming})
         for other_kind in THUMBNAIL_TYPES:
-            if other_kind == kind:
+            if not renaming or other_kind == kind:
                 continue
             other_target = target.rsplit('/', 2)[0] + '/' + other_kind + '/' + filename
             old_target = target.rsplit('/', 2)[0] + '/' + other_kind + '/' + sanitize_filename(payload['label']) + '.png'
@@ -355,10 +375,18 @@ def preview(payload):
                 atomic_write_bytes(directory / cache_name, old_content)
                 manifest['companions'].append({'target': other_target, 'cache': cache_name, 'digest': digest(old_content)})
     atomic_write_json(directory / (token + '.json'), manifest)
-    return {'new_label': new_label if renaming else None, 'token': token, 'image_url': '/api/thumbnail/preview?path=' + quote(str(image), safe=''),
+    return {'provenance': provenance, 'new_label': new_label if renaming else None, 'token': token, 'image_url': '/api/thumbnail/preview?path=' + quote(str(image), safe=''),
             'current_image_url': '/api/thumbnail/preview?path=' + quote(current_target, safe='') + '&v=before-' + token if current_image is not None and valid_png(current_image) else None,
             'current_status': 'missing' if current_image is None else 'exists' if valid_png(current_image) else 'invalid',
             'target': target, 'rom_target': rom_target['target'] if rom_target else None, 'replacing': existing is not None or rom_target is not None, 'source': source, 'width': size[0], 'height': size[1]}
+
+
+def backup_location(target, suffix):
+    if target.lower().endswith('.lpl'):
+        root = app_paths.user_data_dir() / 'playlist-backups'
+        root.mkdir(parents=True, exist_ok=True)
+        return str(root / (target.rsplit('/', 1)[-1] + '.bak-' + suffix))
+    return target + '.bak-' + suffix
 
 
 def write_target(target, content, expected, suffix=None):
@@ -366,7 +394,7 @@ def write_target(target, content, expected, suffix=None):
     if digest(before) != expected:
         raise RuntimeError('目标图片已改变，请重新预览后确认')
     suffix = suffix or uuid.uuid4().hex
-    backup = target + '.bak-' + suffix if before is not None else None
+    backup = backup_location(target, suffix) if before is not None else None
     if not is_adb_uri(target):
         if backup:
             atomic_write_bytes(backup, before)
@@ -408,8 +436,11 @@ def write_target(target, content, expected, suffix=None):
             if digest(read_target(target)) != expected:
                 raise RuntimeError('设备图片已改变，请重新预览')
             if backup:
-                _, remote_backup = parse_adb_uri(backup)
-                adb_command(serial, f'cp {shlex.quote(remote)} {shlex.quote(remote_backup)}')
+                if is_adb_uri(backup):
+                    _, remote_backup = parse_adb_uri(backup)
+                    adb_command(serial, f'cp {shlex.quote(remote)} {shlex.quote(remote_backup)}')
+                else:
+                    atomic_write_bytes(backup, before)
                 if digest(read_target(backup)) != expected:
                     raise RuntimeError('旧图片备份校验失败，原图未替换')
             adb_command(serial, f'mv {shlex.quote(remote_stage)} {shlex.quote(remote)}')
@@ -488,7 +519,8 @@ def apply_independent(manifest, directory, token, receipt):
             existing = read_target(asset['target'])
             if manifest.get('writes_started') and digest(existing) == asset['digest']:
                 continue
-            if completed or existing is not None:
+            expected_existing = manifest.get('cleanup_only') and asset['target'] == manifest['target'] and digest(existing) == manifest['original_digest']
+            if completed or (existing is not None and not expected_existing):
                 raise RuntimeError('独立图片位置已改变，请重新预览')
         if manifest.get('rom_target'):
             alias = manifest['rom_target']
@@ -509,7 +541,7 @@ def apply_independent(manifest, directory, token, receipt):
                     companion_errors.append(str(error))
         if companion_errors:
             print('Warning: Could not copy companion artwork: ' + ' | '.join(companion_errors))
-        playlist_backup = playlist_path + '.bak-' + token
+        playlist_backup = backup_location(playlist_path, token)
         if not completed:
             try:
                 write_target(playlist_path, updated, manifest['playlist_digest'], suffix=token)

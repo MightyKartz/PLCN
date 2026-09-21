@@ -47,6 +47,29 @@ def test_preview_does_not_write_then_confirm_only_updates_one_image(context):
     assert len(list(other.parent.glob('*.png'))) == 2
 
 
+def test_secondary_preview_uses_scoped_candidate_and_never_remembers_it_as_libretro(context, monkeypatch):
+    import secondary_artwork
+    captured = []
+    def content(token, system, kind):
+        captured.append((token, system, kind))
+        return picture(), {'name':'Verified article', 'provider':'wikipedia', 'provider_label':'Wikipedia',
+                           'source_page':'https://zh.wikipedia.org/?curid=42', 'platform':'DOS', 'version':'1995 box art'}
+    monkeypatch.setattr(secondary_artwork, 'content', content)
+    payload = {k:v for k,v in context.items() if k not in {'upload','filename'}}
+    prepared = art.preview({**payload, 'candidate_id':'candidate', 'source':'Caller supplied bogus URL'})
+    assert captured == [('candidate','GBA','Named_Boxarts')]
+    assert prepared['source'] == 'Verified article'
+    assert prepared['provenance']['platform'] == 'DOS'
+    assert not Path(prepared['target']).exists()
+    before = Path(context['playlist_path']).read_bytes()
+    art.apply(prepared['token'])
+    with Image.open(prepared['target']) as image:
+        assert image.size == (12, 16)
+        assert image.getpixel((0, 0)) == (255, 0, 0, 255)
+    assert Path(context['playlist_path']).read_bytes() == before
+    assert not (art.app_paths.user_data_dir() / 'artwork-sources.json').exists()
+
+
 def test_replacement_preserves_old_image_and_receipt(context):
     target = Path(context['thumbnails']) / 'GBA/Named_Boxarts/游戏一.png'
     target.parent.mkdir(parents=True)
@@ -259,7 +282,8 @@ def test_independent_rename_retry_recovers_after_playlist_commit_response_lost(c
     result = art.apply(prepared['token'])
     assert result['new_label'] == '独立名称'
     assert Path(result['playlist_backup']).read_bytes() == original
-    assert len(list(path.parent.glob(path.name + '.bak-*'))) == 1
+    assert not list(path.parent.glob(path.name + '.bak-*'))
+    assert len(list(Path(result['playlist_backup']).parent.glob(path.name + '.bak-*'))) == 1
 
 
 def test_independent_name_cannot_overwrite_an_existing_unreferenced_image(context):
@@ -342,3 +366,24 @@ def test_rom_alias_used_by_another_label_is_not_silently_overwritten(context):
     with pytest.raises(ValueError, match='其他条目'):
         art.preview(context)
     assert alias.read_bytes() == picture('green')
+
+
+@pytest.mark.parametrize('rename', [False, True])
+def test_disc_artwork_confirm_removes_english_companion(context, rename):
+    path = Path(context['playlist_path'])
+    path.write_text(json.dumps({'items': [{'label':'游戏一','path':'/ps/Arc.cue'}, {'label':'Arc','path':'/ps/Arc.bin'}]}))
+    context['rom_path'] = '/ps/Arc.cue'
+    if rename:
+        context['new_label'] = '妖精战士2'
+    else:
+        existing = Path(context['thumbnails']) / 'GBA/Named_Boxarts/游戏一.png'
+        existing.parent.mkdir(parents=True)
+        existing.write_bytes(picture('blue'))
+    original = path.read_bytes()
+    prepared = art.preview(context)
+    assert path.read_bytes() == original
+    result = art.apply(prepared['token'])
+    assert len(json.loads(path.read_text())['items']) == 1
+    assert json.loads(path.read_text())['items'][0]['label'] == ('妖精战士2' if rename else '游戏一')
+    assert Path(result['playlist_backup']).parent != path.parent
+    assert art.apply(prepared['token']) == result
