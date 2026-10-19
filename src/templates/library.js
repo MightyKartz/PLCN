@@ -60,8 +60,43 @@ function filterGameLibrary() {
 }
 
 function gameMatchesImageFilter(item, filter) {
-    return filter === 'missing' ? item.image_status === 'missing'
-        : filter === 'problem' ? ['invalid', 'unreadable', 'unconfigured'].includes(item.image_status) : true;
+    // "Missing" means at least one of the three artwork types is absent, which is
+    // exactly when a row can be filled in. A list with no artwork directory, or one
+    // whose device could not be read, belongs under "Check" instead.
+    if (filter === 'missing') {
+        if (!item.artwork_status) return item.image_status === 'missing';
+        return !['unconfigured', 'unreadable'].includes(item.image_status) && missingArtworkKinds(item).length > 0;
+    }
+    return filter === 'problem' ? ['invalid', 'unreadable', 'unconfigured'].includes(item.image_status) : true;
+}
+
+const ARTWORK_KIND_LABELS = {Named_Boxarts: ['封面', 'Box art'], Named_Snaps: ['游戏截图', 'Screenshot'], Named_Titles: ['标题图', 'Title screen']};
+const ARTWORK_KIND_STATES = {exists: ['已有', 'Present'], invalid: ['损坏', 'Damaged']};
+const ARTWORK_KIND_MARKERS = {exists: '✓', invalid: '!', missing: '○'};
+
+function artworkKindLabel(kind) {
+    const [zh, en] = ARTWORK_KIND_LABELS[kind] || [kind, kind];
+    return workbenchText(zh, en);
+}
+
+function artworkKindState(status) {
+    const [zh, en] = ARTWORK_KIND_STATES[status] || ['缺少', 'Missing'];
+    return workbenchText(zh, en);
+}
+
+/* One chip per artwork type so a row shows which of the three images it actually has. */
+function renderArtworkKindChips(cell, item) {
+    const chips = document.createElement('div');
+    chips.className = 'artwork-chips';
+    for (const kind of Object.keys(ARTWORK_KIND_LABELS)) {
+        const status = item.artwork_status[kind] || 'missing';
+        const chip = document.createElement('span');
+        chip.className = 'artwork-chip artwork-chip-' + status;
+        chip.textContent = ARTWORK_KIND_MARKERS[status] + ' ' + artworkKindLabel(kind);
+        chip.title = artworkKindLabel(kind) + ' · ' + artworkKindState(status);
+        chips.appendChild(chip);
+    }
+    cell.appendChild(chips);
 }
 
 function setGameLibraryFilter(filter) {
@@ -79,6 +114,12 @@ function renderGameLibraryFilters(items) {
         button.setAttribute('aria-pressed', String(gameLibrary.filter === filter));
         button.disabled = gameLibrary.loading;
     }
+}
+
+function missingArtworkKinds(item) {
+    if (!item.artwork_status) return [];
+    return ['Named_Boxarts', 'Named_Snaps', 'Named_Titles']
+        .filter(kind => (item.artwork_status[kind] || 'missing') !== 'exists');
 }
 
 function renderGameLibrary() {
@@ -141,6 +182,7 @@ function renderGameLibrary() {
             image.src = item.image_url;
             cover.appendChild(image);
         }
+        if (item.artwork_status && !['unconfigured', 'unreadable'].includes(item.image_status)) renderArtworkKindChips(cover, item);
         row.appendChild(cover);
         for (const value of [item.label || text('未命名', 'Unnamed'), item.rom_name || '—']) {
             const cell = document.createElement('td');
@@ -152,9 +194,11 @@ function renderGameLibrary() {
         const button = document.createElement('button');
         button.id = 'game-artwork-action-' + item.index;
         button.type = 'button'; button.className = 'btn btn-small btn-muted';
+        const missing = missingArtworkKinds(item).map(kind => artworkKindLabel(kind));
         button.textContent = !hasImageDirectory ? text('设置图片目录', 'Set image folder')
-            : item.image_url ? text('更换图片', 'Replace image') : text('补图', 'Add image');
-        button.setAttribute('aria-label', button.textContent + ' · ' + (item.label || item.rom_name));
+            : item.image_url && !missing.length ? text('更换图片', 'Replace image') : text('补图', 'Add image');
+        if (missing.length) button.title = text('缺少：', 'Missing: ') + missing.join(text('、', ', '));
+        button.setAttribute('aria-label', button.textContent + (missing.length ? '（' + missing.join(text('、', ', ')) + '）' : '') + ' · ' + (item.label || item.rom_name));
         button.disabled = Boolean(workbench.operation) || !item.label;
         button.onclick = () => openArtworkDialog(item);
         actions.appendChild(button);
