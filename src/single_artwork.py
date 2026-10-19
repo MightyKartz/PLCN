@@ -28,6 +28,11 @@ from safe_io import atomic_write_bytes, atomic_write_json, file_lock
 
 BASE = 'https://thumbnails.libretro.com'
 LIMIT = 12 * 1024 * 1024
+KIND_LABELS = {'Named_Boxarts': '封面', 'Named_Snaps': '游戏截图', 'Named_Titles': '标题图'}
+# Gallery match grades, best first. A looser grade is only used when no stricter
+# one matched, and every grade is still a proposal the user must confirm.
+TIER_ORDER = {'exact': 0, 'catalog': 1, 'words': 2, 'fuzzy': 3}
+FUZZY_GALLERY_MIN = 85
 
 
 def digest(content):
@@ -40,10 +45,25 @@ def validated_kind(value):
     return value
 
 
-def download(url):
+def requested_kinds(payload):
+    """Image types this preview should stage; a single type keeps the legacy request shape."""
+    values = payload.get('kinds')
+    if values is None:
+        return [validated_kind(payload.get('kind', 'Named_Boxarts'))]
+    if not isinstance(values, list):
+        raise ValueError('请选择图片类型')
+    kinds = [validated_kind(value) for value in dict.fromkeys(values)]
+    if not kinds:
+        raise ValueError('请至少选择一种图片类型')
+    return kinds
+
+
+def download(url, allow_missing=False):
     try:
         with requests.get(url, timeout=(8, 25), stream=True) as response:
             if response.status_code == 404:
+                if allow_missing:
+                    return None
                 raise ValueError('在线图库未收录此图片，请搜索其他名称或导入本地图片')
             response.raise_for_status()
             content = bytearray()
@@ -94,34 +114,97 @@ def catalog_image(system, kind, name):
     return cache.read_bytes()
 
 
+def gallery_matches(names, queries, query, fuzzy=False):
+    """Grade every gallery filename against the query, most certain first.
+
+    Tiers downgrade only when nothing stricter matched: an exact title, then a
+    name containing every query word, then (manual search only) a close spelling.
+    A graded candidate is still only a proposal — the user picks the image.
+    """
+    from artwork_identity import title_key, base_title
+    word_sets = [re.findall(r'\w+', base_title(value).casefold()) for value in queries]
+    word_sets = [group for group in word_sets if group]
+    key = title_key(query)
+    strict, loose = [], []
+    for name in names:
+        if name.casefold() == query.casefold() or title_key(name) == key:
+            strict.append((name, 'exact', 100))
+            continue
+        words = re.findall(r'\w+', name.casefold())
+        if any(all(word in words for word in group) for group in word_sets):
+            strict.append((name, 'words', 90))
+        elif fuzzy:
+            score = fuzzy_ratio(base_title(query), base_title(name))
+            if score >= FUZZY_GALLERY_MIN:
+                loose.append((name, 'fuzzy', round(score)))
+    found = strict or loose
+    found.sort(key=lambda row: (TIER_ORDER[row[1]], -row[2], row[0]))
+    return found
+
+
+def fuzzy_ratio(left, right):
+    try:
+        from rapidfuzz import fuzz
+    except ImportError:
+        return 0.0
+    return float(fuzz.WRatio(str(left).casefold(), str(right).casefold()))
+
+
 def search(payload):
+    from artwork_identity import title_key
+    from gallery_names import gallery_title_key
+    from dos_artwork_names import search_names
+    import name_suggestions
     if payload.get('provider') == 'wikipedia':
         from secondary_artwork import search as secondary_search
         return secondary_search(payload)
     if payload.get('provider', 'libretro') != 'libretro':
         raise ValueError('未知图片来源')
-    from artwork_identity import title_key, base_title
-    from gallery_names import gallery_title_key
-    from dos_artwork_names import search_names
     system = validate_system(payload.get('system', ''))
     kind = validated_kind(payload.get('kind', 'Named_Boxarts'))
     query = str(payload.get('query', '')).strip().casefold()
     if len(query) < 2:
         raise ValueError('请输入至少两个字符，建议使用英文游戏名')
     names = catalog_names(system, kind)
-    queries = search_names(system, query)
+    # A Chinese title cannot appear in the English gallery index: translate it
+    # through the local catalog first, then search with the English names. An
+    # exact catalog hit wins outright; a weak fuzzy name is only tried when
+    # nothing stronger exists, and never more than one of them.
+    hints = name_suggestions.suggest(system, query) if name_suggestions.has_cjk(query) else []
+    strong = [hint for hint in hints if hint['tier'] != 'fuzzy']
+    if strong:
+        expansion = strong[:4]
+    else:
+        close = [hint for hint in hints if (hint['score'] or 0) >= 80]
+        expansion = (close or hints)[:2]
+    queries = list(search_names(system, query)) + [hint['english_name'] for hint in expansion]
     if payload.get('automatic'):
         keys = {gallery_title_key(system, value) for value in queries}
-        matches = [name for name in names if gallery_title_key(system, name) in keys]
+        graded = [(name, 'exact' if name.casefold() == query else 'words', 100 if name.casefold() == query else 90)
+                  for name in names if gallery_title_key(system, name) in keys]
+        graded.sort(key=lambda row: (TIER_ORDER[row[1]], row[0]))
     else:
-        word_sets = [re.findall(r'\w+', base_title(value).casefold()) for value in queries]
-        matches = [name for name in names if any(words and all(word in re.findall(r'\w+', name.casefold()) for word in words) for words in word_sets)]
-    matches.sort(key=lambda n: (n.casefold() != query, title_key(n) != title_key(query), n))
-    shown = matches[:24]
-    return {'names': shown, 'total': len(matches), 'provider': 'libretro', 'candidates': [
-        {'name': name, 'image_url': '/api/artwork/thumbnail?system=' + quote(system, safe='') + '&kind=' + kind + '&name=' + quote(name, safe=''),
-         'provider': 'libretro', 'provider_label': 'Libretro · 官方图库', 'platform': system,
-         'version': name, 'exact': name.casefold() == query} for name in shown]}
+        graded = gallery_matches(names, queries, query, fuzzy=True)
+    shown = graded[:24]
+    hinted = {title_key(hint['english_name']): hint for hint in hints}
+    candidates = []
+    for name, grade, score in shown:
+        hint = hinted.get(title_key(name))
+        # A Chinese query can only reach the English index through the catalog,
+        # so say so instead of claiming keyword matches the user did not type.
+        tier = 'catalog' if hint and name_suggestions.has_cjk(query) else grade
+        candidates.append({'name': name, 'tier': tier, 'score': hint['score'] if tier == 'catalog' else score,
+                           'exact': grade == 'exact', 'hint': hint,
+                           'image_url': '/api/artwork/thumbnail?system=' + quote(system, safe='') + '&kind=' + kind + '&name=' + quote(name, safe=''),
+                           'provider': 'libretro', 'provider_label': 'Libretro · 官方图库', 'platform': system, 'version': name})
+    # Nothing matched: still offer the catalog names so a Chinese-only title has a way in.
+    suggestions = []
+    if not graded:
+        label = str(payload.get('label') or '').strip()
+        suggestions = hints or (name_suggestions.suggest(system, label)
+                                if name_suggestions.has_cjk(label) and title_key(label) != title_key(query) else [])
+    return {'names': [candidate['name'] for candidate in candidates], 'total': len(graded),
+            'provider': 'libretro', 'candidates': candidates, 'suggestions': suggestions}
 
 
 def normalize_image(content):
@@ -167,22 +250,28 @@ def entry_context(payload):
               if sanitize_filename(item.get('label')).casefold() == filename]
     suggested = rom_title(entry.get('path')) or entry['label']
     used = {sanitize_filename(item.get('label')).casefold() for item in playlist.items}
-    if len(shared) > 1 and payload.get('thumbnails'):
-        root = str(payload['thumbnails']).strip()
+    artwork = {}
+    root = str(payload.get('thumbnails') or '').strip()
+    if root:
+        from playlist_browser import artwork_statuses, open_artwork_reader
         system = validate_system(payload.get('system', ''))
-        for kind in THUMBNAIL_TYPES:
-            if is_adb_uri(root):
-                names = remote_inventory(root, system, kind)['filenames']
-            else:
-                directory = Path(root).expanduser() / system / kind
-                names = [path.name for path in directory.iterdir()] if directory.exists() else []
-            used.update(name[:-4].casefold() for name in names if name.casefold().endswith('.png'))
+        resolver, remote_lookups, error = open_artwork_reader(root, system)
+        if error:
+            artwork = {kind: {'status': 'unreadable', 'message': error} for kind in THUMBNAIL_TYPES}
+        else:
+            artwork = artwork_statuses(entry['label'], entry.get('path'), resolver=resolver,
+                                       remote_lookups=remote_lookups, thumbnails=root, system=system)
+            if len(shared) > 1:
+                from playlist_browser import artwork_filenames
+                for kind in THUMBNAIL_TYPES:
+                    used.update(name[:-4].casefold() for name in artwork_filenames(root, system, kind, remote_lookups)
+                                if name.casefold().endswith('.png'))
     base = suggested
     number = 2
     while sanitize_filename(suggested).casefold() in used:
         suggested = f'{base} ({number})'
         number += 1
-    return {'shared': shared if len(shared) > 1 else [], 'suggested_label': suggested}
+    return {'shared': shared if len(shared) > 1 else [], 'suggested_label': suggested, 'artwork': artwork}
 
 
 def read_entry(payload):
@@ -269,34 +358,96 @@ def existing_rom_target(payload, target):
     return {'target': alias, 'original_digest': digest(content)}
 
 
+def target_path(root, system, kind, filename):
+    if is_adb_uri(root):
+        return root.rstrip('/') + '/' + system + '/' + kind + '/' + filename
+    return str(Path(root).expanduser().resolve() / system / kind / filename)
+
+
+def candidate_source(payload, system, kind, allow_missing=False):
+    """Return (content, source_name, provenance, online) for one image type."""
+    if payload.get('candidate_id'):
+        if kind != 'Named_Boxarts':
+            raise ValueError('备用来源只提供封面')
+        from secondary_artwork import content as secondary_content
+        content, entry = secondary_content(payload['candidate_id'], system, kind)
+        provenance = {key: entry[key] for key in ('provider', 'provider_label', 'source_page', 'platform', 'version') if key in entry}
+        return content, entry['name'], provenance, False
+    if payload.get('upload'):
+        try:
+            content = base64.b64decode(payload['upload'], validate=True)
+        except (ValueError, TypeError) as error:
+            raise ValueError('无法读取所选图片') from error
+        return content, str(payload.get('filename') or '本地图片'), {}, False
+    source = str(payload.get('source') or '').strip()
+    if not source:
+        raise ValueError('请输入图片源名称，或导入本地图片')
+    url = f'{BASE}/{quote(system, safe="")}/{kind}/{quote(sanitize_filename(source) + ".png", safe="")}'
+    return download(url, allow_missing=allow_missing), source, {}, True
+
+
+def image_cache(directory, token, image):
+    return directory / (image.get('cache') or (token + '.png'))
+
+
+def manifest_images(manifest):
+    """Every staged image in a receipt; receipts written before multi-type previews hold one."""
+    images = manifest.get('images')
+    if images:
+        return images
+    return [{'kind': manifest['kind'], 'target': manifest['target'], 'original_digest': manifest['original_digest'],
+             'image_digest': manifest['image_digest'], 'cache': None, 'rom_target': manifest.get('rom_target'),
+             'source': manifest.get('source'), 'online': manifest.get('online')}]
+
+
+def remember_sources(manifest):
+    """Persist each confirmed online source per type; never fail the write over memory."""
+    from artwork_identity import remember
+    context = {**manifest, 'label': manifest.get('new_label') or manifest['label']}
+    failed = []
+    for image in manifest_images(manifest):
+        if not image.get('online') or not image.get('source'):
+            continue
+        try:
+            remember(context, image['source'], image['kind'])
+        except (OSError, ValueError, RuntimeError):
+            failed.append(KIND_LABELS[image['kind']])
+    return ('部分图片源未能保存供下次使用（' + '、'.join(failed) + '）') if failed else ''
+
+
 def write_selected_images(manifest, directory, token, receipt):
     """Validate both names before mutation and recover interrupted multi-file writes."""
-    content = (directory / (token + '.png')).read_bytes()
-    if digest(content) != manifest['image_digest']:
-        raise RuntimeError('候选图片已改变，请重新预览')
-    assets = [{'target': manifest['target'], 'original_digest': manifest['original_digest']}]
-    if manifest.get('rom_target'):
-        assets.append(manifest['rom_target'])
+    images = manifest_images(manifest)
+    assets = []
+    for image in images:
+        content = image_cache(directory, token, image).read_bytes()
+        if digest(content) != image['image_digest']:
+            raise RuntimeError('候选图片已改变，请重新预览')
+        assets.append({'kind': image['kind'], 'target': image['target'], 'content': content,
+                       'digest': image['image_digest'], 'original_digest': image['original_digest']})
+        if image.get('rom_target'):
+            assets.append({'kind': image['kind'], 'target': image['rom_target']['target'], 'content': content,
+                           'digest': image['image_digest'], 'original_digest': image['rom_target']['original_digest']})
     for asset in assets:
         current = digest(read_target(asset['target']))
-        if current != asset['original_digest'] and not (manifest.get('image_writes_started') and current == manifest['image_digest']):
+        if current != asset['original_digest'] and not (manifest.get('image_writes_started') and current == asset['digest']):
             raise RuntimeError('目标图片已改变，请重新预览后确认')
     manifest['image_writes_started'] = True
     atomic_write_json(receipt, manifest)
     backups = []
     for asset in assets:
         backup = asset['target'] + '.bak-' + token if asset['original_digest'] is not None else None
-        if digest(read_target(asset['target'])) != manifest['image_digest']:
-            backup = write_target(asset['target'], content, asset['original_digest'], suffix=token)
+        if digest(read_target(asset['target'])) != asset['digest']:
+            backup = write_target(asset['target'], asset['content'], asset['original_digest'], suffix=token)
         if backup and read_target(backup) is not None:
-            backups.append(backup)
+            backups.append({'kind': asset['kind'], 'target': asset['target'], 'backup': backup})
     return backups
 
 
 def preview(payload):
     playlist_digest, filename = read_entry(payload)
     system = validate_system(payload.get('system', ''))
-    kind = validated_kind(payload.get('kind', 'Named_Boxarts'))
+    kinds = requested_kinds(payload)
     root = str(payload.get('thumbnails') or '').strip()
     if not root:
         raise ValueError('请先在路径设置中指定图片目录')
@@ -304,37 +455,32 @@ def preview(payload):
         serial, remote = parse_adb_uri(root)
         if not serial or not remote.strip('/'):
             raise ValueError('请选择设备上的图片目录')
-        target = root.rstrip('/') + '/' + system + '/' + kind + '/' + filename
-    else:
-        target = str(Path(root).expanduser().resolve() / system / kind / filename)
-    existing = read_target(target)
-    rom_target = existing_rom_target(payload, target)
     new_label = str(payload.get('new_label') or payload['label']).strip()
     renaming = new_label != payload['label']
-    if renaming and existing is not None:
-        raise ValueError('独立名称对应的图片已存在，请换一个名称，避免覆盖其他图片')
-    current_target = target.rsplit('/', 1)[0] + '/' + sanitize_filename(payload['label']) + '.png' if renaming else target
-    if rom_target:
-        current_target = rom_target['target']
-    current_image = read_target(current_target)
-    provenance = {}
-    if payload.get('candidate_id'):
-        from secondary_artwork import content as secondary_content
-        content, entry = secondary_content(payload['candidate_id'], system, kind)
-        source = entry['name']
-        provenance = {key: entry[key] for key in ('provider', 'provider_label', 'source_page', 'platform', 'version')}
-    elif payload.get('upload'):
-        try:
-            content = base64.b64decode(payload['upload'], validate=True)
-        except (ValueError, TypeError) as error:
-            raise ValueError('无法读取所选图片') from error
-        source = str(payload.get('filename') or '本地图片')
-    else:
-        source = str(payload.get('source') or '').strip()
-        if not source:
-            raise ValueError('请输入图片源名称，或导入本地图片')
-        content = download(f'{BASE}/{quote(system, safe="")}/{kind}/{quote(sanitize_filename(source) + ".png", safe="")}')
-    content, size = normalize_image(content)
+
+    plans = []
+    for kind in kinds:
+        target = target_path(root, system, kind, filename)
+        existing = read_target(target)
+        if renaming and existing is not None:
+            raise ValueError(f'独立名称对应的{KIND_LABELS[kind]}图片已存在，请换一个名称，避免覆盖其他图片')
+        rom_target = existing_rom_target(payload, target)
+        current_target = rom_target['target'] if rom_target else (
+            target.rsplit('/', 1)[0] + '/' + sanitize_filename(payload['label']) + '.png' if renaming else target)
+        plans.append({'kind': kind, 'target': target, 'existing': existing,
+                      'rom_target': rom_target, 'current_target': current_target})
+
+    staged, skipped = [], []
+    for plan in plans:
+        content, source, provenance, online = candidate_source(payload, system, plan['kind'], allow_missing=len(plans) > 1)
+        if content is None:
+            skipped.append({'kind': plan['kind'], 'label': KIND_LABELS[plan['kind']], 'reason': '在线图库未收录此类型图片'})
+            continue
+        content, size = normalize_image(content)
+        staged.append({**plan, 'content': content, 'size': size, 'source': source, 'provenance': provenance, 'online': online})
+    if not staged:
+        raise ValueError('所选类型在在线图库都没有对应图片，请修改名称或导入本地图片')
+
     token = uuid.uuid4().hex
     directory = app_paths.cache_dir() / 'artwork-previews'
     directory.mkdir(parents=True, exist_ok=True)
@@ -342,13 +488,28 @@ def preview(payload):
     for old in directory.iterdir():
         if old.is_file() and old.suffix in {'.json', '.png', '.lpl'} and time.time() - old.stat().st_mtime > 86400:
             old.unlink(missing_ok=True)
-    image = directory / (token + '.png')
-    atomic_write_bytes(image, content)
+
+    images, public = [], []
+    for item in staged:
+        # A single type keeps the original staged filename; several types need one file each.
+        cache_name = f'{token}.png' if len(staged) == 1 else f'{token}-write-{item["kind"]}.png'
+        atomic_write_bytes(directory / cache_name, item['content'])
+        current_image = read_target(item['current_target'])
+        has_current = current_image is not None and valid_png(current_image)
+        images.append({'kind': item['kind'], 'cache': cache_name, 'target': item['target'],
+                       'original_digest': digest(item['existing']), 'image_digest': digest(item['content']),
+                       'rom_target': item['rom_target'], 'source': item['source'], 'online': item['online']})
+        public.append({'kind': item['kind'], 'label': KIND_LABELS[item['kind']], 'target': item['target'],
+                       'rom_target': item['rom_target']['target'] if item['rom_target'] else None,
+                       'image_url': '/api/thumbnail/preview?path=' + quote(str(directory / cache_name), safe='') + '&v=after-' + token,
+                       'current_image_url': '/api/thumbnail/preview?path=' + quote(item['current_target'], safe='') + '&v=before-' + token if has_current else None,
+                       'current_status': 'missing' if current_image is None else 'exists' if has_current else 'invalid',
+                       'replacing': item['existing'] is not None or item['rom_target'] is not None,
+                       'source': item['source'], 'provenance': item['provenance'],
+                       'width': item['size'][0], 'height': item['size'][1]})
+
     manifest = {key: payload.get(key) for key in ('playlist_path', 'index', 'label', 'rom_path', 'system')}
-    manifest.update({'created': time.time(), 'playlist_digest': playlist_digest, 'target': target,
-                     'original_digest': digest(existing), 'image_digest': digest(content), 'kind': kind, 'rom_target': rom_target,
-                     'source': source, 'online': not bool(payload.get('upload') or payload.get('candidate_id')),
-                     'provenance': provenance})
+    manifest.update({'created': time.time(), 'playlist_digest': playlist_digest, 'images': images})
     playlist, _ = load_entry(payload)
     cleaned_items, removed = remove_disc_companions(playlist.items, [payload['rom_path']])
     if renaming or removed:
@@ -362,23 +523,28 @@ def preview(payload):
             raise ValueError('此游戏列表过大，请先通过批量整理区分名称')
         atomic_write_bytes(directory / (token + '.lpl'), updated)
         manifest.update({'new_label': new_label, 'updated_playlist_digest': digest(updated), 'companions': [], 'cleanup_only': not renaming})
+        written_kinds = {image['kind'] for image in images}
         for other_kind in THUMBNAIL_TYPES:
-            if not renaming or other_kind == kind:
+            if not renaming or other_kind in written_kinds:
                 continue
-            other_target = target.rsplit('/', 2)[0] + '/' + other_kind + '/' + filename
-            old_target = target.rsplit('/', 2)[0] + '/' + other_kind + '/' + sanitize_filename(payload['label']) + '.png'
+            other_root = plans[0]['target'].rsplit('/', 2)[0]
+            other_target = other_root + '/' + other_kind + '/' + filename
+            old_target = other_root + '/' + other_kind + '/' + sanitize_filename(payload['label']) + '.png'
             if read_target(other_target) is not None:
                 raise ValueError('独立名称对应的其他类型图片已存在，请换一个名称')
             old_content = read_target(old_target)
             if old_content is not None:
                 cache_name = token + '-' + other_kind + '.png'
                 atomic_write_bytes(directory / cache_name, old_content)
-                manifest['companions'].append({'target': other_target, 'cache': cache_name, 'digest': digest(old_content)})
+                manifest['companions'].append({'kind': other_kind, 'target': other_target, 'cache': cache_name, 'digest': digest(old_content)})
     atomic_write_json(directory / (token + '.json'), manifest)
-    return {'provenance': provenance, 'new_label': new_label if renaming else None, 'token': token, 'image_url': '/api/thumbnail/preview?path=' + quote(str(image), safe=''),
-            'current_image_url': '/api/thumbnail/preview?path=' + quote(current_target, safe='') + '&v=before-' + token if current_image is not None and valid_png(current_image) else None,
-            'current_status': 'missing' if current_image is None else 'exists' if valid_png(current_image) else 'invalid',
-            'target': target, 'rom_target': rom_target['target'] if rom_target else None, 'replacing': existing is not None or rom_target is not None, 'source': source, 'width': size[0], 'height': size[1]}
+    primary = public[0]
+    return {'token': token, 'new_label': new_label if renaming else None, 'images': public, 'skipped': skipped,
+            'source': primary['source'], 'width': primary['width'], 'height': primary['height'],
+            'provenance': primary['provenance'], 'replacing': primary['replacing'],
+            'target': primary['target'], 'rom_target': primary['rom_target'],
+            'image_url': '/api/thumbnail/preview?path=' + quote(str(directory / images[0]['cache']), safe=''),
+            'current_image_url': primary['current_image_url'], 'current_status': primary['current_status']}
 
 
 def backup_location(target, suffix):
@@ -454,6 +620,16 @@ def write_target(target, content, expected, suffix=None):
     return backup
 
 
+def written_images(manifest, directory, token, backups):
+    """Report one URL and backup per staged image, in the order they were previewed."""
+    by_kind = {}
+    for entry in backups:
+        by_kind.setdefault(entry['kind'], entry)
+    return [{'kind': image['kind'], 'target': image['target'], 'backup': by_kind.get(image['kind'], {}).get('backup'),
+             'image_url': '/api/thumbnail/preview?path=' + quote(image['target'], safe='') + '&v=after-' + token}
+            for image in manifest_images(manifest)]
+
+
 def apply(token):
     if not isinstance(token, str) or not re.fullmatch('[0-9a-f]{32}', token):
         raise ValueError('无效的图片预览，请重新选择')
@@ -465,31 +641,26 @@ def apply(token):
             return manifest['result']
         if time.time() - manifest['created'] > 1800:
             raise ValueError('预览已过期，请重新核对图片')
-        with file_lock(app_paths.cache_dir() / 'locks' / ('artwork-' + digest(manifest['target'].encode()))):
+        with file_lock(app_paths.cache_dir() / 'locks' / ('artwork-' + digest(manifest_images(manifest)[0]['target'].encode()))):
             if manifest.get('new_label'):
                 result = apply_independent(manifest, directory, token, path)
-                manifest['result'] = result
-                atomic_write_json(path, manifest)
-                return result
-            current_digest, _ = read_entry(manifest)
-            if current_digest != manifest['playlist_digest']:
-                raise RuntimeError('游戏列表已改变，请重新预览图片')
-            content = (directory / (token + '.png')).read_bytes()
-            if digest(content) != manifest['image_digest']:
-                raise RuntimeError('候选图片已改变，请重新预览')
-            backups = write_selected_images(manifest, directory, token, path)
-            backup = backups[0] if backups else None
-            result = {'target': manifest['target'], 'backup': backup, 'index': manifest['index'],
-                      'playlist_path': manifest['playlist_path'], 'label': manifest['label'], 'kind': manifest['kind'],
-                      'image_url': '/api/thumbnail/preview?path=' + quote(manifest['target'], safe='') + '&v=after-' + token}
+            else:
+                current_digest, _ = read_entry(manifest)
+                if current_digest != manifest['playlist_digest']:
+                    raise RuntimeError('游戏列表已改变，请重新预览图片')
+                for image in manifest_images(manifest):
+                    content = image_cache(directory, token, image).read_bytes()
+                    if digest(content) != image['image_digest']:
+                        raise RuntimeError('候选图片已改变，请重新预览')
+                written = written_images(manifest, directory, token, write_selected_images(manifest, directory, token, path))
+                result = {'images': written, 'target': written[0]['target'], 'backup': written[0]['backup'],
+                          'index': manifest['index'], 'playlist_path': manifest['playlist_path'],
+                          'label': manifest['label'], 'kind': written[0]['kind'], 'image_url': written[0]['image_url']}
             manifest['result'] = result
             atomic_write_json(path, manifest)
-            if manifest.get('online'):
-                try:
-                    from artwork_identity import remember
-                    remember(manifest, manifest['source'], manifest['kind'])
-                except (OSError, ValueError, RuntimeError):
-                    result['memory_warning'] = '图片已更新，但图片源未能保存供下次使用'
+            warning = remember_sources(manifest)
+            if warning:
+                result['memory_warning'] = warning
             return result
 
 
@@ -511,7 +682,10 @@ def apply_independent(manifest, directory, token, receipt):
             current_digest, _ = read_entry(manifest)
             if current_digest != manifest['playlist_digest']:
                 raise RuntimeError('游戏列表已改变，请重新预览')
-        assets = [{'target': manifest['target'], 'cache': token + '.png', 'digest': manifest['image_digest']}] + manifest['companions']
+        images = manifest_images(manifest)
+        own = {image['target']: image for image in images}
+        assets = [{'target': image['target'], 'cache': image.get('cache') or token + '.png', 'digest': image['image_digest']}
+                  for image in images] + manifest['companions']
         for asset in assets:
             content = (directory / asset['cache']).read_bytes()
             if digest(content) != asset['digest']:
@@ -519,17 +693,20 @@ def apply_independent(manifest, directory, token, receipt):
             existing = read_target(asset['target'])
             if manifest.get('writes_started') and digest(existing) == asset['digest']:
                 continue
-            expected_existing = manifest.get('cleanup_only') and asset['target'] == manifest['target'] and digest(existing) == manifest['original_digest']
+            original = own.get(asset['target'], {}).get('original_digest')
+            expected_existing = manifest.get('cleanup_only') and original is not None and digest(existing) == original
             if completed or (existing is not None and not expected_existing):
                 raise RuntimeError('独立图片位置已改变，请重新预览')
-        if manifest.get('rom_target'):
-            alias = manifest['rom_target']
+        for image in images:
+            alias = image.get('rom_target')
+            if not alias:
+                continue
             current_alias = digest(read_target(alias['target']))
-            if current_alias != alias['original_digest'] and not (manifest.get('image_writes_started') and current_alias == manifest['image_digest']):
+            if current_alias != alias['original_digest'] and not (manifest.get('image_writes_started') and current_alias == image['image_digest']):
                 raise RuntimeError('ROM 图片已改变，请重新预览')
         manifest['writes_started'] = True
         atomic_write_json(receipt, manifest)
-        # The selected image is managed with its existing ROM alias as one resumable operation.
+        # Every selected image is managed with its existing ROM alias as one resumable operation.
         backups = write_selected_images(manifest, directory, token, receipt)
         companion_errors = []
         for asset in manifest['companions']:
@@ -547,14 +724,12 @@ def apply_independent(manifest, directory, token, receipt):
                 write_target(playlist_path, updated, manifest['playlist_digest'], suffix=token)
             except Exception as error:
                 raise RuntimeError('独立图片已准备，游戏列表写入未确认；可重试查询。备份位置：' + playlist_backup) from error
-        result = {'target': manifest['target'], 'backup': backups[0] if backups else None, 'playlist_backup': playlist_backup,
+        written = written_images(manifest, directory, token, backups)
+        result = {'images': written, 'target': written[0]['target'], 'backup': written[0]['backup'], 'playlist_backup': playlist_backup,
                   'index': manifest['index'], 'playlist_path': playlist_path, 'label': manifest['label'],
-                  'new_label': manifest['new_label'], 'kind': manifest['kind'], 'companion_warnings': companion_errors,
-                  'image_url': '/api/thumbnail/preview?path=' + quote(manifest['target'], safe='') + '&v=after-' + token}
-        if manifest.get('online'):
-            try:
-                from artwork_identity import remember
-                remember({**manifest, 'label': manifest['new_label']}, manifest['source'], manifest['kind'])
-            except (OSError, ValueError, RuntimeError):
-                result['memory_warning'] = '图片已更新，但图片源未能保存供下次使用'
+                  'new_label': manifest['new_label'], 'kind': written[0]['kind'], 'companion_warnings': companion_errors,
+                  'image_url': written[0]['image_url']}
+        warning = remember_sources(manifest)
+        if warning:
+            result['memory_warning'] = warning
         return result

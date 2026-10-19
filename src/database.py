@@ -440,7 +440,6 @@ class DatabaseManager:
         # Determine if keyword is Chinese or English
         is_chinese = any(ord(c) >= 128 for c in keyword)
         
-        print(f"DEBUG search_by_keyword: keyword='{keyword}', system='{system}', is_chinese={is_chinese}")
         
         if is_chinese:
             # Build Chinese names cache (optionally filtered by system)
@@ -459,7 +458,6 @@ class DatabaseManager:
             candidates = [(row[0], row[1], row[2]) for row in cursor.fetchall()]
             chinese_names = [c[0] for c in candidates]
             
-            print(f"DEBUG search_by_keyword: Found {len(candidates)} candidates")
             
             if not chinese_names:
                 return []
@@ -467,7 +465,6 @@ class DatabaseManager:
             # Fuzzy search on Chinese names
             matches = process.extract(keyword, chinese_names, scorer=fuzz.WRatio, limit=limit)
             
-            print(f"DEBUG search_by_keyword: Top 5 matches: {matches[:5]}")
             
             # Build results from matches
             for match_name, score, candidate_index in matches:
@@ -476,7 +473,8 @@ class DatabaseManager:
                     results.append({
                         'chinese_name': cn,
                         'english_name': en,
-                        'system': matched_system
+                        'system': matched_system,
+                        'score': round(float(score), 1)
                     })
         else:
             # Build English names cache (optionally filtered by system)
@@ -495,7 +493,6 @@ class DatabaseManager:
             candidates = [(row[0], row[1], row[2]) for row in cursor.fetchall()]
             english_names = [c[0] for c in candidates]
             
-            print(f"DEBUG search_by_keyword: Found {len(candidates)} candidates")
             
             if not english_names:
                 return []
@@ -512,9 +509,9 @@ class DatabaseManager:
                     results.append({
                         'english_name': en,
                         'chinese_name': cn,
-                        'system': sys
+                        'system': sys,
+                        'score': 100.0
                     })
-                print(f"DEBUG search_by_keyword: Returning {len(results)} exact result(s)")
                 return results
             
             # Fuzzy search on English names
@@ -532,7 +529,6 @@ class DatabaseManager:
                 # Use WRatio for better matching (handles partials, token sort, etc.)
                 matches = process.extract(keyword, english_names, scorer=fuzz.WRatio, limit=limit*2)
 
-            print(f"DEBUG search_by_keyword: Top matches (before filtering): {[(m[0], m[1]) for m in matches[:5]]}")
 
             noise_tokens = {
                 "usa", "us", "japan", "jpn", "europe", "eur", "world", "asia",
@@ -553,17 +549,14 @@ class DatabaseManager:
                 if score < 60: continue
 
                 if required_token and required_token not in self.normalize_name(match_name):
-                    print(f"DEBUG search_by_keyword: Skipping '{match_name}' (score {score}) - missing required token '{required_token}'")
                     continue
                 
                 # Apply stricter filtering for short queries
                 if is_short_query:
                     # For short queries, require word boundary match
                     if not keyword_regex.search(match_name):
-                        print(f"DEBUG search_by_keyword: Skipping '{match_name}' (score {score}) - failed word boundary check")
                         continue
                 
-                print(f"DEBUG search_by_keyword: Accepting match '{match_name}' with score {score}")
                 
                 # Find the corresponding record
                 for en, cn, sys in candidates:
@@ -571,7 +564,8 @@ class DatabaseManager:
                         results.append({
                             'english_name': en,
                             'chinese_name': cn,
-                            'system': sys
+                            'system': sys,
+                            'score': round(float(score), 1)
                         })
                         count += 1
                         break
@@ -579,7 +573,6 @@ class DatabaseManager:
                 if count >= limit:
                     break
             
-        print(f"DEBUG search_by_keyword: Returning {len(results)} results")
         return results
 
     def close(self):

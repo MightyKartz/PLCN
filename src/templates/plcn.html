@@ -2919,7 +2919,7 @@
                             <label for="inspector-thumb" data-i18n="封面源">封面源</label>
                             <div class="source-control">
                                 <input type="text" id="inspector-thumb" oninput="updateSelectedFromInspector('thumbnail_source', this.value)">
-                                <button class="mini-btn" id="search-selected-thumb-btn" type="button" onclick="openSearchModal(selectedChangeIndex)" title="搜索数据库" disabled>
+                                <button class="mini-btn" id="search-selected-thumb-btn" type="button" onclick="openSearchModal(selectedChangeIndex)" title="搜索游戏名（中/英）" disabled>
                                     <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path></svg>
                                 </button>
                                 <button class="mini-btn" type="button" onclick="refreshCoverPreview()" title="刷新封面预览">
@@ -3054,12 +3054,12 @@
     <div id="search-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>搜索数据库</h2>
+                <h2>搜索游戏名（中/英）</h2>
                 <span class="close-modal" onclick="closeSearchModal()">&times;</span>
             </div>
             <div class="modal-body">
                 <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; margin-bottom: 15px;">
-                    <input type="text" id="search-input" placeholder="输入游戏名（中/英）">
+                    <input type="text" id="search-input" placeholder="输入游戏名（中/英），例如 Ys III 或 伊苏3">
                     <button onclick="performSearch()" class="btn" type="button">搜索</button>
                 </div>
                 <div id="search-results" style="max-height: 360px; overflow: auto;"></div>
@@ -3088,7 +3088,7 @@
                 <h3 data-i18n="下载汇总">下载汇总</h3>
                 <div class="download-grid">
                     <div class="download-row"><strong>Boxarts（封面）</strong><span class="ok" id="sum-box-ok">0 成功</span><span class="fail" id="sum-box-fail">0 失败</span><span id="sum-box-skip">0 跳过</span></div>
-                    <div class="download-row"><strong>Snaps（截图）</strong><span class="ok" id="sum-snap-ok">0 成功</span><span class="fail" id="sum-snap-fail">0 失败</span><span id="sum-snap-skip">0 跳过</span></div>
+                    <div class="download-row"><strong>Snaps（游戏截图）</strong><span class="ok" id="sum-snap-ok">0 成功</span><span class="fail" id="sum-snap-fail">0 失败</span><span id="sum-snap-skip">0 跳过</span></div>
                     <div class="download-row"><strong>Titles（标题）</strong><span class="ok" id="sum-title-ok">0 成功</span><span class="fail" id="sum-title-fail">0 失败</span><span id="sum-title-skip">0 跳过</span></div>
                     <div class="download-row total"><strong>总计</strong><span class="ok" id="sum-total-ok">0 成功</span><span class="fail" id="sum-total-fail">0 失败</span><span id="sum-total-skip">0 跳过</span></div>
                 </div>
@@ -4678,7 +4678,7 @@
                 btnSearch.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path></svg>';
                 btnSearch.title = change.artwork_identity_status
                     ? workbenchText('搜索官方图库或导入图片', 'Search official artwork or import an image')
-                    : workbenchText('搜索数据库', 'Search database');
+                    : workbenchText('搜索游戏名（中/英）', 'Search name (Chinese/English)');
                 btnSearch.className = 'mini-btn';
                 btnSearch.type = 'button';
                 btnSearch.onclick = (event) => {
@@ -5053,7 +5053,7 @@
             const content = document.getElementById('download-details-content');
             const rows = [
                 ['Boxarts（封面）', 'sum-box-ok', 'sum-box-fail', 'sum-box-skip', 'progress-box-count', 'progress-box-percent'],
-                ['Snaps（截图）', 'sum-snap-ok', 'sum-snap-fail', 'sum-snap-skip', 'progress-snap-count', 'progress-snap-percent'],
+                ['Snaps（游戏截图）', 'sum-snap-ok', 'sum-snap-fail', 'sum-snap-skip', 'progress-snap-count', 'progress-snap-percent'],
                 ['Titles（标题）', 'sum-title-ok', 'sum-title-fail', 'sum-title-skip', 'progress-title-count', 'progress-title-percent'],
                 ['总计', 'sum-total-ok', 'sum-total-fail', 'sum-total-skip', null, null]
             ];
@@ -5606,7 +5606,7 @@
             document.getElementById('inspector-thumb').value = change.thumbnail_source || '';
             document.getElementById('inspector-confidence').textContent = `${info.label} · ${info.reason}`;
             if (change.artwork) {
-                const kinds = { Named_Boxarts: '封面', Named_Snaps: '截图', Named_Titles: '标题图' };
+                const kinds = { Named_Boxarts: '封面', Named_Snaps: '游戏截图', Named_Titles: '标题图' };
                 const statuses = { exists: '已存在', reusable: '可复用', invalid: '文件损坏', missing: '待下载', missing_source: '缺少来源', failed: '失败' };
                 document.getElementById('inspector-confidence').textContent += ' · ' + Object.entries(change.artwork)
                     .map(([kind, item]) => `${kinds[kind] || kind}：${statuses[item.status] || item.status}`).join(' / ');
@@ -5969,10 +5969,14 @@
         <p id="artwork-game"></p>
         <p id="artwork-scope" class="artwork-help"></p>
         <section id="artwork-shared" hidden><p id="artwork-shared-message"></p><ul id="artwork-shared-games"></ul><label id="artwork-new-label-title" for="artwork-new-label">当前游戏的独立名称</label><input id="artwork-new-label" type="text" oninput="artworkIndependentNameChanged()"><p id="artwork-shared-help" class="artwork-help"></p></section>
-        <label id="artwork-kind-label" for="artwork-kind"></label>
-        <select id="artwork-kind" onchange="discoverArtwork()"><option value="Named_Boxarts">封面</option><option value="Named_Snaps">游戏截图</option><option value="Named_Titles">标题图</option></select>
+        <fieldset id="artwork-kinds" class="artwork-kinds">
+            <legend id="artwork-kind-label"></legend>
+            <label class="artwork-kind" for="artwork-kind-Named_Boxarts"><input id="artwork-kind-Named_Boxarts" type="checkbox" value="Named_Boxarts" onchange="artworkKindChanged()"><span id="artwork-kind-name-Named_Boxarts"></span><small id="artwork-kind-status-Named_Boxarts" class="artwork-kind-status" role="status"></small></label>
+            <label class="artwork-kind" for="artwork-kind-Named_Snaps"><input id="artwork-kind-Named_Snaps" type="checkbox" value="Named_Snaps" onchange="artworkKindChanged()"><span id="artwork-kind-name-Named_Snaps"></span><small id="artwork-kind-status-Named_Snaps" class="artwork-kind-status" role="status"></small></label>
+            <label class="artwork-kind" for="artwork-kind-Named_Titles"><input id="artwork-kind-Named_Titles" type="checkbox" value="Named_Titles" onchange="artworkKindChanged()"><span id="artwork-kind-name-Named_Titles"></span><small id="artwork-kind-status-Named_Titles" class="artwork-kind-status" role="status"></small></label>
+        </fieldset>
         <p id="artwork-identity" class="artwork-help" role="status"></p>
-        <div id="artwork-names"></div>
+        <div id="artwork-names-wrap" hidden><p id="artwork-names-label" class="artwork-help"></p><div id="artwork-names"></div></div>
         <label id="artwork-source-label" for="artwork-source"></label>
         <div class="artwork-source-controls"><input id="artwork-source" type="text" oninput="artworkSearchChanged()" onkeydown="if(event.key === 'Enter') searchArtwork()"><button id="artwork-search" class="btn btn-muted" type="button" onclick="searchArtwork()"></button><button id="artwork-preview" class="btn btn-muted" type="button" onclick="previewArtwork()"></button></div>
         <div id="artwork-results"></div>
@@ -5981,9 +5985,22 @@
         <input id="artwork-upload" type="file" accept="image/png,image/jpeg,image/webp" onchange="importArtwork(this.files[0])">
         <p id="artwork-message" role="status" aria-live="polite"></p>
         <div id="artwork-comparison" hidden>
-            <div class="artwork-current"><h3 id="artwork-current-label"></h3><img id="artwork-current-image" alt=""><p id="artwork-current-empty"></p></div>
-            <div id="artwork-candidate" hidden><h3 id="artwork-candidate-label"></h3><img id="artwork-candidate-image" alt=""><p id="artwork-candidate-caption"></p></div>
-            <p id="artwork-target"></p>
+            <section class="artwork-compare" id="artwork-row-Named_Boxarts" hidden>
+                <div class="artwork-current"><h3 id="artwork-current-label-Named_Boxarts"></h3><img id="artwork-current-image-Named_Boxarts" alt=""><p id="artwork-current-empty-Named_Boxarts"></p></div>
+                <div class="artwork-candidate" id="artwork-candidate-Named_Boxarts"><h3 id="artwork-candidate-label-Named_Boxarts"></h3><img id="artwork-candidate-image-Named_Boxarts" alt=""><p id="artwork-candidate-caption-Named_Boxarts"></p></div>
+                <p id="artwork-target-Named_Boxarts"></p>
+            </section>
+            <section class="artwork-compare" id="artwork-row-Named_Snaps" hidden>
+                <div class="artwork-current"><h3 id="artwork-current-label-Named_Snaps"></h3><img id="artwork-current-image-Named_Snaps" alt=""><p id="artwork-current-empty-Named_Snaps"></p></div>
+                <div class="artwork-candidate" id="artwork-candidate-Named_Snaps"><h3 id="artwork-candidate-label-Named_Snaps"></h3><img id="artwork-candidate-image-Named_Snaps" alt=""><p id="artwork-candidate-caption-Named_Snaps"></p></div>
+                <p id="artwork-target-Named_Snaps"></p>
+            </section>
+            <section class="artwork-compare" id="artwork-row-Named_Titles" hidden>
+                <div class="artwork-current"><h3 id="artwork-current-label-Named_Titles"></h3><img id="artwork-current-image-Named_Titles" alt=""><p id="artwork-current-empty-Named_Titles"></p></div>
+                <div class="artwork-candidate" id="artwork-candidate-Named_Titles"><h3 id="artwork-candidate-label-Named_Titles"></h3><img id="artwork-candidate-image-Named_Titles" alt=""><p id="artwork-candidate-caption-Named_Titles"></p></div>
+                <p id="artwork-target-Named_Titles"></p>
+            </section>
+            <p id="artwork-skipped" class="artwork-help" role="status"></p>
         </div>
         <footer><button id="artwork-confirm" class="btn" type="button" onclick="confirmArtwork()" disabled></button></footer>
     </dialog>

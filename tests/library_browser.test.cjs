@@ -11,11 +11,12 @@ function harness() {
     const pending = [];
     const context = {AbortController, URLSearchParams, workbench: {operation: null},
         document: {getElementById: element},
+        workbenchText: (zh, en) => zh,
         getSystemAbbreviation: s => s, formatGameCount: n => `${n} games`,
         fetch: (url, options) => new Promise(resolve => pending.push({url, options, resolve})),
         renderWorkbench: () => context.syncGameLibrary({previewValid: false}, false)};
     vm.createContext(context);
-    vm.runInContext(source + '\nthis.store = gameLibrary; renderGameLibrary = () => {};', context);
+    vm.runInContext(source + '\nthis.store = gameLibrary; this.markers = ARTWORK_KIND_MARKERS; renderGameLibrary = () => {};', context);
     context.select = path => {
         element('playlist_path').value = path;
         element('system_name').value = 'GBA';
@@ -97,4 +98,40 @@ test('image filters distinguish missing files from damage and read errors', () =
         assert.equal(context.gameMatchesImageFilter({image_status:status}, 'problem'), true);
         assert.equal(context.gameMatchesImageFilter({image_status:status}, 'missing'), false);
     }
+});
+
+test('rows offer to fill every artwork type that is not already present', () => {
+    const {context}=harness();
+    assert.deepEqual([...context.missingArtworkKinds({})], []);
+    assert.deepEqual([...context.missingArtworkKinds({artwork_status: {Named_Boxarts: 'exists', Named_Snaps: 'exists', Named_Titles: 'exists'}})], []);
+    assert.deepEqual([...context.missingArtworkKinds({artwork_status: {Named_Boxarts: 'exists', Named_Snaps: 'missing', Named_Titles: 'invalid'}})], ['Named_Snaps', 'Named_Titles']);
+    assert.deepEqual([...context.missingArtworkKinds({artwork_status: {Named_Boxarts: 'unreadable', Named_Snaps: 'exists', Named_Titles: 'exists'}})], ['Named_Boxarts']);
+});
+
+test('a row counts as missing until all three artwork types are present', () => {
+    const {context}=harness();
+    const status = (box, snap, title) => ({Named_Boxarts: box, Named_Snaps: snap, Named_Titles: title});
+    assert.equal(context.gameMatchesImageFilter({image_status:'exists', artwork_status:status('exists','exists','exists')}, 'missing'), false);
+    assert.equal(context.gameMatchesImageFilter({image_status:'exists', artwork_status:status('exists','missing','exists')}, 'missing'), true);
+    assert.equal(context.gameMatchesImageFilter({image_status:'missing', artwork_status:status('missing','missing','missing')}, 'missing'), true);
+    // Damaged artwork is still a gap to fill, not a reason to hide the row.
+    assert.equal(context.gameMatchesImageFilter({image_status:'invalid', artwork_status:status('invalid','exists','exists')}, 'missing'), true);
+    for (const state of ['unconfigured', 'unreadable']) {
+        const item = {image_status:state, artwork_status:status('missing','missing','missing')};
+        assert.equal(context.gameMatchesImageFilter(item, 'missing'), false);
+        assert.equal(context.gameMatchesImageFilter(item, 'problem'), true);
+    }
+});
+
+test('artwork chips and row buttons share one vocabulary per image type', () => {
+    const {context}=harness();
+    assert.equal(context.artworkKindLabel('Named_Boxarts'), '封面');
+    assert.equal(context.artworkKindLabel('Named_Snaps'), '游戏截图');
+    assert.equal(context.artworkKindLabel('Named_Titles'), '标题图');
+    assert.equal(context.artworkKindState('exists'), '已有');
+    assert.equal(context.artworkKindState('invalid'), '损坏');
+    assert.equal(context.artworkKindState('missing'), '缺少');
+    assert.equal(context.markers.exists, '✓');
+    assert.equal(context.markers.invalid, '!');
+    assert.equal(context.markers.missing, '○');
 });

@@ -141,7 +141,7 @@ def test_corrupt_upload_and_invalid_kind_are_rejected(context):
 
 def test_online_source_search_and_preview_are_distinct(context, monkeypatch):
     urls = []
-    def get(url):
+    def get(url, **kwargs):
         urls.append(url)
         if url.endswith('/'):
             return b'<a href="Goodboy%20Galaxy%20(World).png">image</a><a href="../evil.png">bad</a>'
@@ -159,6 +159,35 @@ def test_online_source_search_and_preview_are_distinct(context, monkeypatch):
     art.apply(prepared['token'])
     assert remembered(context)['sources']['Named_Boxarts'] == result['names'][0]
     assert art.search({'system': 'GBA', 'query': 'not found'})['names'] == []
+
+
+def test_a_chinese_query_expands_through_the_name_catalog(monkeypatch):
+    monkeypatch.setattr(art, 'catalog_names', lambda *args: ['Romance of the Three Kingdoms III - Dragon of Destiny (USA)',
+        'Sangokushi III (Japan)', 'Romance of the Three Kingdoms II (USA)', 'Sangokushi II (Japan)'])
+    result = art.search({'system': 'Sega - Mega Drive - Genesis', 'kind': 'Named_Boxarts',
+                         'query': '三国志3', 'label': '三国志3'})
+    # The exact catalog hit (三国志3) is used; the weak 三国志2 match is not.
+    assert result['names'] == ['Romance of the Three Kingdoms III - Dragon of Destiny (USA)', 'Sangokushi III (Japan)']
+    assert [candidate['tier'] for candidate in result['candidates']] == ['catalog', 'catalog']
+    assert result['candidates'][0]['hint']['chinese_name'] == '三国志3'
+
+
+def test_a_weak_catalog_match_never_pulls_in_its_own_titles(monkeypatch):
+    monkeypatch.setattr(art, 'catalog_names', lambda *args: ['Story of Thor, The (Europe)',
+        'Phantasy Star III - Generations of Doom (USA)'])
+    result = art.search({'system': 'Sega - Mega Drive - Genesis', 'kind': 'Named_Boxarts',
+                         'query': '光之继承者2', 'label': '光之继承者2'})
+    assert result['names'] == ['Story of Thor, The (Europe)']
+
+
+def test_an_unmatched_chinese_query_offers_catalog_names_instead_of_nothing(monkeypatch):
+    monkeypatch.setattr(art, 'catalog_names', lambda *args: ['Some Other Game (USA)'])
+    result = art.search({'system': 'Sega - Mega Drive - Genesis', 'kind': 'Named_Boxarts',
+                         'query': '伊苏3', 'label': '伊苏3'})
+    assert result['total'] == 0 and result['names'] == []
+    offered = [suggestion['english_name'] for suggestion in result['suggestions']]
+    assert 'Ys III (USA)' in offered
+    assert all(suggestion['tier'] in {'exact', 'contains', 'fuzzy'} for suggestion in result['suggestions'])
 
 
 @pytest.mark.parametrize('broken_push', [False, True])
@@ -393,3 +422,70 @@ def test_windows_playlist_backup_stays_outside_playlist_folder(tmp_path, monkeyp
     monkeypatch.setattr(art.app_paths, 'user_data_dir', lambda: tmp_path)
     backup = art.backup_location(r'C:\RetroArch\playlists\SNES.lpl', 'test')
     assert Path(backup) == tmp_path / 'playlist-backups' / 'SNES.lpl.bak-test'
+
+
+def test_entry_context_reports_every_image_type(context):
+    directory = Path(context['thumbnails']) / 'GBA'
+    (directory / 'Named_Boxarts').mkdir(parents=True)
+    (directory / 'Named_Boxarts' / '游戏一.png').write_bytes(picture())
+    (directory / 'Named_Snaps').mkdir(parents=True)
+    (directory / 'Named_Snaps' / 'one.png').write_bytes(b'not an image')
+    assert art.entry_context(context)['artwork'] == {
+        'Named_Boxarts': {'status': 'exists', 'path': str(directory / 'Named_Boxarts' / '游戏一.png')},
+        'Named_Snaps': {'status': 'invalid', 'path': None},
+        'Named_Titles': {'status': 'missing', 'path': None},
+    }
+
+
+def test_multi_type_preview_stages_and_writes_every_selected_type(context, monkeypatch):
+    requested = []
+    def get(url, allow_missing=False):
+        requested.append(url)
+        kind = url.split('/')[-2]
+        return picture({'Named_Boxarts': 'red', 'Named_Snaps': 'green', 'Named_Titles': 'blue'}[kind])
+    monkeypatch.setattr(art, 'download', get)
+    kinds = ['Named_Boxarts', 'Named_Snaps', 'Named_Titles']
+    prepared = art.preview({**{key: value for key, value in context.items() if key != 'upload'},
+                            'kinds': kinds, 'source': 'Goodboy Galaxy (World)'})
+    assert [image['kind'] for image in prepared['images']] == kinds
+    assert prepared['skipped'] == []
+    assert [image['current_status'] for image in prepared['images']] == ['missing'] * 3
+    assert [image['target'] for image in prepared['images']] == [
+        str(Path(context['thumbnails']) / 'GBA' / kind / '游戏一.png') for kind in kinds]
+    from urllib.parse import parse_qs, urlparse
+    staged = [parse_qs(urlparse(image['image_url']).query)['path'][0] for image in prepared['images']]
+    assert len(set(staged)) == 3
+    for path in staged:
+        assert art.valid_png(Path(path).read_bytes())
+    for kind in kinds:
+        assert not (Path(context['thumbnails']) / 'GBA' / kind / '游戏一.png').exists()
+    result = art.apply(prepared['token'])
+    written = [Path(image['target']) for image in result['images']]
+    assert [image['kind'] for image in result['images']] == kinds
+    for path in written:
+        assert art.valid_png(path.read_bytes())
+    assert len({path.read_bytes() for path in written}) == 3
+    assert art.apply(prepared['token']) == result  # Retry cannot write twice.
+    from artwork_identity import remembered
+    assert remembered(context)['sources'] == {kind: 'Goodboy Galaxy (World)' for kind in kinds}
+
+
+def test_multi_type_preview_skips_a_type_that_the_gallery_does_not_have(context, monkeypatch):
+    def get(url, allow_missing=False):
+        if '/Named_Titles/' in url:
+            if allow_missing:
+                return None
+            raise ValueError('在线图库未收录此图片，请搜索其他名称或导入本地图片')
+        return picture()
+    monkeypatch.setattr(art, 'download', get)
+    request = {key: value for key, value in context.items() if key != 'upload'}
+    prepared = art.preview({**request, 'kinds': ['Named_Boxarts', 'Named_Snaps', 'Named_Titles'],
+                            'source': 'Goodboy Galaxy (World)'})
+    assert [image['kind'] for image in prepared['images']] == ['Named_Boxarts', 'Named_Snaps']
+    assert prepared['skipped'] == [{'kind': 'Named_Titles', 'label': '标题图', 'reason': '在线图库未收录此类型图片'}]
+    result = art.apply(prepared['token'])
+    assert [image['kind'] for image in result['images']] == ['Named_Boxarts', 'Named_Snaps']
+    assert not (Path(context['thumbnails']) / 'GBA' / 'Named_Titles' / '游戏一.png').exists()
+    # One type alone still explains the missing gallery entry instead of writing nothing quietly.
+    with pytest.raises(ValueError, match='未收录'):
+        art.preview({**request, 'kind': 'Named_Titles', 'source': 'Goodboy Galaxy (World)'})

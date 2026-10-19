@@ -157,4 +157,14 @@ def resolve(context, config_path=None, name_source=None):
         db.close()
     # A supplied English ROM title is a search term, not a confirmed identity.
     english = [n for n in candidates if len(n.strip()) >= 2 and re.search('[A-Za-z]', n) and not re.search('[\u3400-\u9fff]', n)]
-    return resolution(english, 'filename')
+    if english:
+        return resolution(english, 'filename')
+    # Nothing searchable: stay unresolved, but attach graded catalog names as
+    # choices. A suggestion is a search aid, never a claimed identity.
+    result = resolution([], 'filename')
+    from name_suggestions import suggest
+    hints = suggest(system, label or filename, config_path=config, name_source=name_source)
+    if hints:
+        result['suggestions'] = hints
+        result['names'] = [hint['english_name'] for hint in hints]
+    return result

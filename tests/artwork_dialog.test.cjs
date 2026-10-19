@@ -69,7 +69,7 @@ test('single-game preview never inherits or changes the bulk repair selection', 
     assert.equal(payload.label, 'Chosen');
     assert.equal(payload.changes, undefined);
     assert.equal(elements['artwork-confirm'].disabled, true);
-    elements['artwork-candidate-image'].onload();
+    elements['artwork-candidate-image-Named_Boxarts'].onload();
     assert.equal(elements['artwork-confirm'].disabled, false);
     assert.deepEqual(selectedRepairs, [{enabled:true}, {enabled:true}]);
     context.invalidateArtworkCandidate();
@@ -87,7 +87,7 @@ test('late candidates cannot populate a different game dialog', async () => {
     reply({token:'old',image_url:'/old'}); await pending;
     assert.equal(context.state().context.index, 5);
     assert.equal(context.state().candidate, null);
-    assert.equal(elements['artwork-candidate'].hidden, true);
+    assert.equal(elements['artwork-comparison'].hidden, true);
 });
 
 test('empty search and preview explain the missing input without a failed network request', async () => {
@@ -216,11 +216,11 @@ test('local import remains available during search and its candidate survives a 
     const pending=context.searchArtwork();
     assert.equal(elements['artwork-upload'].disabled,false);
     await context.importArtwork({name:'local.png',size:10});
-    elements['artwork-candidate-image'].onload();
+    elements['artwork-candidate-image-Named_Boxarts'].onload();
     finishSearch({total:0,names:[]}); await pending;
     assert.equal(context.state().candidate.token,'local');
     assert.equal(elements['artwork-comparison'].hidden,false);
-    assert.equal(elements['artwork-current-image'].src,'/old');
+    assert.equal(elements['artwork-current-image-Named_Boxarts'].src,'/old');
     assert.equal(elements['artwork-confirm'].disabled,false);
 });
 
@@ -239,7 +239,7 @@ test('shared artwork shows the affected ROMs and does not reuse the ambiguous la
     await context.previewArtwork();
     assert.equal(preview.new_label,'Four');
     assert.equal(preview.label,'Chosen');
-    elements['artwork-candidate-image'].onload();
+    elements['artwork-candidate-image-Named_Boxarts'].onload();
     assert.match(elements['artwork-message'].textContent,/rename this entry/);
     context.artworkIndependentNameChanged();
     assert.equal(elements['artwork-confirm'].disabled,true);
@@ -269,9 +269,9 @@ test('official results take priority, fallback candidates require explicit previ
     await new Promise(resolve=>setImmediate(resolve));
     assert.equal(calls[2][1].candidate_id,'external');
     assert.equal(calls[2][1].source,undefined);
-    assert.match(elements['artwork-candidate-caption'].textContent,/Wikipedia.*DOS.*1995 cover/);
+    assert.match(elements['artwork-candidate-caption-Named_Boxarts'].textContent,/Wikipedia.*DOS.*1995 cover/);
     assert.equal(elements['artwork-confirm'].disabled,true);
-    elements['artwork-candidate-image'].onload();
+    elements['artwork-candidate-image-Named_Boxarts'].onload();
     assert.equal(elements['artwork-confirm'].disabled,false);
     context.artworkSearchChanged();
     assert.equal(context.state().selectedExternal,null);
@@ -289,4 +289,138 @@ test('direct import entry prepares game context without querying either gallery'
     assert.deepEqual(calls,['/api/artwork/context','/api/artwork/resolve']);
     assert.equal(elements['artwork-upload'].focused,true);
     assert.equal(elements['artwork-confirm'].disabled,true);
+});
+
+test('missing types are checked by default and one preview fills them together', async () => {
+    let preview;
+    const {context,elements}=harness(async (url,body)=>{
+        if (url.endsWith('/context')) return {shared:[], artwork:{Named_Boxarts:{status:'exists'}, Named_Snaps:{status:'missing'}, Named_Titles:{status:'missing'}}};
+        if (url.endsWith('/resolve')) return {status:'resolved',reason:'database',query:'Game (USA)',names:['Game (USA)']};
+        if (url.endsWith('/preview')) {preview=body; return {token:'three',images:[
+            {kind:'Named_Snaps',label:'游戏截图',target:'/img/Named_Snaps/Game.png',image_url:'/snap',source:'Game (USA)',width:8,height:8,current_status:'missing'},
+            {kind:'Named_Titles',label:'标题图',target:'/img/Named_Titles/Game.png',image_url:'/title',source:'Game (USA)',width:8,height:8,current_status:'missing'}],
+            skipped:[{kind:'Named_Boxarts',label:'封面',reason:'在线图库未收录此类型图片'}]};}
+        return {total:1,names:['Game (USA)'],candidates:[{name:'Game (USA)'}]};
+    });
+    await context.discoverArtwork();
+    assert.equal(elements['artwork-kind-Named_Boxarts'].checked, false);
+    assert.equal(elements['artwork-kind-Named_Snaps'].checked, true);
+    assert.equal(elements['artwork-kind-Named_Titles'].checked, true);
+    assert.equal(elements['artwork-kind-status-Named_Boxarts'].textContent, 'Has image');
+    await context.previewArtwork();
+    assert.deepEqual([...preview.kinds], ['Named_Snaps','Named_Titles']);
+    assert.equal(elements['artwork-row-Named_Boxarts'].hidden, true);
+    assert.equal(elements['artwork-row-Named_Snaps'].hidden, false);
+    assert.equal(elements['artwork-row-Named_Titles'].hidden, false);
+    assert.match(elements['artwork-skipped'].textContent, /Not in the official library/);
+    assert.equal(elements['artwork-confirm'].disabled, true);
+    elements['artwork-candidate-image-Named_Snaps'].onload();
+    assert.equal(elements['artwork-confirm'].disabled, true);
+    elements['artwork-candidate-image-Named_Titles'].onload();
+    assert.equal(elements['artwork-confirm'].disabled, false);
+    assert.match(elements['artwork-message'].textContent, /Will write: Screenshot, Title screen/);
+});
+
+test('an already complete game keeps the box art selected and can add one type', async () => {
+    let preview;
+    const {context,elements}=harness(async (url,body)=>{
+        if (url.endsWith('/context')) return {shared:[], artwork:{Named_Boxarts:{status:'exists'}, Named_Snaps:{status:'exists'}, Named_Titles:{status:'exists'}}};
+        if (url.endsWith('/resolve')) return {status:'resolved',reason:'database',query:'Game',names:['Game']};
+        if (url.endsWith('/preview')) {preview=body; return {token:'one',image_url:'/one',source:'Game',width:8,height:8,current_status:'missing'};}
+        return {total:1,names:['Game'],candidates:[{name:'Game'}]};
+    });
+    await context.discoverArtwork();
+    assert.equal(elements['artwork-kind-Named_Boxarts'].checked, true);
+    assert.equal(elements['artwork-kind-Named_Snaps'].checked, false);
+    elements['artwork-kind-Named_Snaps'].checked = true;
+    elements['artwork-kind-Named_Boxarts'].checked = false;
+    context.artworkKindChanged();
+    await context.previewArtwork();
+    assert.deepEqual([...preview.kinds], ['Named_Snaps']);
+});
+
+test('changing the image types discards a candidate staged for the old set', async () => {
+    const {context,elements}=harness(async url=>url.endsWith('/preview')
+        ? {token:'staged',image_url:'/staged',source:'Game',width:8,height:8,current_status:'missing'}
+        : {total:1,names:['Game'],candidates:[{name:'Game'}]});
+    elements['artwork-source'].value='Game';
+    await context.previewArtwork();
+    elements['artwork-candidate-image-Named_Boxarts'].onload();
+    assert.equal(elements['artwork-confirm'].disabled, false);
+    context.artworkKindChanged();
+    assert.equal(context.state().candidate, null);
+    assert.equal(elements['artwork-confirm'].disabled, true);
+    assert.match(elements['artwork-message'].textContent, /Image types changed/);
+});
+
+test('clearing every image type blocks the preview instead of a partial write', async () => {
+    const {context,elements}=harness(async()=>({total:0,names:[]}));
+    elements['artwork-source'].value='Game';
+    for (const kind of ['Named_Boxarts','Named_Snaps','Named_Titles']) elements['artwork-kind-' + kind].checked = false;
+    context.artworkKindChanged();
+    assert.match(elements['artwork-message'].textContent, /at least one image type/);
+    await context.previewArtwork();
+    assert.equal(context.state().candidate, null);
+    assert.equal(elements['artwork-confirm'].disabled, true);
+});
+
+test('a confirmed update reports every written type on the game row', async () => {
+    const {context,item,elements}=harness(async url=>url.endsWith('/apply') ? {job_id:'one'}
+        : {jobs:[{id:'one',status:'completed',result:{backup:'Game.png.bak',images:[
+            {kind:'Named_Boxarts',target:'/img/Named_Boxarts/Game.png',image_url:'/box'},
+            {kind:'Named_Snaps',target:'/img/Named_Snaps/Game.png',image_url:'/snap'}]}}]});
+    context.state().candidate={token:'token'};
+    await context.confirmArtwork();
+    assert.equal(item.image_url,'/box');
+    assert.equal(item.image_path,'/img/Named_Boxarts/Game.png');
+    assert.match(item.artwork_result,/Updated Box art, Screenshot artwork/);
+    assert.equal(elements['artwork-dialog'].open,false);
+});
+
+test('an unidentified Chinese title offers graded catalog names instead of a dead end', async () => {
+    const calls = [];
+    const {context, elements, item} = harness(async (url, body) => {
+        calls.push([url, body]);
+        if (url.endsWith('/context')) return {shared: []};
+        if (url.endsWith('/resolve')) return {status: 'unresolved', reason: 'filename', query: '', names: ['Ys III (USA)'],
+            suggestions: [{english_name: 'Ys - Wanderers from Ys (Japan)', chinese_name: '伊苏国3', tier: 'fuzzy', score: 86},
+                {english_name: 'Ys III (USA)', chinese_name: '伊苏国3', tier: 'fuzzy', score: 86}]};
+        return {total: 1, names: ['Ys III (USA)'], candidates: [{name: 'Ys III (USA)', image_url: '/ys', tier: 'exact', score: 100}]};
+    });
+    context.closeArtworkDialog();
+    context.openArtworkDialog({...item, label: '伊苏3', rom_path: '/roms/伊苏3.md'}, false);
+    await context.discoverArtwork();
+    // A suggestion is never a search: the gallery is only queried after the user chooses.
+    assert.deepEqual(calls.map(call => call[0]), ['/api/artwork/context', '/api/artwork/resolve']);
+    assert.equal(elements['artwork-source'].value, '');
+    assert.equal(elements['artwork-names-wrap'].hidden, false);
+    assert.match(elements['artwork-names-label'].textContent, /candidates/i);
+    assert.match(elements['artwork-identity'].textContent, /name catalog/i);
+    elements.created.onclick();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(calls[2][0], '/api/artwork/search');
+    assert.equal(calls[2][1].query, 'Ys III (USA)');
+    assert.equal(calls[2][1].automatic, false);
+    assert.equal(calls[2][1].label, '伊苏3');
+    assert.equal(elements['artwork-source'].value, 'Ys III (USA)');
+    assert.equal(elements['artwork-names-wrap'].hidden, true);
+});
+
+test('catalog candidates show the Chinese name, grade and match score', () => {
+    const {context} = harness(async () => ({names: [], total: 0, candidates: []}));
+    assert.equal(context.artworkSuggestionDetail({chinese_name: '伊苏国3', tier: 'fuzzy', score: 86}),
+        'Chinese name: 伊苏国3 · Close name, check the edition · Match 86%');
+    assert.equal(context.artworkSuggestionDetail({tier: 'exact'}), 'Exact title match');
+    assert.equal(context.artworkTierLabel('words'), 'Contains every keyword');
+    assert.equal(context.artworkKindName('Named_Snaps'), 'Screenshot');
+});
+
+test('an empty gallery offers catalog names before giving up on a Chinese search term', async () => {
+    const {context, elements} = harness(async () => ({total: 0, names: [], candidates: [],
+        suggestions: [{english_name: 'Ys III (USA)', chinese_name: '伊苏国3', tier: 'fuzzy', score: 86}]}));
+    elements['artwork-source'].value = '伊苏3';
+    await context.searchArtwork(false);
+    assert.match(elements['artwork-message'].textContent, /name catalog/i);
+    assert.equal(elements['artwork-names-wrap'].hidden, false);
+    assert.match(elements['artwork-names-label'].textContent, /candidates/i);
 });
