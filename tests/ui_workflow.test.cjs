@@ -173,18 +173,18 @@ test('late folder responses cannot replace a newer directory or enable stale sel
 test('Escape defers to the browser while a modal is open instead of closing its parent', () => {
     let handler, active=true, closed=0;
     const context={document:{addEventListener:(_type,callback)=>{handler=callback;},querySelector:()=>active?{}:null},
-        closeModal:()=>closed++,closeSearchModal:()=>closed++,closeProjectDocs:()=>closed++,toggleDetailsDrawer:()=>closed++,closeInspector:()=>closed++};
+        closeModal:()=>closed++,closeProjectDocs:()=>closed++,toggleDetailsDrawer:()=>closed++,closeInspector:()=>closed++};
     vm.createContext(context);
     const start=page.indexOf("        document.addEventListener('keydown',");
     vm.runInContext(page.slice(start,page.indexOf('    </script>',start)),context);
     handler({key:'Escape'});
     assert.equal(closed,0);
     active=false;handler({key:'Escape'});
-    assert.equal(closed,4);
+    assert.equal(closed,3);
 });
 
 test('reloading config preserves the current image directories when playlist inputs reset', () => {
-    const values={single_playlist_path:'one.lpl',single_system_name:'GBA',single_thumbnails_dir:'single-images',batch_thumbnails_dir:'batch-images',rom_name_cn_path:'data/rom-name-cn'};
+    const values={playlist_path:'one.lpl',system_name:'GBA',thumbnails_dir:'single-images',batch_thumbnails_dir:'batch-images',rom_name_cn_path:'data/rom-name-cn'};
     const elements={}; const element=id=>elements[id]||={value:'',classList:{add:()=>{},remove:()=>{},toggle:()=>{}},style:{},textContent:'',setAttribute:()=>{},disabled:false,hidden:false};
     const context={fetch:async()=>({json:async()=>values}),document:{getElementById:element},loadStats:()=>{},renderWorkbench:()=>{},showStatus:()=>{}, uiText:x=>x};
     vm.createContext(context);

@@ -49,11 +49,34 @@ def get_base_path():
 
 TEMPLATE_DIR = os.path.join(get_base_path(), "src", "templates")
 
+# Retired single-game workbench keys; migrated to the plain library keys on load.
+LEGACY_CONFIG_KEYS = {
+    'single_playlist_path': 'playlist_path',
+    'single_system_name': 'system_name',
+    'single_thumbnails_dir': 'thumbnails_dir',
+    'single_rom_name_cn_path': 'rom_name_cn_path',
+}
+
+
 def load_server_config():
-    if os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return {}
+    if not os.path.exists(CONFIG_FILE):
+        return {}
+    with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    if not isinstance(data, dict):
+        return {}
+    legacy = {old: new for old, new in LEGACY_CONFIG_KEYS.items() if old in data}
+    if not legacy:
+        return data
+    for old, new in legacy.items():
+        value = data.pop(old)
+        if value and not data.get(new):
+            data[new] = value
+    try:
+        atomic_write_json(CONFIG_FILE, data)
+    except (OSError, RuntimeError):
+        pass
+    return data
 
 def configured_overrides_path(config=None):
     config = config if config is not None else load_server_config()
@@ -294,10 +317,6 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                 desktop_api.reply(self, result)
             except (OSError, ValueError, RuntimeError) as error:
                 desktop_api.reply(self, {'error': str(error)}, 400)
-        elif path == "/api/search":
-            keyword = query_params.get('query', [''])[0]
-            system = query_params.get('system', [None])[0]
-            self.search_db(keyword, system)
         elif path == "/api/progress":
             job_id = query_params.get('job_id', [''])[0]
             self.stream_progress(job_id)
@@ -306,17 +325,6 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
             self.serve_thumbnail_preview(target_path)
         elif path == "/api/overrides/list":
             self.list_overrides()
-        elif path == "/api/execute":
-            # Legacy execute endpoint (SSE)
-            self.send_response(200)
-            self.send_header("Content-type", "text/event-stream")
-            self.send_header("Cache-Control", "no-cache")
-            self.send_header("Connection", "keep-alive")
-            self.end_headers()
-
-            # For compatibility, we just send a message
-            self.wfile.write(b"data: " + json.dumps({"message": "Please use the new UI flow."}).encode() + b"\n\n")
-            self.wfile.write(b"data: " + json.dumps({"done": True}).encode() + b"\n\n")
         else:
             # Default behavior for other files (e.g., static assets)
             self.send_error(404)
@@ -363,13 +371,10 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
 
     def get_stats(self):
         try:
-            config = {}
-            if os.path.exists(CONFIG_FILE):
-                with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
-                    config = json.load(f)
+            config = load_server_config()
 
             base_path = os.getcwd()
-            rom_db_path = config.get("rom_name_cn_path") or config.get("single_rom_name_cn_path") or str(app_paths.default_source())
+            rom_db_path = config.get("rom_name_cn_path") or str(app_paths.default_source())
             if getattr(sys, 'frozen', False) and not os.path.isabs(rom_db_path):
                 rom_db_path = os.path.join(sys._MEIPASS, rom_db_path)
 
@@ -484,10 +489,7 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
     def list_systems(self):
         # List available systems from rom-name-cn directory
         try:
-            config = {}
-            if os.path.exists(CONFIG_FILE):
-                with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
-                    config = json.load(f)
+            config = load_server_config()
             
             rom_db_path = config.get("rom_name_cn_path", str(app_paths.default_source()))
             if getattr(sys, 'frozen', False) and not os.path.isabs(rom_db_path):
@@ -568,61 +570,6 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
             self.send_response(500)
             self.end_headers()
             self.wfile.write(json.dumps({"error": str(e)}).encode())
-
-    def search_db(self, keyword, system=None):
-        try:
-            # Load config to get rom_name_cn_path
-            config = {}
-            if os.path.exists(CONFIG_FILE):
-                with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
-                    config = json.load(f)
-            
-            rom_name_cn_path = config.get("rom_name_cn_path", str(app_paths.default_source()))
-            print(f"DEBUG search_db: Original rom_name_cn_path = {rom_name_cn_path}")
-            print(f"DEBUG search_db: sys.frozen = {getattr(sys, 'frozen', False)}")
-            print(f"DEBUG search_db: sys._MEIPASS = {getattr(sys, '_MEIPASS', 'Not set')}")
-            
-            if getattr(sys, 'frozen', False) and not os.path.isabs(rom_name_cn_path):
-                rom_name_cn_path = os.path.join(sys._MEIPASS, rom_name_cn_path)
-                print(f"DEBUG search_db: Updated rom_name_cn_path = {rom_name_cn_path}")
-            
-            print(f"DEBUG search_db: Final rom_name_cn_path = {rom_name_cn_path}")
-            print(f"DEBUG search_db: Path exists = {os.path.exists(rom_name_cn_path)}")
-            if os.path.exists(rom_name_cn_path):
-                csv_files = glob.glob(os.path.join(rom_name_cn_path, "*.csv"))
-                print(f"DEBUG search_db: Found {len(csv_files)} CSV files")
-
-            if not system:
-                self.send_error(400, 'System parameter required')
-                return
-            from data_pack import open_database
-            from libretro_db import LibretroDB
-            db = open_database(rom_name_cn_path)
-            try:
-                # Local search remains available even when no DAT is cached.
-                results = db.search_by_keyword(keyword, system=system, limit=30)
-                dat = LibretroDB(str(app_paths.dat_storage()))
-                if dat.load_system_dat(system):
-                    names = dat.search(keyword, limit=30)
-                    exact = dat.get_standard_name(keyword)
-                    if exact:
-                        names = [exact] + [name for name in names if name != exact]
-                    known = {row['english_name'] for row in results}
-                    for name in names:
-                        if name not in known:
-                            results.append({'english_name': name, 'chinese_name': db.search_by_english(name, system) or '', 'system': system})
-                            known.add(name)
-            finally:
-                db.close()
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps({'results': results}, ensure_ascii=False).encode('utf-8'))
-        except Exception as error:
-            self.send_response(500)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps({'error': str(error)}).encode('utf-8'))
 
     def stream_progress(self, job_id):
         self.send_response(200)
@@ -778,10 +725,7 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                 system_name = data.get('system_name')
                 thumbnails_dir = data.get('thumbnails_dir')
                 
-                config = {}
-                if os.path.exists(CONFIG_FILE):
-                    with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
-                        config = json.load(f)
+                config = load_server_config()
                 rom_name_cn_path = config.get("rom_name_cn_path", str(app_paths.default_source()))
                 manual_overrides_path = configured_overrides_path(config)
                 if getattr(sys, 'frozen', False) and not os.path.isabs(rom_name_cn_path):
@@ -1034,6 +978,8 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode())
             return
+
+        self.send_error(404, 'Unknown endpoint')
 
     def serve_template(self):
         try:

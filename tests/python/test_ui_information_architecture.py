@@ -155,13 +155,14 @@ def test_primary_labels_are_clear():
     assert "已跳过下载" in html
     assert "change.thumbnail_source ? '将下载'" not in html
     assert "img.src = buildThumbnailUrl(system, change.thumbnail_source)" not in html
-    assert "getDefaultSearchQuery" in html
-    assert "getFileStem" in html
-    assert "normalizeSearchQuery" in html
-    assert "if (defaultQuery) performSearch()" in html
+    assert "getDefaultSearchQuery" not in html
+    assert "getFileStem" not in html
+    assert "normalizeSearchQuery" not in html
+    assert "performSearch" not in html
     assert 'id="search-selected-thumb-btn"' in html
+    assert "openArtworkForSelected" in html
     assert "grid-template-columns: minmax(0, 1fr) 34px 34px" in html
-    assert "Select a game before searching." in html
+    assert "Select a game before searching." not in html
 
 
 def test_inspector_and_details_are_on_demand():
@@ -199,15 +200,14 @@ def test_inspector_and_details_are_on_demand():
     assert "grid-template-columns: minmax(260px, 286px) minmax(0, 1fr) minmax(300px, 365px)" not in html
 
 
-def test_search_results_are_clickable_rows():
+def test_legacy_name_search_workbench_is_removed():
     html = read_template()
 
-    assert "renderSearchResults" in html
-    assert "search-result-row" in html
-    assert "search-results-table" in html
-    assert "row.addEventListener('click'" in html
-    assert "row.addEventListener('keydown'" in html
-    assert "onclick=\"selectSearchResult" not in html
+    assert 'id="search-modal"' not in html
+    assert "openSearchModal" not in html
+    assert "search-results-table" not in html
+    assert "openArtworkForSelected" in html
+    assert "openArtworkDialog({index: change.index" in html
 
 
 def test_dark_theme_active_states_are_restrained():

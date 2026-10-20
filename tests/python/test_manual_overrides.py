@@ -89,17 +89,43 @@ def test_server_config_merge_preserves_manual_overrides_path(tmp_path, monkeypat
         json.dumps(
             {
                 "manual_overrides_path": "/custom/manual-overrides.json",
-                "single_system_name": "Sony - PlayStation",
+                "system_name": "Sony - PlayStation",
             }
         ),
         encoding="utf-8",
     )
     monkeypatch.setattr(server, "CONFIG_FILE", str(config_path))
 
-    merged = server.merge_server_config({"single_system_name": "Nintendo - Game Boy Advance"})
+    merged = server.merge_server_config({"system_name": "Nintendo - Game Boy Advance"})
 
     assert merged["manual_overrides_path"] == "/custom/manual-overrides.json"
-    assert merged["single_system_name"] == "Nintendo - Game Boy Advance"
+    assert merged["system_name"] == "Nintendo - Game Boy Advance"
+
+
+def test_legacy_single_game_keys_migrate_to_library_keys(tmp_path, monkeypatch):
+    config_path = tmp_path / "config.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "single_playlist_path": "/roms/one.lpl",
+                "single_system_name": "Sony - PlayStation",
+                "single_thumbnails_dir": "/roms/images",
+                "single_rom_name_cn_path": "/data/cn",
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(server, "CONFIG_FILE", str(config_path))
+
+    config = server.load_server_config()
+
+    assert config["playlist_path"] == "/roms/one.lpl"
+    assert config["system_name"] == "Sony - PlayStation"
+    assert config["thumbnails_dir"] == "/roms/images"
+    assert config["rom_name_cn_path"] == "/data/cn"
+    assert not [key for key in config if key.startswith("single_")]
+    written = json.loads(config_path.read_text(encoding="utf-8"))
+    assert not [key for key in written if key.startswith("single_")]
 
 
 def test_upsert_override_deduplicates_by_system_crc_then_filename():

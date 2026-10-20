@@ -74,7 +74,7 @@ def initialize(legacy=None):
                         candidate = old / value
                         data[key] = str(candidate.resolve())
             # Bundled data paths must not keep pointing into a onefile extraction.
-            for key in ('rom_name_cn_path', 'single_rom_name_cn_path', 'batch_rom_name_cn_path'):
+            for key in ('rom_name_cn_path', 'batch_rom_name_cn_path'):
                 value = data.get(key)
                 if value and (not Path(value).exists() or Path(value) == old / 'data' / 'rom-name-cn'):
                     data.pop(key)

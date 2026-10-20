@@ -1477,53 +1477,6 @@
             border-bottom-color: #8eb8ff;
         }
 
-        .search-results-table {
-            width: 100%;
-            min-width: 0;
-            border-collapse: collapse;
-            table-layout: fixed;
-            font-size: var(--fs-sm);
-        }
-
-        .search-results-table th,
-        .search-results-table td {
-            padding: 10px 12px;
-            border-bottom: 1px solid var(--border);
-            text-align: left;
-            vertical-align: middle;
-        }
-
-        .search-results-table th {
-            color: var(--muted);
-            font-size: var(--fs-xs);
-            font-weight: 900;
-        }
-
-        .search-result-row {
-            cursor: pointer;
-        }
-
-        .search-result-row:hover,
-        .search-result-row:focus {
-            background: var(--primary-soft);
-            outline: none;
-        }
-
-        .search-result-title {
-            font-weight: 800;
-            overflow-wrap: anywhere;
-        }
-
-        .search-result-muted {
-            color: var(--muted);
-            overflow-wrap: anywhere;
-        }
-
-        .search-action-cell {
-            width: 92px;
-            text-align: right;
-        }
-
         body[data-theme="dark"] .preview-table tr {
             background: var(--surface);
         }
@@ -2910,7 +2863,7 @@
                             <label for="inspector-thumb" data-i18n="封面源">封面源</label>
                             <div class="source-control">
                                 <input type="text" id="inspector-thumb" oninput="updateSelectedFromInspector('thumbnail_source', this.value)">
-                                <button class="mini-btn" id="search-selected-thumb-btn" type="button" onclick="openSearchModal(selectedChangeIndex)" title="搜索游戏名（中/英）" disabled>
+                                <button class="mini-btn" id="search-selected-thumb-btn" type="button" onclick="openArtworkForSelected()" title="搜索封面或导入图片" disabled>
                                     <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path></svg>
                                 </button>
                                 <button class="mini-btn" type="button" onclick="refreshCoverPreview()" title="刷新封面预览">
@@ -3038,22 +2991,6 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-muted" onclick="closeProjectDocs()" type="button">关闭</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="search-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>搜索游戏名（中/英）</h2>
-                <span class="close-modal" onclick="closeSearchModal()">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; margin-bottom: 15px;">
-                    <input type="text" id="search-input" placeholder="输入游戏名（中/英），例如 Ys III 或 伊苏3">
-                    <button onclick="performSearch()" class="btn" type="button">搜索</button>
-                </div>
-                <div id="search-results" style="max-height: 360px; overflow: auto;"></div>
             </div>
         </div>
     </div>
@@ -3332,10 +3269,8 @@
             '搜索游戏名 / rom 名称': 'Search game / ROM name',
             '选择游戏列表后开始预览': 'Choose a game list to preview',
             'PLCN 会先展示写入名称、封面源和匹配状态，低置信结果可在右侧手动校对。': 'PLCN shows the name to write, cover source, and match status. Low-confidence results can be reviewed on the right.',
-            '当前名称': 'Current Name',
             '游戏名称': 'Game Name',
             '修复状态': 'Status',
-            '写入名称': 'Write Name',
             '封面源英文名': 'Cover Source Name',
             '封面状态': 'Cover',
             '修复预览': 'Repair Preview',
@@ -3441,10 +3376,10 @@
                 const config = await response.json();
 
                 document.getElementById('retroarch_root').value = config.retroarch_root || '';
-                document.getElementById('playlist_path').value = config.single_playlist_path || '';
-                document.getElementById('system_name').value = config.single_system_name || '';
-                document.getElementById('thumbnails_dir').value = config.single_thumbnails_dir || '';
-                document.getElementById('rom_name_cn_path').value = config.rom_name_cn_path || config.single_rom_name_cn_path || 'data/rom-name-cn';
+                document.getElementById('playlist_path').value = config.playlist_path || '';
+                document.getElementById('system_name').value = config.system_name || '';
+                document.getElementById('thumbnails_dir').value = config.thumbnails_dir || '';
+                document.getElementById('rom_name_cn_path').value = config.rom_name_cn_path || 'data/rom-name-cn';
 
                 document.getElementById('batch_dir').value = config.batch_dir || '';
                 document.getElementById('batch_thumbnails_dir').value = config.batch_thumbnails_dir || '';
@@ -3454,8 +3389,8 @@
                 // A remembered path is offered explicitly; do not scan a disconnected device on launch.
                 document.getElementById('playlist_path').value = '';
                 document.getElementById('batch_dir').value = '';
-                if (config.single_thumbnails_dir && !document.getElementById('thumbnails_dir').value)
-                    document.getElementById('thumbnails_dir').value = config.single_thumbnails_dir;
+                if (config.thumbnails_dir && !document.getElementById('thumbnails_dir').value)
+                    document.getElementById('thumbnails_dir').value = config.thumbnails_dir;
                 if (config.batch_thumbnails_dir && !document.getElementById('batch_thumbnails_dir').value)
                     document.getElementById('batch_thumbnails_dir').value = config.batch_thumbnails_dir;
                 renderWorkbench();
@@ -3510,10 +3445,6 @@
             if (mode === 'single') {
                 config = {
                     retroarch_root: document.getElementById('retroarch_root').value,
-                    single_playlist_path: document.getElementById('playlist_path').value,
-                    single_system_name: document.getElementById('system_name').value,
-                    single_thumbnails_dir: document.getElementById('thumbnails_dir').value,
-                    single_rom_name_cn_path: document.getElementById('rom_name_cn_path').value,
                     playlist_path: document.getElementById('playlist_path').value,
                     system_name: document.getElementById('system_name').value,
                     thumbnails_dir: document.getElementById('thumbnails_dir').value,
@@ -4612,7 +4543,7 @@
                 const inputNew = document.createElement('input');
                 inputNew.type = 'text';
                 inputNew.className = 'new-label-input';
-                inputNew.setAttribute('aria-label', uiText('写入名称') + ': ' + originalLabel);
+                inputNew.setAttribute('aria-label', uiText('游戏名称') + ': ' + originalLabel);
                 inputNew.value = change.new_label || '';
                 inputNew.title = change.new_label || '';
                 const originalPath = document.createElement('div');
@@ -4667,9 +4598,7 @@
 
                 const btnSearch = document.createElement('button');
                 btnSearch.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path></svg>';
-                btnSearch.title = change.artwork_identity_status
-                    ? workbenchText('搜索官方图库或导入图片', 'Search official artwork or import an image')
-                    : workbenchText('搜索游戏名（中/英）', 'Search name (Chinese/English)');
+                btnSearch.title = workbenchText('搜索封面或导入图片', 'Search artwork or import an image');
                 btnSearch.className = 'mini-btn';
                 btnSearch.type = 'button';
                 if (change.artwork_gallery_status === 'not_found') {
@@ -4678,9 +4607,7 @@
                 }
                 btnSearch.onclick = (event) => {
                     event.stopPropagation();
-                    if (change.artwork_identity_status) {
-                        openArtworkDialog({index: change.index, label: getCurrentItemLabel(change), rom_path: change.path});
-                    } else openSearchModal(index);
+                    openArtworkDialog({index: change.index, label: getCurrentItemLabel(change), rom_path: change.path});
                 };
 
                 thumbWrap.appendChild(inputThumb);
@@ -4999,56 +4926,6 @@
             return `${summary.writeNames ? '将写回游戏列表' : '仅补全图片，保留当前名称'}：${summary.selected} 项已选，${summary.autoRepair} 可自动修复，${summary.ready} 无需修复，${summary.completed} 已完成，${summary.review} 待补充信息，${summary.duplicate} 重复项，${summary.skipped} 项跳过。${downloadText}。`;
         }
 
-        function openSearchModal(rowIndex) {
-            if (rowIndex < 0 || !currentChanges[rowIndex]) {
-                showStatus(currentUILanguage === 'en' ? 'Select a game before searching.' : '请先选择一个游戏再搜索', 'error');
-                return;
-            }
-            currentSearchRowIndex = rowIndex;
-            const change = currentChanges[rowIndex] || {};
-            const defaultQuery = getDefaultSearchQuery(change);
-            const input = document.getElementById('search-input');
-            const results = document.getElementById('search-results');
-            document.getElementById('search-modal').style.display = 'block';
-            input.value = defaultQuery;
-            results.innerHTML = defaultQuery
-                ? `<p>${escapeHtml(currentUILanguage === 'en' ? 'Searching' : '正在搜索')}：${escapeHtml(defaultQuery)}</p>`
-                : `<p>${escapeHtml(currentUILanguage === 'en' ? 'No English name available for this row.' : '当前行没有可用英文名。')}</p>`;
-            input.focus();
-            input.select();
-            if (defaultQuery) performSearch();
-        }
-
-        function getDefaultSearchQuery(change) {
-            const candidates = [
-                change.thumbnail_source,
-                change.artwork_query,
-                change.original_db_name,
-                change.original_item_label,
-                change.original_label,
-                getFileStem(change.path)
-            ];
-            const value = candidates.find(candidate => String(candidate || '').trim());
-            return normalizeSearchQuery(value || '');
-        }
-
-        function getFileStem(path) {
-            if (!path) return '';
-            const clean = String(path).split('#')[0].split('?')[0];
-            const file = clean.split(/[\\/]/).pop() || clean;
-            return file.replace(/\.[^.]+$/, '');
-        }
-
-        function normalizeSearchQuery(value) {
-            return String(value || '')
-                .replace(/\s+/g, ' ')
-                .trim();
-        }
-
-        function closeSearchModal() {
-            document.getElementById('search-modal').style.display = 'none';
-        }
-
         function showDownloadDetails(keepDrawerState = true) {
             const content = document.getElementById('download-details-content');
             const rows = [
@@ -5096,131 +4973,6 @@
             content.innerHTML = summaryHtml + detailHtml;
 
             if (keepDrawerState) toggleDetailsDrawer(true);
-        }
-
-        let currentSearchRowIndex = -1;
-
-        async function performSearch() {
-            const query = normalizeSearchQuery(document.getElementById('search-input').value);
-            if (!query) return;
-
-            const system = currentChanges[currentSearchRowIndex]?.system || document.getElementById('system_name').value;
-            const resultsDiv = document.getElementById('search-results');
-            resultsDiv.innerHTML = '<p>搜索中...</p>';
-
-            try {
-                let url = `/api/search?query=${encodeURIComponent(query)}`;
-                if (system) url += `&system=${encodeURIComponent(system)}`;
-
-                const response = await fetch(url);
-                const data = await response.json();
-
-                if (data.results && data.results.length > 0) {
-                    renderSearchResults(data.results, resultsDiv);
-                } else {
-                    resultsDiv.innerHTML = '<p>未找到结果。</p>';
-                }
-            } catch (error) {
-                resultsDiv.innerHTML = `<p style="color: red;">搜索出错: ${escapeHtml(error.message)}</p>`;
-            }
-        }
-
-        function renderSearchResults(results, container) {
-            container.innerHTML = '';
-
-            const table = document.createElement('table');
-            table.className = 'search-results-table';
-
-            const thead = document.createElement('thead');
-            const headerRow = document.createElement('tr');
-            ['英文名', '中文名', '系统', '操作'].forEach(label => {
-                const th = document.createElement('th');
-                th.textContent = label;
-                if (label === '操作') th.className = 'search-action-cell';
-                headerRow.appendChild(th);
-            });
-            thead.appendChild(headerRow);
-
-            const tbody = document.createElement('tbody');
-            results.forEach(item => {
-                const englishName = item.english_name || '';
-                const chineseName = item.chinese_name || '';
-                const row = document.createElement('tr');
-                row.className = 'search-result-row';
-                row.tabIndex = 0;
-                row.title = currentUILanguage === 'en' ? 'Click to select this result' : '点击选择此结果';
-
-                const englishCell = document.createElement('td');
-                englishCell.className = 'search-result-title';
-                englishCell.textContent = englishName;
-                row.appendChild(englishCell);
-
-                const chineseCell = document.createElement('td');
-                chineseCell.className = 'search-result-muted';
-                chineseCell.textContent = chineseName || (currentUILanguage === 'en' ? 'No Chinese name' : '无中文名');
-                row.appendChild(chineseCell);
-
-                const systemCell = document.createElement('td');
-                systemCell.className = 'search-result-muted';
-                systemCell.textContent = item.system || '-';
-                row.appendChild(systemCell);
-
-                const actionCell = document.createElement('td');
-                actionCell.className = 'search-action-cell';
-                const button = document.createElement('button');
-                button.className = 'btn btn-ghost';
-                button.type = 'button';
-                button.textContent = currentUILanguage === 'en' ? 'Select' : '选择';
-                button.addEventListener('click', event => {
-                    event.stopPropagation();
-                    selectSearchResult(englishName, chineseName);
-                });
-                actionCell.appendChild(button);
-                row.appendChild(actionCell);
-
-                row.addEventListener('click', () => selectSearchResult(englishName, chineseName));
-                row.addEventListener('keydown', event => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        selectSearchResult(englishName, chineseName);
-                    }
-                });
-
-                tbody.appendChild(row);
-            });
-
-            table.appendChild(thead);
-            table.appendChild(tbody);
-            container.appendChild(table);
-        }
-
-        function selectSearchResult(englishName, chineseName) {
-            if (currentSearchRowIndex !== -1) {
-                const row = document.querySelector(`#preview-table-body tr[data-index="${currentSearchRowIndex}"]`);
-                let finalName = chineseName;
-
-                if (!finalName) {
-                    const currentVal = currentChanges[currentSearchRowIndex]?.new_label || '';
-                    finalName = currentVal && /[\u4e00-\u9fa5]/.test(currentVal) ? currentVal : englishName;
-                }
-
-                currentChanges[currentSearchRowIndex].new_label = finalName;
-                currentChanges[currentSearchRowIndex].thumbnail_source = englishName;
-                markChangeEdited(currentSearchRowIndex, '手动从数据库搜索结果选择', 'both');
-
-                if (row) {
-                    const labelInput = row.querySelector('.new-label-input');
-                    const thumbInput = row.querySelector('.thumb-source-input');
-                    if (labelInput) labelInput.value = finalName;
-                    if (thumbInput) thumbInput.value = englishName;
-                    row.style.backgroundColor = '#e6fffa';
-                }
-
-                selectPreviewRow(currentSearchRowIndex);
-                updateSummary(currentChanges);
-                renderPreviewTable(currentChanges);
-            }
-            closeSearchModal();
         }
 
         function trackProgress(jobId, mode = 'single') {
@@ -5575,6 +5327,15 @@
             });
             document.querySelector('.app-shell')?.classList.remove('inspector-hidden');
             updateInspector(currentChanges[index]);
+        }
+
+        function openArtworkForSelected() {
+            const change = currentChanges[selectedChangeIndex];
+            if (!change) {
+                showStatus(currentUILanguage === 'en' ? 'Select a game first.' : '请先选择一个游戏', 'error');
+                return;
+            }
+            openArtworkDialog({index: change.index, label: getCurrentItemLabel(change), rom_path: change.path});
         }
 
         function updateInspector(change) {
@@ -5936,7 +5697,6 @@
             if (event.key === 'Escape') {
                 // Let the browser cancel only the topmost modal dialog.
                 if (document.querySelector('dialog[open]')) return;
-                closeSearchModal();
                 closeProjectDocs();
                 toggleDetailsDrawer(false);
                 closeInspector();
