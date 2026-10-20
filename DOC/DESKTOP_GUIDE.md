@@ -1,6 +1,6 @@
 # PLCN 桌面预览版使用与发布
 
-本轮是 v3.3 桌面体验版；当前发行版为 v3.3.0，历史发行版从 v3.2.5 起提供内置 ADB 的 Windows / macOS 安装包。桌面基础 PR：[MightyKartz/PLCN#5](https://github.com/MightyKartz/PLCN/pull/5)，UI 精简 PR：[MightyKartz/PLCN#6](https://github.com/MightyKartz/PLCN/pull/6)。
+本轮是 v3.3 桌面体验版；当前发行版为 v3.3.1，历史发行版从 v3.2.5 起提供内置 ADB 的 Windows / macOS 安装包。桌面基础 PR：[MightyKartz/PLCN#5](https://github.com/MightyKartz/PLCN/pull/5)，UI 精简 PR：[MightyKartz/PLCN#6](https://github.com/MightyKartz/PLCN/pull/6)。
 
 ## 普通用户
 

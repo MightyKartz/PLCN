@@ -5,4 +5,4 @@ CI can build a version without editing the tree.
 """
 import os
 
-VERSION = os.environ.get('PLCN_VERSION') or '3.3.0'
+VERSION = os.environ.get('PLCN_VERSION') or '3.3.1'

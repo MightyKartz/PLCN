@@ -5,9 +5,6 @@ on:
   workflow_dispatch:
   workflow_call:
 
-env:
-  PLCN_VERSION: 3.3.0
-
 permissions:
   contents: read
 
