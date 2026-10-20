@@ -1,6 +1,6 @@
 # PLCN 桌面预览版使用与发布
 
-本轮是 v3.2 桌面体验预览，尚未发布正式版本。桌面基础 PR：[MightyKartz/PLCN#5](https://github.com/MightyKartz/PLCN/pull/5)，UI 精简 PR：[MightyKartz/PLCN#6](https://github.com/MightyKartz/PLCN/pull/6)。
+本轮是 v3.3 桌面体验版；当前发行版为 v3.3.0，历史发行版从 v3.2.5 起提供内置 ADB 的 Windows / macOS 安装包。桌面基础 PR：[MightyKartz/PLCN#5](https://github.com/MightyKartz/PLCN/pull/5)，UI 精简 PR：[MightyKartz/PLCN#6](https://github.com/MightyKartz/PLCN/pull/6)。
 
 ## 普通用户
 
@@ -126,7 +126,7 @@ RetroArch 1.20 读取本地缩略图时依次尝试 ROM 文件名、完整列表
 
 PS、Saturn、Dreamcast 等光盘游戏常同时包含 `.cue` 描述文件和一个或多个 `.bin/.img` 数据文件。PLCN 在当前游戏列表和批量预览中只显示同目录同名的一组光盘文件中的一条，优先选择 `.m3u`、`.cue`、`.chd`、`.iso` 或 `.gdi`；附属数据文件仍保留在设备上，不会被删除。单独的 `.bin/.img` 没有被同组描述文件引用时会继续显示。
 
-## v3.2.5 分发说明
+## 分发说明（v3.2.5 起）
 
 Windows / macOS 包内置 Google Platform Tools 37.0.1 的 ADB 及必要依赖、NOTICE；不包含完整 Android SDK。构建时运行 `scripts/prepare_adb.py`，核验固定 SHA256，归档变化时构建失败，需维护者审核后更新校验值。
 

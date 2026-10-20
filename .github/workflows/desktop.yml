@@ -6,7 +6,7 @@ on:
   workflow_call:
 
 env:
-  PLCN_VERSION: 3.2.5
+  PLCN_VERSION: 3.3.0
 
 permissions:
   contents: read

@@ -37,6 +37,11 @@ jobs:
             These CI packages are not distribution-signed; macOS is not notarized.
             First-launch security restrictions may apply. See README installation notes.
 
-            Includes DOS artwork aliases/alternate-source previews and same-disc
-            playlist companion cleanup. Backups stay outside the playlists folder.
+            Chinese game titles can be searched against the official artwork gallery;
+            candidates are graded by match quality and are only written after an
+            explicit click. The playlist image column reports cover, snap and title
+            screen status separately. Backups stay outside the playlists folder.
+
+            中文游戏名可直接搜索官方图库，候选按匹配可靠度分级，必须手动点选后才会写入；
+            游戏列表的图片列分别显示封面、游戏截图、标题图的状态。
           files: release-artifacts/*
