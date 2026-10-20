@@ -182,13 +182,6 @@
             font-weight: 800;
         }
 
-        .brand-product {
-            margin-top: 2px;
-            color: var(--text);
-            font-size: var(--fs-sm);
-            font-weight: 800;
-        }
-
         .mode-switch {
             display: inline-flex;
             padding: 3px;
@@ -1405,23 +1398,19 @@
         }
 
         .preview-table .col-current {
-            width: 220px;
+            width: 310px;
         }
 
         .preview-table .col-status {
-            width: 180px;
-        }
-
-        .preview-table .col-cn {
-            width: 210px;
+            width: 148px;
         }
 
         .preview-table .col-en {
-            width: 216px;
+            width: 296px;
         }
 
         .preview-table .col-cover {
-            width: 90px;
+            width: 112px;
         }
 
         .preview-table th {
@@ -1468,23 +1457,20 @@
         }
 
         .preview-table tr.row-warning {
-            background: #fffaf1;
+            background: #fffcf3;
         }
 
         .preview-table tr.row-danger {
-            background: #fff5f5;
+            background: #fffafa;
         }
 
         .preview-table tr.row-ready {
             background: var(--surface);
         }
 
-        .preview-table tr.row-warning.selected {
-            background: linear-gradient(90deg, #dceaff 0, #eaf2ff 26%, #fff6e6 100%);
-        }
-
+        .preview-table tr.row-warning.selected,
         .preview-table tr.row-danger.selected {
-            background: linear-gradient(90deg, #dceaff 0, #eaf2ff 26%, #fff0f0 100%);
+            background: linear-gradient(90deg, #dceaff 0, #eaf2ff 30%, #f7faff 100%);
         }
 
         .preview-table tr.selected td {
@@ -1552,11 +1538,11 @@
         }
 
         body[data-theme="dark"] .preview-table tr.row-warning {
-            background: #241b0d;
+            background: #1f1a11;
         }
 
         body[data-theme="dark"] .preview-table tr.row-danger {
-            background: #251315;
+            background: #1e1416;
         }
 
         body[data-theme="dark"] .preview-table tr.row-warning.selected,
@@ -1644,16 +1630,9 @@
             color: var(--quiet);
         }
 
-        .name-primary {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            color: var(--text);
-            font-weight: 700;
-        }
-
-        .name-secondary {
-            margin-top: 3px;
+        .name-edit .name-secondary {
+            margin-top: 0;
+            line-height: 1.35;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
@@ -1666,6 +1645,30 @@
             height: 30px;
             padding: 0 9px;
             font-size: var(--fs-sm);
+        }
+
+        .name-edit {
+            min-width: 0;
+            display: grid;
+            gap: 2px;
+        }
+
+        .name-edit input[type="text"] {
+            height: 26px;
+            padding: 0 7px;
+            font-weight: 700;
+        }
+
+        .mini-btn-accent {
+            border-color: #e8b23c;
+            color: #9a6b05;
+            background: #fff8e6;
+        }
+
+        body[data-theme="dark"] .mini-btn-accent {
+            border-color: #6b5520;
+            color: #f0c674;
+            background: #2a2110;
         }
 
         .thumb-cell {
@@ -1801,16 +1804,6 @@
             gap: 8px;
             min-width: 0;
             white-space: nowrap;
-        }
-
-        .status-reason {
-            max-width: 100%;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            color: var(--quiet);
-            font-size: var(--fs-xs);
-            line-height: 1.15;
         }
 
         .status-dot {
@@ -2667,15 +2660,14 @@
                 <div>
                     <div class="brand-line">
                         <div class="brand-name">PLCN</div>
-                        <div class="brand-version">v3.2 preview</div>
+                        <div class="brand-version">{{PLCN_VERSION}}</div>
                     </div>
-                    <div class="brand-product">PLCN Device Library</div>
                 </div>
             </div>
 
             <div class="mode-switch" role="tablist" aria-label="处理模式">
-                <button class="tab active" onclick="switchTab('single', this)" data-i18n="当前游戏列表" type="button">当前游戏列表</button>
-                <button class="tab" onclick="switchTab('batch', this)" data-i18n="全部游戏列表" type="button">全部游戏列表</button>
+                <button class="tab active" onclick="switchTab('single', this)" data-i18n="当前列表" type="button">当前列表</button>
+                <button class="tab" onclick="switchTab('batch', this)" data-i18n="全部列表" type="button">全部列表</button>
             </div>
 
             <div class="top-spacer"></div>
@@ -2774,6 +2766,7 @@
                         <p id="game-library-status" role="status"></p>
                         <p id="game-library-note" class="sr-only"></p>
                     </div>
+                    <p id="game-library-toast" role="status" aria-live="polite" hidden></p>
                     <div class="game-library-scroll">
                         <button id="game-library-retry" class="btn btn-muted" type="button" onclick="retryGameLibrary()" hidden></button>
                         <table id="game-library-table" class="game-library-table" hidden>
@@ -2833,16 +2826,14 @@
                                 <col class="col-select">
                                 <col class="col-current">
                                 <col class="col-status">
-                                <col class="col-cn">
                                 <col class="col-en">
                                 <col class="col-cover">
                             </colgroup>
                             <thead>
                                 <tr>
                                     <th class="select-cell"></th>
-                                    <th data-i18n="当前名称">当前名称</th>
+                                    <th data-i18n="游戏名称">游戏名称</th>
                                     <th data-i18n="修复状态">修复状态</th>
-                                    <th class="cn-name-col" data-i18n="写入名称">写入名称</th>
                                     <th class="en-name-col" data-i18n="封面源英文名">封面源英文名</th>
                                     <th data-i18n="封面状态">封面状态</th>
                                 </tr>
@@ -3256,8 +3247,8 @@
             "PLCN 管理": "PLCN management",
             "匹配依据": "Match evidence",
 
-            '当前游戏列表': 'Current List',
-            '全部游戏列表': 'All Lists',
+            '当前列表': 'Current list',
+            '全部列表': 'All lists',
             '本地数据库': 'Local DB',
             '设备与目录': 'Device & Paths',
             '连接目标': 'Target',
@@ -3342,6 +3333,7 @@
             '选择游戏列表后开始预览': 'Choose a game list to preview',
             'PLCN 会先展示写入名称、封面源和匹配状态，低置信结果可在右侧手动校对。': 'PLCN shows the name to write, cover source, and match status. Low-confidence results can be reviewed on the right.',
             '当前名称': 'Current Name',
+            '游戏名称': 'Game Name',
             '修复状态': 'Status',
             '写入名称': 'Write Name',
             '封面源英文名': 'Cover Source Name',
@@ -4615,41 +4607,40 @@
                     tableThumb.textContent = 'IMG';
                 }
                 const originalText = document.createElement('div');
-                const originalName = document.createElement('div');
-                originalName.className = 'name-primary';
-                originalName.textContent = getCurrentItemLabel(change);
-                originalName.title = getCurrentItemLabel(change);
-                const originalPath = document.createElement('div');
-                originalPath.className = 'name-secondary';
-                originalPath.textContent = getCurrentItemMeta(change);
-                originalPath.title = getCurrentItemMeta(change);
-                originalText.appendChild(originalName);
-                originalText.appendChild(originalPath);
-                tdOriginal.appendChild(tableThumb);
-                tdOriginal.appendChild(originalText);
-                tdOriginal.title = [getCurrentItemLabel(change), getCurrentItemMeta(change)].filter(Boolean).join('\n');
-                tr.appendChild(tdOriginal);
-                tr.appendChild(buildStatusCell(info, index));
-
-                const tdNew = document.createElement('td');
-                tdNew.className = 'cn-name-col';
+                originalText.className = 'name-edit';
+                const originalLabel = getCurrentItemLabel(change);
                 const inputNew = document.createElement('input');
                 inputNew.type = 'text';
                 inputNew.className = 'new-label-input';
-                inputNew.setAttribute('aria-label', uiText('写入名称') + ': ' + getCurrentItemLabel(change));
+                inputNew.setAttribute('aria-label', uiText('写入名称') + ': ' + originalLabel);
                 inputNew.value = change.new_label || '';
                 inputNew.title = change.new_label || '';
+                const originalPath = document.createElement('div');
+                originalPath.className = 'name-secondary';
+                const pathLabel = getCurrentItemMeta(change);
+                const syncOriginalLine = () => {
+                    const renamed = originalLabel && inputNew.value !== originalLabel;
+                    originalPath.textContent = renamed ? workbenchText('原名：', 'Was: ') + originalLabel : pathLabel;
+                    originalPath.title = renamed ? originalPath.textContent : pathLabel;
+                };
+                syncOriginalLine();
                 inputNew.oninput = (e) => {
                     currentChanges[index].new_label = e.target.value;
                     e.target.title = e.target.value;
+                    syncOriginalLine();
                     markChangeEdited(index, '手动编辑显示名称', 'new_label');
                     refreshPreviewRowState(index);
                     if (selectedChangeIndex === index) updateInspector(currentChanges[index]);
                     updateSummary(currentChanges);
                 };
                 inputNew.onclick = (event) => event.stopPropagation();
-                tdNew.appendChild(inputNew);
-                tr.appendChild(tdNew);
+                originalText.appendChild(inputNew);
+                originalText.appendChild(originalPath);
+                tdOriginal.appendChild(tableThumb);
+                tdOriginal.appendChild(originalText);
+                tdOriginal.title = [originalLabel, getCurrentItemMeta(change)].filter(Boolean).join('\n');
+                tr.appendChild(tdOriginal);
+                tr.appendChild(buildStatusCell(info, index));
 
                 const tdThumb = document.createElement('td');
                 tdThumb.className = 'en-name-col';
@@ -4681,6 +4672,10 @@
                     : workbenchText('搜索游戏名（中/英）', 'Search name (Chinese/English)');
                 btnSearch.className = 'mini-btn';
                 btnSearch.type = 'button';
+                if (change.artwork_gallery_status === 'not_found') {
+                    btnSearch.classList.add('mini-btn-accent');
+                    btnSearch.title = workbenchText('官方图库未收录此名，搜索备用图库（维基百科）', 'Not in the official gallery; search the alternate source (Wikipedia)');
+                }
                 btnSearch.onclick = (event) => {
                     event.stopPropagation();
                     if (change.artwork_identity_status) {
@@ -4690,6 +4685,19 @@
 
                 thumbWrap.appendChild(inputThumb);
                 thumbWrap.appendChild(btnSearch);
+                if (!hasExistingCover(change)) {
+                    const importButton = document.createElement('button');
+                    importButton.type = 'button';
+                    importButton.className = 'mini-btn';
+                    importButton.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 4v10"></path><path d="m8 10 4 4 4-4"></path><path d="M4 18v1a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1"></path></svg>';
+                    importButton.title = workbenchText('导入本地图片', 'Import a local image');
+                    importButton.setAttribute('aria-label', workbenchText('导入本地图片', 'Import a local image'));
+                    importButton.onclick = event => {
+                        event.stopPropagation();
+                        openArtworkImport({index:change.index, label:getCurrentItemLabel(change), rom_path:change.path});
+                    };
+                    thumbWrap.appendChild(importButton);
+                }
 
                 const previewHref = getCoverPreviewUrl(change);
                 if (previewHref) {
@@ -4704,16 +4712,6 @@
                 }
 
                 tdThumb.appendChild(thumbWrap);
-                if (!hasExistingCover(change)) {
-                    const importButton = document.createElement('button');
-                    importButton.type = 'button'; importButton.className = 'btn btn-small btn-muted artwork-import-inline';
-                    importButton.textContent = workbenchText('导入图片', 'Import image');
-                    importButton.onclick = event => {
-                        event.stopPropagation();
-                        openArtworkImport({index:change.index, label:getCurrentItemLabel(change), rom_path:change.path});
-                    };
-                    tdThumb.appendChild(importButton);
-                }
                 tr.appendChild(tdThumb);
 
                 tr.appendChild(buildCoverStatusCell(change));
@@ -4724,7 +4722,7 @@
             if (!visibleChanges.length && changes.length) {
                 const tr = document.createElement('tr');
                 const td = document.createElement('td');
-                td.colSpan = 6;
+                td.colSpan = 5;
                 td.style.textAlign = 'center';
                 td.style.color = 'var(--muted)';
                 td.style.padding = '28px';
@@ -4747,8 +4745,10 @@
                 if (change.artwork_gallery_status === 'not_found' || change.artwork_gallery_status === 'unavailable') {
                     return {className: 'missing',
                         label: change.artwork_gallery_status === 'not_found'
-                            ? workbenchText('图库未找到', 'No gallery match') : workbenchText('图库查询失败', 'Gallery unavailable'),
-                        title: change.match_reason};
+                            ? workbenchText('官方图库无', 'Not in gallery') : workbenchText('图库查询失败', 'Gallery unavailable'),
+                        title: change.artwork_gallery_status === 'not_found'
+                            ? workbenchText('官方图库没有这张图。点击行内的放大镜会搜索备用图库（维基百科），选中后再应用。', 'The official gallery has no image. The row magnifier searches the alternate source (Wikipedia); pick one, then apply.')
+                            : change.match_reason};
                 }
                 return {
                     className: 'missing',
@@ -4855,13 +4855,13 @@
             status.className = 'status-text';
             status.style.color = info.color;
             status.innerHTML = `<span class="status-dot"></span>${info.label}`;
+            const reason = getMatchReasonLabel(info, currentChanges[index]);
+            if (reason) {
+                status.title = reason;
+                status.setAttribute('aria-label', info.label + ' · ' + reason);
+            }
             statusMainline.appendChild(status);
-            const reason = document.createElement('div');
-            reason.className = 'status-reason';
-            reason.textContent = getMatchReasonLabel(info, currentChanges[index]);
-            reason.title = reason.textContent;
             statusStack.appendChild(statusMainline);
-            statusStack.appendChild(reason);
             tdStatus.appendChild(statusStack);
             return tdStatus;
         }

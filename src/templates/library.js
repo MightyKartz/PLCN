@@ -106,6 +106,17 @@ function setGameLibraryFilter(filter) {
     renderGameLibrary();
 }
 
+let gameLibraryToastTimer = null;
+
+function showGameLibraryToast(message) {
+    const toast = document.getElementById('game-library-toast');
+    if (!toast) return;
+    clearTimeout(gameLibraryToastTimer);
+    toast.textContent = message;
+    toast.hidden = !message;
+    if (message) gameLibraryToastTimer = setTimeout(() => { toast.hidden = true; }, 6000);
+}
+
 function renderGameLibraryFilters(items) {
     for (const [filter, zh, en] of [['all', '全部', 'All'], ['missing', '缺图', 'Missing'], ['problem', '需检查', 'Check']]) {
         const button = document.getElementById('game-library-filter-' + filter);
@@ -113,6 +124,7 @@ function renderGameLibraryFilters(items) {
         button.textContent = workbenchText(zh, en) + ' ' + count;
         button.setAttribute('aria-pressed', String(gameLibrary.filter === filter));
         button.disabled = gameLibrary.loading;
+        if (filter === 'problem') button.hidden = count === 0 && gameLibrary.filter !== 'problem';
     }
 }
 
@@ -149,7 +161,10 @@ function renderGameLibrary() {
         : !filtered.length ? text('没有符合搜索条件的游戏。', 'No games match your search.')
         : query || gameLibrary.filter !== 'all' || filtered.length > gameLibrary.limit
             ? text(`${Math.min(filtered.length, gameLibrary.limit)} / ${items.length} 个游戏`, `${Math.min(filtered.length, gameLibrary.limit)} / ${items.length} games`) : '';
-    if (gameLibrary.notice) status.textContent = gameLibrary.notice;
+    if (gameLibrary.notice) {
+        showGameLibraryToast(gameLibrary.notice);
+        gameLibrary.notice = '';
+    }
     const tbody = document.getElementById('game-library-rows');
     tbody.replaceChildren();
     for (const item of filtered.slice(0, gameLibrary.limit)) {

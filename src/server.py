@@ -18,6 +18,7 @@ from http.cookies import SimpleCookie
 from safe_io import file_lock, atomic_write_json
 from task_control import TaskCancelled, checkpoint
 import app_paths
+from app_version import VERSION
 from manual_overrides import (
     build_override_entry,
     default_overrides_path,
@@ -1038,6 +1039,7 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
         try:
             with open(os.path.join(TEMPLATE_DIR, "plcn.html"), 'rb') as f:
                 content = f.read()
+                content = content.replace(b'{{PLCN_VERSION}}', VERSION.encode('utf-8'))
                 self.send_response(200)
                 self.send_header("Content-type", "text/html")
                 self.send_header('Set-Cookie', f'plcn_session={SESSION_TOKEN}; HttpOnly; SameSite=Strict; Path=/')

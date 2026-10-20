@@ -113,7 +113,7 @@ function renderWorkbench() {
     const playlistPath = document.getElementById('playlist_path').value;
     const selectedSystem = document.getElementById('system_name').value;
     const selectedTitle = !playlistPath ? '' : selectedSystem ? getSystemAbbreviation(selectedSystem) : playlistPath.replaceAll('\\', '/').split('/').pop();
-    document.getElementById('workspace-title').textContent = batch ? uiText('全部游戏列表')
+    document.getElementById('workspace-title').textContent = batch ? uiText('全部列表')
         : state.previewValid ? `${selectedTitle} · ${uiText('修复预览')}`
         : workbench.operation === 'preview' ? `${selectedTitle} · ${workbenchText('正在分析', 'Analyzing')}`
         : selectedTitle || uiText('选择游戏列表');

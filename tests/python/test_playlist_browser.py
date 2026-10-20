@@ -137,7 +137,7 @@ def test_browser_matches_retroarch_rom_filename_priority(tmp_path, monkeypatch, 
     assert Path(result['items'][0]['image_path']).name == '火焰之纹章4.png'
 
 
-def test_disc_media_rows_show_one_launchable_entry(tmp_path):
+def test_disc_media_rows_show_one_launchable_entry_per_disc(tmp_path):
     path = tmp_path / 'PS1.lpl'
     items = [
         {'label': 'Game Disc 1', 'path': '/roms/Game (Disc 1).cue'},
@@ -147,4 +147,20 @@ def test_disc_media_rows_show_one_launchable_entry(tmp_path):
     ]
     path.write_text(json.dumps({'items': items}), encoding='utf-8')
     data = read_playlist(str(path), 'Sony - PlayStation')
-    assert [item['rom_name'] for item in data['items']] == ['Game (Disc 1).cue', 'Single.bin']
+    assert [item['rom_name'] for item in data['items']] == [
+        'Game (Disc 1).cue', 'Game (Disc 2).cue', 'Single.bin']
+
+
+def test_m3u_row_replaces_the_discs_it_lists(tmp_path):
+    path = tmp_path / 'SS.lpl'
+    items = [
+        {'label': 'Grandia CN', 'path': '/roms/SS/Grandia CN.m3u'},
+        {'label': 'Grandia CN (Disc 1)', 'path': '/roms/SS/Grandia CN (Disc 1).chd'},
+        {'label': 'Grandia CN (Disc 2)', 'path': '/roms/SS/Grandia CN (Disc 2).chd'},
+        {'label': 'Other', 'path': '/roms/SS/Other (Disc 1).chd'},
+        {'label': 'Other (Disc 2)', 'path': '/roms/SS/Other (Disc 2).chd'},
+    ]
+    path.write_text(json.dumps({'items': items}), encoding='utf-8')
+    data = read_playlist(str(path), 'Sega - Saturn')
+    assert [item['rom_name'] for item in data['items']] == [
+        'Grandia CN.m3u', 'Other (Disc 1).chd', 'Other (Disc 2).chd']

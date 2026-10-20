@@ -3,6 +3,9 @@ import os
 import sys
 from pathlib import Path
 
+sys.path.insert(0, 'src')
+from app_version import VERSION as _APP_VERSION
+
 adb_root = Path("build/platform-tools")
 if not (adb_root / ("adb.exe" if sys.platform == "win32" else "adb")).is_file():
     raise RuntimeError("Run scripts/prepare_adb.py before packaging")
@@ -29,8 +32,8 @@ if sys.platform == 'darwin':
         bundle, name='PLCN.app', bundle_identifier='io.github.mightykartz.plcn',
         info_plist={
             'CFBundleName': 'PLCN', 'CFBundleDisplayName': 'PLCN',
-            'CFBundleShortVersionString': os.environ.get('PLCN_VERSION', '3.3.0'),
-            'CFBundleVersion': os.environ.get('PLCN_VERSION', '3.3.0'),
+            'CFBundleShortVersionString': _APP_VERSION,
+            'CFBundleVersion': _APP_VERSION,
             'NSHighResolutionCapable': True,
         },
     )

@@ -92,7 +92,7 @@ test('known search names do not become download sources and explain gallery fail
     const game={new_label:'仙剑奇侠传',original_item_label:'仙剑奇侠传',thumbnail_source:null,
         artwork_query:'Sword and Fairy',artwork_identity_status:'resolved',artwork_gallery_status:'not_found'};
     assert.equal(repairActionStatus(game),'incomplete');
-    assert.equal(context.getCoverStatusInfo(game).label,'图库未找到');
+    assert.equal(context.getCoverStatusInfo(game).label,'官方图库无');
     assert.equal(context.getCoverStatusInfo({...game,artwork_gallery_status:'unavailable'}).label,'图库查询失败');
     assert.equal(context.getCoverStatusInfo({...game,artwork_identity_status:'unresolved',artwork_gallery_status:'unknown'}).label,'名称未识别');
     assert.equal(repairActionStatus({...game,new_label:'新名称'},'names'),'rename');

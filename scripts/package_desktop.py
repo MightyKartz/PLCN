@@ -9,6 +9,9 @@ import subprocess
 import sys
 import tempfile
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
+from app_version import VERSION as APP_VERSION
+
 
 def run(command, **kwargs):
     subprocess.run(command, check=True, **kwargs)
@@ -52,7 +55,7 @@ def main():
         shutil.make_archive(f'dist/PLCN-Windows-{args.arch}-Portable', 'zip', 'dist', 'PLCN')
         if args.installer:
             compiler = shutil.which('ISCC') or r'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
-            run([compiler, '/DAppVersion=' + os.environ.get('PLCN_VERSION', '3.3.0'), 'packaging/windows.iss'])
+            run([compiler, '/DAppVersion=' + APP_VERSION, 'packaging/windows.iss'])
 
 
 if __name__ == '__main__':

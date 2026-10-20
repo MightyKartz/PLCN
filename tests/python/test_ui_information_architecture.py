@@ -11,8 +11,9 @@ def read_template():
 def test_primary_labels_are_clear():
     html = read_template()
 
-    assert "当前游戏列表" in html
-    assert "全部游戏列表" in html
+    assert 'data-i18n="当前列表"' in html
+    assert 'data-i18n="全部列表"' in html
+    assert "全部游戏列表" not in html
     assert "应用已选修复" in html
     assert "修复状态" in html
     assert "写入名称" in html
@@ -34,7 +35,7 @@ def test_primary_labels_are_clear():
     assert "repair-mini-stats" not in html
     assert 'data-i18n="置信度"' not in html
     assert "tdConfidence" not in html
-    assert "status-reason" in html
+    assert "status.title = reason" in html
     assert "getMatchReasonLabel" in html
     assert "apply-summary-panel" in html
     assert "buildApplySummary" in html
