@@ -8,6 +8,7 @@ sys.path.append(os.path.join(os.getcwd(), "src"))
 
 import app_paths
 import playlist_service as plcn
+import playlist_writeback
 
 
 SYSTEM = "Nintendo - Nintendo Entertainment System"
@@ -104,7 +105,7 @@ def change_for(index, item, new_label, thumbnail_source=None, proposal_id=None):
 
 
 def test_apply_changes_creates_timestamped_backup_file(tmp_path, monkeypatch):
-    monkeypatch.setattr(plcn, "ThumbnailDownloader", RecordingDownloader)
+    monkeypatch.setattr(playlist_writeback, "ThumbnailDownloader", RecordingDownloader)
     RecordingDownloader.reset()
     playlist_path = tmp_path / f"{SYSTEM}.lpl"
     original_item = playlist_item("/roms/nes/Contra (USA).zip", "Contra (USA)")
@@ -126,7 +127,7 @@ def test_apply_changes_creates_timestamped_backup_file(tmp_path, monkeypatch):
 
 
 def test_stale_proposal_is_skipped_without_enqueueing_downloads(tmp_path, monkeypatch):
-    monkeypatch.setattr(plcn, "ThumbnailDownloader", RecordingDownloader)
+    monkeypatch.setattr(playlist_writeback, "ThumbnailDownloader", RecordingDownloader)
     RecordingDownloader.reset()
     playlist_path = tmp_path / f"{SYSTEM}.lpl"
     original_item = playlist_item("/roms/nes/Contra (USA).zip", "Contra (USA)")
@@ -165,7 +166,7 @@ def test_stale_proposal_is_skipped_without_enqueueing_downloads(tmp_path, monkey
 
 
 def test_apply_result_includes_structured_apply_and_download_details(tmp_path, monkeypatch):
-    monkeypatch.setattr(plcn, "ThumbnailDownloader", RecordingDownloader)
+    monkeypatch.setattr(playlist_writeback, "ThumbnailDownloader", RecordingDownloader)
     RecordingDownloader.reset()
     playlist_path = tmp_path / f"{SYSTEM}.lpl"
     original_item = playlist_item("/roms/nes/Super Mario Bros. (USA).zip", "Super Mario Bros. (USA)")
@@ -203,7 +204,7 @@ def test_apply_result_includes_structured_apply_and_download_details(tmp_path, m
 
 
 def test_read_back_verification_confirms_written_labels(tmp_path, monkeypatch):
-    monkeypatch.setattr(plcn, "ThumbnailDownloader", RecordingDownloader)
+    monkeypatch.setattr(playlist_writeback, "ThumbnailDownloader", RecordingDownloader)
     RecordingDownloader.reset()
     playlist_path = tmp_path / f"{SYSTEM}.lpl"
     original_item = playlist_item("/roms/nes/Legend of Zelda, The (USA).zip", "Legend of Zelda, The (USA)")

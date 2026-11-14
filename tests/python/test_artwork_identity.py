@@ -115,7 +115,8 @@ def test_dos_verified_alias_and_english_archive_are_searchable(library):
 def test_dos_bulk_preview_preserves_labels_and_does_not_offer_launcher_downloads(library, tmp_path, monkeypatch):
     import playlist_service as plcn
     from types import SimpleNamespace
-    monkeypatch.setattr(plcn, 'Translator', lambda *args: SimpleNamespace(db=SimpleNamespace()))
+    import playlist_analysis
+    monkeypatch.setattr(playlist_analysis, 'Translator', lambda *args: SimpleNamespace(db=SimpleNamespace()))
     calls = []
     def catalog(*args):
         calls.append(args)

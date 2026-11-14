@@ -2,6 +2,8 @@
 
 ## 中文更新
 
+- 核心按分析、提案、图片查找、写回和命令行批处理拆分，`playlist_service.py` 保留统一公开入口。匹配规则、提案格式、写回与备份协议保持不变；游戏列表浏览直接复用只读图片查找模块。
+
 - 三类图片全缺时，游戏行仅显示“缺图”；部分缺失或损坏时才展开类型标签。有封面但其它类型损坏的游戏也计入“需检查”。
 - 补图窗口打开后自动列出官方候选，点选即预览并定位到对比，取消重复的“预览图片”按钮。官方无结果时显示备用来源入口，备用查询和最终写入都需要手动操作；本地导入保留。
 - 移除底部任务栏和旧详情抽屉，进度、处理记录、图片汇总、错误、取消和重试集中在“设置 → 任务与恢复”。运行提示可直接进入任务页；长明细滚动时仍可关闭窗口。
@@ -20,6 +22,8 @@
 - 缺少图片目录时，列表顶部集中显示“指定图片目录”入口；图片列留空，不再逐行重复提示，也不计入单个游戏的“需检查”。损坏图片和读取失败仍归入“需检查”。
 
 ## English Updates
+
+- Split the playlist core into analysis, proposals, artwork lookup, writeback and CLI batch modules while retaining the public `playlist_service.py` entry. Preserve matching rules, proposal formats, writeback and backups; browsing uses the read-only artwork module directly.
 
 - Show one Missing mark when all artwork types are absent; expand type badges only for partial or damaged sets. Damaged secondary images count toward Check even when box art loads.
 - Automatically list official artwork candidates; selecting one previews it and scrolls to the comparison. Remove the redundant Preview image button. Alternate searches and final writes remain explicit; local import stays available.

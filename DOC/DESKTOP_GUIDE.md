@@ -81,7 +81,17 @@ python scripts/package_desktop.py --arch x64 --installer
 
 后端按领域拆分：`api_routes.py` 注册 GET / POST 路径，`api_library.py`、`api_playlists.py`、`api_artwork.py`、`api_tasks.py`、`api_data.py`、`api_desktop.py`、`api_config.py` 实现接口；`server.py` 负责同源会话、请求解析、静态资源及服务启动。处理函数接收请求、运行上下文和已解析的参数，配置路径与任务管理器始终由当前服务提供；新增接口应在路由表中显式注册。
 
-`plcn.py` 只处理 CLI 参数与分发，`playlist_service.py` 提供分析、提案、写回和批量处理；HTTP 与 CLI 使用同一核心，核心不依赖服务启动。`batch_review.py` 保存只读汇总所需的提案与文件摘要，`playlist_transport.py` 复用本地／ADB 写回协议；`job_manager.py` 管理任务状态，`job_results.py` 转换任务结果；原 `desktop_api.py` 已由上述领域模块替代。
+`plcn.py` 只处理 CLI 参数与分发，`playlist_service.py` 是统一公开入口，通过显式导出保留原有函数和提案类型；HTTP 与 CLI 使用同一核心，核心不依赖服务启动。内部职责如下：
+
+- `playlist_analysis.py`：名称、ROM、DAT 证据分析与提案生成。
+- `playlist_proposals.py`：提案数据结构、匹配元数据、标识及原始条目快照校验。
+- `playlist_artwork.py`：只读查找本地／ADB 图片，供分析与游戏列表浏览复用。
+- `playlist_writeback.py`：文件锁、汇总摘要校验、备份、写回、回读验证及图片任务。
+- `playlist_batch.py`：原有 CLI 单列表和目录处理流程；HTTP 的“先汇总再确认”仍由 `batch_review.py` 管理。
+
+只读图片查找和写回模块可以独立导入，不加载分析器或名称翻译器。修改依赖或测试替换点时，在实际拥有该依赖的模块操作，统一入口不再复制这些内部依赖。
+
+`batch_review.py` 保存只读汇总所需的提案与文件摘要，`playlist_transport.py` 复用本地／ADB 写回协议；`job_manager.py` 管理任务状态，`job_results.py` 转换任务结果；原 `desktop_api.py` 已由上述领域模块替代。
 
 macOS 在对应架构机器上执行 `python3 scripts/package_desktop.py --arch arm64` 或 `--arch x64`。脚本使用 onedir/app bundle，核对 Python 实际架构，并从临时工作目录启动 `--self-check` 验证资源和写入目录；不支持跨 OS 编译。Linux 继续保留 `plcn.spec` 的 CLI 打包。
 
