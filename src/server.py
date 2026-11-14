@@ -45,7 +45,7 @@ def get_base_path():
 TEMPLATE_DIR = os.path.join(get_base_path(), "src", "templates")
 UI_ASSETS = (
     'plcn.css', 'workflow.js', 'ui.js', 'config.js', 'library-navigation.js',
-    'repair-model.js', 'preview.js', 'tasks.js', 'inspector.js',
+    'repair-model.js', 'preview.js', 'tasks.js',
     'library.js', 'artwork.js', 'welcome.js', 'desktop.js',
 )
 

@@ -161,6 +161,19 @@ def test_playlist_routes_preview_write_and_report_progress(service, tmp_path, mo
         payload = {'thumbnails_dir': str(tmp_path / 'images'), 'options': {'download_thumbnails': False}}
         if batch:
             payload['batch_dir'] = str(playlists)
+            started = session.post(service + '/api/batch/preview', json=payload, timeout=3)
+            started.raise_for_status()
+            review_id = started.json()['job_id']
+            with session.get(service + '/api/progress', params={'job_id': review_id}, stream=True, timeout=5) as progress:
+                for line in progress.iter_lines(chunk_size=1):
+                    if line.startswith(b'data: '):
+                        review = json.loads(line[6:])
+                        if review['status'] in ('completed', 'failed', 'cancelled'):
+                            break
+            assert review['status'] == 'completed', review
+            assert review['result']['rows'][0]['names'] == 1
+            assert json.loads(playlist.read_text(encoding='utf-8')) == original
+            payload = {'preview_job_id': review_id}
             endpoint = '/api/batch/apply'
         else:
             payload.update(playlist_path=str(playlist), changes=changes)
@@ -198,3 +211,13 @@ def test_open_folder_route_reaches_platform_opener(service, tmp_path, monkeypatc
         response.raise_for_status()
         assert response.json() == {'status': 'success', 'path': str(tmp_path)}
     assert opened == [str(tmp_path)]
+
+
+def test_batch_apply_requires_a_completed_review(service, monkeypatch):
+    monkeypatch.setattr(server, 'job_manager', server.JobManager())
+    with requests.Session() as session:
+        session.get(service, timeout=3).raise_for_status()
+        response = session.post(service + '/api/batch/apply', json={'batch_dir': '/unreviewed'}, timeout=3)
+        assert response.status_code == 400
+        assert '汇总' in response.json()['error']
+        assert not server.job_manager.jobs

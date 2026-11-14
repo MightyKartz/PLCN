@@ -2,6 +2,10 @@
 
 ## 中文更新
 
+- 标题栏“整理本主机”直接进入预览；预览顶部用“修改名称”“补全图片”勾选框选择操作，切换后重新分析。移除右侧检查器和流程条，编辑过的行保留“记住修正”。
+- “整理全部主机”独立放在左侧导航顶部，先列出各主机的改名／补图数量与读取错误，再确认应用。确认后使用同一批提案；列表在汇总后变动则要求重新生成。关闭汇总不会写入列表。
+- 仅补图在本地和 ADB 上均保留 `.lpl` 文件；修复设备端仅补图仍可能回推未改名列表的问题。批量列表错误明确显示为部分完成。
+
 - 后端接口改用按领域组织的路由表，命令行与 HTTP 服务共用独立的列表处理核心；保留现有分析与写回规则。修复打开数据目录／文件所在目录请求被旧路由截走的问题。
 
 - 预览中的名称和图片源默认显示为文本，点击后编辑，Enter 或失焦提交、Esc 取消；每行仅保留“更换图片”，统一进入包含搜索、导入和图片预览的补图窗口。副标题只显示 ROM 文件名，完整路径保留在悬停提示中；紧凑窗口也能看到完整的五列表格。
@@ -12,6 +16,10 @@
 - 缺少图片目录时，列表顶部集中显示“指定图片目录”入口；图片列留空，不再逐行重复提示，也不计入单个游戏的“需检查”。损坏图片和读取失败仍归入“需检查”。
 
 ## English Updates
+
+- Organize this system opens preview directly. Rename and artwork checkboxes reanalyze on change. Remove the inspector and flow strip; edited rows retain Remember correction.
+- Organize all systems is a separate sidebar action. Review per-system rename/artwork counts and errors before applying the exact saved proposals. Changed playlists require a new summary; closing it writes nothing.
+- Artwork-only processing preserves playlist files locally and over ADB. Fix unnecessary remote playlist pushes and report batch playlist errors as partial completion.
 
 - Split HTTP routes by domain and share an independent playlist service with the CLI, preserving analysis and writeback rules. Restore folder-opening requests previously intercepted by the old dispatcher.
 

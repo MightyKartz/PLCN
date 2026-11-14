@@ -77,18 +77,24 @@ async function applyPathSettings() {
 
 function getProcessingOptions() {
     return {
-        write_names: document.getElementById('repair-mode')?.value !== 'artwork',
-        download_thumbnails: document.getElementById('repair-mode').value !== 'names'
+        write_names: document.getElementById('option-write-names').checked,
+        download_thumbnails: document.getElementById('option-download-artwork').checked
     };
 }
 
-function getBatchOptions() {
-    return {
-        backup: document.getElementById('batch-option-backup')?.checked !== false,
-        continue_on_error: document.getElementById('batch-option-continue')?.checked !== false,
-        write_names: document.getElementById('repair-mode')?.value !== 'artwork',
-        download_thumbnails: document.getElementById('repair-mode').value !== 'names'
-    };
+function getRepairMode() {
+    const options = getProcessingOptions();
+    return !options.write_names ? 'artwork' : !options.download_thumbnails ? 'names' : 'both';
+}
+
+async function changePreviewOptions(control) {
+    const options = getProcessingOptions();
+    if (!options.write_names && !options.download_thumbnails) {
+        control.checked = true;
+        showStatus(workbenchText('至少保留一个操作', 'Choose at least one operation'), 'info');
+        return;
+    }
+    await previewTask();
 }
 
 function openFilePicker(inputId, directoryMode, returnFocus = document.activeElement) {
@@ -195,6 +201,5 @@ document.addEventListener('keydown', (event) => {
         // Let the browser cancel only the topmost modal dialog.
         if (document.querySelector('dialog[open]')) return;
         toggleDetailsDrawer(false);
-        closeInspector();
     }
 });

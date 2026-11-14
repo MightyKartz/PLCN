@@ -177,37 +177,32 @@ async function main() {
     await click('#language-display-btn');
     await click('#theme-toggle-btn');
 
-    await click('#organize-menu > summary');
-    await evaluate(() => {
-        const scope = document.querySelector('#organize-scope');
-        scope.value = 'batch';
-        scope.dispatchEvent(new Event('change', {bubbles: true}));
-    });
+    await click('#batch-review-button');
+    await waitFor(() => document.querySelector('#batch-review-rows').children.length === 2
+        && !document.querySelector('#batch-review-refresh').disabled, 'all-system read-only summary');
+    assert.equal(await evaluate(() => document.querySelector('#batch-review-apply').disabled), true);
+    await click('#batch-download-artwork');
+    await waitFor(() => !document.querySelector('#batch-review-apply').disabled
+        && document.querySelector('#batch-review-rows').children.length === 2, 'names-only batch summary');
+    assert.deepEqual(await evaluate(() => Array.from(document.querySelectorAll('#batch-review-rows tr')).map(row => row.children[1].textContent)), ['1','1']);
+    await screenshot('02-all-systems-summary');
+    await click('#batch-review-dialog header button');
+    await waitFor(() => !document.querySelector('#batch-review-dialog').open, 'cancelled whole-library review');
     assert.equal(await evaluate(visible, '#game-library'), true);
-    assert.equal(await evaluate(() => document.querySelector('#workspace-title').textContent.includes('SNES')), true);
-    assert.equal(await evaluate(visible, '#preview-button'), false);
-    assert.equal(await evaluate(() => document.querySelector('#batch-start-button').disabled), true);
-    await evaluate(() => {
-        const mode = document.querySelector('#repair-mode');
-        mode.value = 'names';
-        mode.dispatchEvent(new Event('change', {bubbles: true}));
-    });
-    await screenshot('02-all-systems-menu');
     await click('#theme-toggle-btn');
     await click('#language-display-btn');
-    await screenshot('02-dark-en-all-systems-menu');
+    await click('#batch-review-button');
+    await waitFor(() => !document.querySelector('#batch-review-apply').disabled, 'English all-system summary');
+    assert.equal(await evaluate(() => document.querySelector('#batch-review-title').textContent), 'All-system change summary');
+    await screenshot('02-dark-en-all-systems-summary');
+    await click('#batch-review-dialog header button');
     await click('#language-display-btn');
     await click('#theme-toggle-btn');
-    await click('#batch-start-button');
-    await waitFor(visible, 'all-systems confirmation', '.desktop-confirm');
-    assert.equal(await evaluate(() => document.querySelector('.desktop-confirm').textContent.includes('无需逐项确认')), true);
-    await click('.desktop-confirm button:first-of-type');
-    await evaluate(() => {
-        const scope = document.querySelector('#organize-scope');
-        scope.value = 'single';
-        scope.dispatchEvent(new Event('change', {bubbles: true}));
-    });
     await click('#preview-button');
+    await waitFor(() => !document.querySelector('#option-download-artwork').disabled
+        && document.querySelector('#preview-table-body .new-label-text')?.textContent === '暗影狂奔', 'default preview');
+    assert.equal(await evaluate(() => document.querySelector('#option-write-names').checked && document.querySelector('#option-download-artwork').checked), true);
+    await click('#option-download-artwork');
     await waitFor(() => document.querySelector('#workspace-title')?.textContent === 'SNES · 修复预览'
         && document.querySelector('#preview-table-body .new-label-text')?.textContent === '暗影狂奔'
         && !document.querySelector('#apply-button').disabled, 'actionable translated preview');
@@ -219,6 +214,8 @@ async function main() {
     assert.equal(await evaluate(() => document.querySelectorAll('#preview-table-body .mini-btn, #preview-table-body .link-preview').length), 0);
     assert.equal(await evaluate(() => document.querySelector('#preview-table-body .name-secondary').textContent), 'Shadowrun (USA).sfc');
     assert.equal(await evaluate(() => document.querySelector('#preview-table-body .name-secondary').title), '/roms/snes/Shadowrun (USA).sfc');
+    await click('#preview-table-body .name-secondary');
+    assert.equal(await evaluate(() => document.querySelector('#inspector-panel')), null);
     await screenshot('03-preview');
     await click('#preview-table-body .new-label-text');
     await send('Input.insertText', {text: '取消的名称'});
@@ -278,10 +275,21 @@ async function main() {
     await click(system);
     await waitFor(() => document.querySelector('#workspace-title').textContent.includes('SNES')
         && document.querySelector('#game-library').getAttribute('aria-busy') === 'false', 'SNES with artwork directory');
-    await click('#organize-menu > summary');
-    await evaluate(() => { const mode = document.querySelector('#repair-mode'); mode.value = 'names'; mode.dispatchEvent(new Event('change', {bubbles:true})); });
     await click('#preview-button');
     await waitFor(() => document.querySelector('#preview-table-body .new-label-text')?.textContent === '暗影狂奔', 'fresh preview');
+    if (!await evaluate(() => document.querySelector('#option-download-artwork').checked)) {
+        await click('#option-download-artwork');
+        await waitFor(() => !document.querySelector('#option-write-names').disabled, 'combined preview reanalysis');
+    }
+    await click('#option-write-names');
+    await waitFor(() => !document.querySelector('#option-write-names').disabled
+        && document.querySelector('#preview-table-body .new-label-text')?.textContent === 'Shadowrun (USA)', 'artwork-only keeps current name');
+    await screenshot('04-artwork-only-preview');
+    await click('#option-write-names');
+    await waitFor(() => !document.querySelector('#option-download-artwork').disabled, 'names restored');
+    await click('#option-download-artwork');
+    await waitFor(() => !document.querySelector('#option-write-names').disabled
+        && document.querySelector('#preview-table-body .new-label-text')?.textContent === '暗影狂奔', 'names-only regenerated');
     await click('#preview-table-body .replace-artwork');
     await waitFor(visible, 'single-game artwork dialog', '#artwork-dialog');
     await waitFor(() => !document.querySelector('#artwork-search').disabled, 'artwork context loaded');
@@ -289,6 +297,15 @@ async function main() {
     assert.equal(await evaluate(visible, '#artwork-source'), true);
     await screenshot('05-artwork-dialog');
     await click('#artwork-close');
+    await click('#preview-table-body .new-label-text');
+    await send('Input.insertText', {text: '暗影狂奔（本地）'});
+    await send('Input.dispatchKeyEvent', {type:'keyDown', key:'Enter', code:'Enter', windowsVirtualKeyCode:13});
+    await send('Input.dispatchKeyEvent', {type:'keyUp', key:'Enter', code:'Enter', windowsVirtualKeyCode:13});
+    await click('#preview-table-body [data-save-override]');
+    await waitFor(() => document.querySelector('#apply-button').disabled, 'local correction saved for reanalysis');
+    const savedOverrides = await evaluate(async () => (await fetch('/api/overrides/list')).json());
+    assert.equal(savedOverrides.entries.some(entry => entry.new_label === '暗影狂奔（本地）'), true);
+    await screenshot('06-local-correction');
     assert.deepEqual(errors, [], 'Page errors');
     console.log(`Browser smoke OK (${width}×${height}): home → local library → SNES → translated preview`);
 }

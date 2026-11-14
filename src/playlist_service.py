@@ -19,7 +19,7 @@ from rom_fingerprint import build_rom_match_candidates
 from rom_paths import remove_disc_companions, disc_group, preferred_disc_entry, rom_filename, rom_title
 from match_evidence import CONFLICT_REASON, build_match_diagnostics
 from manual_overrides import find_override, load_overrides
-from safe_io import file_lock
+from safe_io import file_lock, file_digest
 from artwork_resolver import ArtworkResolver, sanitize_filename, valid_image_file, validate_system
 import app_paths
 
@@ -1211,12 +1211,14 @@ def applied_record_verified(record, items):
     return False
 
 
-def apply_changes(playlist_path, changes, thumbnails_dir, backup=True, progress_callback=None, download_thumbnails=True, cancel_check=None, write_names=True, record_history=True):
+def apply_changes(playlist_path, changes, thumbnails_dir, backup=True, progress_callback=None, download_thumbnails=True, cancel_check=None, write_names=True, record_history=True, expected_digest=None):
     from task_control import checkpoint
     checkpoint(cancel_check)
     if not isinstance(changes, list) or any(not isinstance(change, dict) for change in changes):
         raise ValueError('changes 必须是变更对象数组')
     with file_lock(playlist_path):
+        if expected_digest is not None and file_digest(playlist_path) != expected_digest:
+            raise ValueError('游戏列表在汇总后已改变，请重新生成汇总：' + str(playlist_path))
         return _apply_changes_locked(playlist_path, changes, thumbnails_dir, backup, progress_callback, download_thumbnails, cancel_check, write_names, record_history)
 
 

@@ -27,7 +27,6 @@ const ready = {operation: null, previewKey: 'a', inputKey: 'a', playlist: 'test.
 
 test('first launch never claims a completed step or enables writes', () => {
     const state = deriveWorkbenchState({previewKey:null, inputKey:'a', selected:0});
-    assert.deepEqual(state.steps, ['current','waiting','waiting']);
     assert.equal(state.hasLibrary, false);
     assert.equal(state.canApply, false);
     assert.equal(state.canPreview, false);
@@ -36,13 +35,11 @@ test('scanned library requires an explicit list choice', () => {
     const state = deriveWorkbenchState({scanned:true,previewKey:null,inputKey:'a',selected:0});
     assert.equal(state.hasLibrary,true);
     assert.equal(state.canPreview,false);
-    assert.deepEqual(state.steps,['done','waiting','waiting']);
 });
 test('valid playlist permits a preview, not a write without proposals', () => {
     const state = deriveWorkbenchState({...ready,previewKey:null});
     assert.equal(state.canPreview,true);
     assert.equal(state.canApply,false);
-    assert.deepEqual(state.steps,['done','current','waiting']);
 });
 test('empty, unchecked and unconfirmed review-only selections cannot apply', () => {
     assert.equal(deriveWorkbenchState({...ready,selected:0}).canApply,false);
@@ -62,20 +59,17 @@ for (const operation of ['scan','preview','apply','pick']) {
         const state = deriveWorkbenchState({...ready,operation,batchDir:'lists',batchThumbnails:'images'});
         assert.equal(state.canPreview,false);
         assert.equal(state.canApply,false);
-        assert.equal(state.canBatch,false);
+        assert.equal(state.canReviewBatch,false);
     });
 }
 test('failed or cancelled apply does not claim completion and allows recovery', () => {
     const state=deriveWorkbenchState({...ready,operation:null,applied:false});
     assert.equal(state.canApply,true);
-    assert.equal(state.steps[2],'waiting');
-    assert.equal(deriveWorkbenchState({...ready,applied:true}).steps[2],'done');
 });
-test('all systems uses the library target and shared image folder', () => {
-    assert.equal(deriveWorkbenchState({...ready}).canBatch,false);
-    assert.equal(deriveWorkbenchState({...ready,batchDir:'lists',thumbnails:''}).canBatch,false);
-    assert.equal(deriveWorkbenchState({...ready,batchDir:'lists'}).canBatch,true);
-    assert.equal(deriveWorkbenchState({...ready,batchDir:'lists',download:false}).canBatch,true);
+test('all-system analysis requires a scanned library but no artwork folder', () => {
+    assert.equal(deriveWorkbenchState({...ready}).canReviewBatch,false);
+    assert.equal(deriveWorkbenchState({...ready,scanned:true,batchDir:'lists',thumbnails:''}).canReviewBatch,true);
+    assert.equal(deriveWorkbenchState({...ready,scanned:true,batchDir:'lists'}).canReviewBatch,true);
 });
 
 // Exercise the real filtering function, including the old accidental inversion regression.
@@ -96,7 +90,7 @@ function source(name) {
 }
 test('known search names do not become download sources and explain gallery failures separately', () => {
     const context={document:{getElementById:()=>({value:'both'})}, workbenchText:zh=>zh,
-        uiText:x=>x, hasExistingCover:()=>false};
+        getRepairMode:()=> 'both', uiText:x=>x, hasExistingCover:()=>false};
     vm.createContext(context);
     vm.runInContext(source('getCoverStatusInfo'),context);
     const game={new_label:'仙剑奇侠传',original_item_label:'仙剑奇侠传',thumbnail_source:null,
@@ -183,14 +177,14 @@ test('late folder responses cannot replace a newer directory or enable stale sel
 test('Escape defers to the browser while a modal is open instead of closing its parent', () => {
     let handler, active=true, closed=0;
     const context={document:{addEventListener:(_type,callback)=>{handler=callback;},querySelector:()=>active?{}:null},
-        closeModal:()=>closed++,toggleDetailsDrawer:()=>closed++,closeInspector:()=>closed++};
+        closeModal:()=>closed++,toggleDetailsDrawer:()=>closed++};
     vm.createContext(context);
     const start=configSource.indexOf("document.addEventListener('keydown',");
     vm.runInContext(configSource.slice(start),context);
     handler({key:'Escape'});
     assert.equal(closed,0);
     active=false;handler({key:'Escape'});
-    assert.equal(closed,2);
+    assert.equal(closed,1);
 });
 
 test('reloading legacy config preserves its image folder as an override while clearing selection', () => {
@@ -234,23 +228,29 @@ test('a manual artwork override belongs to its library and survives only same-li
     assert.equal(context.pathSettingsRoot,'library-b');
 });
 
-test('all-systems execution sends the detected library and shared override to the existing batch API', async () => {
+test('preview options reject turning both operations off, and otherwise reanalyze', async () => {
+    let previews=0, mode='names';
+    const control={checked:false};
+    const context={getProcessingOptions:()=>({write_names:mode!=='none',download_thumbnails:mode==='both'}),
+        previewTask:async()=>{previews++;},showStatus:()=>{},workbenchText:zh=>zh};
+    vm.createContext(context);vm.runInContext(source('changePreviewOptions'),context);
+    await context.changePreviewOptions(control);assert.equal(previews,1);
+    mode='none';await context.changePreviewOptions(control);
+    assert.equal(control.checked,true);assert.equal(previews,1);
+});
+
+test('batch application sends only the reviewed job, never fresh paths or proposals', async () => {
     let sent, tracked;
-    const context={workbench:{operation:null},currentDeviceScan:{directories:{playlists:'/library/playlists'}},
-        document:{getElementById:id=>id==='rom_name_cn_path'?{value:'/names'}:{}},
-        getThumbnailsDirectory:()=>'/shared-images',getBatchOptions:()=>({write_names:true,download_thumbnails:false,backup:true,continue_on_error:true}),
-        desktopConfirm:async message=>{assert.match(message,/\/library\/playlists/);return true;},
-        workbenchText:zh=>zh,beginWorkbenchOperation:()=>true,saveConfig:async()=>true,
-        showLogPanel:()=>{},setInlineProgress:()=>{},endWorkbenchOperation:()=>{},
-        fetch:async(url,options)=>{sent={url,body:JSON.parse(options.body)};return {json:async()=>({job_id:'all-systems-job'})};},
-        trackProgress:(...args)=>{tracked=args;}};
-    vm.createContext(context);
-    vm.runInContext(source('executeTask'),context);
-    await context.executeTask('batch');
+    const context={batchReviewId:'review-1',workbench:{operation:null},
+        document:{getElementById:id=>({disabled:false,checked:true,close:()=>{},addEventListener:()=>{}})},
+        beginWorkbenchOperation:()=>true,desktopRequest:async(url,body)=>{sent={url,body};return {job_id:'apply-1'};},
+        invalidateWorkbenchPreview:()=>{},showLogPanel:()=>{},trackProgress:(...args)=>{tracked=args;}};
+    vm.createContext(context);vm.runInContext(source('applyBatchReview'),context);
+    await context.applyBatchReview();
     assert.equal(sent.url,'/api/batch/apply');
-    assert.equal(sent.body.batch_dir,'/library/playlists');
-    assert.equal(sent.body.thumbnails_dir,'/shared-images');
-    assert.equal(sent.body.rom_name_cn_path,'/names');
-    assert.equal(sent.body.options.download_thumbnails,false);
-    assert.deepEqual(tracked,['all-systems-job','batch']);
+    assert.equal(sent.body.preview_job_id,'review-1');
+    assert.equal(Object.hasOwn(sent.body,'batch_dir'),false);
+    assert.equal(Object.hasOwn(sent.body,'changes'),false);
+    assert.equal(context.batchReviewId,null);
+    assert.deepEqual(tracked,['apply-1','batch']);
 });

@@ -4,63 +4,115 @@ let lastAppliedChangeKeys = new Set();
 let lastAppliedDownloadEnabled = true;
 let lastAppliedWriteNames = true;
 
-async function executeTask(mode) {
-    if (mode === 'single') return previewTask();
+let batchReviewId = null;
+let batchReviewJobId = null;
+
+async function openBatchReview() {
     if (workbench.operation) return;
+    const dialog = document.getElementById('batch-review-dialog');
+    dialog.showModal();
+    await refreshBatchReview();
+}
 
-    if (mode === 'batch') {
-        const batchDir = currentDeviceScan?.directories?.playlists || '';
-        const thumbnailsDir = getThumbnailsDirectory();
-        const romNameCnPath = document.getElementById('rom_name_cn_path').value;
-        const options = getBatchOptions();
-
-        if (!batchDir) {
-            showStatus('请选择游戏列表目录', 'error');
-            return;
-        }
-        if (options.download_thumbnails && !thumbnailsDir) {
-            showStatus('请选择缩略图目录', 'error');
-            return;
-        }
-
-        const backupNote = options.backup
-            ? workbenchText('每个修改的列表会先备份。', 'Changed lists will be backed up.')
-            : workbenchText('自动备份已关闭。', 'Automatic backups are disabled.');
-        if (!await desktopConfirm(workbenchText('处理此目录中的全部列表：', 'Process all lists in: ') + batchDir + '\n' + backupNote + workbenchText('无需逐项确认。', ' No per-item confirmation is required.'))) return;
-        if (!beginWorkbenchOperation('apply')) return;
-        workbench.hasTask = true;
-        const saved = await saveConfig(mode);
-        if (!saved) { endWorkbenchOperation(); return; }
-
-        showLogPanel('batch');
-        setInlineProgress(2, '启动中', '正在启动批量处理', '当前：扫描游戏列表目录');
-        document.getElementById('batch-log-view').innerHTML = '<strong>批量运行日志：</strong><br>正在启动批量处理...<br>';
-
-        try {
-            const response = await fetch('/api/batch/apply', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    batch_dir: batchDir,
-                    thumbnails_dir: thumbnailsDir,
-                    rom_name_cn_path: romNameCnPath,
-                    options
-                })
-            });
-
-            const data = await response.json();
-            if (data.job_id) {
-                trackProgress(data.job_id, 'batch');
-            } else {
-                throw new Error(data.error || 'Missing job ID');
-            }
-        } catch (error) {
-            alert('Error: ' + error.message);
-            setInlineProgress(0, '失败', '批量处理启动失败', error.message);
-            endWorkbenchOperation();
-        }
+async function closeBatchReview() {
+    document.getElementById('batch-review-dialog').close();
+    try {
+        if (batchReviewJobId) await desktopRequest('/api/jobs/cancel', {job_id: batchReviewJobId});
+        if (batchReviewId) await desktopRequest('/api/batch/discard', {preview_job_id: batchReviewId});
+    } catch (error) {
+        showStatus(error.message, 'error');
+    } finally {
+        batchReviewId = null;
+        document.getElementById('batch-review-button').focus();
     }
 }
+
+async function refreshBatchReview(control) {
+    if (workbench.operation) return;
+    const options = {write_names: document.getElementById('batch-write-names').checked,
+        download_thumbnails: document.getElementById('batch-download-artwork').checked};
+    if (!options.write_names && !options.download_thumbnails) {
+        control.checked = true;
+        return;
+    }
+    if (!beginWorkbenchOperation('batch-preview')) return;
+    const dialog = document.getElementById('batch-review-dialog');
+    const status = document.getElementById('batch-review-status');
+    const apply = document.getElementById('batch-review-apply');
+    apply.disabled = true;
+    document.getElementById('batch-review-rows').replaceChildren();
+    const controls = ['batch-write-names', 'batch-download-artwork', 'batch-review-refresh'];
+    controls.forEach(id => { document.getElementById(id).disabled = true; });
+    status.textContent = workbenchText('正在分析全部主机，不会写入…', 'Analyzing all systems without writing…');
+    try {
+        if (batchReviewId) await desktopRequest('/api/batch/discard', {preview_job_id: batchReviewId});
+        batchReviewId = null;
+        const started = await desktopRequest('/api/batch/preview', {
+            batch_dir: currentDeviceScan.directories.playlists,
+            thumbnails_dir: getThumbnailsDirectory(),
+            rom_name_cn_path: document.getElementById('rom_name_cn_path').value, options,
+        });
+        batchReviewJobId = started.job_id;
+        const result = await new Promise((resolve, reject) => {
+            const events = new EventSource(`/api/progress?job_id=${started.job_id}`);
+            events.onmessage = event => {
+                const job = JSON.parse(event.data);
+                if (job.status === 'completed') { events.close(); resolve(job.result); }
+                else if (job.error || ['failed', 'cancelled'].includes(job.status)) {
+                    events.close(); reject(new Error(job.error || workbenchText('分析已取消', 'Analysis cancelled')));
+                } else status.textContent = job.message;
+            };
+            // EventSource reconnects; a transient disconnect must not enable Apply.
+        });
+        batchReviewId = started.job_id;
+        if (!dialog.open) {
+            await desktopRequest('/api/batch/discard', {preview_job_id: batchReviewId});
+            batchReviewId = null;
+            return;
+        }
+        const rows = document.getElementById('batch-review-rows');
+        for (const item of result.rows) {
+            const row = document.createElement('tr');
+            for (const value of [item.system, item.names, item.artwork, item.error || item.review]) {
+                const cell = document.createElement('td'); cell.textContent = value; row.appendChild(cell);
+            }
+            rows.appendChild(row);
+        }
+        const count = result.rows.reduce((total, item) => total + item.names + item.artwork, 0);
+        status.textContent = result.options.download_thumbnails && !getThumbnailsDirectory()
+            ? workbenchText('请先设置图片目录，或取消补全图片后重新分析。', 'Choose an artwork folder, or uncheck artwork to analyze names only.')
+            : workbenchText(`共 ${result.rows.length} 个主机 · ${count} 项名称／图片任务，尚未写入。`, `${result.rows.length} systems · ${count} name/artwork actions. Nothing has been written.`);
+        apply.disabled = !result.can_apply;
+    } catch (error) {
+        status.textContent = error.message;
+    } finally {
+        batchReviewJobId = null;
+        controls.forEach(id => { document.getElementById(id).disabled = false; });
+        endWorkbenchOperation();
+    }
+}
+
+async function applyBatchReview() {
+    if (!batchReviewId || workbench.operation || document.getElementById('batch-review-apply').disabled) return;
+    if (!beginWorkbenchOperation('apply')) return;
+    document.getElementById('batch-review-apply').disabled = true;
+    try {
+        const data = await desktopRequest('/api/batch/apply', {preview_job_id: batchReviewId,
+            continue_on_error: document.getElementById('batch-option-continue').checked});
+        batchReviewId = null;
+        document.getElementById('batch-review-dialog').close();
+        invalidateWorkbenchPreview();
+        showLogPanel('batch');
+        trackProgress(data.job_id, 'batch');
+    } catch (error) {
+        document.getElementById('batch-review-status').textContent = error.message;
+        endWorkbenchOperation();
+    }
+}
+
+document.getElementById('batch-review-dialog').addEventListener('cancel', event => {
+    event.preventDefault(); closeBatchReview();
+});
 
 async function applyChanges(confirmed = false) {
     if (!workbenchSnapshot().canApply) return;
@@ -281,6 +333,13 @@ function trackProgress(jobId, mode = 'single') {
 
         if (data.status === 'completed' || data.status === 'cancelled') {
             const outcome = downloadTaskOutcome(data.status, data.result?.download_summary);
+            const errors = data.result?.errors || [];
+            if (errors.length) {
+                outcome.complete = false;
+                outcome.label = workbenchText('部分完成', 'Partially completed');
+                outcome.message = workbenchText(`${errors.length} 个列表处理失败，请查看任务明细`, `${errors.length} playlists failed; see task details`);
+                if (logView) for (const error of errors) logView.innerHTML += `<span class="fail">${escapeHtml(error)}</span><br>`;
+            }
             if (logView) logView.innerHTML += `<span style="color:${outcome.complete ? '#58d68d' : '#f5b041'}">${escapeHtml(outcome.message)}</span><br>`;
             eventSource.close();
             lastDownloadSummary = data.result?.download_summary || null;

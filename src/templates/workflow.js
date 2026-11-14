@@ -33,10 +33,7 @@ function deriveWorkbenchState(input) {
         canPreview: !busy && Boolean(input.playlist && input.system),
         canApply: !busy && previewValid && input.selected > 0 && Boolean(input.playlist)
             && (!input.download || Boolean(input.thumbnails)),
-        canBatch: !busy && Boolean(input.batchDir) && (!input.download || Boolean(input.thumbnails)),
-        steps: [input.scanned || input.playlist ? 'done' : 'current',
-            previewValid ? 'done' : input.playlist ? 'current' : 'waiting',
-            input.operation === 'apply' ? 'current' : input.applied ? 'done' : 'waiting']
+        canReviewBatch: !busy && Boolean(input.scanned && input.batchDir)
     };
 }
 
@@ -44,15 +41,15 @@ const workbench = { operation: null, previewKey: null, applied: false, hasTask: 
 
 function workbenchText(zh, en) { return currentUILanguage === 'en' ? en : zh; }
 function workbenchInputKey() {
-    return JSON.stringify(['playlist_path', 'system_name', 'rom_name_cn_path', 'repair-mode', 'organize-scope']
-        .map(id => document.getElementById(id).value.trim()).concat(getThumbnailsDirectory()));
+    return JSON.stringify(['playlist_path', 'system_name', 'rom_name_cn_path']
+        .map(id => document.getElementById(id).value.trim()).concat(getThumbnailsDirectory(), getRepairMode()));
 }
 function workbenchSnapshot() {
     const value = id => document.getElementById(id).value.trim();
     return deriveWorkbenchState({
         ...workbench, inputKey: workbenchInputKey(), scanned: Boolean(currentDeviceScan?.playlists?.length),
         playlist: value('playlist_path'), system: value('system_name'), selected: getIncludedChanges().length,
-        download: value('repair-mode') !== 'names', thumbnails: getThumbnailsDirectory(),
+        download: getProcessingOptions().download_thumbnails, thumbnails: getThumbnailsDirectory(),
         batchDir: currentDeviceScan?.directories?.playlists || ''
     });
 }
@@ -73,8 +70,7 @@ function invalidateWorkbenchPreview() {
     currentChanges = [];
     currentPreviewFilter = 'all';
     document.getElementById('preview-search').value = '';
-    selectedChangeIndex = -1;
-    hideApplySummary(); clearInspector(); renderPreviewTable([]); updateSummary([]);
+    hideApplySummary(); renderPreviewTable([]); updateSummary([]);
     setPreviewAreaVisible(false);
     renderWorkbench();
 }
@@ -82,35 +78,29 @@ function renderWorkbench() {
     const shell = document.querySelector('.app-shell');
     if (!shell) return;
     const state = workbenchSnapshot();
-    const batch = document.getElementById('organize-scope').value === 'batch';
-    document.querySelector('.workflow-strip').hidden = !state.previewValid && !['preview', 'apply'].includes(workbench.operation);
     document.getElementById('browse-games-button').hidden = !state.previewValid;
     document.getElementById('browse-games-button').disabled = state.busy;
     document.getElementById('browse-games-button').textContent = workbenchText('返回游戏列表', 'Back to games');
-    document.querySelector('#organize-menu > summary').textContent = workbenchText('批量整理', 'Organize games');
-    if (workbench.operation === 'preview') document.getElementById('organize-menu').open = false;
     shell.classList.toggle('library-loaded', state.hasLibrary);
     shell.classList.toggle('preview-loaded', state.previewValid);
     shell.classList.toggle('task-visible', workbench.hasTask);
     document.getElementById('preview-button').disabled = !state.canPreview;
-    document.getElementById('preview-button').hidden = batch;
+    document.getElementById('batch-review-button').disabled = !state.canReviewBatch;
+    document.getElementById('preview-options').hidden = !state.previewValid;
+    for (const id of ['option-write-names', 'option-download-artwork']) document.getElementById(id).disabled = state.busy;
     const apply = document.getElementById('apply-button');
     apply.disabled = !state.canApply;
     apply.hidden = !state.previewValid;
     const count = getIncludedChanges().length;
     apply.textContent = workbenchText(`应用 ${count} 项变更`, `Apply ${count} ${count === 1 ? 'change' : 'changes'}`);
     document.getElementById('confirm-apply-button').disabled = !state.canApply;
-    document.getElementById('batch-start-button').hidden = !batch;
-    document.getElementById('batch-start-button').disabled = !state.canBatch;
-    document.getElementById('batch-explanation').hidden = !batch;
-    document.getElementById('batch-options').hidden = !batch;
     document.getElementById('workspace-empty').hidden = state.previewValid
         || Boolean(document.getElementById('playlist_path').value && workbench.operation !== 'preview');
     document.getElementById('workspace-empty').textContent = workbench.operation === 'preview'
         ? workbenchText('正在分析名称与图片，生成修复建议…', 'Analyzing names and artwork to prepare suggestions…')
         : uiText('选择左侧列表，然后预览名称与图片变更。');
     document.getElementById('preview-button').classList.toggle('btn-ghost', state.previewValid);
-    document.getElementById('preview-button').textContent = state.previewValid ? workbenchText('重新预览', 'Refresh preview') : uiText('预览变更');
+    document.getElementById('preview-button').textContent = state.previewValid ? workbenchText('重新预览', 'Refresh preview') : workbenchText('整理本主机', 'Organize this system');
     const playlistPath = document.getElementById('playlist_path').value;
     const selectedSystem = document.getElementById('system_name').value;
     const selectedTitle = !playlistPath ? '' : selectedSystem ? getSystemAbbreviation(selectedSystem) : playlistPath.replaceAll('\\', '/').split('/').pop();
@@ -123,13 +113,6 @@ function renderWorkbench() {
         ? (libraryRoot.startsWith('adb://') ? 'ADB · ' : workbenchText('本地 · ', 'Local · ')) + shortPath(libraryRoot)
         : workbenchText('手动选择的列表', 'Manually selected list');
     document.getElementById('library-location').title = document.getElementById('retroarch_root').value;
-    document.querySelectorAll('[data-workflow-step]').forEach((step, index) => {
-        step.dataset.state = state.steps[index];
-        if (state.steps[index] === 'current') step.setAttribute('aria-current', 'step');
-        else step.removeAttribute('aria-current');
-        step.querySelector('.flow-state').textContent = state.steps[index] === 'done' ? uiText('已完成')
-            : state.steps[index] === 'current' ? uiText('当前') : uiText('等待');
-    });
     document.querySelectorAll('[data-input-control], #scanned-playlists button').forEach(control => {
         control.disabled = state.busy;
     });
@@ -141,9 +124,7 @@ function renderWorkbench() {
     document.getElementById('choose-image-directory').disabled = state.busy;
     document.getElementById('preview-search').disabled = state.busy;
     document.getElementById('preview-search').setAttribute('aria-label', uiText('搜索游戏名 / rom 名称'));
-    document.querySelector('.workflow-strip').setAttribute('aria-label', uiText('修复流程'));
     document.getElementById('preview-container').inert = state.busy;
-    document.getElementById('inspector-panel').inert = state.busy;
     document.getElementById('workbench-busy').textContent = state.busy && workbench.operation !== 'artwork'
         ? workbenchText('正在处理，请稍候…', 'Working, please wait…') : '';
     const counts = {all: currentChanges.length, matched: 0, review: 0, duplicate: 0, ready: 0, completed: 0, 'missing-cover': 0, edited: 0};

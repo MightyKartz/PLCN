@@ -3,11 +3,11 @@
 function preparePreviewChanges(changes) {
     return (changes || []).map(original => {
         const change = { ...original };
-        if (document.getElementById('repair-mode')?.value === 'names' && !change.needs_review && ['matched', 'rename', 'ready', 'download'].includes(change.match_status)) {
+        if (getRepairMode() === 'names' && !change.needs_review && ['matched', 'rename', 'ready', 'download'].includes(change.match_status)) {
             change.match_status = currentMatchesWriteName(change) ? 'ready' : 'rename';
             change.match_reason = '仅修复名称；此次不下载图片';
         }
-        if (document.getElementById('repair-mode')?.value === 'artwork') {
+        if (getRepairMode() === 'artwork') {
             change.new_label = change.original_item_label || change.original_label;
             change.artwork = null;
             clearCoverState(change);
@@ -210,9 +210,6 @@ function applyCompletedJobToPreview(result) {
 
     updateSummary(currentChanges);
     renderPreviewTable(currentChanges);
-    if (selectedChangeIndex >= 0 && currentChanges[selectedChangeIndex]) {
-        updateInspector(currentChanges[selectedChangeIndex]);
-    }
 }
 
 function matchesFilter(change, query) {
@@ -278,10 +275,10 @@ function getMatchReasonLabel(info, change) {
     if (change.pending_override || info.source === 'manual-edit') {
         return [uiText('待保存本地修正'), change.match_reason || info.reason || ''].filter(Boolean).join(' · ');
     }
-    if (document.getElementById('repair-mode').value === 'names' && ['rename', 'ready'].includes(info.kind)) return workbenchText('仅检查显示名称，图片保持不变', 'Only display names are checked; artwork is unchanged');
+    if (getRepairMode() === 'names' && ['rename', 'ready'].includes(info.kind)) return workbenchText('仅检查显示名称，图片保持不变', 'Only display names are checked; artwork is unchanged');
     if (!change.thumbnail_source && change.artwork_gallery_status === 'not_found') return workbenchText('名称已识别，可搜索图库或导入本地图片', 'Title identified. Search the library or import an image');
     if (!change.thumbnail_source && change.artwork_gallery_status === 'unavailable') return workbenchText('名称已识别，请重试图库查询', 'Title identified. Retry the gallery search');
-    if (document.getElementById('repair-mode').value === 'artwork') return ['review', 'duplicate'].includes(info.kind)
+    if (getRepairMode() === 'artwork') return ['review', 'duplicate'].includes(info.kind)
         ? workbenchText('图片来源需核对，当前名称保持不变', 'Review the artwork source; current names are preserved')
         : workbenchText('检查并补全图片，当前名称保持不变', 'Check and complete artwork; current names are preserved');
     if (info.kind === 'ready') return uiText('中文名、封面源和封面已就绪');
@@ -318,7 +315,7 @@ function getMatchInfo(change) {
             duplicate: { label: uiText('重复需处理'), badgeClass: 'danger', rowClass: 'row-danger', color: 'var(--red)', fallbackScore: 99 },
             applied: { kind: 'completed', label: uiText('已完成'), badgeClass: 'success', rowClass: '', color: 'var(--green)', fallbackScore: 100 }
         };
-        const action = repairActionStatus(change, document.getElementById('repair-mode').value);
+        const action = repairActionStatus(change, getRepairMode());
         const actionKind = action === 'incomplete' ? 'review' : action;
         const status = statusMap[actionKind] || statusMap.review;
         const score = Number(change.match_score);

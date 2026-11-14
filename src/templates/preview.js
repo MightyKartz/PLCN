@@ -1,7 +1,6 @@
 /* Repair preview rows, filters and selection summaries. */
 let currentChanges = [];
 let currentPreviewFilter = 'all';
-let selectedChangeIndex = -1;
 
 async function previewTask() {
     const playlistPath = document.getElementById('playlist_path').value;
@@ -36,14 +35,12 @@ async function previewTask() {
         lastAppliedChangeKeys = new Set();
         lastDownloadSummary = null;
         setDownloadSummary(null);
-        selectedChangeIndex = -1;
         setLibraryBrowserVisible(true);
         setPreviewAreaVisible(true);
         document.getElementById('preview-empty').style.display = currentChanges.length ? 'none' : 'grid';
         document.getElementById('preview-container').style.display = currentChanges.length ? 'block' : 'none';
         updateSummary(currentChanges);
         renderPreviewTable(currentChanges);
-        clearInspector();
         showLogPanel(null);
         showStatus('分析完成，请校对', 'success');
     } catch (error) {
@@ -68,18 +65,6 @@ function renderPreviewTable(changes) {
         const tr = document.createElement('tr');
         tr.dataset.index = index;
         tr.className = info.rowClass;
-        if (index === selectedChangeIndex) tr.classList.add('selected');
-        tr.onclick = () => selectPreviewRow(index);
-        tr.tabIndex = 0;
-        tr.setAttribute('aria-label', workbenchText('查看详情：', 'View details: ') + getCurrentItemLabel(change));
-        tr.addEventListener('keydown', event => {
-            if (event.target === tr && ['Enter', ' '].includes(event.key)) {
-                event.preventDefault();
-                selectPreviewRow(index);
-                document.getElementById('inspector-label').focus();
-            }
-        });
-
         const tdSelect = document.createElement('td');
         tdSelect.className = 'select-cell';
         const canSelect = isActionableChange(change);
@@ -206,7 +191,6 @@ function buildPreviewEditor(change, index, key, value, label) {
                 button.textContent = value || workbenchText('点击填写', 'Click to enter');
                 button.title = label + ': ' + (value || uiText('待补充'));
                 refreshPreviewRowState(index);
-                if (selectedChangeIndex === index) updateInspector(currentChanges[index]);
                 updateSummary(currentChanges);
             }
             input.replaceWith(button);
@@ -225,7 +209,7 @@ function buildPreviewEditor(change, index, key, value, label) {
 }
 
 function getCoverStatusInfo(change) {
-    if (document.getElementById('repair-mode').value === 'names') return {className:'skipped', label:workbenchText('本次不处理', 'Not requested'), title:workbenchText('仅修复名称，图片保持不变', 'Names only; artwork is unchanged')};
+    if (getRepairMode() === 'names') return {className:'skipped', label:workbenchText('本次不处理', 'Not requested'), title:workbenchText('仅修复名称，图片保持不变', 'Names only; artwork is unchanged')};
     if (!change.thumbnail_source) {
         if (hasExistingCover(change)) {
             return {
@@ -318,7 +302,6 @@ function refreshPreviewRowState(index) {
 
     const info = getMatchInfo(change);
     row.className = info.rowClass || '';
-    if (index === selectedChangeIndex) row.classList.add('selected');
 
     const canSelect = isActionableChange(change);
     const isSelected = change.enabled !== false && canSelect;
@@ -354,6 +337,17 @@ function buildStatusCell(info, index) {
     }
     statusMainline.appendChild(status);
     statusStack.appendChild(statusMainline);
+    const change = currentChanges[index];
+    if (isEditedChange(change)) {
+        const save = document.createElement('button');
+        save.type = 'button'; save.className = 'save-row-override';
+        save.dataset.saveOverride = index;
+        save.textContent = workbenchText('记住修正', 'Remember correction');
+        save.title = workbenchText('保存为本地修正规则', 'Save as a local correction');
+        save.disabled = !canSaveOverride(change);
+        save.onclick = () => saveChangeOverride(index);
+        statusStack.appendChild(save);
+    }
     tdStatus.appendChild(statusStack);
     return tdStatus;
 }
@@ -486,4 +480,63 @@ function toggleFilterBar() {
     button.setAttribute('aria-expanded', String(!compact));
     button.title = compact ? workbenchText('展开筛选项', 'Show more filters') : workbenchText('收起筛选项', 'Show fewer filters');
     showStatus(compact ? '已收起非当前筛选项' : '已展开全部筛选项', 'info');
+}
+
+function canSaveOverride(change) {
+    return Boolean(change) && isEditedChange(change)
+        && Boolean(normalizeDisplayName(change.new_label))
+        && Boolean(normalizeDisplayName(change.thumbnail_source));
+}
+
+async function saveChangeOverride(index) {
+    const change = currentChanges[index];
+    if (!canSaveOverride(change)) return;
+
+    const button = document.querySelector(`[data-save-override="${index}"]`);
+    if (button) button.disabled = true;
+
+    const system = change.system || document.getElementById('system_name').value || '';
+    const payload = {
+        system,
+        change: {
+            system,
+            path: change.path || '',
+            crc32: change.crc32 || '',
+            new_label: change.new_label || '',
+            thumbnail_source: change.thumbnail_source || ''
+        }
+    };
+
+    try {
+        const response = await fetch('/api/overrides/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data.error) throw new Error(data.error || '保存本地修正规则失败');
+
+        const saved = data.entry || payload.change;
+        const savedChange = currentChanges[index];
+        if (!savedChange) return;
+        savedChange.system = saved.system || system || savedChange.system;
+        savedChange.new_label = saved.new_label || savedChange.new_label;
+        savedChange.thumbnail_source = saved.thumbnail_source || savedChange.thumbnail_source;
+        savedChange.match_source = 'manual_override';
+        savedChange.match_status = 'review';
+        savedChange.match_score = 100;
+        savedChange.match_reason = uiText('本地修正规则已保存，重新预览后应用');
+        savedChange.needs_review = true;
+        savedChange.pending_override = false;
+        savedChange.enabled = false;
+
+        updateSummary(currentChanges);
+        renderPreviewTable(currentChanges);
+        showStatus(uiText('本地修正规则已保存'), 'success');
+    } catch (error) {
+        showStatus('保存本地修正规则失败: ' + error.message, 'error');
+    } finally {
+        const currentButton = document.querySelector(`[data-save-override="${index}"]`);
+        if (currentButton) currentButton.disabled = !canSaveOverride(currentChanges[index]);
+    }
 }

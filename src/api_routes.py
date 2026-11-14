@@ -36,6 +36,8 @@ POST_ROUTES = {
     '/api/artwork/resolve': api_artwork.resolve,
     '/api/artwork/search': api_artwork.search,
     '/api/artwork/status': api_artwork.status,
+    '/api/batch/discard': api_playlists.batch_discard,
+    '/api/batch/preview': api_playlists.batch_preview,
     '/api/batch/apply': api_playlists.batch_apply,
     '/api/config': api_config.save_config,
     '/api/data/activate': api_data.activate,

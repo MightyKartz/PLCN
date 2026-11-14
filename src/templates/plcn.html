@@ -10,7 +10,7 @@
 </head>
 
 <body>
-    <div class="app-shell inspector-hidden">
+    <div class="app-shell">
         <header class="topbar">
             <div class="brand">
                 <div class="brand-mark" aria-hidden="true">
@@ -58,6 +58,7 @@
                             <p class="library-browser-summary" id="library-browser-summary" data-i18n="扫描后按主机名称显示 .lpl 游戏列表">扫描后按主机名称显示 .lpl 游戏列表</p>
                         </div>
                     </div>
+                    <button id="batch-review-button" class="btn btn-muted" type="button" onclick="openBatchReview()" data-i18n="整理全部主机" disabled>整理全部主机</button>
                     <input id="library-system-search" class="library-system-search" type="search" aria-label="搜索主机" placeholder="搜索主机" oninput="filterLibrarySystems()">
                     <p id="library-system-empty" class="artwork-help" hidden></p>
                     <div class="playlist-list playlist-system-list" id="scanned-playlists">
@@ -90,34 +91,12 @@
                     <section class="home-local" aria-labelledby="home-local-title"><div><h2 id="home-local-title">本地游戏库</h2><p id="home-local-description"></p></div><div class="home-local-actions"><button class="btn btn-muted" data-input-control id="home-local-open" type="button" onclick="openFilePicker('retroarch_root', true)">打开本地目录</button><button class="home-path-link" data-input-control id="home-manual-open" type="button" onclick="enterLibraryPath()">手动输入路径</button></div></section>
                 </section>
                 <div class="workbench-content">
-                <ol class="workflow-strip" aria-label="修复流程">
-                    <li data-workflow-step><span data-i18n="选择游戏库">选择游戏库</span><small class="flow-state"></small></li>
-                    <li data-workflow-step><span data-i18n="预览变更">预览变更</span><small class="flow-state"></small></li>
-                    <li data-workflow-step><span data-i18n="应用变更">应用变更</span><small class="flow-state"></small></li>
-                </ol>
                 <div class="panel-header">
                     <h1 class="panel-title" id="workspace-title">选择游戏列表</h1>
 
                     <div class="panel-actions">
                         <button id="browse-games-button" class="btn btn-muted" type="button" onclick="invalidateWorkbenchPreview()" hidden>返回游戏列表</button>
-                        <details id="organize-menu">
-                            <summary class="btn btn-muted">批量整理</summary>
-                            <div class="organize-menu-content">
-                                <div class="operation-choice">
-                                    <label for="organize-scope" data-i18n="范围">范围</label>
-                                    <select id="organize-scope" data-input-control><option value="single" data-i18n="当前主机">当前主机</option><option value="batch" data-i18n="全部主机">全部主机</option></select>
-                                    <label for="repair-mode" data-i18n="本次操作">本次操作</label>
-                                    <select data-input-control id="repair-mode"><option value="both" data-i18n="修复名称并补全图片">修复名称并补全图片</option><option value="names" data-i18n="仅修复名称">仅修复名称</option><option value="artwork" data-i18n="仅补全图片（保留当前名称）">仅补全图片（保留当前名称）</option></select>
-                                </div>
-                                <div id="batch-options" class="option-list" hidden>
-                                    <label><input id="batch-option-backup" data-input-control type="checkbox" checked><span data-i18n="每个 playlist 自动备份">每个 playlist 自动备份</span></label>
-                                    <label><input id="batch-option-continue" data-input-control type="checkbox" checked><span data-i18n="遇到错误继续处理下一个">遇到错误继续处理下一个</span></label>
-                                </div>
-                                <p id="batch-explanation" class="artwork-help" hidden data-i18n="处理游戏库中的全部主机，自动应用已识别的名称和图片源。">处理游戏库中的全部主机，自动应用已识别的名称和图片源。</p>
-                                <button id="preview-button" class="btn" onclick="previewTask()" disabled data-i18n="预览变更" type="button">预览变更</button>
-                                <button id="batch-start-button" class="btn" type="button" onclick="executeTask('batch')" hidden disabled data-i18n="处理全部主机">处理全部主机</button>
-                            </div>
-                        </details>
+                        <button id="preview-button" class="btn" onclick="previewTask()" disabled type="button" data-i18n="整理本主机">整理本主机</button>
                         <button id="apply-button" class="btn btn-success" onclick="applyChanges()" disabled type="button">应用已选修复</button>
                     </div>
                 </div>
@@ -147,6 +126,11 @@
                         <button id="game-library-more" class="btn btn-muted" type="button" onclick="gameLibrary.limit += 100; renderGameLibrary()" hidden></button>
                     </div>
                 </section>
+                <div id="preview-options" class="preview-options" hidden>
+                    <label><input id="option-write-names" type="checkbox" checked onchange="changePreviewOptions(this)"><span data-i18n="修改名称">修改名称</span></label>
+                    <label><input id="option-download-artwork" type="checkbox" checked onchange="changePreviewOptions(this)"><span data-i18n="补全图片">补全图片</span></label>
+                    <span data-i18n="选项变化后重新分析">选项变化后重新分析</span>
+                </div>
                 <div class="table-toolbar">
                     <div class="filter-group">
                         <button class="filter-btn active" type="button" data-filter="all" onclick="setPreviewFilter('all', this)"><span data-i18n="全部">全部</span> <strong class="filter-count">0</strong></button>
@@ -216,91 +200,6 @@
                 </div>
             </section>
 
-            <aside class="inspector" id="inspector-panel">
-                <div class="inspector-header">
-                    <h2 class="inspector-title" data-i18n="修复预览">修复预览</h2>
-                    <button class="btn btn-small btn-muted" type="button" onclick="closeInspector()" title="关闭详情">×</button>
-                </div>
-                <div class="inspector-body">
-                    <div class="cover-preview" id="cover-preview">
-                        <img id="cover-image" alt="">
-                        <div class="cover-placeholder">
-                            <strong id="cover-title">等待选择</strong>
-                            <span id="cover-subtitle">预览行会显示匹配链路</span>
-                        </div>
-                    </div>
-                    <div class="inspector-caption" id="inspector-caption">未选择游戏</div>
-
-                    <div class="inspector-tabs">
-                        <div class="inspector-tab active" data-i18n="匹配详情">匹配详情</div>
-                        <div class="inspector-tab" data-i18n="元数据">元数据</div>
-                        <div class="inspector-tab" data-i18n="文件信息">文件信息</div>
-                    </div>
-
-                    <div class="timeline">
-                        <div class="timeline-item">
-                            <div class="timeline-icon">F</div>
-                            <div>
-                                <div class="timeline-label" data-i18n="文件名">文件名</div>
-                                <div class="timeline-value" id="inspector-original">尚未分析</div>
-                            </div>
-                            <div class="timeline-time">本地</div>
-                        </div>
-                        <div class="timeline-item">
-                            <div class="timeline-icon">DB</div>
-                            <div>
-                                <div class="timeline-label" data-i18n="中文库（rom-name-cn）">中文库（rom-name-cn）</div>
-                                <div class="timeline-value" id="inspector-cn">等待匹配</div>
-                            </div>
-                            <div class="timeline-time">SQLite</div>
-                        </div>
-                        <div class="timeline-item">
-                            <div class="timeline-icon">✓</div>
-                            <div>
-                                <div class="timeline-label" data-i18n="DAT（Libretro）">DAT（Libretro）</div>
-                                <div class="timeline-value" id="inspector-dat">等待标准名</div>
-                            </div>
-                            <div class="timeline-time">DAT</div>
-                        </div>
-                        <div class="timeline-item">
-                            <div class="timeline-icon">URL</div>
-                            <div>
-                                <div class="timeline-label" data-i18n="缩略图 URL">缩略图 URL</div>
-                                <div class="timeline-value" id="inspector-url">等待封面源</div>
-                            </div>
-                            <div class="timeline-time">Libretro</div>
-                        </div>
-                    </div>
-
-                    <div class="inspector-fields">
-                        <div class="form-group">
-                            <label for="inspector-label" data-i18n="显示名称（将写入游戏列表）">显示名称（将写入游戏列表）</label>
-                            <input type="text" id="inspector-label" oninput="updateSelectedFromInspector('new_label', this.value)">
-                        </div>
-                        <div class="form-group">
-                            <label for="inspector-thumb" data-i18n="封面源">封面源</label>
-                            <div class="source-control">
-                                <input type="text" id="inspector-thumb" oninput="updateSelectedFromInspector('thumbnail_source', this.value)">
-                                <button class="mini-btn" id="search-selected-thumb-btn" type="button" onclick="openArtworkForSelected()" title="搜索封面或导入图片" disabled>
-                                    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path></svg>
-                                </button>
-                                <button class="mini-btn" type="button" onclick="refreshCoverPreview()" title="刷新封面预览">
-                                    <svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4.7L4 8"></path><path d="M4 4v4h4"></path><path d="M4 13a8 8 0 0 0 14.5 4.7L20 16"></path><path d="M20 20v-4h-4"></path></svg>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="confidence-line">
-                            <span data-i18n="匹配依据">匹配依据</span>
-                            <strong id="inspector-confidence">--</strong>
-                        </div>
-                        <div class="inspector-actions">
-                            <button class="btn btn-success" id="save-local-override" onclick="saveSelectedOverride()" data-i18n="保存为本地修正规则" type="button" disabled>保存为本地修正规则</button>
-                            <button class="btn" id="confirm-reviewed" onclick="confirmReviewedChange()" type="button" disabled hidden>加入应用</button>
-                            <button class="btn btn-ghost" id="open-thumb-folder" onclick="openThumbnailFolder()" data-i18n="打开封面文件夹" type="button">打开封面文件夹</button>
-                        </div>
-                    </div>
-                </div>
-            </aside>
         </main>
 
         <section class="bottom-dock" aria-label="任务进度">
@@ -530,6 +429,19 @@
         </div>
         <footer><button id="artwork-confirm" class="btn" type="button" onclick="confirmArtwork()" disabled></button></footer>
     </dialog>
+    <dialog id="batch-review-dialog" aria-labelledby="batch-review-title">
+        <header class="batch-review-header"><h2 id="batch-review-title" data-i18n="全部主机变更汇总">全部主机变更汇总</h2><button class="btn btn-muted" type="button" onclick="closeBatchReview()" data-i18n="关闭">关闭</button></header>
+        <p data-i18n="这里只分析，不会写入。确认后应用本次汇总中的变更。">这里只分析，不会写入。确认后应用本次汇总中的变更。</p>
+        <div class="preview-options">
+            <label><input id="batch-write-names" type="checkbox" checked onchange="refreshBatchReview(this)"><span data-i18n="修改名称">修改名称</span></label>
+            <label><input id="batch-download-artwork" type="checkbox" checked onchange="refreshBatchReview(this)"><span data-i18n="补全图片">补全图片</span></label>
+        </div>
+        <p id="batch-review-status" role="status" aria-live="polite"></p>
+        <div class="batch-review-table-wrap"><table><thead><tr><th data-i18n="主机">主机</th><th data-i18n="修改名称">修改名称</th><th data-i18n="补全图片">补全图片</th><th data-i18n="待补充">待补充</th></tr></thead><tbody id="batch-review-rows"></tbody></table></div>
+        <label><input id="batch-option-continue" type="checkbox" checked><span data-i18n="遇到错误继续处理下一个">遇到错误继续处理下一个</span></label>
+        <p data-i18n="写回名称前自动备份；仅补图不改写游戏列表。">写回名称前自动备份；仅补图不改写游戏列表。</p>
+        <footer class="batch-review-footer"><button class="btn btn-muted" type="button" onclick="refreshBatchReview()" id="batch-review-refresh" data-i18n="重新生成汇总">重新生成汇总</button><button id="batch-review-apply" class="btn btn-success" type="button" onclick="applyBatchReview()" disabled data-i18n="确认应用全部变更">确认应用全部变更</button></footer>
+    </dialog>
     <script src="/assets/workflow.js"></script>
     <script src="/assets/ui.js"></script>
     <script src="/assets/config.js"></script>
@@ -537,7 +449,6 @@
     <script src="/assets/repair-model.js"></script>
     <script src="/assets/preview.js"></script>
     <script src="/assets/tasks.js"></script>
-    <script src="/assets/inspector.js"></script>
     <script src="/assets/library.js"></script>
     <script src="/assets/artwork.js"></script>
     <script src="/assets/welcome.js"></script>

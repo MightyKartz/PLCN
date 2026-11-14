@@ -2,11 +2,7 @@
 import json
 import os
 import sys
-import tempfile
-import threading
 import app_paths
-from safe_io import file_lock
-from task_control import TaskCancelled
 from api_common import reply
 
 
@@ -97,212 +93,62 @@ def preview(handler, context, payload):
 
 
 def apply(handler, context, payload):
-    try:
-        data = payload
-        playlist_path = data.get('playlist_path')
-        changes = data.get('changes')
-        thumbnails_dir = data.get('thumbnails_dir')
-        options = data.get('options') or {}
-        download_thumbnails = options.get('download_thumbnails', True)
-        write_names = options.get('write_names', True)
+    from api_common import background
+    from playlist_transport import apply_playlist
+    options = payload.get('options') or {}
+    def work(jid):
+        context.job_manager.contexts[jid] = {'thumbnails_dir': payload.get('thumbnails_dir')}
+        return apply_playlist(payload.get('playlist_path'), payload.get('changes'), payload.get('thumbnails_dir'),
+                              options=options, progress=lambda a, b, text: context.job_manager.update_job(jid, a, b, text),
+                              cancel_check=lambda: context.job_manager.cancelled(jid))
+    reply(handler, {'job_id': background(context.job_manager, '应用游戏列表变更', work)})
 
-        # Create Job
-        job_id = context.job_manager.create_job()
-        context.job_manager.contexts[job_id] = {'thumbnails_dir': thumbnails_dir}
 
-        def run_job(jid, p_path, chgs, t_dir, should_download):
-            from contextlib import ExitStack
-            with ExitStack() as resources:
-                return run_apply_job(resources, jid, p_path, chgs, t_dir, should_download)
-
-        def run_apply_job(resources, jid, p_path, chgs, t_dir, should_download):
-            try:
-                import playlist_service as plcn
-                from retroarch_scanner import (
-                    verified_push_adb_playlist,
-                    is_adb_uri,
-                    materialize_adb_file,
-                    push_adb_directory,
-                )
-                def progress_cb(curr, tot, msg):
-                    context.job_manager.update_job(jid, curr, tot, msg)
-
-                remote_playlist = is_adb_uri(p_path)
-                remote_thumbnails = is_adb_uri(t_dir)
-                effective_playlist_path = p_path
-                effective_thumbnails_dir = t_dir
-
-                if remote_playlist:
-                    context.job_manager.update_job(jid, 0, len(chgs or []), "正在读取实机游戏列表...")
-                    import hashlib
-                    lock_name = hashlib.sha256(p_path.encode('utf-8')).hexdigest()
-                    resources.enter_context(file_lock(app_paths.cache_dir() / 'locks' / lock_name))
-                    staging_dir = resources.enter_context(tempfile.TemporaryDirectory(prefix='plcn-adb-'))
-                    effective_playlist_path = materialize_adb_file(p_path, cache_dir=staging_dir)
-                    with open(effective_playlist_path, encoding='utf-8-sig') as original:
-                        expected_remote = json.load(original)
-
-                if remote_playlist and remote_thumbnails:
-                    effective_thumbnails_dir = resources.enter_context(tempfile.TemporaryDirectory(prefix='plcn-adb-thumbnails-'))
-
-                apply_result = plcn.apply_changes(
-                    effective_playlist_path,
-                    chgs,
-                    effective_thumbnails_dir,
-                    progress_callback=progress_cb,
-                    download_thumbnails=should_download, cancel_check=lambda: context.job_manager.cancelled(jid),
-                    write_names=write_names, record_history=not remote_playlist
-                )
-                summary, apply_summary = context.split_plcn_apply_result(apply_result)
-
-                remote_backup = None
-                if remote_playlist and apply_summary and apply_summary.get('applied'):
-                    context.job_manager.update_job(jid, len(chgs or []), len(chgs or []), "正在备份并验证实机游戏列表...")
-                    remote_backup = verified_push_adb_playlist(effective_playlist_path, p_path, expected_remote)
-
-                if remote_playlist and remote_thumbnails and should_download:
-                    context.job_manager.update_job(jid, len(chgs or []), len(chgs or []), "正在推送缩略图到实机...")
-                    push_adb_directory(effective_thumbnails_dir, t_dir)
-
-                summary = context.annotate_download_summary_paths(
-                    summary,
-                    local_root=effective_thumbnails_dir,
-                    final_root=t_dir,
-                )
-
-                context.job_manager.complete_job(jid, context.build_apply_job_result(
-                    summary,
-                    apply_summary=apply_summary,
-                    changes=chgs,
-                    transport="adb" if remote_playlist else "local",
-                    remote_backup=remote_backup,
-                ))
-            except Exception as e:
-                import traceback
-                traceback.print_exc()
-                context.job_manager.fail_job(jid, str(e))
-
-        # Start background thread
-        thread = threading.Thread(target=run_job, args=(job_id, playlist_path, changes, thumbnails_dir, download_thumbnails))
-        thread.start()
-
-        handler.send_response(200)
-        handler.send_header("Content-type", "application/json")
-        handler.end_headers()
-        handler.wfile.write(json.dumps({"job_id": job_id}).encode())
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        handler.send_response(500)
-        handler.end_headers()
-        handler.wfile.write(json.dumps({"error": str(e)}).encode())
-    return
+def batch_preview(handler, context, payload):
+    from api_common import background
+    from batch_review import prepare_review
+    directory = payload.get('batch_dir')
+    if not isinstance(directory, str) or not directory:
+        raise ValueError('请选择游戏列表目录')
+    supplied = payload.get('options') or {}
+    options = {key: supplied.get(key, True) for key in ('write_names', 'download_thumbnails')}
+    if any(not isinstance(value, bool) for value in options.values()) or not any(options.values()):
+        raise ValueError('至少选择修改名称或补全图片')
+    thumbnails = payload.get('thumbnails_dir') or ''
+    config = context.load_server_config()
+    source = payload.get('rom_name_cn_path') or config.get('rom_name_cn_path') or str(app_paths.default_source())
+    if getattr(sys, 'frozen', False) and not os.path.isabs(source):
+        source = os.path.join(sys._MEIPASS, source)
+    overrides = context.configured_overrides_path(config)
+    def work(jid):
+        review = prepare_review(directory, thumbnails, source, overrides, options,
+                                lambda a, b, text: context.job_manager.update_job(jid, a, b, text),
+                                lambda: context.job_manager.cancelled(jid))
+        context.job_manager.contexts[jid] = {'batch_review': review}
+        return {'rows': review['rows'], 'options': options,
+                'can_apply': any(plan['changes'] for plan in review['plans'])
+                             and (not options['download_thumbnails'] or bool(thumbnails))}
+    reply(handler, {'job_id': background(context.job_manager, '分析全部主机（不会写入）', work)})
 
 
 def batch_apply(handler, context, payload):
-    try:
-        data = payload
-        batch_dir = data.get('batch_dir')
-        thumbnails_dir = data.get('thumbnails_dir')
-        rom_name_cn_path = data.get('rom_name_cn_path') or context.load_server_config().get('rom_name_cn_path') or str(app_paths.default_source())
-        options = data.get('options') or {}
-        backup = options.get('backup', True)
-        continue_on_error = options.get('continue_on_error', True)
-        download_thumbnails = options.get('download_thumbnails', True)
-        write_names = options.get('write_names', True)
+    from api_common import background
+    from batch_review import apply_review
+    preview_id = payload.get('preview_job_id')
+    job = context.job_manager.get_job(preview_id)
+    stored = context.job_manager.contexts.get(preview_id, {})
+    review = stored.get('batch_review')
+    if not job or job['status'] != 'completed' or not review or not job['result']['can_apply']:
+        raise ValueError('请先生成有效的全部主机汇总，再确认应用')
+    review = stored.pop('batch_review')
+    def work(jid):
+        context.job_manager.contexts[jid] = {'thumbnails_dir': review['thumbnails_dir']}
+        return apply_review(review, lambda a, b, text: context.job_manager.update_job(jid, a, b, text),
+                            lambda: context.job_manager.cancelled(jid), payload.get('continue_on_error', True))
+    reply(handler, {'job_id': background(context.job_manager, '应用已确认的全部主机变更', work)})
 
-        # Handle PyInstaller path for rom_name_cn_path
-        if getattr(sys, 'frozen', False) and not os.path.isabs(rom_name_cn_path):
-             rom_name_cn_path = os.path.join(sys._MEIPASS, rom_name_cn_path)
 
-        # Create Job
-        job_id = context.job_manager.create_job()
-        context.job_manager.contexts[job_id] = {'thumbnails_dir': thumbnails_dir}
-
-        def run_batch_job(jid, b_dir, t_dir, r_path, use_backup, keep_going, should_download):
-            try:
-                import playlist_service as plcn
-                import glob
-                from thumbnail_downloader import ThumbnailDownloader
-
-                # Find all .lpl files
-                playlist_files = glob.glob(os.path.join(b_dir, "*.lpl"))
-                total_files = len(playlist_files)
-
-                if total_files == 0:
-                    context.job_manager.fail_job(jid, "No .lpl files found in directory.")
-                    return
-
-                context.job_manager.update_job(jid, 0, total_files, f"Found {total_files} playlists.")
-
-                summaries = []
-                errors = []
-
-                for i, playlist_path in enumerate(playlist_files):
-                    if context.job_manager.cancelled(jid):
-                        break
-                    filename = os.path.basename(playlist_path)
-                    context.job_manager.update_job(jid, i, total_files, f"Processing {filename}...")
-
-                    system_name = os.path.splitext(filename)[0]
-
-                    try:
-                        # 1. Analyze
-                        changes = plcn.analyze_playlist(playlist_path, system_name, r_path, t_dir, manual_overrides_path=context.configured_overrides_path())
-
-                        # 2. Apply (with backup)
-                        # We pass a dummy progress callback or None, as we track file-level progress here.
-                        # Or we could aggregate progress? For simplicity, just file-level.
-                        apply_result = plcn.apply_changes(
-                            playlist_path,
-                            changes,
-                            t_dir,
-                            backup=use_backup,
-                            download_thumbnails=should_download, cancel_check=lambda: context.job_manager.cancelled(jid),
-                            write_names=write_names
-                        )
-                        summary, _apply_summary = context.split_plcn_apply_result(apply_result)
-                        summary = context.annotate_download_summary_paths(
-                            summary,
-                            local_root=t_dir,
-                            final_root=t_dir,
-                        )
-                        summaries.append(summary)
-
-                    except TaskCancelled:
-                        break
-                    except Exception as e:
-                        print(f"Error processing {filename}: {e}")
-                        errors.append(f"{filename}: {e}")
-                        if not keep_going:
-                            raise
-
-                merged_summary = ThumbnailDownloader.merge_summaries(summaries)
-                context.job_manager.complete_job(jid, {
-                    "processed_count": len(summaries),
-                    "errors": errors,
-                    "download_summary": merged_summary
-                })
-            except Exception as e:
-                import traceback
-                traceback.print_exc()
-                context.job_manager.fail_job(jid, str(e))
-
-        # Start background thread
-        thread = threading.Thread(
-            target=run_batch_job,
-            args=(job_id, batch_dir, thumbnails_dir, rom_name_cn_path, backup, continue_on_error, download_thumbnails)
-        )
-        thread.start()
-
-        handler.send_response(200)
-        handler.send_header("Content-type", "application/json")
-        handler.end_headers()
-        handler.wfile.write(json.dumps({"job_id": job_id}).encode())
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        handler.send_response(500)
-        handler.end_headers()
-        handler.wfile.write(json.dumps({"error": str(e)}).encode())
-    return
+def batch_discard(handler, context, payload):
+    stored = context.job_manager.contexts.get(payload.get('preview_job_id'), {})
+    stored.pop('batch_review', None)
+    reply(handler, {'discarded': True})

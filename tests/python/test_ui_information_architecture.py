@@ -16,12 +16,11 @@ def read_template():
 def test_primary_labels_are_clear():
     html = read_template()
 
-    assert 'data-i18n="当前主机"' in html
-    assert 'data-i18n="全部主机"' in html
+    assert 'data-i18n="整理本主机"' in html
+    assert 'data-i18n="整理全部主机"' in html
     assert "全部游戏列表" not in html
     assert "应用已选修复" in html
     assert "修复状态" in html
-    assert "写入名称" in html
     assert "封面源英文名" in html
     assert 'data-i18n="推荐中文名"' not in html
     assert 'data-i18n="官方英文名"' not in html
@@ -165,16 +164,25 @@ def test_primary_labels_are_clear():
     assert "getFileStem" not in html
     assert "normalizeSearchQuery" not in html
     assert "performSearch" not in html
-    assert 'id="search-selected-thumb-btn"' in html
-    assert "openArtworkForSelected" in html
-    assert "grid-template-columns: minmax(0, 1fr) 34px 34px" in html
+    assert 'id="search-selected-thumb-btn"' not in html
+    assert "openArtworkForSelected" not in html
     assert "Select a game before searching." not in html
 
 
-def test_inspector_and_details_are_on_demand():
+def test_inspector_and_flow_strip_removed_while_task_details_remain():
     html = read_template()
 
-    assert '<div class="app-shell inspector-hidden">' in html
+    assert 'id="inspector-panel"' not in html
+    assert 'inspector.js' not in html
+    assert 'workflow-strip' not in html
+    assert 'selectPreviewRow' not in html
+    assert 'id="organize-menu"' not in html
+    assert 'id="option-write-names"' in html
+    assert 'id="option-download-artwork"' in html
+    assert 'id="batch-review-dialog"' in html
+    assert '/api/batch/preview' in html
+    assert 'preview_job_id: batchReviewId' in html
+    assert 'saveChangeOverride(index)' in html
     assert 'class="details-drawer"' in html
     assert "toggleDetailsDrawer" in html
     assert "toggleTheme" in html
@@ -190,11 +198,8 @@ def test_inspector_and_details_are_on_demand():
     assert "manual-confirmed" not in html
     assert "change.confirmed" not in html
     assert "position: fixed;" in html
-    assert "top: 66px;" in html
-    assert "right: 6px;" in html
     assert "--bottom-dock-height: 104px" in html
     assert "bottom: calc(var(--bottom-dock-height) + 8px)" in html
-    assert "width: min(365px, calc(100vw - 24px))" in html
     assert "height: min(220px, calc(100vh - var(--bottom-dock-height) - 92px))" in html
     assert "details-close-btn" in html
     assert "overflow-y: auto" in html
@@ -218,7 +223,7 @@ def test_legacy_name_search_workbench_is_removed():
     assert "loadStats" not in html
     assert "openSearchModal" not in html
     assert "search-results-table" not in html
-    assert "openArtworkForSelected" in html
+    assert "openArtworkForSelected" not in html
     assert "openArtworkDialog({index: change.index" in html
 
 
@@ -232,7 +237,7 @@ def test_dark_theme_active_states_are_restrained():
     assert "--dark-focus-ring: rgba(95, 143, 212, 0.2)" in html
     assert "body[data-theme=\"dark\"] .filter-btn.active" in html
     assert "body[data-theme=\"dark\"] .playlist-system-tab.active" in html
-    assert "box-shadow: inset 3px 0 0 var(--dark-selected-rail), inset 0 0 0 1px var(--dark-selected-border)" in html
+    assert ".preview-table tr.selected" not in html
     assert "body[data-theme=\"dark\"] .mini-btn:hover" in html
     assert "body[data-theme=\"dark\"] .badge.warning" in html
     assert "inset 5px 0 0 var(--primary), inset 0 0 0 2px #4f86d5" not in html
