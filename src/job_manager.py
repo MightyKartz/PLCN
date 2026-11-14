@@ -22,6 +22,7 @@ class JobManager:
                 'progress': 0,
                 'total': 0,
                 'message': '',
+                'messages': [],
                 'result': None,
                 'error': None
             }
@@ -32,6 +33,9 @@ class JobManager:
             if job_id in self.jobs:
                 self.jobs[job_id]['progress'] = progress
                 self.jobs[job_id]['total'] = total
+                messages = self.jobs[job_id]['messages']
+                if message and (not messages or messages[-1] != message):
+                    self.jobs[job_id]['messages'] = (messages + [message])[-200:]
                 self.jobs[job_id]['message'] = message
                 self.jobs[job_id]['status'] = 'running'
 

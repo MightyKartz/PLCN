@@ -122,15 +122,19 @@ async function refreshDesktop() {
         } else {
             const state = await desktopRequest('/api/desktop');
             if (version !== desktopRenderVersion || !desktopDialog.open) return;
+            const expanded = new Set(Array.from(body.querySelectorAll('details[data-task-id][open]'), element => element.dataset.taskId));
             body.replaceChildren();
             desktopElement('h3', desktopText('本次运行的任务', 'Tasks in this session'), body);
             desktopElement('p', desktopText('关闭浏览器不会停止服务。取消在安全步骤边界生效，已完成的结果会保留。', 'Closing the browser does not stop PLCN. Cancellation takes effect at safe boundaries and keeps completed work.'), body);
             for (const job of state.jobs) {
                 const entry = desktopElement('div', undefined, body); entry.className = 'desktop-entry';
+                entry.dataset.jobId = job.id;
                 const progress = job.total ? ` · ${job.progress}/${job.total}` : '';
-                desktopElement('strong', desktopJobStatus(job.status) + progress, entry);
+                desktopElement('strong', (job.status === 'completed' && (job.result?.errors?.length || job.result?.download_summary?.total?.failed)
+                    ? desktopText('部分完成', 'Partially completed') : desktopJobStatus(job.status)) + progress, entry);
                 if (job.result?.applied_count !== undefined) desktopElement('p', desktopText(`已处理 ${job.result.applied_count} 项`, `${job.result.applied_count} items processed`), entry);
                 desktopElement('p', job.error || job.message, entry);
+                renderTaskDetails(entry, job, expanded.has(job.id));
                 if (['pending', 'running'].includes(job.status)) desktopButton(entry, desktopText('取消任务', 'Cancel task'), async () => {
                     await desktopRequest('/api/jobs/cancel', { job_id: job.id }); await refreshDesktop();
                 });
@@ -280,3 +284,54 @@ async function initializeDesktop() {
 }
 initializeDisplayPreferences();
 loadConfig().then(initializeDesktop);
+
+function renderTaskDetails(parent, job, expanded) {
+    const result = job.result || {};
+    const details = desktopElement('details', undefined, parent);
+    details.dataset.taskId = job.id;
+    details.open = expanded;
+    desktopElement('summary', desktopText('任务明细', 'Task details'), details);
+    if (job.messages?.length) {
+        desktopElement('h4', desktopText('最近的处理记录', 'Recent activity'), details);
+        const log = desktopElement('ol', undefined, details); log.className = 'task-log';
+        for (const message of job.messages) desktopElement('li', message, log);
+    }
+    if (result.errors?.length) {
+        const errors = desktopElement('ul', undefined, details); errors.className = 'task-errors';
+        for (const error of result.errors) desktopElement('li', error, errors);
+    }
+    const summary = result.download_summary;
+    if (summary) {
+        desktopElement('h4', desktopText('图片处理汇总', 'Artwork summary'), details);
+        const table = desktopElement('table', undefined, details); table.className = 'task-result-table';
+        const heading = desktopElement('tr', undefined, table);
+        for (const text of [desktopText('类型', 'Type'), desktopText('成功', 'Succeeded'), desktopText('失败', 'Failed'), desktopText('跳过', 'Skipped')]) desktopElement('th', text, heading);
+        for (const [kind, name] of Object.entries(ARTWORK_KIND_LABELS)) {
+            const row = desktopElement('tr', undefined, table);
+            desktopElement('td', desktopText(...name), row);
+            for (const key of ['success', 'failed', 'skipped']) desktopElement('td', summary.types?.[kind]?.[key] || 0, row);
+        }
+        const images = summary.details || [];
+        const failures = images.filter(image => image.status === 'failed' || image.reason === 'cancelled');
+        const visible = failures.length ? failures : images.slice(-200);
+        if (visible.length) {
+            desktopElement('h4', failures.length ? desktopText('未完成的图片', 'Incomplete images')
+                : desktopText(`图片明细（最近 ${visible.length} / ${images.length} 条）`, `Image details (latest ${visible.length} / ${images.length})`), details);
+            const list = desktopElement('ul', undefined, details); list.className = 'task-receipts';
+            for (const image of visible) {
+                const label = artworkKindLabel(image.type);
+                const status = {success: ['成功', 'Succeeded'], failed: ['失败', 'Failed'], skipped: ['跳过', 'Skipped']}[image.status];
+                desktopElement('li', [image.game || image.source, label, status ? desktopText(...status) : '', image.message].filter(Boolean).join(' · '), list);
+            }
+        }
+    }
+    for (const playlist of result.playlists || [result]) {
+        const records = [...(playlist.apply?.skipped || []), ...(playlist.download_summary?.writeback?.failed || [])];
+        if (records.length) {
+            desktopElement('h4', desktopText('未应用的名称变更', 'Name changes not applied'), details);
+            const list = desktopElement('ul', undefined, details); list.className = 'task-errors';
+            for (const record of records) desktopElement('li', [playlist.system, record.new_label || record.old_label || record.path,
+                record.reason === 'stale_proposal' ? desktopText('列表已变化，请重新预览', 'Playlist changed; preview again') : record.reason].filter(Boolean).join(' · '), list);
+        }
+    }
+}

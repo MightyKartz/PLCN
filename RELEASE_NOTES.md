@@ -2,6 +2,10 @@
 
 ## 中文更新
 
+- 三类图片全缺时，游戏行仅显示“缺图”；部分缺失或损坏时才展开类型标签。有封面但其它类型损坏的游戏也计入“需检查”。
+- 补图窗口打开后自动列出官方候选，点选即预览并定位到对比，取消重复的“预览图片”按钮。官方无结果时显示备用来源入口，备用查询和最终写入都需要手动操作；本地导入保留。
+- 移除底部任务栏和旧详情抽屉，进度、处理记录、图片汇总、错误、取消和重试集中在“设置 → 任务与恢复”。运行提示可直接进入任务页；长明细滚动时仍可关闭窗口。
+
 - 标题栏“整理本主机”直接进入预览；预览顶部用“修改名称”“补全图片”勾选框选择操作，切换后重新分析。移除右侧检查器和流程条，编辑过的行保留“记住修正”。
 - “整理全部主机”独立放在左侧导航顶部，先列出各主机的改名／补图数量与读取错误，再确认应用。确认后使用同一批提案；列表在汇总后变动则要求重新生成。关闭汇总不会写入列表。
 - 仅补图在本地和 ADB 上均保留 `.lpl` 文件；修复设备端仅补图仍可能回推未改名列表的问题。批量列表错误明确显示为部分完成。
@@ -16,6 +20,10 @@
 - 缺少图片目录时，列表顶部集中显示“指定图片目录”入口；图片列留空，不再逐行重复提示，也不计入单个游戏的“需检查”。损坏图片和读取失败仍归入“需检查”。
 
 ## English Updates
+
+- Show one Missing mark when all artwork types are absent; expand type badges only for partial or damaged sets. Damaged secondary images count toward Check even when box art loads.
+- Automatically list official artwork candidates; selecting one previews it and scrolls to the comparison. Remove the redundant Preview image button. Alternate searches and final writes remain explicit; local import stays available.
+- Consolidate task progress, recent activity, image summaries, errors, cancellation and retries in Settings → Tasks & restore. Remove the old bottom dock and details drawer; keep the close control visible while scrolling.
 
 - Organize this system opens preview directly. Rename and artwork checkboxes reanalyze on change. Remove the inspector and flow strip; edited rows retain Remember correction.
 - Organize all systems is a separate sidebar action. Review per-system rename/artwork counts and errors before applying the exact saved proposals. Changed playlists require a new summary; closing it writes nothing.

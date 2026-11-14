@@ -228,3 +228,18 @@ def test_retry_reports_adb_target_without_creating_local_uri_directory(tmp_path,
     assert jobs.contexts[handler.replies[0][1]['job_id']]['thumbnails_dir'].startswith('adb://')
     assert '只支持本地目录' in jobs.get_job(handler.replies[0][1]['job_id'])['error']
     assert not (tmp_path / 'adb:').exists()
+
+
+def test_task_activity_survives_completion_and_is_bounded_for_settings():
+    jobs = server.JobManager()
+    job = jobs.create_job()
+    for index in range(250):
+        jobs.update_job(job, index, 250, f'图片 {index}')
+    jobs.update_job(job, 250, 250, '图片 249')
+    jobs.complete_job(job, {'applied_count': 1})
+    snapshot = jobs.snapshot()[0]
+    assert snapshot['status'] == 'completed'
+    assert snapshot['progress'] == 250
+    assert len(snapshot['messages']) == 200
+    assert snapshot['messages'][0] == '图片 50'
+    assert snapshot['messages'][-1] == '图片 249'

@@ -137,3 +137,8 @@ test('artwork chips and row buttons share one vocabulary per image type', () => 
     assert.equal(context.markers.invalid, '!');
     assert.equal(context.markers.missing, '○');
 });
+
+test('a damaged secondary image counts as a problem even when box art loads', () => {
+    const {context}=harness();
+    assert.equal(context.gameMatchesImageFilter({image_status:'exists', artwork_status:{Named_Boxarts:'exists',Named_Snaps:'invalid',Named_Titles:'missing'}}, 'problem'), true);
+});

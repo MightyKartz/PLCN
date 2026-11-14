@@ -42,7 +42,7 @@
             </div>
         </header>
 
-        <p id="workbench-busy" class="workbench-busy" role="status" aria-live="polite"></p>
+        <p id="workbench-busy" class="workbench-busy" role="status" aria-live="polite"><span id="workbench-busy-label"></span><button id="task-status-button" class="btn btn-small btn-muted" type="button" onclick="openDesktop('tasks')" hidden data-i18n="查看任务">查看任务</button></p>
         <main class="workspace">
             <aside class="sidebar">
                 <div class="sidebar-scroll">
@@ -202,64 +202,6 @@
 
         </main>
 
-        <section class="bottom-dock" aria-label="任务进度">
-            <div class="dock-section">
-                <h2 class="dock-title">
-                    <span class="dock-title-main"><span data-i18n="任务进度">任务进度</span> <span id="inline-progress-label">待处理</span></span>
-                    <span class="dock-title-actions">
-                        <button class="btn btn-muted" type="button" onclick="toggleDetailsDrawer()" data-i18n="任务详情" style="min-height: 30px; padding: 0 10px;">任务详情</button>
-                    </span>
-                </h2>
-                <div class="inline-progress"><span id="inline-progress-fill"></span></div>
-                <div class="progress-meta">
-                    <span id="inline-progress-main">等待预览校对</span>
-                    <span id="inline-progress-current">当前：未开始</span>
-                    <span class="repair-summary-inline" id="repair-summary-inline">已选 0 项 · 等待游戏库</span>
-                </div>
-                <div class="dock-flow">
-                    <div class="dock-stage">
-                        <div class="dock-stage-number">1</div>
-                        <div>
-                            <div class="dock-stage-label" data-i18n="扫描设备">扫描设备</div>
-                            <div class="dock-stage-value" id="dock-scan-count">0 个游戏列表</div>
-                        </div>
-                    </div>
-                    <div class="dock-stage">
-                        <div class="dock-stage-number">2</div>
-                        <div>
-                            <div class="dock-stage-label" data-i18n="生成修复计划">生成修复计划</div>
-                            <div class="dock-stage-value" id="dock-plan-count">0 项待校对</div>
-                        </div>
-                    </div>
-                    <div class="dock-stage">
-                        <div class="dock-stage-number">3</div>
-                        <div>
-                            <div class="dock-stage-label" data-i18n="下载官方封面">下载官方封面</div>
-                            <div class="dock-stage-value" id="dock-download-count">0 项待下载</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="progress-cards">
-                    <div class="progress-card">
-                        <span>Boxarts</span>
-                        <strong id="progress-box-count">0 / 0</strong>
-                        <em id="progress-box-percent">(0%)</em>
-                    </div>
-                    <div class="progress-card">
-                        <span>Snaps</span>
-                        <strong id="progress-snap-count">0 / 0</strong>
-                        <em id="progress-snap-percent">(0%)</em>
-                    </div>
-                    <div class="progress-card">
-                        <span>Titles</span>
-                        <strong id="progress-title-count">0 / 0</strong>
-                        <em id="progress-title-percent">(0%)</em>
-                    </div>
-                </div>
-            </div>
-
-        </section>
-
         <div id="status" class="status"></div>
     </div>
 
@@ -279,37 +221,6 @@
             </div>
         </div>
     </dialog>
-
-    <aside class="details-drawer" id="details-drawer" aria-hidden="true">
-        <div class="details-drawer-header">
-            <h2 data-i18n="任务详情">任务详情</h2>
-            <button class="details-close-btn" type="button" onclick="toggleDetailsDrawer(false)" title="关闭任务详情" aria-label="关闭任务详情">×</button>
-        </div>
-        <div class="details-drawer-body">
-            <section class="details-block">
-                <h3><span data-i18n="任务日志">任务日志</span> <button class="btn btn-muted" type="button" onclick="clearLogs()" data-i18n="清空日志" style="min-height: 30px; padding: 0 10px;">清空日志</button></h3>
-                <div id="single-log-container">
-                    <div id="single-log-view" class="log-view"></div>
-                </div>
-                <div id="batch-log-container">
-                    <div id="batch-log-view" class="log-view"></div>
-                </div>
-                <div id="log-placeholder" class="log-view log-placeholder" data-i18n="等待任务开始，处理日志会显示在这里。">等待任务开始，处理日志会显示在这里。</div>
-            </section>
-
-            <section class="details-block">
-                <h3 data-i18n="下载汇总">下载汇总</h3>
-                <div class="download-grid">
-                    <div class="download-row"><strong>Boxarts（封面）</strong><span class="ok" id="sum-box-ok">0 成功</span><span class="fail" id="sum-box-fail">0 失败</span><span id="sum-box-skip">0 跳过</span></div>
-                    <div class="download-row"><strong>Snaps（游戏截图）</strong><span class="ok" id="sum-snap-ok">0 成功</span><span class="fail" id="sum-snap-fail">0 失败</span><span id="sum-snap-skip">0 跳过</span></div>
-                    <div class="download-row"><strong>Titles（标题）</strong><span class="ok" id="sum-title-ok">0 成功</span><span class="fail" id="sum-title-fail">0 失败</span><span id="sum-title-skip">0 跳过</span></div>
-                    <div class="download-row total"><strong>总计</strong><span class="ok" id="sum-total-ok">0 成功</span><span class="fail" id="sum-total-fail">0 失败</span><span id="sum-total-skip">0 跳过</span></div>
-                </div>
-                <div class="download-grid" id="download-details-content"></div>
-                <button class="btn btn-muted" type="button" onclick="showDownloadDetails()" data-i18n="刷新下载明细" style="margin-top: 10px; min-height: 30px; padding: 0 10px;">刷新下载明细</button>
-            </section>
-        </div>
-    </aside>
 
     <input id="playlist_path" type="hidden">
     <input id="system_name" type="hidden">
@@ -403,7 +314,7 @@
         <p id="artwork-identity" class="artwork-help" role="status"></p>
         <div id="artwork-names-wrap" hidden><p id="artwork-names-label" class="artwork-help"></p><div id="artwork-names"></div></div>
         <label id="artwork-source-label" for="artwork-source"></label>
-        <div class="artwork-source-controls"><input id="artwork-source" type="text" oninput="artworkSearchChanged()" onkeydown="if(event.key === 'Enter') searchArtwork()"><button id="artwork-search" class="btn btn-muted" type="button" onclick="searchArtwork()"></button><button id="artwork-preview" class="btn btn-muted" type="button" onclick="previewArtwork()"></button></div>
+        <div class="artwork-source-controls"><input id="artwork-source" type="text" oninput="artworkSearchChanged()" onkeydown="if(event.key === 'Enter') searchArtwork()"><button id="artwork-search" class="btn btn-muted" type="button" onclick="searchArtwork()"></button></div>
         <div id="artwork-results"></div>
         <button id="artwork-secondary" class="btn btn-muted" type="button" hidden onclick="searchArtwork(false, 'wikipedia')">搜索备用来源</button>
         <label id="artwork-upload-label" for="artwork-upload"></label>

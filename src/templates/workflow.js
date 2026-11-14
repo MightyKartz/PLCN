@@ -37,7 +37,7 @@ function deriveWorkbenchState(input) {
     };
 }
 
-const workbench = { operation: null, previewKey: null, applied: false, hasTask: false, jobId: null };
+const workbench = { operation: null, previewKey: null, taskMessage: '', jobId: null };
 
 function workbenchText(zh, en) { return currentUILanguage === 'en' ? en : zh; }
 function workbenchInputKey() {
@@ -55,18 +55,18 @@ function workbenchSnapshot() {
 }
 function beginWorkbenchOperation(operation) {
     if (workbench.operation) return false;
+    workbench.taskMessage = '';
     workbench.operation = operation;
     renderWorkbench();
     return true;
 }
 function endWorkbenchOperation() {
     workbench.operation = null;
+    workbench.taskMessage = '';
     renderWorkbench();
 }
 function invalidateWorkbenchPreview() {
     workbench.previewKey = null;
-    workbench.applied = false;
-    if (workbench.operation !== 'apply') workbench.hasTask = false;
     currentChanges = [];
     currentPreviewFilter = 'all';
     document.getElementById('preview-search').value = '';
@@ -83,7 +83,6 @@ function renderWorkbench() {
     document.getElementById('browse-games-button').textContent = workbenchText('返回游戏列表', 'Back to games');
     shell.classList.toggle('library-loaded', state.hasLibrary);
     shell.classList.toggle('preview-loaded', state.previewValid);
-    shell.classList.toggle('task-visible', workbench.hasTask);
     document.getElementById('preview-button').disabled = !state.canPreview;
     document.getElementById('batch-review-button').disabled = !state.canReviewBatch;
     document.getElementById('preview-options').hidden = !state.previewValid;
@@ -125,8 +124,10 @@ function renderWorkbench() {
     document.getElementById('preview-search').disabled = state.busy;
     document.getElementById('preview-search').setAttribute('aria-label', uiText('搜索游戏名 / rom 名称'));
     document.getElementById('preview-container').inert = state.busy;
-    document.getElementById('workbench-busy').textContent = state.busy && workbench.operation !== 'artwork'
-        ? workbenchText('正在处理，请稍候…', 'Working, please wait…') : '';
+    document.getElementById('workbench-busy-label').textContent = state.busy && workbench.operation !== 'artwork'
+        ? workbench.taskMessage || workbenchText('正在处理，请稍候…', 'Working, please wait…') : '';
+    document.getElementById('workbench-busy').hidden = !state.busy || workbench.operation === 'artwork';
+    document.getElementById('task-status-button').hidden = !workbench.jobId;
     const counts = {all: currentChanges.length, matched: 0, review: 0, duplicate: 0, ready: 0, completed: 0, 'missing-cover': 0, edited: 0};
     for (const change of currentChanges) {
         const info = getMatchInfo(change);

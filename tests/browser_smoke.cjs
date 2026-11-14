@@ -138,7 +138,19 @@ async function main() {
     await click('[data-desktop-view="tasks"]');
     await waitFor(() => document.querySelector('#desktop-content')?.textContent.includes('本地列表恢复'), 'tasks and restore settings');
     assert.equal(await evaluate(() => document.querySelector('#desktop-content').textContent.includes('本次运行的任务')), true);
+    assert.equal(await evaluate(() => document.querySelector('.bottom-dock, #details-drawer')), null);
+    await click('#desktop-content .desktop-entry:nth-of-type(2) details > summary');
+    await waitFor(() => document.querySelector('#desktop-content details[open]')?.textContent.includes('测试图片网络失败'), 'task logs and failed image receipts');
+    assert.equal(await evaluate(() => document.querySelector('#desktop-content details[open]').textContent.includes('开始补图')), true);
+    assert.equal(await evaluate(visible, '#desktop-close'), true);
     await screenshot('01-task-settings');
+    await click('#desktop-content button');
+    await waitFor(() => document.querySelector('#desktop-content').textContent.includes('测试任务已取消'), 'task cancellation');
+    assert.equal(await evaluate(() => document.querySelector('#desktop-content details[open]')?.textContent.includes('测试图片网络失败')), true);
+    await click('#desktop-content button');
+    await waitFor(() => document.querySelectorAll('#desktop-content [data-job-id]').length === 3
+        && !Array.from(document.querySelectorAll('#desktop-content [data-job-id] strong')).some(node => /处理中|等待中/.test(node.textContent)), 'image retry without changing playlists');
+    await screenshot('01-tasks-after-retry');
     await click('#desktop-close');
 
     await click('#home-manual-open');
@@ -271,10 +283,30 @@ async function main() {
     assert.equal(config.thumbnails_override, '');
     assert.equal(config.thumbnails_dir, detected);
     assert.equal(await evaluate(visible, '#image-directory-notice'), false);
+    assert.equal(await evaluate(() => document.querySelector('#game-library-rows .game-image-placeholder').textContent), '缺图');
+    assert.equal(await evaluate(() => document.querySelectorAll('#game-library-rows .artwork-chip').length), 0);
     await screenshot('04-auto-artwork');
     await click(system);
     await waitFor(() => document.querySelector('#workspace-title').textContent.includes('SNES')
         && document.querySelector('#game-library').getAttribute('aria-busy') === 'false', 'SNES with artwork directory');
+    const boxFile = path.join(detected, 'Nintendo - Super Nintendo Entertainment System', 'Named_Boxarts', 'Shadowrun (USA).png');
+    const boxBytes = Buffer.from(await evaluate(async () => Array.from(new Uint8Array(await (await fetch('/api/artwork/thumbnail?system=SNES&kind=Named_Boxarts&name=Game.png')).arrayBuffer()))));
+    fs.mkdirSync(path.dirname(boxFile), {recursive:true});
+    fs.writeFileSync(boxFile, boxBytes);
+    await click(gba);
+    await waitFor(() => document.querySelector('#game-library').getAttribute('aria-busy') === 'false', 'GBA before artwork reread');
+    await click(system);
+    await waitFor(() => document.querySelectorAll('#game-library-rows .artwork-chip').length === 3, 'partial artwork expands type markers');
+    await screenshot('04-partial-artwork');
+    const brokenFile = path.join(detected, 'Nintendo - Super Nintendo Entertainment System', 'Named_Snaps', 'Shadowrun (USA).png');
+    fs.mkdirSync(path.dirname(brokenFile), {recursive:true});
+    fs.writeFileSync(brokenFile, 'damaged test image');
+    await click(gba);
+    await waitFor(() => document.querySelector('#game-library').getAttribute('aria-busy') === 'false', 'GBA before damaged artwork reread');
+    await click(system);
+    await waitFor(() => document.querySelectorAll('#game-library-rows .artwork-chip-invalid').length === 1, 'damaged artwork keeps individual markers');
+    assert.equal(await evaluate(() => document.querySelector('#game-library-filter-problem').textContent.endsWith('1')), true);
+    await screenshot('04-damaged-artwork');
     await click('#preview-button');
     await waitFor(() => document.querySelector('#preview-table-body .new-label-text')?.textContent === '暗影狂奔', 'fresh preview');
     if (!await evaluate(() => document.querySelector('#option-download-artwork').checked)) {
@@ -295,8 +327,25 @@ async function main() {
     await waitFor(() => !document.querySelector('#artwork-search').disabled, 'artwork context loaded');
     assert.equal(await evaluate(visible, '#artwork-upload'), true);
     assert.equal(await evaluate(visible, '#artwork-source'), true);
+    assert.equal(await evaluate(() => document.querySelector('#artwork-preview')), null);
+    assert.equal(await evaluate(() => document.querySelector('#artwork-confirm').disabled), true);
+    await waitFor(() => document.querySelectorAll('#artwork-results .artwork-option').length > 0, 'automatic official gallery candidates');
+    assert.equal(await evaluate(() => document.querySelector('#artwork-confirm').disabled), true);
     await screenshot('05-artwork-dialog');
+    await click('#artwork-results .artwork-option');
+    await waitFor(() => !document.querySelector('#artwork-confirm').disabled, 'explicit candidate selection loads comparison');
+    assert.equal(await evaluate(visible, '#artwork-comparison'), true);
+    await screenshot('05-candidate-preview');
+    await evaluate(() => { const input = document.querySelector('#artwork-source'); input.focus(); input.select(); });
+    await send('Input.insertText', {text:'Unmatched example'});
+    if (!await evaluate(() => document.querySelector('#artwork-kind-Named_Boxarts').checked)) await click('#artwork-kind-Named_Boxarts');
+    await click('#artwork-search');
+    await waitFor(visible, 'no official results offers alternate source', '#artwork-secondary');
+    assert.equal(await evaluate(() => document.querySelector('#artwork-confirm').disabled), true);
+    await screenshot('05-no-official-match');
     await click('#artwork-close');
+    assert.deepEqual(fs.readFileSync(boxFile), boxBytes);
+    assert.equal(fs.readFileSync(brokenFile, 'utf8'), 'damaged test image');
     await click('#preview-table-body .new-label-text');
     await send('Input.insertText', {text: '暗影狂奔（本地）'});
     await send('Input.dispatchKeyEvent', {type:'keyDown', key:'Enter', code:'Enter', windowsVirtualKeyCode:13});

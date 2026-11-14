@@ -174,19 +174,6 @@ test('late folder responses cannot replace a newer directory or enable stale sel
     assert.equal(elements.selectDirBtn.disabled,true);
 });
 
-test('Escape defers to the browser while a modal is open instead of closing its parent', () => {
-    let handler, active=true, closed=0;
-    const context={document:{addEventListener:(_type,callback)=>{handler=callback;},querySelector:()=>active?{}:null},
-        closeModal:()=>closed++,toggleDetailsDrawer:()=>closed++};
-    vm.createContext(context);
-    const start=configSource.indexOf("document.addEventListener('keydown',");
-    vm.runInContext(configSource.slice(start),context);
-    handler({key:'Escape'});
-    assert.equal(closed,0);
-    active=false;handler({key:'Escape'});
-    assert.equal(closed,1);
-});
-
 test('reloading legacy config preserves its image folder as an override while clearing selection', () => {
     const values={playlist_path:'one.lpl',system_name:'GBA',thumbnails_dir:'single-images',batch_thumbnails_dir:'batch-images',rom_name_cn_path:'data/rom-name-cn'};
     const elements={}; const element=id=>elements[id]||={value:'',classList:{add:()=>{},remove:()=>{},toggle:()=>{}},style:{},textContent:'',setAttribute:()=>{},disabled:false,hidden:false};
@@ -253,4 +240,26 @@ test('batch application sends only the reviewed job, never fresh paths or propos
     assert.equal(Object.hasOwn(sent.body,'changes'),false);
     assert.equal(context.batchReviewId,null);
     assert.deepEqual(tracked,['apply-1','batch']);
+});
+
+test('task transport keeps writes locked on disconnect and distinguishes cancellation from failure', () => {
+    for (const status of ['cancelled','failed','completed']) {
+        let events, closed=false, refreshes=0, applied=0;
+        const notices=[];
+        const context={workbench:{operation:null}, EventSource:class {constructor(){events=this;} close(){closed=true;}},
+            renderWorkbench:()=>{}, workbenchText:zh=>zh, downloadTaskOutcome,
+            showStatus:(message,type)=>notices.push({message,type}),
+            applyCompletedJobToPreview:()=>applied++, desktopDialog:{open:true}, desktopView:'tasks',
+            refreshDesktop:()=>refreshes++, endWorkbenchOperation:()=>{context.workbench.operation=null;}};
+        vm.createContext(context);vm.runInContext(source('trackProgress'),context);
+        context.trackProgress('job-1');
+        events.onerror();assert.equal(context.workbench.operation,'apply');
+        events.onmessage({data:JSON.stringify({status, error:status==='completed'?null:'任务已停止', result:{download_summary:{total:{failed:0}}}})});
+        assert.equal(closed,true);
+        assert.equal(context.workbench.operation,null);
+        assert.equal(context.workbench.jobId,null);
+        assert.equal(refreshes,1);
+        assert.equal(applied,status==='failed'?0:1);
+        assert.equal(notices[0].type,status==='cancelled'?'info':status==='failed'?'error':'success');
+    }
 });

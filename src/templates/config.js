@@ -173,7 +173,7 @@ function selectFile(path) {
     if (currentTargetInputId === 'retroarch_root') {
         scanDevice(false);
     }
-    updateWorkflowLabels();
+    renderWorkbench();
 }
 
 function selectCurrentDir() { selectFile(currentPath); }
@@ -195,11 +195,3 @@ function handleContextChange(event) {
 
 document.addEventListener('input', handleContextChange);
 document.addEventListener('change', handleContextChange);
-
-document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') {
-        // Let the browser cancel only the topmost modal dialog.
-        if (document.querySelector('dialog[open]')) return;
-        toggleDetailsDrawer(false);
-    }
-});

@@ -22,7 +22,6 @@ async function scanDevice(useDefault = false) {
     desktopDialog.close();
     scanBtn.disabled = true;
     defaultBtn.disabled = true;
-    setInlineProgress(5, uiText('扫描中'), uiText('正在扫描 RetroArch 目录'), uiText('当前：读取 playlists'));
 
     try {
         const url = targetPath ? `/api/device/scan?path=${encodeURIComponent(targetPath)}` : '/api/device/scan';
@@ -46,15 +45,6 @@ async function scanDevice(useDefault = false) {
         }
         const playlistCount = scan.totals?.playlists || 0;
         const itemCount = scan.totals?.items || 0;
-        document.getElementById('dock-scan-count').textContent = formatGameListCount(playlistCount);
-        setInlineProgress(
-            playlistCount ? 16 : 0,
-            playlistCount ? uiText('已扫描') : uiText('未找到'),
-            currentUILanguage === 'en'
-                ? (playlistCount ? 'RetroArch directory detected' : 'No game lists found')
-                : (scan.message || '扫描完成'),
-            currentUILanguage === 'en' ? `Current: ${itemCount} game entries` : `当前：${itemCount} 个游戏条目`
-        );
         const scanStatusMessage = currentUILanguage === 'en'
             ? (playlistCount ? 'RetroArch directory detected' : 'No game lists found')
             : (scan.message || '扫描完成');
@@ -65,7 +55,6 @@ async function scanDevice(useDefault = false) {
     } catch (error) {
         currentDeviceScan = null;
         renderDeviceScan(null);
-        setInlineProgress(0, uiText('扫描失败'), uiText('无法扫描 RetroArch 目录'), error.message);
         showStatus(`${uiText('扫描失败')}: ${error.message}`, 'error');
         libraryHome.openError = `${uiText('扫描失败')}: ${error.message}`;
     } finally {
@@ -150,7 +139,6 @@ function renderDeviceScan(scan) {
         summary.classList.remove('ready');
         list.innerHTML = `<div class="playlist-empty">${uiText('扫描后显示 .lpl 游戏列表')}</div>`;
         if (librarySummary) librarySummary.textContent = uiText('扫描后按主机名称显示 .lpl 游戏列表');
-        document.getElementById('dock-scan-count').textContent = formatGameListCount(0);
         return;
     }
 
@@ -163,7 +151,6 @@ function renderDeviceScan(scan) {
         groups.get(groupName).push({ playlist, index });
     });
 
-    document.getElementById('dock-scan-count').textContent = formatGameListCount(playlistCount);
     summary.textContent = playlistCount
         ? `${shortPath(scan.root_path)} · ${formatGameListCount(playlistCount)} · ${formatGameCount(itemCount)}`
         : (currentUILanguage === 'en' ? 'No game lists found' : (scan.message || '未找到游戏列表'));
@@ -331,7 +318,7 @@ async function selectScannedPlaylist(index) {
     invalidateWorkbenchPreview();
     document.getElementById('playlist_path').value = playlist.path;
     document.getElementById('system_name').value = playlist.system || '';
-    updateWorkflowLabels();
+    renderWorkbench();
     renderDeviceScan(currentDeviceScan);
     renderWorkbench();
 }

@@ -51,8 +51,37 @@ def test_home_to_library_to_preview(tmp_path, monkeypatch, chrome_binary, viewpo
     monkeypatch.setattr(DatabaseManager, 'DB_FILE', str(home / 'cache/plcn.db'))
     monkeypatch.setattr(retroarch_scanner, 'list_adb_devices', lambda **kwargs: [])
     monkeypatch.setattr(retroarch_scanner, 'default_scan_candidates', lambda: [])
-    monkeypatch.setattr(single_artwork, 'catalog_names', lambda *args: [])
+    monkeypatch.setattr(single_artwork, 'catalog_names', lambda *args: ['Shadowrun (USA)'])
+    import io
+    from PIL import Image
+    png = io.BytesIO()
+    Image.new('RGB', (12, 16), (30, 100, 200)).save(png, format='PNG')
+    monkeypatch.setattr(single_artwork, 'catalog_image', lambda *args, **kwargs: png.getvalue())
+    monkeypatch.setattr(single_artwork, 'download', lambda *args, **kwargs: png.getvalue())
     monkeypatch.setattr(server, 'job_manager', server.JobManager())
+    jobs = server.job_manager
+    failed = jobs.create_job()
+    jobs.contexts[failed] = {'thumbnails_dir': str(home / 'retry-images')}
+    jobs.update_job(failed, 0, 3, '浏览器任务记录：开始补图')
+    jobs.update_job(failed, 3, 3, '浏览器任务记录：部分完成')
+    jobs.complete_job(failed, {'applied_count': 1, 'errors': ['NES：列表已变化，请重新预览'], 'download_summary': {
+        'total': {'success': 1, 'failed': 1, 'skipped': 1},
+        'types': {'Named_Boxarts': {'success': 1, 'failed': 0, 'skipped': 0},
+                  'Named_Snaps': {'success': 0, 'failed': 1, 'skipped': 0},
+                  'Named_Titles': {'success': 0, 'failed': 0, 'skipped': 1}},
+        'details': [{'system': 'NES', 'source': 'Game', 'game': '游戏', 'type': 'Named_Snaps',
+                     'status': 'failed', 'reason': 'network_error', 'message': '测试图片网络失败'}]}})
+    pending = jobs.create_job()
+    jobs.update_job(pending, 1, 2, '等待取消的测试任务')
+    original_cancel = jobs.cancel
+    def cancel(job_id):
+        original_cancel(job_id)
+        if job_id == pending:
+            from task_control import TaskCancelled
+            jobs.fail_job(job_id, TaskCancelled('测试任务已取消'))
+    monkeypatch.setattr(jobs, 'cancel', cancel)
+    from thumbnail_downloader import ThumbnailDownloader
+    monkeypatch.setattr(ThumbnailDownloader, 'download_batch', lambda *args, **kwargs: ThumbnailDownloader.empty_summary())
     source = tmp_path / 'names'
     source.mkdir()
     playlists = tmp_path / '游戏库/playlists'

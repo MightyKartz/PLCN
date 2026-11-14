@@ -66,7 +66,8 @@ function gameMatchesImageFilter(item, filter) {
         if (!item.artwork_status) return item.image_status === 'missing';
         return !['unconfigured', 'unreadable'].includes(item.image_status) && missingArtworkKinds(item).length > 0;
     }
-    return filter === 'problem' ? ['invalid', 'unreadable'].includes(item.image_status) : true;
+    return filter === 'problem' ? ['invalid', 'unreadable'].includes(item.image_status)
+        || Object.values(item.artwork_status || {}).includes('invalid') : true;
 }
 
 const ARTWORK_KIND_LABELS = {Named_Boxarts: ['封面', 'Box art'], Named_Snaps: ['游戏截图', 'Screenshot'], Named_Titles: ['标题图', 'Title screen']};
@@ -83,7 +84,7 @@ function artworkKindState(status) {
     return workbenchText(zh, en);
 }
 
-/* One chip per artwork type so a row shows which of the three images it actually has. */
+/* Expand per-type states only when a row has some artwork or a damaged image. */
 function renderArtworkKindChips(cell, item) {
     const chips = document.createElement('div');
     chips.className = 'artwork-chips';
@@ -146,7 +147,7 @@ function renderGameLibrary() {
     document.getElementById('image-directory-notice').hidden = hasImageDirectory;
     document.getElementById('image-directory-message').textContent = text('尚未指定图片目录，设置后可检查和补全游戏图片。', 'Choose an artwork folder to check and fill in game images.');
     document.getElementById('choose-image-directory').textContent = text('指定图片目录', 'Choose artwork folder');
-    document.getElementById('game-library-note').textContent = text('使用“批量整理”预览名称与图片修复建议，或在游戏行中单独补图。', 'Use Organize games to preview name and artwork suggestions, or update an image from its game row.');
+    document.getElementById('game-library-note').textContent = text('点击“整理本主机”预览修复建议，或在游戏行中单独补图。', 'Use Organize this system to preview fixes, or update artwork from its game row.');
     const status = document.getElementById('game-library-status');
     const retry = document.getElementById('game-library-retry');
     retry.textContent = text('重新读取', 'Retry');
@@ -174,7 +175,10 @@ function renderGameLibrary() {
         const placeholder = document.createElement('span');
         placeholder.className = 'game-image-placeholder';
         const imageStates = {exists: text('加载图片…', 'Loading image…'), missing: text('缺少图片', 'Missing image'), invalid: text('图片损坏', 'Damaged image'), unreadable: text('图片读取失败', 'Image read failed')};
-        placeholder.textContent = hasImageDirectory ? imageStates[item.image_status] || text('缺少图片', 'Missing image') : '';
+        const allMissing = item.artwork_status && Object.keys(ARTWORK_KIND_LABELS).every(kind => (item.artwork_status[kind] || 'missing') === 'missing');
+        if (hasImageDirectory && allMissing && item.image_status !== 'unreadable') row.className = 'artwork-empty-row';
+        placeholder.textContent = !hasImageDirectory ? '' : allMissing && item.image_status !== 'unreadable'
+            ? text('缺图', 'Missing') : imageStates[item.image_status] || text('缺少图片', 'Missing image');
         placeholder.title = item.image_message || '';
         cover.appendChild(placeholder);
         if (item.image_url) {
@@ -198,7 +202,7 @@ function renderGameLibrary() {
             image.src = item.image_url;
             cover.appendChild(image);
         }
-        if (item.artwork_status && !['unconfigured', 'unreadable'].includes(item.image_status)) renderArtworkKindChips(cover, item);
+        if (item.artwork_status && !allMissing && !['unconfigured', 'unreadable'].includes(item.image_status)) renderArtworkKindChips(cover, item);
         row.appendChild(cover);
         for (const value of [item.label || text('未命名', 'Unnamed'), item.rom_name || '—']) {
             const cell = document.createElement('td');

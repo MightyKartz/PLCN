@@ -3,6 +3,7 @@ let currentUILanguage = 'zh';
 let currentTheme = 'light';
 
 const UI_EN = {
+    '查看任务': 'View tasks',
     '整理本主机': 'Organize this system',
     '整理全部主机': 'Organize all systems',
     '修改名称': 'Rename games',
@@ -324,8 +325,7 @@ function applyUILanguage(language) {
     }
     hideApplySummary();
     updateSummary(currentChanges);
-    updateWorkflowLabels();
-    setDownloadSummary(lastDownloadSummary);
+    renderWorkbench();
 }
 
 function formatGameListCount(count) {
@@ -338,10 +338,6 @@ function formatGameCount(count) {
 
 function formatItemCount(count) {
     return currentUILanguage === 'en' ? `${count} items` : `${count} 项`;
-}
-
-function formatPendingDownloadCount(count) {
-    return currentUILanguage === 'en' ? `${count} to download` : `${count} 项待下载`;
 }
 
 function toggleTheme() {
@@ -360,8 +356,6 @@ function initializeDisplayPreferences() {
     applyUILanguage(localStorage.getItem('plcn-ui-language') || 'zh');
     applyTheme(localStorage.getItem('plcn-theme') || 'light');
 }
-
-function updateWorkflowLabels() { renderWorkbench(); }
 
 function shortPath(path) {
     if (!path) return '';

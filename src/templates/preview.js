@@ -17,7 +17,6 @@ async function previewTask() {
     invalidateWorkbenchPreview();
     const previewKey = workbenchInputKey();
     showStatus('正在分析游戏列表...', 'success');
-    setInlineProgress(8, '分析中', '正在分析游戏列表', '当前：生成预览');
 
     try {
         if (!await saveConfig('single')) throw new Error(uiText('读取失败'));
@@ -33,19 +32,15 @@ async function previewTask() {
         currentChanges = preparePreviewChanges(data.changes || []);
         workbench.previewKey = previewKey;
         lastAppliedChangeKeys = new Set();
-        lastDownloadSummary = null;
-        setDownloadSummary(null);
         setLibraryBrowserVisible(true);
         setPreviewAreaVisible(true);
         document.getElementById('preview-empty').style.display = currentChanges.length ? 'none' : 'grid';
         document.getElementById('preview-container').style.display = currentChanges.length ? 'block' : 'none';
         updateSummary(currentChanges);
         renderPreviewTable(currentChanges);
-        showLogPanel(null);
         showStatus('分析完成，请校对', 'success');
     } catch (error) {
         showStatus('预览失败: ' + error.message, 'error');
-        setInlineProgress(0, '失败', '预览失败', '当前：请检查路径和系统');
     } finally {
         endWorkbenchOperation();
     }
@@ -386,91 +381,8 @@ function toggleChangeEnabled(index, control) {
     updateSummary(currentChanges);
 }
 
-function updateSummary(changes) {
-    let matched = 0;
-    let ready = 0;
-    let review = 0;
-    let duplicate = 0;
-    let enabled = 0;
-    let downloadable = 0;
-    let completed = 0;
-    changes.forEach(change => {
-        const info = getMatchInfo(change);
-        const isIncluded = change.enabled !== false && isActionableChange(change);
-        if (isIncluded) enabled += 1;
-        if (isIncluded && needsCoverDownload(change, info)) downloadable += 1;
-        if (isAutoRepairKind(info.kind)) matched += 1;
-        if (info.kind === 'ready') ready += 1;
-        if (info.kind === 'review') review += 1;
-        if (info.kind === 'duplicate') duplicate += 1;
-        if (info.kind === 'completed') completed += 1;
-    });
-
-    document.getElementById('dock-plan-count').textContent = currentUILanguage === 'en'
-        ? `${enabled} ready · ${review} to review`
-        : `${enabled} 可应用 · ${review} 待校对`;
-    document.getElementById('dock-download-count').textContent = formatPendingDownloadCount(downloadable);
-    document.getElementById('repair-summary-inline').textContent = completed
-        ? getAppliedSummaryText(completed)
-        : getRepairSummaryText(enabled, matched, review, changes.length, ready, completed);
-    updateReviewProgress(changes.length, review, enabled, ready, completed);
-    setProgressCardTotals(changes.length || 0, 0);
+function updateSummary() {
     renderWorkbench();
-}
-
-function getAppliedSummaryText(applied) {
-    const failed = Number(lastDownloadSummary?.total?.failed) || 0;
-    if (failed) return currentUILanguage === 'en'
-        ? `${applied} entries processed · ${failed} images failed`
-        : `${applied} 项已处理 · ${failed} 张图片失败，需重新补图`;
-    if (!lastAppliedWriteNames) return currentUILanguage === 'en' ? `${applied} items processed; names unchanged` : `${applied} 项图片已处理，名称保持不变`;
-    return currentUILanguage === 'en'
-        ? `${uiText('修复完成')} · ${applied} ${uiText('项已写回')}`
-        : `${uiText('修复完成')} · ${applied} ${uiText('项已写回')}`;
-}
-
-function getRepairSummaryText(enabled, matched, review, total, ready = 0, completed = 0) {
-    if (!total) return uiText('已选 0 项 · 等待游戏库');
-    return currentUILanguage === 'en'
-        ? `Selected ${enabled} · ${matched} auto repair · ${ready} no repair needed · ${completed} completed · ${review} need information`
-        : `已选 ${enabled} 项 · ${matched} 可自动修复 · ${ready} 无需修复 · ${completed} 已完成 · ${review} 待补充信息`;
-}
-
-function updateReviewProgress(total, review, enabled, ready = 0, completed = 0) {
-    const progressLabel = document.getElementById('inline-progress-label');
-    if (!progressLabel) return;
-    const busyStates = ['应用中', '处理中', '完成', '失败', '断开', '启动中'];
-    if (busyStates.includes(progressLabel.textContent.trim())) return;
-
-    if (!total) {
-        setInlineProgress(0, uiText('待处理'), uiText('等待预览校对'), uiText('当前：未开始'));
-        return;
-    }
-
-    if (review > 0) {
-        setInlineProgress(
-            20,
-            uiText('待确认'),
-            currentUILanguage === 'en' ? `Analyzed ${total}` : `已分析 ${total} 项`,
-            currentUILanguage === 'en' ? `Current: ${review} need information` : `当前：${review} 项待补充信息`
-        );
-    } else {
-        if (!enabled && ready + completed >= total) {
-            setInlineProgress(
-                100,
-                uiText('无需处理'),
-                currentUILanguage === 'en' ? `Analyzed ${total}` : `已分析 ${total} 项`,
-                uiText('当前：无需处理')
-            );
-            return;
-        }
-        setInlineProgress(
-            35,
-            uiText('待应用'),
-            currentUILanguage === 'en' ? `Analyzed ${total}` : `已分析 ${total} 项`,
-            currentUILanguage === 'en' ? `Current: ${enabled} ready to apply` : `当前：${enabled} 项可应用`
-        );
-    }
 }
 
 function toggleFilterBar() {

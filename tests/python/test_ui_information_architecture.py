@@ -169,7 +169,7 @@ def test_primary_labels_are_clear():
     assert "Select a game before searching." not in html
 
 
-def test_inspector_and_flow_strip_removed_while_task_details_remain():
+def test_legacy_overlays_removed_and_task_details_live_in_settings():
     html = read_template()
 
     assert 'id="inspector-panel"' not in html
@@ -183,8 +183,13 @@ def test_inspector_and_flow_strip_removed_while_task_details_remain():
     assert '/api/batch/preview' in html
     assert 'preview_job_id: batchReviewId' in html
     assert 'saveChangeOverride(index)' in html
-    assert 'class="details-drawer"' in html
-    assert "toggleDetailsDrawer" in html
+    assert 'class="details-drawer"' not in html
+    assert 'class="bottom-dock"' not in html
+    assert 'renderTaskDetails' in html
+    assert 'task-result-table' in html
+    assert 'data-i18n="查看任务"' in html
+    assert 'id="artwork-preview"' not in html
+    assert "toggleDetailsDrawer" not in html
     assert "toggleTheme" in html
     assert "toggleUILanguage" in html
     assert "isEditedChange" in html
@@ -198,16 +203,9 @@ def test_inspector_and_flow_strip_removed_while_task_details_remain():
     assert "manual-confirmed" not in html
     assert "change.confirmed" not in html
     assert "position: fixed;" in html
-    assert "--bottom-dock-height: 104px" in html
-    assert "bottom: calc(var(--bottom-dock-height) + 8px)" in html
-    assert "height: min(220px, calc(100vh - var(--bottom-dock-height) - 92px))" in html
-    assert "details-close-btn" in html
     assert "overflow-y: auto" in html
-    assert "任务详情" in html
     assert "progress-modal" not in html
     assert "dock-details-section" not in html
-    assert "grid-template-rows: 60px minmax(0, 1fr) var(--bottom-dock-height)" in html
-    assert ".dock-flow {\n    display: none;" in html
     assert "grid-template-columns: minmax(260px, 286px) minmax(0, 1fr) minmax(300px, 365px)" not in html
 
 
