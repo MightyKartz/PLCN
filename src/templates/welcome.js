@@ -30,6 +30,8 @@ function renderLibraryHome() {
     refresh.textContent = libraryHome.loading ? homeText('检测中…', 'Detecting…') : homeText('重新检测', 'Refresh');
     refresh.disabled = busy || libraryHome.loading;
     panel.setAttribute('aria-busy', String(libraryHome.loading || Boolean(libraryHome.opening)));
+    document.getElementById('usb-debug-help').hidden = libraryHome.loading
+        || (libraryHome.data?.sources || []).some(source => source.status === 'ready');
     const message = document.getElementById('home-message');
     message.textContent = libraryHome.openError || libraryHome.error;
     message.hidden = !message.textContent;
@@ -108,10 +110,9 @@ async function rememberOpenedLibrary(scan) {
 }
 function showLibraryHome() {
     if (workbench.operation) return;
-    document.querySelector('.library-manage').open = false;
     currentDeviceScan = null;
     renderDeviceScan(null);
-    for (const id of ['playlist_path', 'batch_dir', 'thumbnails_dir', 'batch_thumbnails_dir']) document.getElementById(id).value = '';
+    for (const id of ['playlist_path', 'system_name']) document.getElementById(id).value = '';
     invalidateWorkbenchPreview();
     refreshLibrarySources();
 }

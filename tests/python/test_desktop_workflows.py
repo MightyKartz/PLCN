@@ -9,7 +9,7 @@ from http.server import ThreadingHTTPServer
 
 import app_paths
 from app_runtime import InstanceLock
-import plcn
+import playlist_service as plcn
 import repair_history
 import server
 from safe_io import file_digest
@@ -171,7 +171,7 @@ def test_desktop_endpoints_and_shutdown_refuses_active_work(tmp_path, desktop_ho
 
 def test_compare_installed_pack_keeps_active_config_and_reuses_baseline(tmp_path, desktop_home):
     import data_pack
-    from desktop_api import compare_active, managed_pack
+    from api_data import compare_active, managed_pack
     source = tmp_path / 'source'; source.mkdir()
     csv = source / 'NES.csv'
     csv.write_text('Name EN,Name CN\nGame,游戏\n', encoding='utf-8')
@@ -202,18 +202,29 @@ def test_desktop_launcher_restores_streams_after_service_exit(desktop_home, monk
     assert 'service completed' in (desktop_home / 'logs/desktop.log').read_text(encoding='utf-8')
 
 
-def test_retry_keeps_adb_thumbnail_target(tmp_path, desktop_home, monkeypatch):
+def test_retry_reports_adb_target_without_creating_local_uri_directory(tmp_path, desktop_home, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(ThumbnailDownloader, 'download_batch', lambda *args: ThumbnailDownloader.empty_summary())
     jobs = server.JobManager()
+    finished = threading.Event()
+    original_fail = jobs.fail_job
+    def failed(job_id, error):
+        original_fail(job_id, error)
+        finished.set()
+    monkeypatch.setattr(jobs, 'fail_job', failed)
     monkeypatch.setattr(server, 'job_manager', jobs)
     old = jobs.create_job()
     jobs.contexts[old] = {'thumbnails_dir': 'adb://device/sdcard/RetroArch/thumbnails'}
     jobs.complete_job(old, {'download_summary': {'details': [{'system': 'Sony - PlayStation', 'source': 'Game (USA)', 'game': '中文', 'type': 'Named_Boxarts', 'status': 'failed', 'reason': 'not_found'}]}})
 
-    import desktop_api
+    import api_tasks
     handler = SimpleNamespace(replies=[])
     def reply(_handler, data, status=200):
         handler.replies.append((status, data))
-    monkeypatch.setattr(desktop_api, 'reply', reply)
-    desktop_api.post(handler, '/api/jobs/retry', {'job_id': old}, jobs, str(tmp_path / 'config.json'))
+    monkeypatch.setattr(api_tasks, 'reply', reply)
+    api_tasks.retry(handler, server, {'job_id': old})
+    assert finished.wait(2)
     assert handler.replies[0][1]['job_id']
     assert jobs.contexts[handler.replies[0][1]['job_id']]['thumbnails_dir'].startswith('adb://')
+    assert '只支持本地目录' in jobs.get_job(handler.replies[0][1]['job_id'])['error']
+    assert not (tmp_path / 'adb:').exists()

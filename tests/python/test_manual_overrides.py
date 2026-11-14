@@ -6,7 +6,7 @@ import pytest
 
 sys.path.append(os.path.join(os.getcwd(), "src"))
 
-import plcn
+import playlist_service as plcn
 import server
 from manual_overrides import (
     build_override_entry,

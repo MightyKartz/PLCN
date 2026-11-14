@@ -11,7 +11,7 @@ import pytest
 sys.path.append(os.path.join(os.getcwd(), "src"))
 
 import app_paths
-import plcn
+import playlist_service as plcn
 
 
 FIXTURE_DIR = Path(__file__).resolve().parents[1] / "fixtures" / "playlists"

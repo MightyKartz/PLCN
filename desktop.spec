@@ -14,6 +14,7 @@ adb_notices = [(str(adb_root / name), "platform-tools") for name in ("NOTICE.txt
 
 a = Analysis(
     ['src/desktop.py'], pathex=['src'], binaries=adb_binaries,
+    # Bundle the complete UI directory, including the split CSS and domain scripts.
     datas=[('src/templates', 'src/templates'), ('data/rom-name-cn', 'data/rom-name-cn')] + adb_notices,
     hiddenimports=['tkinter', 'tkinter.filedialog', 'tkinter.messagebox'],
     hookspath=[], hooksconfig={}, runtime_hooks=[], excludes=[], noarchive=False,

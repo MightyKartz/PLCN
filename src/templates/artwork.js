@@ -100,7 +100,7 @@ function hideArtworkComparison() {
 function openArtworkDialog(item, autoSearch = true) {
     if (workbench.operation) return;
     const [playlist_path, system, thumbnails] = gameLibraryInput();
-    if (!thumbnails) { openPathSettings(); return; }
+    if (!thumbnails) { openPathSettings('thumbnails_override'); return; }
     const key = JSON.stringify(gameLibraryInput());
     artworkDialogState = {context: {playlist_path, system, thumbnails, index: item.index, label: item.label, rom_path: item.rom_path},
         key, fromPreview: workbench.previewKey != null, version: 0, candidate: null, busy: false, searching: false, applying: false, jobId: null, kindsTouched: false, returnFocus: document.activeElement};

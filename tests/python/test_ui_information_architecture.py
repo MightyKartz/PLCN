@@ -1,18 +1,23 @@
 from pathlib import Path
+import re
 
 
 TEMPLATE_PATH = Path("src/templates/plcn.html")
 
 
 def read_template():
-    return TEMPLATE_PATH.read_text(encoding="utf-8")
+    html = TEMPLATE_PATH.read_text(encoding="utf-8")
+    assets = re.findall(r'(?:src|href)="/assets/([^"/]+)"', html)
+    return html + "\n" + "\n".join(
+        (TEMPLATE_PATH.parent / name).read_text(encoding="utf-8") for name in assets
+    )
 
 
 def test_primary_labels_are_clear():
     html = read_template()
 
-    assert 'data-i18n="当前列表"' in html
-    assert 'data-i18n="全部列表"' in html
+    assert 'data-i18n="当前主机"' in html
+    assert 'data-i18n="全部主机"' in html
     assert "全部游戏列表" not in html
     assert "应用已选修复" in html
     assert "修复状态" in html
@@ -44,7 +49,7 @@ def test_primary_labels_are_clear():
     assert "目录详情" in html
     assert "library-browser" in html
     assert "playlist-system-tabs" in html
-    assert "playlist-list-panel" in html
+    assert "playlist-list-panel" not in html
     assert "container.appendChild(panel)" not in html
     assert "has-preview" in html
     assert "selectedLibrarySystem" in html
@@ -74,7 +79,7 @@ def test_primary_labels_are_clear():
     assert "flex-wrap: nowrap" in html
     assert "sr-only" in html
     assert "iconOnlyButton" in html
-    assert "invertVisibleSelection" in html
+    assert "invertVisibleSelection" not in html
     assert "ui-language-icon" in html
     assert "theme-toggle-icon" in html
     assert "getLanguageIconSvg" in html
@@ -87,11 +92,11 @@ def test_primary_labels_are_clear():
     assert "M5 19 10 5l5 14" not in html
     assert "M18.5 5v14" not in html
     assert 'width="20" height="20" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet"' in html
-    assert "inline-size: 20px !important" in html
-    assert "block-size: 20px !important" in html
+    assert "inline-size: 20px;" in html
+    assert "block-size: 20px;" in html
     assert "stroke-width: 1.75" in html
     assert "shape-rendering: geometricPrecision" in html
-    assert "border: 0 !important" in html
+    assert "border: 0;" in html
     assert "vector-effect: non-scaling-stroke" in html
     assert "getSystemAbbreviation(groupName)" in html
     assert "selectFirstPlaylistForSystem(groupName)" in html
@@ -100,7 +105,7 @@ def test_primary_labels_are_clear():
     assert "'Wii'" in html
     assert "<colgroup>" in html
     assert "col-current" in html
-    assert "min-width: 960px" in html
+    assert "min-width: 800px" in html
     assert "overflow-x: auto" in html
     assert '<th style="width:' not in html
     assert 'class="cn-name-col" style=' not in html
@@ -148,8 +153,9 @@ def test_primary_labels_are_clear():
     assert "cover_download_status === 'failed'" in html
     assert "boxartResult.cover_path || boxartResult.path" in html
     assert "boxartResult.cover_preview_url" in html
-    assert "markChangeEdited(index, '手动编辑显示名称', 'new_label')" in html
-    assert "markChangeEdited(index, '手动编辑封面源', 'thumbnail_source')" in html
+    assert "buildPreviewEditor" in html
+    assert "手动编辑显示名称" in html
+    assert "手动编辑封面源" in html
     assert "已下载" in html
     assert "下载失败" in html
     assert "已跳过下载" in html
@@ -196,7 +202,7 @@ def test_inspector_and_details_are_on_demand():
     assert "progress-modal" not in html
     assert "dock-details-section" not in html
     assert "grid-template-rows: 60px minmax(0, 1fr) var(--bottom-dock-height)" in html
-    assert ".dock-flow {\n            display: none;" in html
+    assert ".dock-flow {\n    display: none;" in html
     assert "grid-template-columns: minmax(260px, 286px) minmax(0, 1fr) minmax(300px, 365px)" not in html
 
 
@@ -204,6 +210,12 @@ def test_legacy_name_search_workbench_is_removed():
     html = read_template()
 
     assert 'id="search-modal"' not in html
+    assert 'id="docs-modal"' not in html
+    assert "openProjectDocs" not in html
+    assert "closeProjectDocs" not in html
+    assert "database-status-chip" not in html
+    assert "dat-status-chip" not in html
+    assert "loadStats" not in html
     assert "openSearchModal" not in html
     assert "search-results-table" not in html
     assert "openArtworkForSelected" in html

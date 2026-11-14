@@ -2,7 +2,7 @@
 const gameLibrary = { key: null, controller: null, data: null, error: '', loading: false, limit: 100, filter: 'all', notice: '' };
 
 function gameLibraryInput() {
-    return ['playlist_path', 'system_name', 'thumbnails_dir'].map(id => document.getElementById(id).value.trim());
+    return ['playlist_path', 'system_name'].map(id => document.getElementById(id).value.trim()).concat(getThumbnailsDirectory());
 }
 
 function resetGameLibrary() {
@@ -31,10 +31,10 @@ async function loadGameLibrary(input, key) {
     }
 }
 
-function syncGameLibrary(state, batch) {
+function syncGameLibrary(state) {
     const panel = document.getElementById('game-library');
     const input = gameLibraryInput();
-    const visible = Boolean(input[0]) && !batch && !state.previewValid
+    const visible = Boolean(input[0]) && !state.previewValid
         && !['scan', 'preview', 'apply'].includes(workbench.operation);
     panel.hidden = !visible;
     if (!visible) { resetGameLibrary(); return; }
@@ -61,13 +61,12 @@ function filterGameLibrary() {
 
 function gameMatchesImageFilter(item, filter) {
     // "Missing" means at least one of the three artwork types is absent, which is
-    // exactly when a row can be filled in. A list with no artwork directory, or one
-    // whose device could not be read, belongs under "Check" instead.
+    // exactly when a row can be filled in. Directory setup is a library-level issue.
     if (filter === 'missing') {
         if (!item.artwork_status) return item.image_status === 'missing';
         return !['unconfigured', 'unreadable'].includes(item.image_status) && missingArtworkKinds(item).length > 0;
     }
-    return filter === 'problem' ? ['invalid', 'unreadable', 'unconfigured'].includes(item.image_status) : true;
+    return filter === 'problem' ? ['invalid', 'unreadable'].includes(item.image_status) : true;
 }
 
 const ARTWORK_KIND_LABELS = {Named_Boxarts: ['封面', 'Box art'], Named_Snaps: ['游戏截图', 'Screenshot'], Named_Titles: ['标题图', 'Title screen']};
@@ -144,8 +143,10 @@ function renderGameLibrary() {
     search.setAttribute('aria-label', search.placeholder);
     search.disabled = gameLibrary.loading || !gameLibrary.data;
     const hasImageDirectory = Boolean(gameLibraryInput()[2]);
-    document.getElementById('game-library-note').textContent = text('使用“批量整理”预览名称与图片修复建议，或在游戏行中单独补图。', 'Use Organize games to preview name and artwork suggestions, or update an image from its game row.')
-        + (hasImageDirectory ? '' : text(' 图片目录可在“路径设置”中指定。', ' Choose an artwork directory in Path settings.'));
+    document.getElementById('image-directory-notice').hidden = hasImageDirectory;
+    document.getElementById('image-directory-message').textContent = text('尚未指定图片目录，设置后可检查和补全游戏图片。', 'Choose an artwork folder to check and fill in game images.');
+    document.getElementById('choose-image-directory').textContent = text('指定图片目录', 'Choose artwork folder');
+    document.getElementById('game-library-note').textContent = text('使用“批量整理”预览名称与图片修复建议，或在游戏行中单独补图。', 'Use Organize games to preview name and artwork suggestions, or update an image from its game row.');
     const status = document.getElementById('game-library-status');
     const retry = document.getElementById('game-library-retry');
     retry.textContent = text('重新读取', 'Retry');
@@ -173,7 +174,7 @@ function renderGameLibrary() {
         const placeholder = document.createElement('span');
         placeholder.className = 'game-image-placeholder';
         const imageStates = {exists: text('加载图片…', 'Loading image…'), missing: text('缺少图片', 'Missing image'), invalid: text('图片损坏', 'Damaged image'), unreadable: text('图片读取失败', 'Image read failed')};
-        placeholder.textContent = hasImageDirectory ? imageStates[item.image_status] || text('缺少图片', 'Missing image') : text('未设置目录', 'No folder set');
+        placeholder.textContent = hasImageDirectory ? imageStates[item.image_status] || text('缺少图片', 'Missing image') : '';
         placeholder.title = item.image_message || '';
         cover.appendChild(placeholder);
         if (item.image_url) {
@@ -206,18 +207,18 @@ function renderGameLibrary() {
             row.appendChild(cell);
         }
         const actions = document.createElement('td');
+        if (!hasImageDirectory) { row.appendChild(actions); tbody.appendChild(row); continue; }
         const button = document.createElement('button');
         button.id = 'game-artwork-action-' + item.index;
         button.type = 'button'; button.className = 'btn btn-small btn-muted';
         const missing = missingArtworkKinds(item).map(kind => artworkKindLabel(kind));
-        button.textContent = !hasImageDirectory ? text('设置图片目录', 'Set image folder')
-            : item.image_url && !missing.length ? text('更换图片', 'Replace image') : text('补图', 'Add image');
+        button.textContent = item.image_url && !missing.length ? text('更换图片', 'Replace image') : text('补图', 'Add image');
         if (missing.length) button.title = text('缺少：', 'Missing: ') + missing.join(text('、', ', '));
         button.setAttribute('aria-label', button.textContent + (missing.length ? '（' + missing.join(text('、', ', ')) + '）' : '') + ' · ' + (item.label || item.rom_name));
         button.disabled = Boolean(workbench.operation) || !item.label;
         button.onclick = () => openArtworkDialog(item);
         actions.appendChild(button);
-        if (hasImageDirectory && !item.image_url) {
+        if (!item.image_url) {
             const importButton = document.createElement('button');
             importButton.type = 'button'; importButton.className = 'btn btn-small btn-muted artwork-import-inline';
             importButton.textContent = text('导入图片', 'Import image');

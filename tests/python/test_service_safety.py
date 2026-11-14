@@ -1,4 +1,5 @@
 import json
+import re
 import shlex
 import sys
 import threading
@@ -34,6 +35,21 @@ def test_local_session_and_same_origin_required(service):
     assert session.get(service, headers={'Host': 'evil.test'}, timeout=3).status_code == 403
     assert session.post(service + '/api/config', data='{}', timeout=3).status_code == 415
     assert session.head(service + '/README.md', timeout=3).status_code == 405
+
+
+def test_page_assets_are_served_from_the_explicit_allowlist(service):
+    with requests.Session() as session:
+        page = session.get(service, timeout=3)
+        page.raise_for_status()
+        assets = re.findall(r'(?:src|href)="/assets/([^"/]+)"', page.text)
+        assert set(assets) == set(server.UI_ASSETS)
+        for name in assets:
+            response = session.get(service + '/assets/' + name, timeout=3)
+            assert response.status_code == 200
+            assert response.content == (Path(server.TEMPLATE_DIR) / name).read_bytes()
+            mime = 'text/javascript' if name.endswith('.js') else 'text/css'
+            assert response.headers['Content-Type'] == mime + '; charset=utf-8'
+        assert session.get(service + '/assets/server.py', timeout=3).status_code == 404
 
 
 def test_active_pack_stats_and_clean_system_names(service, tmp_path, monkeypatch):
@@ -102,3 +118,83 @@ def test_corrupt_adb_upload_does_not_replace_original(tmp_path):
         verified_push_adb_playlist(str(local), 'adb://device/list.lpl', old, runner)
     assert json.loads(files['/list.lpl']) == old
     assert len(files) == 1
+
+
+@pytest.mark.parametrize('body', ['{', '[]', 'null'])
+def test_json_boundary_rejects_invalid_payload_without_changing_config(service, tmp_path, monkeypatch, body):
+    config = tmp_path / 'config.json'
+    config.write_text('{"keep": true}', encoding='utf-8')
+    monkeypatch.setattr(server, 'CONFIG_FILE', str(config))
+    with requests.Session() as session:
+        session.get(service, timeout=3).raise_for_status()
+        response = session.post(service + '/api/config', data=body,
+                                headers={'Content-Type': 'application/json'}, timeout=3)
+    assert response.status_code == 400
+    assert response.json()['error']
+    assert config.read_text(encoding='utf-8') == '{"keep": true}'
+
+
+@pytest.mark.parametrize('batch', [False, True], ids=['single', 'batch'])
+def test_playlist_routes_preview_write_and_report_progress(service, tmp_path, monkeypatch, batch):
+    monkeypatch.setenv('PLCN_HOME', str(tmp_path / 'home'))
+    monkeypatch.setattr(server, 'job_manager', server.JobManager())
+    source = tmp_path / 'source'
+    source.mkdir()
+    (source / 'NES.csv').write_text('Name EN,Name CN\nGame,游戏\n', encoding='utf-8')
+    config = tmp_path / 'config.json'
+    config.write_text(json.dumps({'rom_name_cn_path': str(source)}), encoding='utf-8')
+    monkeypatch.setattr(server, 'CONFIG_FILE', str(config))
+    playlists = tmp_path / 'playlists'
+    playlists.mkdir()
+    playlist = playlists / 'NES.lpl'
+    original = {'items': [{'path': '/roms/Game.nes', 'label': 'Game', 'db_name': 'NES.lpl'}]}
+    playlist.write_text(json.dumps(original), encoding='utf-8')
+    with requests.Session() as session:
+        session.get(service, timeout=3).raise_for_status()
+        preview = session.post(service + '/api/playlist/preview', json={
+            'playlist_path': str(playlist), 'system_name': 'NES', 'thumbnails_dir': str(tmp_path / 'images'),
+        }, timeout=5)
+        preview.raise_for_status()
+        changes = preview.json()['changes']
+        assert changes[0]['new_label'] == '游戏'
+        assert json.loads(playlist.read_text(encoding='utf-8')) == original
+        payload = {'thumbnails_dir': str(tmp_path / 'images'), 'options': {'download_thumbnails': False}}
+        if batch:
+            payload['batch_dir'] = str(playlists)
+            endpoint = '/api/batch/apply'
+        else:
+            payload.update(playlist_path=str(playlist), changes=changes)
+            endpoint = '/api/playlist/apply'
+        response = session.post(service + endpoint, json=payload, timeout=3)
+        response.raise_for_status()
+        job_id = response.json()['job_id']
+        with session.get(service + '/api/progress', params={'job_id': job_id}, stream=True, timeout=5) as progress:
+            progress.raise_for_status()
+            for line in progress.iter_lines(chunk_size=1):
+                if line.startswith(b'data: '):
+                    final = json.loads(line[6:])
+                    if final['status'] in ('completed', 'failed', 'cancelled'):
+                        break
+    assert final['status'] == 'completed', final
+    assert not server.job_manager.active()
+    assert json.loads(playlist.read_text(encoding='utf-8'))['items'][0]['label'] == '游戏'
+    if batch:
+        assert final['result']['processed_count'] == 1
+    else:
+        assert final['result']['applied_count'] == 1
+        assert final['result']['apply']['backup_path']
+
+
+def test_open_folder_route_reaches_platform_opener(service, tmp_path, monkeypatch):
+    import api_library
+    opened = []
+    monkeypatch.setattr(api_library.subprocess, 'Popen', lambda args: opened.append(args[-1]))
+    monkeypatch.setattr(api_library.os, 'startfile', lambda path: opened.append(path), raising=False)
+    file = tmp_path / 'game.lpl'
+    file.write_text('{}', encoding='utf-8')
+    with requests.Session() as session:
+        session.get(service, timeout=3).raise_for_status()
+        response = session.post(service + '/api/fs/open', json={'path': str(file)}, timeout=3)
+        response.raise_for_status()
+        assert response.json() == {'status': 'success', 'path': str(tmp_path)}
+    assert opened == [str(tmp_path)]

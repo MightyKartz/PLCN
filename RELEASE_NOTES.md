@@ -1,3 +1,27 @@
+# 尚未发布：预览、设置与游戏库流程简化
+
+## 中文更新
+
+- 后端接口改用按领域组织的路由表，命令行与 HTTP 服务共用独立的列表处理核心；保留现有分析与写回规则。修复打开数据目录／文件所在目录请求被旧路由截走的问题。
+
+- 预览中的名称和图片源默认显示为文本，点击后编辑，Enter 或失焦提交、Esc 取消；每行仅保留“更换图片”，统一进入包含搜索、导入和图片预览的补图窗口。副标题只显示 ROM 文件名，完整路径保留在悬停提示中；紧凑窗口也能看到完整的五列表格。
+- 顶栏管理入口统一为“设置”，包含“游戏库 / 名称数据库 / 任务与恢复”；恢复记录与任务同页，侧栏只保留“打开其他游戏库”。首页无可用设备时提供可折叠的 Android USB 调试与授权步骤。
+- 本地图片下载器明确拒绝 `adb://` 目标，避免把设备 URI 误建为本地 `adb:` 目录。任务页重试仅支持本地图片，设备图片通过游戏行的补图窗口处理。
+- 路径设置只需游戏库目录和可选的图片目录覆盖；列表、主机名称及默认图片目录由游戏库自动推导。手动覆盖在切换主机及重开当前库后保留，清空即可恢复自动检测；打开其他库时清除覆盖。旧配置路径仍可读取。
+- 顶栏的“当前列表 / 全部列表”移入“批量整理 → 范围：当前主机 / 全部主机”，切换范围不再隐藏当前游戏列表。“当前主机”预览左侧所选列表；“全部主机”仍在一次确认后自动应用全部列表，无须逐项预览。
+- 缺少图片目录时，列表顶部集中显示“指定图片目录”入口；图片列留空，不再逐行重复提示，也不计入单个游戏的“需检查”。损坏图片和读取失败仍归入“需检查”。
+
+## English Updates
+
+- Split HTTP routes by domain and share an independent playlist service with the CLI, preserving analysis and writeback rules. Restore folder-opening requests previously intercepted by the old dispatcher.
+
+- Preview names and artwork sources are text until clicked. Enter or blur commits an edit; Escape cancels it. Each row has one Change artwork action for search, import and preview. ROM subtitles show only the filename, with full paths in tooltips; the five-column table also fits compact desktop windows.
+- Consolidate management into Settings: Library / Name database / Tasks & restore. Tasks and restore history share one page, and the sidebar keeps only Open another library. Empty-device states include collapsible Android USB debugging and authorization steps.
+- Reject device URIs in the local image downloader instead of creating a local `adb:` directory. Task retries support local artwork; use the game-row artwork dialog for device images.
+- Path settings now expose only the library folder and an optional artwork-folder override. Systems, playlists and default artwork folders are derived from the library. Overrides survive system changes and reopening the same library; clearing an override restores detection, and opening another library clears it. Legacy paths remain readable.
+- Move processing scope into Organize games: Current system / All systems. The current games remain visible when the scope changes. The current-system preview uses the selected playlist; all-system processing still automatically applies every playlist after one confirmation.
+- Show one library-level artwork-folder prompt with a Choose artwork folder action. Leave unconfigured artwork cells blank and exclude missing directory setup from per-game Check counts; damaged and unreadable artwork still needs checking.
+
 # PLCN v3.3.1 多碟显示与界面精简
 
 ## 中文更新

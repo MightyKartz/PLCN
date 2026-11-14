@@ -43,7 +43,7 @@ def artwork_filenames(thumbnails, system, kind, remote_lookups=None):
 
 def artwork_statuses(label, rom_path, resolver=None, remote_lookups=None, thumbnails='', system=''):
     """Per-type state for one entry; reads only, matches and writes nothing."""
-    from plcn import find_existing_boxart
+    from playlist_service import find_existing_boxart
     statuses = {}
     for kind in THUMBNAIL_TYPES:
         status, path = 'missing', None

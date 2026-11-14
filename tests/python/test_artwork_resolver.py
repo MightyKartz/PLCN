@@ -10,7 +10,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent / 'src'))
 from artwork_resolver import ArtworkResolver, artwork_path, sanitize_filename, valid_image_file
 from thumbnail_downloader import ThumbnailDownloader
-import plcn
+import playlist_service as plcn
 
 
 def png():

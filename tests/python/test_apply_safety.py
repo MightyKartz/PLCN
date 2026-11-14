@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.append(os.path.join(os.getcwd(), "src"))
 
 import app_paths
-import plcn
+import playlist_service as plcn
 
 
 SYSTEM = "Nintendo - Nintendo Entertainment System"

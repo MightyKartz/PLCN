@@ -30,6 +30,8 @@ def main():
         import server
         import data_pack
         assert (app_paths.resource_root() / 'src/templates/plcn.html').is_file()
+        assert all((app_paths.resource_root() / 'src/templates' / name).is_file()
+                   for name in server.UI_ASSETS)
         assert app_paths.default_source().is_dir()
         adb_version = None
         if getattr(sys, 'frozen', False):

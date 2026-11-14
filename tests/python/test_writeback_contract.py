@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent / 'src'))
-import plcn
+import playlist_service as plcn
 from playlist_manager import PlaylistManager
 from manual_overrides import find_override, normalize_crc
 from safe_io import file_lock

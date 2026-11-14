@@ -11,6 +11,7 @@ function harness() {
     const pending = [];
     const context = {AbortController, URLSearchParams, workbench: {operation: null},
         document: {getElementById: element},
+        getThumbnailsDirectory: () => element('thumbnails_override').value,
         workbenchText: (zh, en) => zh,
         getSystemAbbreviation: s => s, formatGameCount: n => `${n} games`,
         fetch: (url, options) => new Promise(resolve => pending.push({url, options, resolve})),
@@ -53,7 +54,7 @@ test('A → B → A rejects both late responses even when the path matches again
 });
 
 test('clearing selection or starting preview discards an outstanding read', async () => {
-    for (const action of ['clear', 'preview', 'batch']) {
+    for (const action of ['clear', 'preview']) {
         const {context, elements, pending} = harness();
         context.select('a.lpl');
         if (action === 'clear') context.select('');
@@ -83,7 +84,7 @@ test('failed reads can retry and an empty list is a successful result', async ()
 test('changing the image directory rejects the previous artwork response', async () => {
     const {context, elements} = harness();
     context.select('a.lpl');
-    elements.thumbnails_dir.value = 'new-images';
+    elements.thumbnails_override.value = 'new-images';
     context.syncGameLibrary({previewValid: false}, false);
     await context.reply(1, {items: [{label: 'New image'}]});
     await context.reply(0, {items: [{label: 'Old image'}]});
@@ -94,7 +95,8 @@ test('image filters distinguish missing files from damage and read errors', () =
     const {context}=harness();
     assert.equal(context.gameMatchesImageFilter({image_status:'missing'}, 'missing'), true);
     assert.equal(context.gameMatchesImageFilter({image_status:'exists'}, 'missing'), false);
-    for (const status of ['invalid','unreadable','unconfigured']) {
+    assert.equal(context.gameMatchesImageFilter({image_status:'unconfigured'}, 'problem'), false);
+    for (const status of ['invalid','unreadable']) {
         assert.equal(context.gameMatchesImageFilter({image_status:status}, 'problem'), true);
         assert.equal(context.gameMatchesImageFilter({image_status:status}, 'missing'), false);
     }
@@ -119,7 +121,7 @@ test('a row counts as missing until all three artwork types are present', () => 
     for (const state of ['unconfigured', 'unreadable']) {
         const item = {image_status:state, artwork_status:status('missing','missing','missing')};
         assert.equal(context.gameMatchesImageFilter(item, 'missing'), false);
-        assert.equal(context.gameMatchesImageFilter(item, 'problem'), true);
+        assert.equal(context.gameMatchesImageFilter(item, 'problem'), state === 'unreadable');
     }
 });
 

@@ -71,24 +71,34 @@ test('failed or cancelled apply does not claim completion and allows recovery', 
     assert.equal(state.steps[2],'waiting');
     assert.equal(deriveWorkbenchState({...ready,applied:true}).steps[2],'done');
 });
-test('batch requires its own target and image folder', () => {
+test('all systems uses the library target and shared image folder', () => {
     assert.equal(deriveWorkbenchState({...ready}).canBatch,false);
-    assert.equal(deriveWorkbenchState({...ready,batchDir:'lists'}).canBatch,false);
+    assert.equal(deriveWorkbenchState({...ready,batchDir:'lists',thumbnails:''}).canBatch,false);
+    assert.equal(deriveWorkbenchState({...ready,batchDir:'lists'}).canBatch,true);
     assert.equal(deriveWorkbenchState({...ready,batchDir:'lists',download:false}).canBatch,true);
 });
 
 // Exercise the real filtering function, including the old accidental inversion regression.
 const fs=require('node:fs');
 const vm=require('node:vm');
-const page=fs.readFileSync(require('node:path').join(__dirname,'../src/templates/plcn.html'),'utf8');
-function source(name,next) { return page.slice(page.indexOf('        function '+name),page.indexOf('        function '+next)); }
+const path=require('node:path');
+const templateDir=path.join(__dirname,'../src/templates');
+const html=fs.readFileSync(path.join(templateDir,'plcn.html'),'utf8');
+const page=Array.from(html.matchAll(/<script src="\/assets\/([^"/]+)"><\/script>/g),
+    match=>fs.readFileSync(path.join(templateDir,match[1]),'utf8')).join('\n');
+const configSource=fs.readFileSync(path.join(templateDir,'config.js'),'utf8');
+function source(name) {
+    const start=page.search(new RegExp('^(?:async )?function '+name+'\\(', 'm'));
+    assert.notEqual(start,-1,`Missing UI function: ${name}`);
+    const remaining=page.slice(start);
+    const next=remaining.slice(1).search(/^(?:async )?function /m);
+    return next<0 ? remaining : remaining.slice(0,next+1);
+}
 test('known search names do not become download sources and explain gallery failures separately', () => {
     const context={document:{getElementById:()=>({value:'both'})}, workbenchText:zh=>zh,
         uiText:x=>x, hasExistingCover:()=>false};
     vm.createContext(context);
-    const start=page.indexOf('        function getCoverStatusInfo(');
-    const end=page.indexOf('\n        function ',start+20);
-    vm.runInContext(page.slice(start,end),context);
+    vm.runInContext(source('getCoverStatusInfo'),context);
     const game={new_label:'仙剑奇侠传',original_item_label:'仙剑奇侠传',thumbnail_source:null,
         artwork_query:'Sword and Fairy',artwork_identity_status:'resolved',artwork_gallery_status:'not_found'};
     assert.equal(repairActionStatus(game),'incomplete');
@@ -100,14 +110,14 @@ test('known search names do not become download sources and explain gallery fail
 test('clicking All twice preserves row selection', () => {
     const context={currentPreviewFilter:'all',currentChanges:[{enabled:true}], document:{querySelectorAll:()=>[]},renderPreviewTable:()=>{},renderWorkbench:()=>{}};
     vm.createContext(context);
-    vm.runInContext(source('setPreviewFilter','invertVisibleSelection'),context);
+    vm.runInContext(source('setPreviewFilter'),context);
     const button={classList:{add:()=>{},contains:()=>true}};
     context.setPreviewFilter('all',button); context.setPreviewFilter('all',button);
     assert.equal(context.currentChanges[0].enabled,true);
 });
 test('manual confirmation moves a review item into actionable filter', () => {
     const context={currentPreviewFilter:'review',getMatchInfo:c=>({kind:c.review_confirmed?'reviewed':c.match_status}),isActionableChange:c=>c.review_confirmed===true,isEditedChange:()=>false};
-    vm.createContext(context);vm.runInContext(source('matchesFilter','isEditedChange'),context);
+    vm.createContext(context);vm.runInContext(source('matchesFilter'),context);
     assert.equal(context.matchesFilter({match_status:'duplicate'},''),true);
     assert.equal(context.matchesFilter({match_status:'review',review_confirmed:true},''),false);
     context.currentPreviewFilter='matched';
@@ -123,7 +133,7 @@ function pickerContext(request) {
         desktopRequest:request, showStatus:()=>{}, desktopText:zh=>zh,
         selectFile:path=>{assert.equal(context.operation,null);context.selected=path;context.operation='scan';}};
     vm.createContext(context);
-    vm.runInContext(desktopSource.slice(desktopSource.indexOf('const builtInFilePicker'),desktopSource.indexOf('function setRepairMode')),context);
+    vm.runInContext(desktopSource.slice(desktopSource.indexOf('const builtInFilePicker'),desktopSource.indexOf('async function openPathSettings')),context);
     return context;
 }
 test('native picker locks duplicate requests and releases before a selected folder starts scanning', async () => {
@@ -156,7 +166,7 @@ test('late folder responses cannot replace a newer directory or enable stale sel
     const context={fileListVersion:0,currentPath:'.',workbenchText:zh=>zh,console,
         document:{getElementById:id=>elements[id]},fetch:()=>new Promise(resolve=>pending.push(resolve))};
     vm.createContext(context);
-    vm.runInContext(page.slice(page.indexOf('        async function loadFileList('),page.indexOf('        function selectFile(')),context);
+    vm.runInContext(source('loadFileList'),context);
     const first=context.loadFileList('old');
     assert.equal(elements.selectDirBtn.disabled,true);
     const second=context.loadFileList('new');
@@ -173,24 +183,74 @@ test('late folder responses cannot replace a newer directory or enable stale sel
 test('Escape defers to the browser while a modal is open instead of closing its parent', () => {
     let handler, active=true, closed=0;
     const context={document:{addEventListener:(_type,callback)=>{handler=callback;},querySelector:()=>active?{}:null},
-        closeModal:()=>closed++,closeProjectDocs:()=>closed++,toggleDetailsDrawer:()=>closed++,closeInspector:()=>closed++};
+        closeModal:()=>closed++,toggleDetailsDrawer:()=>closed++,closeInspector:()=>closed++};
     vm.createContext(context);
-    const start=page.indexOf("        document.addEventListener('keydown',");
-    vm.runInContext(page.slice(start,page.indexOf('    </script>',start)),context);
+    const start=configSource.indexOf("document.addEventListener('keydown',");
+    vm.runInContext(configSource.slice(start),context);
     handler({key:'Escape'});
     assert.equal(closed,0);
     active=false;handler({key:'Escape'});
-    assert.equal(closed,3);
+    assert.equal(closed,2);
 });
 
-test('reloading config preserves the current image directories when playlist inputs reset', () => {
+test('reloading legacy config preserves its image folder as an override while clearing selection', () => {
     const values={playlist_path:'one.lpl',system_name:'GBA',thumbnails_dir:'single-images',batch_thumbnails_dir:'batch-images',rom_name_cn_path:'data/rom-name-cn'};
     const elements={}; const element=id=>elements[id]||={value:'',classList:{add:()=>{},remove:()=>{},toggle:()=>{}},style:{},textContent:'',setAttribute:()=>{},disabled:false,hidden:false};
-    const context={fetch:async()=>({json:async()=>values}),document:{getElementById:element},loadStats:()=>{},renderWorkbench:()=>{},showStatus:()=>{}, uiText:x=>x};
+    const context={fetch:async()=>({ok:true,json:async()=>values}),document:{getElementById:element},renderWorkbench:()=>{},showStatus:()=>{}, uiText:x=>x};
     vm.createContext(context);
-    vm.runInContext(page.slice(page.indexOf('        async function loadConfig('),page.indexOf('        async function loadStats(')),context);
+    vm.runInContext(source('loadConfig'),context);
     return context.loadConfig().then(()=>{
-        assert.equal(element('thumbnails_dir').value,'single-images');
-        assert.equal(element('batch_thumbnails_dir').value,'batch-images');
+        assert.equal(element('thumbnails_override').value,'single-images');
+        assert.equal(element('playlist_path').value,'');
+        assert.equal(element('system_name').value,'');
     });
+});
+
+test('an explicit empty override follows the detected directory instead of a stored effective path', async () => {
+    const elements={};
+    const element=id=>elements[id]||={value:''};
+    const context={document:{getElementById:element},currentDeviceScan:{directories:{thumbnails:'detected-images'}},
+        fetch:async()=>({ok:true,json:async()=>({retroarch_root:'library',thumbnails_override:'',thumbnails_dir:'stale-images'})}),
+        renderWorkbench:()=>{},showStatus:()=>{},uiText:x=>x};
+    vm.createContext(context);
+    vm.runInContext(source('getThumbnailsDirectory')+source('loadConfig'),context);
+    await context.loadConfig();
+    assert.equal(context.getThumbnailsDirectory(),'detected-images');
+    element('thumbnails_override').value='custom-images';
+    assert.equal(context.getThumbnailsDirectory(),'custom-images');
+    element('thumbnails_override').value='';
+    assert.equal(context.getThumbnailsDirectory(),'detected-images');
+});
+
+test('a manual artwork override belongs to its library and survives only same-library navigation', () => {
+    const elements={retroarch_root:{value:'library-a'},thumbnails_override:{value:'custom-images'}};
+    const context={pathSettingsRoot:'library-a',legacyThumbnailsSetting:false,document:{getElementById:id=>elements[id]}};
+    vm.createContext(context);
+    vm.runInContext(source('setLibraryRoot'),context);
+    context.setLibraryRoot('library-a');
+    assert.equal(elements.thumbnails_override.value,'custom-images');
+    context.setLibraryRoot('library-b');
+    assert.equal(elements.thumbnails_override.value,'');
+    assert.equal(context.pathSettingsRoot,'library-b');
+});
+
+test('all-systems execution sends the detected library and shared override to the existing batch API', async () => {
+    let sent, tracked;
+    const context={workbench:{operation:null},currentDeviceScan:{directories:{playlists:'/library/playlists'}},
+        document:{getElementById:id=>id==='rom_name_cn_path'?{value:'/names'}:{}},
+        getThumbnailsDirectory:()=>'/shared-images',getBatchOptions:()=>({write_names:true,download_thumbnails:false,backup:true,continue_on_error:true}),
+        desktopConfirm:async message=>{assert.match(message,/\/library\/playlists/);return true;},
+        workbenchText:zh=>zh,beginWorkbenchOperation:()=>true,saveConfig:async()=>true,
+        showLogPanel:()=>{},setInlineProgress:()=>{},endWorkbenchOperation:()=>{},
+        fetch:async(url,options)=>{sent={url,body:JSON.parse(options.body)};return {json:async()=>({job_id:'all-systems-job'})};},
+        trackProgress:(...args)=>{tracked=args;}};
+    vm.createContext(context);
+    vm.runInContext(source('executeTask'),context);
+    await context.executeTask('batch');
+    assert.equal(sent.url,'/api/batch/apply');
+    assert.equal(sent.body.batch_dir,'/library/playlists');
+    assert.equal(sent.body.thumbnails_dir,'/shared-images');
+    assert.equal(sent.body.rom_name_cn_path,'/names');
+    assert.equal(sent.body.options.download_thumbnails,false);
+    assert.deepEqual(tracked,['all-systems-job','batch']);
 });

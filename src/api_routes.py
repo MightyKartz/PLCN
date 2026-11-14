@@ -1,0 +1,56 @@
+"""Explicit HTTP routes.
+
+Handlers take (request, live service context, parsed query or JSON object).
+Authentication and JSON transport validation stay in server.ConfigHandler.
+"""
+import api_library
+import api_playlists
+import api_artwork
+import api_tasks
+import api_data
+import api_desktop
+import api_config
+
+GET_ROUTES = {
+    '/api/artwork/thumbnail': api_artwork.thumbnail,
+    '/api/config': api_config.get_config,
+    '/api/data': api_data.data,
+    '/api/desktop': api_desktop.desktop,
+    '/api/device/scan': api_library.scan_device,
+    '/api/fs/list': api_library.list_files,
+    '/api/instance': api_desktop.instance,
+    '/api/library/sources': api_library.sources,
+    '/api/overrides/list': api_config.list_overrides,
+    '/api/playlist/detect': api_playlists.detect_system,
+    '/api/playlist/items': api_playlists.items,
+    '/api/progress': api_tasks.stream_progress,
+    '/api/stats': api_data.get_stats,
+    '/api/systems': api_data.list_systems,
+    '/api/thumbnail/preview': api_artwork.serve_thumbnail_preview,
+}
+
+POST_ROUTES = {
+    '/api/artwork/apply': api_artwork.apply,
+    '/api/artwork/context': api_artwork.context,
+    '/api/artwork/preview': api_artwork.preview,
+    '/api/artwork/resolve': api_artwork.resolve,
+    '/api/artwork/search': api_artwork.search,
+    '/api/artwork/status': api_artwork.status,
+    '/api/batch/apply': api_playlists.batch_apply,
+    '/api/config': api_config.save_config,
+    '/api/data/activate': api_data.activate,
+    '/api/data/check': api_data.check,
+    '/api/data/compare': api_data.compare,
+    '/api/data/fetch': api_data.fetch,
+    '/api/data/rollback': api_data.rollback,
+    '/api/desktop/pick': api_desktop.pick,
+    '/api/desktop/shutdown': api_desktop.shutdown,
+    '/api/fs/open': api_library.open_folder,
+    '/api/history/restore': api_tasks.restore,
+    '/api/jobs/cancel': api_tasks.cancel,
+    '/api/jobs/retry': api_tasks.retry,
+    '/api/library/recent': api_library.recent,
+    '/api/overrides/save': api_config.save_overrides_handler,
+    '/api/playlist/apply': api_playlists.apply,
+    '/api/playlist/preview': api_playlists.preview,
+}
