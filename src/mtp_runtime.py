@@ -44,15 +44,20 @@ class Device(C.Structure):
 _lock = threading.RLock()
 _sessions = {}
 _lib = None
+_libc = None
 _device_list = []
 
 
 def library():
-    global _lib
+    global _lib, _libc
     if _lib is not None:
         return _lib
     if sys.platform != 'darwin':
         raise RuntimeError('当前文件传输连接仅支持 macOS')
+    _libc = C.CDLL(None)
+    _libc.free.argtypes = [C.c_void_p]
+    _libc.strdup.argtypes = [C.c_char_p]
+    _libc.strdup.restype = C.c_void_p
     path = app_paths.resource_root() / 'libmtp.dylib'
     name = str(path) if path.exists() else ctypes.util.find_library('mtp')
     if not name:
@@ -86,10 +91,6 @@ def library():
     return lib
 
 
-_libc = C.CDLL(None)
-_libc.free.argtypes = [C.c_void_p]
-_libc.strdup.argtypes = [C.c_char_p]
-_libc.strdup.restype = C.c_void_p
 
 
 def close():

@@ -245,3 +245,13 @@ def test_service_releases_mtp_before_retiring_http_instance(monkeypatch):
     instance = SimpleNamespace(publish=lambda *args:events.append('published'))
     server._serve_instance(instance, False)
     assert events == ['published','served','mtp_closed','http_closed']
+
+
+def test_import_on_windows_does_not_load_native_mtp_or_libc(monkeypatch):
+    import runpy
+    import sys
+    monkeypatch.setattr(sys, 'platform', 'win32')
+    monkeypatch.setattr(ctypes, 'CDLL', lambda *a, **kw: pytest.fail('Import must not load a native library'))
+    namespace = runpy.run_path(str(Path(mtp.__file__)))
+    with pytest.raises(RuntimeError, match='仅支持 macOS'):
+        namespace['library']()
