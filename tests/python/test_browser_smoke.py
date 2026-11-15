@@ -121,11 +121,18 @@ def test_home_to_library_to_preview(tmp_path, monkeypatch, chrome_binary, viewpo
                 try:
                     deadline = time.monotonic() + 15
                     active_port = profile / 'DevToolsActivePort'
-                    while not active_port.is_file():
+                    while True:
                         assert chrome.poll() is None, f'Chrome exited; see {artifacts / "chrome.log"}'
                         assert time.monotonic() < deadline, f'Chrome startup timed out; see {artifacts / "chrome.log"}'
+                        if active_port.is_file():
+                            try:
+                                port = int(active_port.read_text(encoding='utf-8').splitlines()[0])
+                                break
+                            except PermissionError:
+                                # Windows can keep this file locked while Chrome writes it.
+                                time.sleep(0.05)
+                                continue
                         time.sleep(0.05)
-                    port = int(active_port.read_text(encoding='utf-8').splitlines()[0])
                     response = requests.get(f'http://127.0.0.1:{port}/json/list', timeout=15)
                     response.raise_for_status()
                     targets = response.json()
