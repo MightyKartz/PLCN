@@ -3,6 +3,7 @@
 Handlers take (request, live service context, parsed query or JSON object).
 Authentication and JSON transport validation stay in server.ConfigHandler.
 """
+import api_content
 import api_library
 import api_playlists
 import api_artwork
@@ -12,6 +13,9 @@ import api_desktop
 import api_config
 
 GET_ROUTES = {
+    '/api/cores/info': api_content.core_info,
+    '/api/content/setup': api_content.setup,
+    '/api/content/directories': api_content.directories,
     '/api/artwork/thumbnail': api_artwork.thumbnail,
     '/api/config': api_config.get_config,
     '/api/data': api_data.data,
@@ -30,6 +34,11 @@ GET_ROUTES = {
 }
 
 POST_ROUTES = {
+    '/api/content/hints': api_content.hints,
+    '/api/content/preview': api_content.preview,
+    '/api/content/apply': api_content.apply,
+    '/api/cores/download': api_content.core_download,
+    '/api/cores/transfer': api_content.core_transfer,
     '/api/artwork/apply': api_artwork.apply,
     '/api/artwork/context': api_artwork.context,
     '/api/artwork/preview': api_artwork.preview,

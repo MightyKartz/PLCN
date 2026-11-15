@@ -27,6 +27,8 @@ SESSION_TOKEN = secrets.token_urlsafe(32)
 
 
 class LocalHTTPServer(http.server.ThreadingHTTPServer):
+    # Split UI assets arrive concurrently; the default backlog of five resets browser connections.
+    request_queue_size = 32
     # Windows SO_REUSEADDR can let another instance bind the same address,
     # sending a browser to the wrong profile instead of using a free port.
     allow_reuse_address = os.name != 'nt'
@@ -46,7 +48,7 @@ TEMPLATE_DIR = os.path.join(get_base_path(), "src", "templates")
 UI_ASSETS = (
     'plcn.css', 'workflow.js', 'ui.js', 'config.js', 'library-navigation.js',
     'repair-model.js', 'preview.js', 'tasks.js',
-    'library.js', 'artwork.js', 'welcome.js', 'desktop.js',
+    'library.js', 'artwork.js', 'welcome.js', 'content-scan.js', 'desktop.js',
 )
 
 # Retired single-game workbench keys; migrated to the plain library keys on load.
@@ -217,6 +219,11 @@ def _serve_instance(instance, open_browser):
             httpd.serve_forever()
         except KeyboardInterrupt:
             print("\nServer stopped.")
+        finally:
+            # Release USB before run_server removes the instance lock/record.
+            # A replacement process must not open a session while this one closes it.
+            from mtp_runtime import close
+            close()
 
 if __name__ == "__main__":
     run_server()

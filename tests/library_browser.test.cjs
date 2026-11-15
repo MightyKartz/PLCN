@@ -7,7 +7,7 @@ const source = fs.readFileSync(require('node:path').join(__dirname, '../src/temp
 
 function harness() {
     const elements = {};
-    const element = id => elements[id] ||= {value: '', hidden: false};
+    const element = id => elements[id] ||= {value: '', hidden: false, setAttribute: () => {}};
     const pending = [];
     const context = {AbortController, URLSearchParams, workbench: {operation: null},
         document: {getElementById: element},

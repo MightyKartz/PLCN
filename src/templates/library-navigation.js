@@ -48,8 +48,8 @@ async function scanDevice(useDefault = false) {
         const scanStatusMessage = currentUILanguage === 'en'
             ? (playlistCount ? 'RetroArch directory detected' : 'No game lists found')
             : (scan.message || '扫描完成');
-        showStatus(scanStatusMessage, playlistCount ? 'success' : 'error');
-        if (!playlistCount) libraryHome.openError = (targetPath ? shortPath(targetPath) + '：' : '') + scanStatusMessage;
+        showStatus(scanStatusMessage, scan.connected ? 'success' : 'error');
+        if (!scan.connected) libraryHome.openError = (targetPath ? shortPath(targetPath) + '：' : '') + scanStatusMessage;
         else { await rememberOpenedLibrary(scan); await saveConfig(); }
 
     } catch (error) {
@@ -180,12 +180,40 @@ function findPreferredLibrarySystem(groups) {
             if (items.some(({ playlist }) => playlist.path === selectedPath)) return groupName;
         }
     }
-    return groups.keys().next().value || '';
+    return '';
+}
+
+function selectAllLibrarySystems() {
+    if (workbench.operation) return;
+    selectedLibrarySystem = '';
+    invalidateWorkbenchPreview();
+    for (const id of ['playlist_path', 'system_name']) document.getElementById(id).value = '';
+    renderDeviceScan(currentDeviceScan);
+    renderWorkbench();
 }
 
 function renderLibrarySystemTabs(container, groups) {
     const tabs = document.createElement('div');
     tabs.className = 'playlist-system-tabs';
+
+    const allButton = document.createElement('button');
+    allButton.type = 'button';
+    allButton.id = 'library-all-systems';
+    allButton.className = `playlist-system-tab${selectedLibrarySystem === '' ? ' active' : ''}`;
+    const allAbbreviation = document.createElement('strong');
+    allAbbreviation.textContent = workbenchText('全部', 'All');
+    const allName = document.createElement('span'); allName.className = 'system-display-name';
+    allName.textContent = workbenchText('全部主机', 'All systems');
+    const allCount = document.createElement('span'); allCount.className = 'system-game-count';
+    allCount.textContent = currentDeviceScan?.totals?.items
+        ?? [...groups.values()].reduce((total, items) => total
+            + items.reduce((sum, item) => sum + (Number(item.playlist.item_count) || 0), 0), 0);
+    allButton.append(allAbbreviation, allName, allCount);
+    allButton.title = workbenchText('全部主机', 'All systems');
+    allButton.setAttribute('aria-label', workbenchText('全部主机', 'All systems'));
+    allButton.setAttribute('aria-pressed', String(selectedLibrarySystem === ''));
+    allButton.onclick = selectAllLibrarySystems;
+    tabs.appendChild(allButton);
 
     groups.forEach((items, groupName) => {
         const tabButton = document.createElement('button');
@@ -321,4 +349,59 @@ async function selectScannedPlaylist(index) {
     renderWorkbench();
     renderDeviceScan(currentDeviceScan);
     renderWorkbench();
+}
+
+
+function renderLibraryOverview(visible) {
+    const panel = document.getElementById('library-overview');
+    panel.hidden = !visible;
+    panel.replaceChildren();
+    if (!visible) return;
+    const groups = new Map();
+    for (const playlist of currentDeviceScan.playlists) {
+        const name = getPlaylistSystemName(playlist);
+        groups.set(name, (groups.get(name) || 0) + (Number(playlist.item_count) || 0));
+    }
+    const intro = document.createElement('div'); intro.className = 'overview-intro';
+    const heading = document.createElement('h2');
+    heading.textContent = groups.size ? workbenchText('游戏库已就绪', 'Your library is ready') : workbenchText('设备已连接', 'Device connected');
+    const description = document.createElement('p');
+    description.textContent = groups.size ? workbenchText('选择主机，查看游戏与图片；也可以一键补全全部主机。', 'Choose a system to browse games and artwork, or auto-complete all systems.') : workbenchText('当前存储尚未检测到游戏列表。点击“更新游戏库”，选择游戏目录后扫描。', 'No playlists detected in this storage. Use Update library to choose a game folder and scan.');
+    const stats = document.createElement('div'); stats.className = 'overview-stats';
+    for (const [value, label] of [[groups.size, workbenchText('个主机', 'systems')],
+            [currentDeviceScan.totals?.items || 0, workbenchText('个游戏', 'games')]]) {
+        const stat = document.createElement('span');
+        const count = document.createElement('strong'); count.textContent = value;
+        stat.append(count, document.createTextNode(' ' + label)); stats.appendChild(stat);
+    }
+    intro.append(heading, description, stats);
+    const title = document.createElement('h2'); title.className = 'overview-systems-title';
+    title.textContent = workbenchText('按主机浏览', 'Browse by system');
+    const grid = document.createElement('div'); grid.className = 'overview-system-grid';
+    for (const [name, count] of groups) {
+        const card = document.createElement('button'); card.type = 'button'; card.className = 'overview-system-card';
+        card.setAttribute('data-input-control', '');
+        card.setAttribute('aria-label', workbenchText('浏览 ', 'Browse ') + name);
+        const badge = document.createElement('span'); badge.className = 'overview-system-badge';
+        badge.textContent = getSystemAbbreviation(name);
+        const details = document.createElement('span'); details.className = 'overview-system-details';
+        const label = document.createElement('strong'); label.textContent = name.replace(/^[^-]+ - /, ''); label.title = name;
+        const total = document.createElement('span'); total.textContent = formatGameCount(count);
+        details.append(label, total);
+        const arrow = document.createElement('span'); arrow.className = 'overview-system-arrow'; arrow.textContent = '→'; arrow.setAttribute('aria-hidden', 'true');
+        card.append(badge, details, arrow);
+        card.onclick = () => {
+            selectedLibrarySystem = name;
+            renderDeviceScan(currentDeviceScan);
+            selectFirstPlaylistForSystem(name);
+        };
+        grid.appendChild(card);
+    }
+    panel.appendChild(intro);
+    if (groups.size) panel.append(title, grid);
+    else {
+        const action = document.createElement('button'); action.className = 'btn'; action.type = 'button';
+        action.textContent = workbenchText('更新游戏库', 'Update game library'); action.onclick = () => openContentScan();
+        panel.appendChild(action);
+    }
 }

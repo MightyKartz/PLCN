@@ -12,6 +12,7 @@ import requests
 
 import app_paths
 from database import DatabaseManager
+import playlist_service
 import retroarch_scanner
 import server
 import single_artwork
@@ -58,6 +59,8 @@ def test_home_to_library_to_preview(tmp_path, monkeypatch, chrome_binary, viewpo
     Image.new('RGB', (12, 16), (30, 100, 200)).save(png, format='PNG')
     monkeypatch.setattr(single_artwork, 'catalog_image', lambda *args, **kwargs: png.getvalue())
     monkeypatch.setattr(single_artwork, 'download', lambda *args, **kwargs: png.getvalue())
+    import library_sources
+    monkeypatch.setattr(library_sources, 'usb_android_devices', lambda: [{'serial':'test-handheld','label':'Android handheld USB'}])
     monkeypatch.setattr(server, 'job_manager', server.JobManager())
     jobs = server.job_manager
     failed = jobs.create_job()
@@ -82,6 +85,11 @@ def test_home_to_library_to_preview(tmp_path, monkeypatch, chrome_binary, viewpo
     monkeypatch.setattr(jobs, 'cancel', cancel)
     from thumbnail_downloader import ThumbnailDownloader
     monkeypatch.setattr(ThumbnailDownloader, 'download_batch', lambda *args, **kwargs: ThumbnailDownloader.empty_summary())
+    original_analyze = playlist_service.analyze_playlist
+    def slow_analyze(*args, **kwargs):
+        time.sleep(0.3)
+        return original_analyze(*args, **kwargs)
+    monkeypatch.setattr(playlist_service, 'analyze_playlist', slow_analyze)
     source = tmp_path / 'names'
     source.mkdir()
     playlists = tmp_path / '游戏库/playlists'

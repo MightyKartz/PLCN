@@ -37,7 +37,7 @@ function syncGameLibrary(state) {
     const visible = Boolean(input[0]) && !state.previewValid
         && !['scan', 'preview', 'apply'].includes(workbench.operation);
     panel.hidden = !visible;
-    if (!visible) { resetGameLibrary(); return; }
+    if (!visible) { panel.setAttribute('aria-busy', 'false'); resetGameLibrary(); return; }
     const key = JSON.stringify(input);
     if (key !== gameLibrary.key) {
         resetGameLibrary();
@@ -147,7 +147,7 @@ function renderGameLibrary() {
     document.getElementById('image-directory-notice').hidden = hasImageDirectory;
     document.getElementById('image-directory-message').textContent = text('尚未指定图片目录，设置后可检查和补全游戏图片。', 'Choose an artwork folder to check and fill in game images.');
     document.getElementById('choose-image-directory').textContent = text('指定图片目录', 'Choose artwork folder');
-    document.getElementById('game-library-note').textContent = text('点击“整理本主机”预览修复建议，或在游戏行中单独补图。', 'Use Organize this system to preview fixes, or update artwork from its game row.');
+    document.getElementById('game-library-note').textContent = text('点击“一键补全”预览名称与图片建议，或在游戏行中单独补图。', 'Use Auto-complete to preview name and artwork suggestions, or update artwork from its game row.');
     const status = document.getElementById('game-library-status');
     const retry = document.getElementById('game-library-retry');
     retry.textContent = text('重新读取', 'Retry');

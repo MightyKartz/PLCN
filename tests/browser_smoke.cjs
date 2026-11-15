@@ -119,16 +119,13 @@ async function main() {
     await send('Page.navigate', {url: baseUrl});
     await waitFor(() => document.readyState === 'complete'
         && document.querySelector('#library-onboarding')?.getAttribute('aria-busy') === 'false', 'home discovery');
-    assert.equal(await evaluate(visible, '#home-manual-open'), true);
+    assert.equal(await evaluate(() => document.querySelector('#home-manual-open, #home-scan-open')), null);
     assert.equal(await evaluate(visible, '.sidebar'), false);
     assert.equal(await evaluate(visible, '#preview-area'), false);
+    assert.equal(await evaluate(() => document.querySelector('#home-devices [data-status="usb_only"]')?.textContent.includes('文件传输未就绪')), true);
+    assert.equal(await evaluate(() => document.querySelector('#home-devices [data-status="usb_only"] button')?.textContent), '等待文件传输');
     await screenshot('01-home');
-    assert.equal(await evaluate(visible, '#usb-debug-help'), true);
-    await click('#usb-debug-help > summary');
-    assert.equal(await evaluate(() => document.querySelectorAll('#usb-debug-help li').length), 4);
-    assert.equal(await evaluate(() => document.querySelector('#usb-debug-help').textContent.includes('USB 调试')), true);
-    await screenshot('01-usb-help');
-    await click('#usb-debug-help > summary');
+    assert.equal(await evaluate(() => document.querySelector('#usb-debug-help, #home-local-open')), null);
     await click('#settings-button');
     assert.equal(await evaluate(() => document.querySelectorAll('dialog[open]').length), 1);
     assert.equal(await evaluate(() => document.querySelectorAll('[data-desktop-view]').length), 3);
@@ -153,7 +150,7 @@ async function main() {
     await screenshot('01-tasks-after-retry');
     await click('#desktop-close');
 
-    await click('#home-manual-open');
+    await click('#settings-button');
     await waitFor(visible, 'library path dialog', '#path-settings');
     assert.equal(await evaluate(() => document.querySelectorAll('#path-settings input[type="text"]').length), 2);
     assert.equal(await evaluate(() => document.querySelector('.topbar .mode-switch')), null);
@@ -161,8 +158,12 @@ async function main() {
     await evaluate(() => { const input = document.querySelector('#retroarch_root'); input.focus(); input.select(); });
     await send('Input.insertText', {text: libraryPath});
     await click('#scan-device-btn');
-    await waitFor(() => document.querySelectorAll('.playlist-system-tab').length === 2
-        && !document.querySelector('.playlist-system-tab').disabled, 'two systems');
+    await waitFor(() => document.querySelectorAll('.playlist-system-tab').length === 3
+        && !document.querySelector('#library-all-systems').disabled, 'all-systems row and two systems');
+    assert.equal(await evaluate(() => document.querySelector('#library-all-systems').getAttribute('aria-pressed')), 'true');
+    assert.equal(await evaluate(() => document.querySelector('#preview-button').disabled), false);
+    assert.equal(await evaluate(visible, '#game-library'), false);
+    assert.equal(await evaluate(() => document.querySelector('#workspace-title').textContent.includes('全部主机')), true);
 
     const system = '.playlist-system-tab[aria-label="Nintendo - Super Nintendo Entertainment System"]';
     await click(system);
@@ -172,16 +173,22 @@ async function main() {
     assert.equal(await evaluate(visible, '#game-library'), true);
     assert.equal(await evaluate(visible, '#library-onboarding'), false);
     assert.equal(await evaluate(visible, '#preview-area'), false);
-    assert.equal(await evaluate(visible, '#image-directory-notice'), true);
+    assert.equal(await evaluate(visible, '#image-directory-notice'), false);
     assert.equal(await evaluate(() => document.querySelector('#game-library-filter-problem').textContent), '需检查 0');
-    assert.equal(await evaluate(() => document.querySelector('#game-library-rows td:first-child').textContent), '');
-    assert.equal(await evaluate(() => document.querySelectorAll('#game-library-rows button').length), 0);
+    assert.equal(await evaluate(() => document.querySelector('#game-library-rows .game-image-placeholder').textContent), '缺图');
+    assert.equal(await evaluate(() => document.querySelectorAll('#game-library-rows button').length), 2);
+    assert.equal(await evaluate(() => document.querySelector('#preview-button').textContent), '一键补全');
+    assert.equal(await evaluate(() => document.querySelector('#completion-entry-note').textContent), '自动匹配中文名与图片，预览后确认应用。');
+    assert.equal(await evaluate(visible, '#completion-entry-note'), true);
     await screenshot('02-games');
 
     await click('#theme-toggle-btn');
     await click('#language-display-btn');
     assert.equal(await evaluate(() => document.querySelector('#image-directory-message').textContent.startsWith('Choose an artwork folder')), true);
-    await click('#choose-image-directory');
+    assert.equal(await evaluate(() => document.querySelector('#preview-button').textContent), 'Auto-complete');
+    assert.equal(await evaluate(() => document.querySelector('#completion-entry-note').textContent), 'Match Chinese names and artwork automatically; preview before applying.');
+    await screenshot('02-one-click-complete-en');
+    await evaluate(() => document.querySelector('#choose-image-directory').click());
     assert.equal(await evaluate(() => document.querySelector('label[for="thumbnails_override"]').textContent), 'Artwork folder (optional override)');
     await screenshot('02-dark-en-path-settings');
     await click('#desktop-close');
@@ -189,27 +196,54 @@ async function main() {
     await click('#language-display-btn');
     await click('#theme-toggle-btn');
 
-    await click('#batch-review-button');
-    await waitFor(() => document.querySelector('#batch-review-rows').children.length === 2
-        && !document.querySelector('#batch-review-refresh').disabled, 'all-system read-only summary');
-    assert.equal(await evaluate(() => document.querySelector('#batch-review-apply').disabled), true);
-    await click('#batch-download-artwork');
-    await waitFor(() => !document.querySelector('#batch-review-apply').disabled
-        && document.querySelector('#batch-review-rows').children.length === 2, 'names-only batch summary');
-    assert.deepEqual(await evaluate(() => Array.from(document.querySelectorAll('#batch-review-rows tr')).map(row => row.children[1].textContent)), ['1','1']);
-    await screenshot('02-all-systems-summary');
-    await click('#batch-review-dialog header button');
-    await waitFor(() => !document.querySelector('#batch-review-dialog').open, 'cancelled whole-library review');
-    assert.equal(await evaluate(visible, '#game-library'), true);
+    await click('#library-all-systems');
+    assert.equal(await evaluate(() => document.querySelector('#library-all-systems').getAttribute('aria-pressed')), 'true');
+    assert.equal(await evaluate(() => document.querySelector('#workspace-title').textContent.includes('全部主机')), true);
+    assert.equal(await evaluate(visible, '#game-library'), false);
+    const playlistFiles = () => Object.fromEntries(fs.readdirSync(libraryPath + '/playlists')
+        .filter(name => name.endsWith('.lpl'))
+        .map(name => [name, fs.readFileSync(libraryPath + '/playlists/' + name)]));
+    const beforeRun = playlistFiles();
+    await click('#preview-button');
+    await waitFor(() => document.querySelector('#batch-review-dialog').open && batchRunJobId, 'all-systems run started');
+    assert.equal(await evaluate(visible, '#batch-run-cancel'), true);
+    await click('#batch-run-cancel');
+    await waitFor(() => document.querySelector('#batch-review-title').textContent === '补全已取消'
+        && !document.querySelector('#batch-run-done').hidden, 'cancelled all-systems run');
+    assert.equal(await evaluate(() => document.querySelector('#batch-review-status').dataset.state), 'blocked');
+    assert.deepEqual(playlistFiles(), beforeRun);
+    await screenshot('02-all-systems-cancelled');
+    await click('#batch-run-done');
+    await waitFor(() => !document.querySelector('#batch-review-dialog').open, 'closed cancelled run');
+    assert.equal(await evaluate(visible, '#game-library'), false);
+    assert.equal(await evaluate(() => document.querySelector('#library-all-systems').getAttribute('aria-pressed')), 'true');
+    await evaluate(() => { runAllSystemsCompletion({write_names: false, download_thumbnails: true}); });
+    await waitFor(() => document.querySelector('#batch-review-title').textContent === '补全完成'
+        && !document.querySelector('#batch-run-done').hidden, 'completed all-systems run');
+    assert.equal(await evaluate(() => document.querySelector('#batch-review-rows').children.length), 2);
+    assert.equal(await evaluate(() => Array.from(document.querySelectorAll('#batch-review-rows tr'))
+        .every(row => row.children[4].textContent.length > 0)), true);
+    assert.equal(await evaluate(() => document.querySelector('#batch-review-status').textContent.length > 0), true);
+    assert.equal(await evaluate(visible, '#batch-run-done'), true);
+    assert.equal(await evaluate(() => document.getElementById('batch-review-apply')), null);
+    await screenshot('02-all-systems-done');
+    await click('#batch-run-done');
+    await waitFor(() => !document.querySelector('#batch-review-dialog').open, 'closed completed run');
+    assert.equal(await evaluate(() => document.querySelector('#library-all-systems').getAttribute('aria-pressed')), 'true');
+    assert.deepEqual(playlistFiles(), beforeRun);
     await click('#theme-toggle-btn');
     await click('#language-display-btn');
-    await click('#batch-review-button');
-    await waitFor(() => !document.querySelector('#batch-review-apply').disabled, 'English all-system summary');
-    assert.equal(await evaluate(() => document.querySelector('#batch-review-title').textContent), 'All-system change summary');
-    await screenshot('02-dark-en-all-systems-summary');
-    await click('#batch-review-dialog header button');
+    await evaluate(() => { runAllSystemsCompletion({write_names: false, download_thumbnails: true}); });
+    await waitFor(() => document.querySelector('#batch-review-title').textContent === 'Completed'
+        && !document.querySelector('#batch-run-done').hidden, 'English all-systems run');
+    await screenshot('02-dark-en-all-systems-done');
+    await click('#batch-run-done');
     await click('#language-display-btn');
     await click('#theme-toggle-btn');
+    await click(system);
+    await waitFor(() => document.querySelector('#workspace-title')?.textContent.includes('SNES')
+        && document.querySelector('#game-library')?.getAttribute('aria-busy') === 'false'
+        && document.querySelector('.game-library-table tbody tr'), 'SNES reselected for preview');
     await click('#preview-button');
     await waitFor(() => !document.querySelector('#option-download-artwork').disabled
         && document.querySelector('#preview-table-body .new-label-text')?.textContent === '暗影狂奔', 'default preview');
@@ -228,6 +262,12 @@ async function main() {
     assert.equal(await evaluate(() => document.querySelector('#preview-table-body .name-secondary').title), '/roms/snes/Shadowrun (USA).sfc');
     await click('#preview-table-body .name-secondary');
     assert.equal(await evaluate(() => document.querySelector('#inspector-panel')), null);
+    assert.equal(await evaluate(() => document.querySelector('#preview-button').textContent), '重新预览');
+    assert.equal(await evaluate(visible, '#completion-entry-note'), false);
+    assert.equal(await evaluate(() => document.querySelector('#apply-button').textContent), '确认应用 1 项');
+    assert.equal(await evaluate(visible, '#apply-summary-panel'), true);
+    assert.equal(await evaluate(() => document.querySelector('#apply-summary-text').textContent.includes('修改名称 1 项')), true);
+    assert.equal(await evaluate(() => document.querySelector('#confirm-apply-button')), null);
     await screenshot('03-preview');
     await click('#preview-table-body .new-label-text');
     await send('Input.insertText', {text: '取消的名称'});
@@ -247,7 +287,7 @@ async function main() {
     await screenshot('03-preview-edited');
 
     await click('#browse-games-button');
-    await click('#choose-image-directory');
+    await evaluate(() => document.querySelector('#choose-image-directory').click());
     assert.equal(await evaluate(() => document.activeElement.id), 'thumbnails_override');
     const override = path.join(libraryPath, '自定义图片');
     fs.mkdirSync(override);
@@ -264,7 +304,11 @@ async function main() {
     assert.equal(await evaluate(visible, '#image-directory-notice'), false);
     await send('Page.reload');
     await waitFor(() => document.querySelector('#library-onboarding')?.getAttribute('aria-busy') === 'false', 'reloaded home');
-    await click('#home-recent button');
+    await click('#settings-button');
+    await click('#scan-device-btn');
+    await waitFor(() => document.querySelectorAll('.playlist-system-tab').length === 3
+        && !document.querySelector('#library-all-systems').disabled, 'reopened library systems');
+    await click(system);
     await waitFor(() => document.querySelector('#game-library')?.getAttribute('aria-busy') === 'false'
         && document.querySelector('.game-library-table tbody tr'), 'reopened library');
     assert.equal(await evaluate(() => document.querySelector('#thumbnails_override').value), override);
@@ -277,18 +321,21 @@ async function main() {
     await send('Input.dispatchKeyEvent', {type: 'keyDown', key: 'Backspace', code: 'Backspace', windowsVirtualKeyCode: 8});
     await send('Input.dispatchKeyEvent', {type: 'keyUp', key: 'Backspace', code: 'Backspace', windowsVirtualKeyCode: 8});
     await click('#scan-device-btn');
-    await waitFor(() => !document.querySelector('#desktop-dialog').open
-        && document.querySelector('#game-library').getAttribute('aria-busy') === 'false', 'detected artwork folder');
+    await waitFor(dir => !document.querySelector('#desktop-dialog').open
+        && currentDeviceScan?.directories?.thumbnails === dir
+        && fetch('/api/config').then(r => r.json())
+            .then(c => c.thumbnails_override === '' && c.thumbnails_dir === dir), 'detected artwork folder', detected);
     const config = await evaluate(async () => (await fetch('/api/config')).json());
     assert.equal(config.thumbnails_override, '');
     assert.equal(config.thumbnails_dir, detected);
+    await click(system);
+    await waitFor(() => document.querySelector('#workspace-title').textContent.includes('SNES')
+        && document.querySelector('#game-library').getAttribute('aria-busy') === 'false'
+        && document.querySelector('.game-library-table tbody tr'), 'SNES with artwork directory');
     assert.equal(await evaluate(visible, '#image-directory-notice'), false);
     assert.equal(await evaluate(() => document.querySelector('#game-library-rows .game-image-placeholder').textContent), '缺图');
     assert.equal(await evaluate(() => document.querySelectorAll('#game-library-rows .artwork-chip').length), 0);
     await screenshot('04-auto-artwork');
-    await click(system);
-    await waitFor(() => document.querySelector('#workspace-title').textContent.includes('SNES')
-        && document.querySelector('#game-library').getAttribute('aria-busy') === 'false', 'SNES with artwork directory');
     const boxFile = path.join(detected, 'Nintendo - Super Nintendo Entertainment System', 'Named_Boxarts', 'Shadowrun (USA).png');
     const boxBytes = Buffer.from(await evaluate(async () => Array.from(new Uint8Array(await (await fetch('/api/artwork/thumbnail?system=SNES&kind=Named_Boxarts&name=Game.png')).arrayBuffer()))));
     fs.mkdirSync(path.dirname(boxFile), {recursive:true});

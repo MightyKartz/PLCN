@@ -6,7 +6,6 @@ async function previewTask() {
     const playlistPath = document.getElementById('playlist_path').value;
     const systemName = document.getElementById('system_name').value;
     const thumbnailsDir = getThumbnailsDirectory();
-    hideApplySummary();
 
     if (!playlistPath || !systemName) {
         showStatus('请先选择游戏列表和系统', 'error');
@@ -23,7 +22,7 @@ async function previewTask() {
         const response = await fetch('/api/playlist/preview', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ playlist_path: playlistPath, system_name: systemName, thumbnails_dir: thumbnailsDir })
+            body: JSON.stringify({ playlist_path: playlistPath, system_name: systemName, thumbnails_dir: thumbnailsDir, options: getProcessingOptions() })
         });
 
         const data = await response.json();
@@ -89,9 +88,11 @@ function renderPreviewTable(changes) {
         const tableThumb = document.createElement('div');
         tableThumb.className = 'table-thumb';
         const coverUrl = getCoverPreviewUrl(change);
+        const candidateCover = !hasExistingCover(change) && change.artwork_recommended;
         if (coverUrl) {
             const img = document.createElement('img');
-            img.alt = '';
+            img.alt = candidateCover ? workbenchText('推荐封面', 'Recommended cover') : '';
+            if (candidateCover) tableThumb.title = workbenchText('推荐封面，可更换：', 'Recommended cover; change if needed: ') + change.thumbnail_source;
             img.loading = 'lazy';
             img.src = coverUrl;
             img.onerror = () => {
@@ -106,6 +107,10 @@ function renderPreviewTable(changes) {
                 tableThumb.textContent = hasExistingCover(change) ? uiText('本地') : 'IMG';
             };
             tableThumb.appendChild(img);
+            if (candidateCover) {
+                const caption = document.createElement('span'); caption.className = 'candidate-cover-label';
+                caption.textContent = workbenchText('推荐', 'Recommended'); tableThumb.appendChild(caption);
+            }
         } else {
             tableThumb.textContent = 'IMG';
         }
@@ -129,6 +134,29 @@ function renderPreviewTable(changes) {
         const thumbWrap = document.createElement('div');
         thumbWrap.className = 'thumb-cell';
         thumbWrap.appendChild(buildPreviewEditor(change, index, 'thumbnail_source', change.thumbnail_source || change.artwork_query || '', uiText('封面源英文名')));
+        if (!change.thumbnail_source && change.artwork_candidates?.length && !['unavailable', 'not_found'].includes(change.artwork_gallery_status)) {
+            thumbWrap.classList.add('has-version-choice');
+            const versions = document.createElement('select');
+            versions.className = 'artwork-version-select';
+            versions.setAttribute('aria-label', workbenchText('选择图片版本', 'Choose artwork version') + ' · ' + change.new_label);
+            const placeholder = document.createElement('option');
+            placeholder.value = ''; placeholder.textContent = workbenchText('选择图片版本…', 'Choose artwork version…');
+            versions.appendChild(placeholder);
+            for (const name of change.artwork_candidates) {
+                const option = document.createElement('option'); option.value = name; option.textContent = name;
+                versions.appendChild(option);
+            }
+            versions.onchange = () => {
+                if (!versions.value) return;
+                change.thumbnail_source = versions.value;
+                change.artwork_source_confirmed = true;
+                change.artwork_recommended = false;
+                markChangeEdited(index, '已选择图片版本', 'thumbnail_source');
+                renderPreviewTable(currentChanges); updateSummary(currentChanges);
+            };
+            thumbWrap.appendChild(versions);
+        }
+
         const artworkButton = document.createElement('button');
         artworkButton.className = 'btn btn-muted replace-artwork';
         artworkButton.type = 'button';
@@ -182,6 +210,7 @@ function buildPreviewEditor(change, index, key, value, label) {
             if (commit && input.value !== value) {
                 value = input.value;
                 currentChanges[index][key] = value;
+                if (key === 'thumbnail_source') currentChanges[index].artwork_source_confirmed = true;
                 markChangeEdited(index, key === 'new_label' ? '手动编辑显示名称' : '手动编辑封面源', key);
                 button.textContent = value || workbenchText('点击填写', 'Click to enter');
                 button.title = label + ': ' + (value || uiText('待补充'));
@@ -206,6 +235,8 @@ function buildPreviewEditor(change, index, key, value, label) {
 function getCoverStatusInfo(change) {
     if (getRepairMode() === 'names') return {className:'skipped', label:workbenchText('本次不处理', 'Not requested'), title:workbenchText('仅修复名称，图片保持不变', 'Names only; artwork is unchanged')};
     if (!change.thumbnail_source) {
+        if (change.artwork_candidates?.length && !['unavailable', 'not_found'].includes(change.artwork_gallery_status)) return {className:'missing',
+            label:workbenchText('待选择版本', 'Choose version'), title:change.match_reason};
         if (hasExistingCover(change)) {
             return {
                 className: 'exists',
@@ -216,9 +247,9 @@ function getCoverStatusInfo(change) {
         if (change.artwork_gallery_status === 'not_found' || change.artwork_gallery_status === 'unavailable') {
             return {className: 'missing',
                 label: change.artwork_gallery_status === 'not_found'
-                    ? workbenchText('官方图库无', 'Not in gallery') : workbenchText('图库查询失败', 'Gallery unavailable'),
+                    ? workbenchText('未匹配图片源', 'No artwork match') : workbenchText('图库查询失败', 'Gallery unavailable'),
                 title: change.artwork_gallery_status === 'not_found'
-                    ? workbenchText('官方图库没有这张图。点击“更换图片”搜索备用图库（维基百科），选中后再应用。', 'The official gallery has no image. Use Change artwork to search the alternate source (Wikipedia); pick one, then apply.')
+                    ? workbenchText('当前名称未匹配到官方图片。请核对标准名称与盘号，或点击“更换图片”选择其他图片。', 'No official image matched the current name. Check the standard title and disc number, or use Change artwork.')
                     : change.match_reason};
         }
         return {
@@ -232,6 +263,7 @@ function getCoverStatusInfo(change) {
         return {
             className: 'failed',
             label: change.cover_download_reason === 'not_found' ? workbenchText('图库未找到', 'No gallery match')
+                : change.cover_download_reason === 'filename_collision' ? workbenchText('文件名冲突', 'Filename collision')
                 : change.cover_download_reason === 'network_error' ? workbenchText('网络连接失败', 'Network error') : uiText('下载失败'),
             title: change.cover_download_message || uiText('下载失败')
         };
@@ -358,7 +390,6 @@ function setPreviewFilter(filter, target) {
 function toggleChangeEnabled(index, control) {
     const change = currentChanges[index];
     if (!change) return;
-    hideApplySummary();
     const nextEnabled = change.enabled === false;
     if (nextEnabled && !isActionableChange(change)) {
         showStatus(

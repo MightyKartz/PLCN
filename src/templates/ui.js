@@ -3,17 +3,15 @@ let currentUILanguage = 'zh';
 let currentTheme = 'light';
 
 const UI_EN = {
+    '自动匹配中文名与图片，预览后确认应用。': 'Match Chinese names and artwork automatically; preview before applying.',
     '查看任务': 'View tasks',
-    '整理本主机': 'Organize this system',
-    '整理全部主机': 'Organize all systems',
+    '一键补全': 'Auto-complete',
     '修改名称': 'Rename games',
     '补全图片': 'Complete artwork',
     '选项变化后重新分析': 'Changing options reanalyzes the list',
-    '全部主机变更汇总': 'All-system change summary',
-    '这里只分析，不会写入。确认后应用本次汇总中的变更。': 'Analysis only. Confirm to apply the changes in this summary.',
-    '写回名称前自动备份；仅补图不改写游戏列表。': 'Playlists are backed up before renaming. Artwork-only tasks preserve playlist files.',
-    '重新生成汇总': 'Refresh summary',
-    '确认应用全部变更': 'Apply all reviewed changes',
+    '需手动处理': 'Needs manual work',
+    '结果': 'Result',
+    '查看任务明细': 'View task details',
     '关闭': 'Close',
 
     "设置": "Settings",
@@ -114,7 +112,6 @@ const UI_EN = {
     '预览后应用': 'Preview & Apply',
     '批量配置': 'Batch Config',
     '每个 playlist 自动备份': 'Back up each playlist',
-    '遇到错误继续处理下一个': 'Continue after errors',
     '批量下载三类缩略图': 'Download all thumbnail types',
     '开始批量处理': 'Start Batch',
     '游戏库扫描': 'Game Library Scan',
@@ -323,7 +320,6 @@ function applyUILanguage(language) {
     } else {
         renderDeviceScan(null);
     }
-    hideApplySummary();
     updateSummary(currentChanges);
     renderWorkbench();
 }

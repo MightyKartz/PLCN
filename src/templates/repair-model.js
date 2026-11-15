@@ -3,7 +3,21 @@
 function preparePreviewChanges(changes) {
     return (changes || []).map(original => {
         const change = { ...original };
-        if (getRepairMode() === 'names' && !change.needs_review && ['matched', 'rename', 'ready', 'download'].includes(change.match_status)) {
+        // The server candidates already obey known region, disc and revision constraints.
+        // This chooses artwork for preview; it does not assert the ROM's unknown revision.
+        if (getRepairMode() !== 'names' && !change.thumbnail_source
+                && change.artwork_identity_status === 'resolved' && change.artwork_gallery_status === 'ambiguous'
+                && change.artwork_candidates?.length) {
+            const ranked = [...change.artwork_candidates].sort((a, b) => {
+                const region = name => /\(Japan\)/i.test(name) ? 0 : /\(USA\)/i.test(name) ? 1 : 2;
+                return region(a) - region(b) || a.localeCompare(b, 'en', {numeric: true});
+            });
+            change.thumbnail_source = ranked[0];
+            change.artwork_recommended = true;
+            change.artwork_gallery_status = 'matched';
+            change.match_reason = '已推荐匹配封面，可单独更换；确认应用后下载';
+        }
+        if (getRepairMode() === 'names' && (!change.needs_review || change.artwork_review_only) && (['matched', 'rename', 'ready', 'download'].includes(change.match_status) || change.artwork_review_only)) {
             change.match_status = currentMatchesWriteName(change) ? 'ready' : 'rename';
             change.match_reason = '仅修复名称；此次不下载图片';
         }
@@ -98,6 +112,9 @@ function clearCoverState(change) {
     change.cover_preview_url = '';
     change.cover_download_status = '';
     change.cover_download_message = '';
+    change.cover_download_reason = '';
+    change.artwork_blocked = false;
+    change.artwork_message = '';
 }
 
 function findBoxartDownloadResult(change, summary) {
@@ -167,14 +184,17 @@ function applyCompletedJobToPreview(result) {
         }
 
         if (appliedRecord?.new_label) change.new_label = appliedRecord.new_label;
-        change.applied = true;
-        change.match_status = 'applied';
+        change.name_applied = change.name_applied || lastAppliedWriteNames;
+        change.applied = !lastAppliedDownloadEnabled;
+        change.match_status = change.applied ? 'applied' : 'download';
         change.match_score = 100;
         change.match_source = 'applied';
         change.match_reason = uiText('已写入 playlist');
         change.needs_review = false;
         change.enabled = false;
         change.original_item_label = change.new_label || change.original_item_label;
+        if (change.original_item_snapshot) change.original_item_snapshot = {...change.original_item_snapshot, label: change.original_item_label};
+        if (appliedRecord?.actual_index !== undefined) change.index = appliedRecord.actual_index;
 
         if (!change.thumbnail_source) return;
 
@@ -183,15 +203,22 @@ function applyCompletedJobToPreview(result) {
             return;
         }
 
-        for (const detail of summary?.details || []) {
-            if (detail.game !== change.new_label || detail.system !== change.system || !detail.type) continue;
-            change.artwork ||= {};
-            change.artwork[detail.type] = {
-                status: detail.status === 'failed' ? 'failed' : (detail.path ? 'exists' : 'missing'),
+        const imageResults = (summary?.details || []).filter(detail => detail.game === change.new_label && detail.system === change.system);
+        change.artwork ||= {};
+        for (const kind of ['Named_Boxarts', 'Named_Snaps', 'Named_Titles']) {
+            const detail = imageResults.find(detail => detail.type === kind);
+            if (detail) change.artwork[kind] = {
+                status: detail.status === 'success' || (detail.status === 'skipped' && detail.path) ? 'exists' : 'failed',
                 path: detail.path || null, message: detail.message || ''
             };
+            else change.artwork[kind] ||= {status:'missing'};
         }
-
+        change.applied = Object.values(change.artwork).every(image => image.status === 'exists');
+        change.artwork_message = [...new Set(imageResults.filter(detail => detail.status === 'failed').map(detail => detail.message).filter(Boolean))].join(' · ');
+        change.artwork_blocked = imageResults.some(detail => ['not_found', 'filename_collision'].includes(detail.reason));
+        change.match_status = change.applied ? 'applied' : change.artwork_blocked ? 'review' : 'download';
+        change.enabled = !change.applied && !change.artwork_blocked;
+        change.needs_review = change.artwork_blocked;
         const boxartResult = findBoxartDownloadResult(change, summary);
         if (!boxartResult) return;
 
@@ -254,7 +281,8 @@ function reclassifyEditedChange(change, reason) {
 function markChangeEdited(index, reason, editedKey = '') {
     const change = currentChanges[index];
     if (!change) return;
-    hideApplySummary();
+    if (editedKey === 'new_label') change.name_applied = false;
+    change.applied = false;
     const coverStillTargetsCurrentName = currentMatchesWriteName(change);
     if (editedKey === 'thumbnail_source' || editedKey === 'both' || (editedKey === 'new_label' && !coverStillTargetsCurrentName)) {
         clearCoverState(change);
@@ -263,6 +291,7 @@ function markChangeEdited(index, reason, editedKey = '') {
         change.cover_download_message = '';
     }
     if (editedKey === 'thumbnail_source' || editedKey === 'both') {
+        change.artwork_recommended = false;
         change.artwork_query = '';
         change.artwork_gallery_status = '';
     }
@@ -272,6 +301,7 @@ function markChangeEdited(index, reason, editedKey = '') {
 function getMatchReasonLabel(info, change) {
     if (!change) return info.reason || '';
     if (change.applied || change.match_status === 'applied') return uiText('已写入 playlist');
+    if (change.name_applied) return workbenchText('名称已写入，图片尚未全部完成。', 'Names saved; artwork is incomplete. ') + (change.artwork_message || '');
     if (change.pending_override || info.source === 'manual-edit') {
         return [uiText('待保存本地修正'), change.match_reason || info.reason || ''].filter(Boolean).join(' · ');
     }
@@ -318,15 +348,17 @@ function getMatchInfo(change) {
         const action = repairActionStatus(change, getRepairMode());
         const actionKind = action === 'incomplete' ? 'review' : action;
         const status = statusMap[actionKind] || statusMap.review;
+        const nameReady = currentMatchesWriteName(change) && hasChineseDisplayName(change.new_label);
         const score = Number(change.match_score);
         return {
             kind: status.kind || actionKind,
             confidence: Number.isFinite(score) ? Math.max(0, Math.min(100, Math.round(score))) : status.fallbackScore,
-            label: action === 'incomplete' ? (change.artwork_identity_status === 'resolved'
+            label: nameReady && ['download', 'incomplete'].includes(action) ? workbenchText('名称完成 · 图片待补全', 'Names saved · Artwork pending')
+                : action === 'incomplete' ? (change.artwork_identity_status === 'resolved'
                 ? workbenchText('待补充图片', 'Artwork needed') : workbenchText('待补充名称或图片源', 'Name or artwork source missing')) : status.label,
             badgeClass: status.badgeClass,
             rowClass: status.rowClass,
-            color: status.color,
+            color: nameReady && ['download', 'incomplete'].includes(action) ? 'var(--amber)' : status.color,
             reason: change.match_reason || status.label,
             source: change.match_source || 'backend'
         };
@@ -349,6 +381,13 @@ function getCoverPreviewUrl(change) {
     if (change.cover_preview_url) return change.cover_preview_url;
     if (hasExistingCover(change) && change.cover_path) {
         return `/api/thumbnail/preview?path=${encodeURIComponent(change.cover_path)}`;
+    }
+    if (change.artwork_candidates?.length && !['unavailable', 'not_found'].includes(change.artwork_gallery_status)) {
+        const source = change.thumbnail_source || change.artwork_candidates[0];
+        if (change.artwork_candidates.includes(source)) {
+            return '/api/artwork/thumbnail?system=' + encodeURIComponent(change.system)
+                + '&kind=Named_Boxarts&name=' + encodeURIComponent(source);
+        }
     }
     return getRemoteCoverUrl(change);
 }

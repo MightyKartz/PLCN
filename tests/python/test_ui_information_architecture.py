@@ -16,8 +16,16 @@ def read_template():
 def test_primary_labels_are_clear():
     html = read_template()
 
-    assert 'data-i18n="整理本主机"' in html
-    assert 'data-i18n="整理全部主机"' in html
+    assert 'data-i18n="一键补全"' in html
+    assert 'id="batch-review-button"' not in html
+    assert 'onclick="startCompletion()"' in html
+    assert 'library-all-systems' in html
+    assert 'selectAllLibrarySystems' in html
+    assert 'runAllSystemsCompletion' in html
+    assert 'id="batch-run-cancel"' in html
+    assert 'id="batch-review-apply"' not in html
+    assert 'batch-write-names' not in html
+    assert html.index('id="batch-review-status"') < html.index('id="batch-review-rows"')
     assert "全部游戏列表" not in html
     assert "应用已选修复" in html
     assert "修复状态" in html
@@ -35,7 +43,9 @@ def test_primary_labels_are_clear():
     assert "单项修复" not in html
     assert "批量修复" not in html
     assert "一键修复已选项目" not in html
-    assert html.count(">应用已选修复</button>") == 1
+    assert html.count(">确认应用</button>") == 1
+    assert 'id="confirm-apply-button"' not in html
+    assert "applyChanges(true)" not in html
     assert "repair-mini-stats" not in html
     assert 'data-i18n="置信度"' not in html
     assert "tdConfidence" not in html
@@ -139,7 +149,7 @@ def test_primary_labels_are_clear():
     assert "writeback.failed" in html
     assert "writeback.skipped" in html
     assert "findBoxartDownloadResult" in html
-    assert "match_status = 'applied'" in html
+    assert "change.applied = Object.values(change.artwork).every" in html
     assert "match_source = 'writeback'" in html
     assert "change.original_item_label = change.new_label || change.original_item_label" in html
     assert "kind: 'completed'" in html
@@ -181,7 +191,7 @@ def test_legacy_overlays_removed_and_task_details_live_in_settings():
     assert 'id="option-download-artwork"' in html
     assert 'id="batch-review-dialog"' in html
     assert '/api/batch/preview' in html
-    assert 'preview_job_id: batchReviewId' in html
+    assert 'preview_job_id: started.job_id' in html
     assert 'saveChangeOverride(index)' in html
     assert 'class="details-drawer"' not in html
     assert 'class="bottom-dock"' not in html

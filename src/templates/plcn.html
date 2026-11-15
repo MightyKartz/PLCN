@@ -49,6 +49,7 @@
                     <section class="library-heading">
                         <div class="library-heading-row"><h2 data-i18n="当前游戏库">当前游戏库</h2></div>
                         <p id="library-location"></p>
+                        <label id="device-storage-field" class="device-storage-field" hidden>存储空间<select id="device-storage-select" onchange="selectDeviceStorage()"></select></label>
                         <button class="btn btn-muted" data-input-control id="home-back" onclick="showLibraryHome()" type="button">打开其他游戏库</button>
                     </section>
                 <section class="library-browser" id="library-browser">
@@ -58,7 +59,7 @@
                             <p class="library-browser-summary" id="library-browser-summary" data-i18n="扫描后按主机名称显示 .lpl 游戏列表">扫描后按主机名称显示 .lpl 游戏列表</p>
                         </div>
                     </div>
-                    <button id="batch-review-button" class="btn btn-muted" type="button" onclick="openBatchReview()" data-i18n="整理全部主机" disabled>整理全部主机</button>
+                    <button class="btn btn-muted content-scan-entry" type="button" data-input-control onclick="openContentScan()">更新游戏库</button>
                     <input id="library-system-search" class="library-system-search" type="search" aria-label="搜索主机" placeholder="搜索主机" oninput="filterLibrarySystems()">
                     <p id="library-system-empty" class="artwork-help" hidden></p>
                     <div class="playlist-list playlist-system-list" id="scanned-playlists">
@@ -75,20 +76,9 @@
                     <section class="home-section" aria-labelledby="home-devices-title">
                         <div class="home-section-heading"><h2 id="home-devices-title">已连接设备与目录</h2><button class="btn btn-muted" id="scan-default-btn" onclick="refreshLibrarySources()" type="button">重新检测</button></div>
                         <div id="home-devices" aria-live="polite"></div>
-                        <details id="usb-debug-help" class="usb-debug-help" hidden>
-                            <summary data-i18n="Android 掌机连接帮助">Android 掌机连接帮助</summary>
-                            <ol>
-                                <li data-i18n="在掌机的设置中找到关于设备，连续点击版本号 7 次，开启开发者选项。">在掌机的设置中找到关于设备，连续点击版本号 7 次，开启开发者选项。</li>
-                                <li data-i18n="在开发者选项中打开 USB 调试，用支持数据传输的 USB 线连接电脑。">在开发者选项中打开 USB 调试，用支持数据传输的 USB 线连接电脑。</li>
-                                <li data-i18n="解锁掌机，在允许 USB 调试的弹窗中授权这台电脑。">解锁掌机，在允许 USB 调试的弹窗中授权这台电脑。</li>
-                                <li data-i18n="回到这里点击重新检测；也可以直接打开电脑或 SD 卡上的本地目录。">回到这里点击重新检测；也可以直接打开电脑或 SD 卡上的本地目录。</li>
-                            </ol>
-                            <p data-i18n="不同 Android 系统的设置名称可能略有不同。">不同 Android 系统的设置名称可能略有不同。</p>
-                            <a href="https://developer.android.com/studio/debug/dev-options" target="_blank" rel="noopener" data-i18n="Android 官方调试说明">Android 官方调试说明</a>
-                        </details>
+
                     </section>
-                    <section class="home-section" aria-labelledby="home-recent-title"><div class="home-section-heading"><h2 id="home-recent-title">最近使用</h2></div><div id="home-recent"></div></section>
-                    <section class="home-local" aria-labelledby="home-local-title"><div><h2 id="home-local-title">本地游戏库</h2><p id="home-local-description"></p></div><div class="home-local-actions"><button class="btn btn-muted" data-input-control id="home-local-open" type="button" onclick="openFilePicker('retroarch_root', true)">打开本地目录</button><button class="home-path-link" data-input-control id="home-manual-open" type="button" onclick="enterLibraryPath()">手动输入路径</button></div></section>
+                    <section class="home-section" aria-labelledby="home-recent-title" hidden><div class="home-section-heading"><h2 id="home-recent-title">最近使用</h2></div><div id="home-recent"></div></section>
                 </section>
                 <div class="workbench-content">
                 <div class="panel-header">
@@ -96,11 +86,15 @@
 
                     <div class="panel-actions">
                         <button id="browse-games-button" class="btn btn-muted" type="button" onclick="invalidateWorkbenchPreview()" hidden>返回游戏列表</button>
-                        <button id="preview-button" class="btn" onclick="previewTask()" disabled type="button" data-i18n="整理本主机">整理本主机</button>
-                        <button id="apply-button" class="btn btn-success" onclick="applyChanges()" disabled type="button">应用已选修复</button>
+                        <div class="completion-entry">
+                            <span id="completion-entry-note">自动匹配中文名与图片，预览后确认应用。</span>
+                            <button id="preview-button" class="btn" onclick="startCompletion()" disabled type="button" aria-describedby="completion-entry-note" data-i18n="一键补全">一键补全</button>
+                        </div>
+                        <button id="apply-button" class="btn btn-success" onclick="applyChanges()" disabled type="button">确认应用</button>
                     </div>
                 </div>
                 <p id="workspace-empty" class="workspace-note" data-i18n="选择左侧列表，然后预览名称与图片变更。">选择左侧列表，然后预览名称与图片变更。</p>
+                <section id="library-overview" class="library-overview" aria-label="游戏库概览" hidden></section>
                 <section id="game-library" class="game-library" aria-label="当前游戏列表" hidden>
                     <div class="game-library-toolbar">
                         <input id="game-library-search" type="search" oninput="filterGameLibrary()">
@@ -154,18 +148,9 @@
                     </div>
                 </div>
 
-                <div class="apply-summary-panel" id="apply-summary-panel" hidden>
-                    <div class="apply-summary-copy">
-                        <div class="apply-summary-title" id="apply-summary-title">准备应用修复</div>
-                        <div class="apply-summary-text" id="apply-summary-text"></div>
-                    </div>
-                    <div class="apply-summary-actions">
-                        <button class="btn btn-muted" type="button" onclick="cancelApplySummary()" data-i18n="取消">取消</button>
-                        <button id="confirm-apply-button" class="btn btn-success" type="button" onclick="applyChanges(true)" data-i18n="确认应用">确认应用</button>
-                    </div>
+                <div class="apply-summary-panel" id="apply-summary-panel" role="status" hidden>
+                    <div class="apply-summary-text" id="apply-summary-text"></div>
                 </div>
-
-
 
                 <div class="preview-area" id="preview-area" hidden>
                     <div class="empty-state" id="preview-empty">
@@ -341,17 +326,36 @@
         <footer><button id="artwork-confirm" class="btn" type="button" onclick="confirmArtwork()" disabled></button></footer>
     </dialog>
     <dialog id="batch-review-dialog" aria-labelledby="batch-review-title">
-        <header class="batch-review-header"><h2 id="batch-review-title" data-i18n="全部主机变更汇总">全部主机变更汇总</h2><button class="btn btn-muted" type="button" onclick="closeBatchReview()" data-i18n="关闭">关闭</button></header>
-        <p data-i18n="这里只分析，不会写入。确认后应用本次汇总中的变更。">这里只分析，不会写入。确认后应用本次汇总中的变更。</p>
-        <div class="preview-options">
-            <label><input id="batch-write-names" type="checkbox" checked onchange="refreshBatchReview(this)"><span data-i18n="修改名称">修改名称</span></label>
-            <label><input id="batch-download-artwork" type="checkbox" checked onchange="refreshBatchReview(this)"><span data-i18n="补全图片">补全图片</span></label>
-        </div>
+        <header class="batch-review-header"><h2 id="batch-review-title">一键补全 · 全部主机</h2><button id="batch-run-close" class="btn btn-muted" type="button" onclick="closeBatchRun()" data-i18n="关闭">关闭</button></header>
         <p id="batch-review-status" role="status" aria-live="polite"></p>
-        <div class="batch-review-table-wrap"><table><thead><tr><th data-i18n="主机">主机</th><th data-i18n="修改名称">修改名称</th><th data-i18n="补全图片">补全图片</th><th data-i18n="待补充">待补充</th></tr></thead><tbody id="batch-review-rows"></tbody></table></div>
-        <label><input id="batch-option-continue" type="checkbox" checked><span data-i18n="遇到错误继续处理下一个">遇到错误继续处理下一个</span></label>
-        <p data-i18n="写回名称前自动备份；仅补图不改写游戏列表。">写回名称前自动备份；仅补图不改写游戏列表。</p>
-        <footer class="batch-review-footer"><button class="btn btn-muted" type="button" onclick="refreshBatchReview()" id="batch-review-refresh" data-i18n="重新生成汇总">重新生成汇总</button><button id="batch-review-apply" class="btn btn-success" type="button" onclick="applyBatchReview()" disabled data-i18n="确认应用全部变更">确认应用全部变更</button></footer>
+        <progress id="batch-run-progress"></progress>
+        <div class="batch-review-table-wrap" hidden><table><thead><tr><th data-i18n="主机">主机</th><th data-i18n="修改名称">修改名称</th><th data-i18n="补全图片">补全图片</th><th data-i18n="需手动处理">需手动处理</th><th data-i18n="结果">结果</th></tr></thead><tbody id="batch-review-rows"></tbody></table></div>
+        <p id="batch-run-note"></p>
+        <footer class="batch-review-footer"><button id="batch-run-tasks" class="btn btn-muted" type="button" onclick="showBatchRunTasks()" data-i18n="查看任务明细" hidden>查看任务明细</button><button id="batch-run-cancel" class="btn btn-muted" type="button" onclick="cancelBatchRun()" data-i18n="取消">取消</button><button id="batch-run-done" class="btn" type="button" onclick="closeBatchRun()" data-i18n="完成" hidden>完成</button></footer>
+    </dialog>
+    <dialog id="content-scan-dialog" aria-labelledby="content-scan-title">
+        <header><div><h2 id="content-scan-title">更新游戏库</h2><p>选择目录 → 确认主机与核心 → 开始扫描 → 预览并确认更新</p></div><button id="content-scan-close" class="btn btn-muted" type="button" onclick="closeContentScan()">关闭</button></header>
+        <div class="content-scan-body">
+        <fieldset id="content-scan-fields">
+            <label>扫描配置<select id="content-scan-profile" onchange="loadContentProfile()"></select></label>
+            <label>游戏目录<div class="content-scan-input-action"><input id="content-scan-directory" placeholder="选择掌机上的游戏文件夹"><button class="btn btn-muted" type="button" onclick="browseContentDirectory()">选择目录</button></div></label>
+            <section id="content-directory-picker" hidden aria-label="选择游戏目录"><label id="content-directory-storage-label" hidden>游戏所在存储<select id="content-directory-storage" onchange="browseContentDirectory(this.value)"></select></label><p id="content-directory-path"></p><div class="content-directory-actions"><button type="button" class="btn btn-muted" onclick="browseContentDirectory(contentScan.browserParent)">上一级</button><button type="button" class="btn" id="content-directory-use" onclick="chooseContentDirectory()">使用此目录</button><button type="button" class="btn btn-muted" onclick="document.getElementById('content-directory-picker').hidden=true">取消选择</button></div><div id="content-directory-entries"></div><p>在本机或存储卡中选择游戏目录，列表仍更新到当前游戏库。</p></section>
+            <label id="content-scan-android-label">掌机中的实际游戏目录<input id="content-scan-android" placeholder="例如 /storage/4A21-0000/Roms/SS"><small>用于 RetroArch 启动游戏，与电脑文件传输地址不同。请按掌机实际路径填写。</small></label>
+            <section id="content-scan-android-suggestions" class="content-path-suggestions" hidden aria-label="建议的掌机路径"><p>从现有列表找到以下路径，请核对它是否对应刚选的本机或存储卡目录。</p><div class="content-scan-input-action"><select id="content-scan-android-candidates" aria-label="建议的掌机游戏目录"></select><button class="btn btn-muted" type="button" onclick="useContentAndroidPath()">使用所选路径</button></div></section>
+            <div class="content-scan-grid"><label>主机<select id="content-scan-system" onchange="changeContentSystem()"></select></label><label>默认核心<select id="content-scan-core" onchange="changeContentCore()"></select></label></div>
+            <p id="content-scan-recommendation" class="artwork-help"></p><p id="content-core-formats" class="artwork-help" role="status"></p>
+            <label>已安装核心的完整路径<input id="content-scan-core-path" placeholder="在 RetroArch 的设置 → 目录 → 核心中查看"><small id="content-scan-install-state">MTP 无法验证应用私有目录，填写路径不代表已安装。请先在 RetroArch 中确认核心可用。</small></label>
+            <details id="content-scan-download"><summary>缺少核心？从官方下载安装</summary>
+                <p>下载来源：Libretro 官方 Buildbot。请选择 RetroArch 应用的架构（不是仅看掌机 CPU）。下载不会自动安装或替换现有核心。</p>
+                <label>RetroArch 应用架构<select id="content-scan-abi"><option value="">请选择应用架构</option><option value="arm64-v8a">Android ARM 64 位</option><option value="armeabi-v7a">Android ARM 32 位</option><option value="x86_64">Android x86 64 位</option><option value="x86">Android x86 32 位</option></select></label>
+                <div class="content-directory-actions"><button class="btn btn-muted" type="button" onclick="downloadContentCore()">官方下载</button><button id="content-core-transfer" class="btn btn-muted" type="button" onclick="transferContentCore()" disabled>传到掌机待安装</button></div><p id="content-core-result" role="status"></p>
+            </details>
+            <details><summary>扫描选项</summary><label>目标列表文件名<input id="content-scan-playlist-name" placeholder="主机名称.lpl"></label><label>文件格式（空格分隔）<input id="content-scan-extensions"></label><label class="content-scan-check"><input id="content-scan-recursive" type="checkbox" checked>包含子目录</label><label>街机 DAT 文件路径（可选，MAME 必填）<input id="content-scan-dat" placeholder="与所选核心及 ROM 集匹配的 XML DAT"></label><label class="content-scan-check"><input id="content-scan-dat-filter" type="checkbox">仅加入 DAT 中匹配的游戏</label><p>增量合并，保留已有条目与单独核心设置。不删除失效项。ZIP/7z 按单个游戏入口扫描，不读取包内内容。</p></details>
+        </fieldset>
+        <p id="content-scan-status" role="status" aria-live="polite"></p>
+        <section id="content-scan-preview" hidden aria-label="扫描变更预览"><h3>本次更新</h3><p id="content-scan-summary"></p><div class="content-scan-table"><table><thead><tr><th>新增游戏</th><th>掌机启动路径</th></tr></thead><tbody id="content-scan-rows"></tbody></table></div><p>确认更新前请退出 RetroArch，避免它覆盖列表。写入前自动备份原列表。</p></section>
+        </div>
+        <footer><button id="content-scan-cancel" class="btn btn-muted" type="button" onclick="cancelContentScan()" hidden>取消任务</button><button id="content-scan-start" class="btn btn-muted" type="button" onclick="previewContentScan()">开始扫描</button><button id="content-scan-apply" class="btn" type="button" onclick="applyContentScan()" hidden>确认更新列表</button><button id="content-scan-complete" class="btn" type="button" onclick="completeImportedContent()" hidden>预览名称与图片补全</button></footer>
     </dialog>
     <script src="/assets/workflow.js"></script>
     <script src="/assets/ui.js"></script>
@@ -363,6 +367,7 @@
     <script src="/assets/library.js"></script>
     <script src="/assets/artwork.js"></script>
     <script src="/assets/welcome.js"></script>
+    <script src="/assets/content-scan.js"></script>
     <script src="/assets/desktop.js"></script>
 </body>
 
