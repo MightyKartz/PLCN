@@ -5,7 +5,7 @@ from pathlib import Path
 import hashlib
 
 import app_paths
-from rom_paths import artwork_titles
+from rom_paths import artwork_titles, DISC_MARKER
 from safe_io import atomic_write_json, file_lock
 
 # Curated title absent from the bundled translation catalog.
@@ -57,6 +57,19 @@ SNES_FIRE_EMBLEM = {
 
 
 def rom_search_alias(system, filename):
+    if system == 'Sega - Saturn':
+        if title_key(DISC_MARKER.sub('', filename)) == 'gulliverboy':
+            return 'Kuusou Kagaku Sekai Gulliver Boy'
+        aliases = {'chaosseed': 'Senkutsu Katsuryu Taisen - Chaos Seed', 'chaos seed': 'Senkutsu Katsuryu Taisen - Chaos Seed', 'srwf': 'Super Robot Taisen F', 'srwff': 'Super Robot Taisen F - Kanketsu-hen'}
+        if filename.casefold() in aliases:
+            return aliases[filename.casefold()]
+        wrapped = re.fullmatch(r'CN\s*\[([^\[\]]+)\]', filename, re.I)
+        if wrapped:
+            return wrapped[1].replace('_', ' ')
+        cleaned = re.sub(r'\bCN\b', '', filename, flags=re.I)
+        if cleaned != filename:
+            return re.sub(r'\s+', ' ', cleaned).strip()
+        return None
     if system not in {'Nintendo - Super Nintendo Entertainment System', 'SNES', 'SFC'}:
         return None
     match = re.fullmatch(r'(?:火焰之?[纹紋]章|火焰[纹紋]章|火[纹紋])([345])', title_key(filename))
@@ -103,7 +116,7 @@ def resolution(names, reason):
             'names': names, 'query': names[0] if len(names) == 1 else base_title(names[0]) if len(groups) == 1 else ''}
 
 
-def resolve(context, config_path=None, name_source=None):
+def resolve(context, config_path=None, name_source=None, database=None):
     from artwork_resolver import validate_system
     from data_pack import open_database
     from manual_overrides import load_overrides, find_override, default_overrides_path
@@ -122,8 +135,10 @@ def resolve(context, config_path=None, name_source=None):
     candidates = artwork_titles(system, context.get('rom_path'), label)
     filename = candidates[0] if candidates else ''
     rom_alias = rom_search_alias(system, filename)
-    if rom_alias:
+    if rom_alias and system != 'Sega - Saturn':
         return resolution([rom_alias], 'rom_alias')
+    if rom_alias:
+        candidates.insert(0, rom_alias)
     curated = CURATED_NAMES.get(system, {})
     # Normalize punctuation only; unlike title_key, retain parenthesized edition
     # names so a power-up kit/hack cannot silently match the base game.
@@ -135,12 +150,16 @@ def resolve(context, config_path=None, name_source=None):
         return resolution(known, 'curated')
     config = Path(config_path or app_paths.config_path())
     settings = json.loads(config.read_text()) if config.exists() else {}
-    db = open_database(name_source or settings.get('rom_name_cn_path') or app_paths.default_source())
+    db = database or open_database(name_source or settings.get('rom_name_cn_path') or app_paths.default_source())
     try:
         systems = db.expand_system_mapping(system)
         placeholders = ','.join('?' for _ in systems)
         conn = db.get_connection()
         rows = conn.execute(f'SELECT english_name, chinese_name FROM translations WHERE system_base(system) IN ({placeholders})', systems).fetchall()
+        if rom_alias:
+            alias_names = {r['english_name'] for r in rows if title_key(r['english_name']) == title_key(rom_alias)}
+            if alias_names:
+                return resolution(alias_names, 'rom_alias')
         rom_exact = {r['english_name'] for r in rows if filename.casefold() == r['english_name'].casefold()}
         if rom_exact:
             return resolution(rom_exact, 'database')
@@ -153,8 +172,14 @@ def resolve(context, config_path=None, name_source=None):
         matches.update(r['english_name'] for r in aliases if title_key(r['alias']) in keys)
         if matches:
             return resolution(matches, 'alias')
+        if system == 'Sega - Saturn' and re.fullmatch(r'[A-Za-z0-9_]{2,12}', filename):
+            parent = Path(str(context.get('rom_path') or '').replace('\\', '/')).parent.name
+            parent_matches = {r['english_name'] for r in rows if r['chinese_name'] == parent}
+            if parent_matches:
+                return resolution(parent_matches, 'parent_title')
     finally:
-        db.close()
+        if database is None:
+            db.close()
     # A supplied English ROM title is a search term, not a confirmed identity.
     english = [n for n in candidates if len(n.strip()) >= 2 and re.search('[A-Za-z]', n) and not re.search('[\u3400-\u9fff]', n)]
     if english:

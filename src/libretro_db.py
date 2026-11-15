@@ -4,6 +4,9 @@ import urllib.request
 import urllib.parse
 import xml.etree.ElementTree as ET
 import re
+import json
+import hashlib
+from pathlib import Path
 from safe_io import atomic_write_bytes
 
 class LibretroDB:
@@ -28,7 +31,10 @@ class LibretroDB:
         """Returns the path to the DAT file for the given system."""
         from app_paths import resource_root
         cached = os.path.join(self.dat_dir, f'{system_name}.dat')
-        if os.path.isfile(cached):
+        metadata = resource_root() / 'data/libretro-db/sources.json'
+        sources = json.loads(metadata.read_text()) if metadata.is_file() else {}
+        legacy_hash = sources.get(system_name, {}).get('supplement_sha256')
+        if os.path.isfile(cached) and (not legacy_hash or hashlib.sha256(Path(cached).read_bytes()).hexdigest() != legacy_hash):
             return cached
         bundled = resource_root() / 'data' / 'libretro-db' / 'dat' / f'{system_name}.dat'
         return str(bundled) if bundled.is_file() else cached
@@ -129,11 +135,15 @@ class LibretroDB:
                     success = True
                     print(f"Loaded Redump DAT for {base_system}")
             
+            from app_paths import resource_root
+            supplemental = resource_root() / 'data/libretro-db/supplemental' / (base_system + '.dat')
+            if supplemental.is_file():
+                success = self._load_single_dat(base_system, dat_path=str(supplemental)) or success
             return success
     
-    def _load_single_dat(self, system_name, specific_url=None):
+    def _load_single_dat(self, system_name, specific_url=None, dat_path=None):
         """Loads a single DAT file for the system, downloading it if necessary."""
-        dat_path = self.get_dat_path(system_name)
+        dat_path = dat_path or self.get_dat_path(system_name)
         
         # Check if DAT exists (either bundled or previously downloaded)
         if not os.path.exists(dat_path):
@@ -299,35 +309,10 @@ class LibretroDB:
         if not candidates:
             return None
             
-        if len(candidates) == 1:
-            return candidates[0]
-            
-        # Try to match region
-        # If no region match, or no region in input, prefer USA -> Europe -> Japan -> World
-        # Also prefer names WITHOUT "Anniversary Collection", "Mini", etc.
-        
-        # Extract region from input name if possible
-        # Look for (Japan), (USA), (Europe), etc.
-        regions = re.findall(r'\((.*?)\)', name)
-        region = regions[-1] if regions else None
-        
-        def score_candidate(c):
-            score = 0
-            if region and region in c:
-                score += 100
-            if "USA" in c: score += 50
-            elif "Europe" in c: score += 40
-            elif "Japan" in c: score += 30
-            
-            # Penalize collections/minis as they usually don't have individual thumbnails
-            if "Anniversary Collection" in c: score -= 500
-            if "Mini" in c: score -= 500
-            if "Virtual Console" in c: score -= 500
-            
-            return score
-            
-        candidates.sort(key=score_candidate, reverse=True)
-        return candidates[0]
+        from gallery_names import release_candidates
+        candidates = release_candidates(name, candidates)
+        # Names cannot prove an unspecified region, revision or disc.
+        return candidates[0] if len(candidates) == 1 else None
 
     def search(self, keyword, limit=20):
         """

@@ -110,7 +110,7 @@ def has_disc_descriptor_siblings(items):
     )
 
 
-def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_dir=None, manual_overrides_path=None):
+def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_dir=None, manual_overrides_path=None, verify_artwork=False, source_playlist_path=None):
     """
     Analyzes the playlist and returns a list of proposed changes.
     Returns:
@@ -170,12 +170,15 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
     manual_overrides = load_overrides(manual_overrides_path) if manual_overrides_path else []
 
     def add_proposal(index, item, display_label, new_label, thumbnail_source, match_source, match_reason, match_diagnostics=None):
+        if system_name == 'Sega - Saturn':
+            from saturn_artwork import distinct_disc_label
+            new_label = distinct_disc_label(new_label, item.get('path'), items)
         cover_exists, cover_path = find_existing_boxart(
             thumbnails_dir,
             system_name,
             rom_title(item.get('path')),
             new_label,
-            item.get('label') or '',
+            (item.get('label') or '') if '(Disc ' not in new_label else '',
             lookup=boxart_lookup,
         )
         artwork = None
@@ -407,7 +410,7 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
         translator.last_translation_candidates = []
         if system_name not in lookups:
             lookups[system_name] = build_existing_boxart_lookup(thumbnails_dir, system_name)
-            if thumbnails_dir and not str(thumbnails_dir).startswith('adb://'):
+            if thumbnails_dir and not str(thumbnails_dir).startswith(('adb://', 'mtp://')):
                 artwork_resolvers[system_name] = ArtworkResolver(thumbnails_dir, system_name)
         boxart_lookup = lookups[system_name]
         artwork_resolver = artwork_resolvers.get(system_name)
@@ -726,7 +729,7 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
         if translated_label and any('\u4e00' <= char <= '\u9fff' for char in translated_label):
             # Priority 1: Use Chinese translation
             new_label = translated_label
-            thumbnail_source = matched_english_name or standard_english_name
+            thumbnail_source = standard_english_name or matched_english_name
         elif standard_english_name and standard_english_name != matched_english_name:
             # Priority 2: Use standardized English name (if different from original)
             new_label = standard_english_name
@@ -787,6 +790,9 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
             translation_diagnostics,
         )
 
+    if 'Sega - Saturn' in translators:
+        from saturn_artwork import resolve_proposals
+        resolve_proposals(proposed_changes, translators, source_playlist_path or str(playlist_path), verify_artwork, thumbnails_dir)
     targets = {}
     for proposal in proposed_changes:
         key = (proposal['system'], sanitize_filename(proposal['new_label']).casefold())

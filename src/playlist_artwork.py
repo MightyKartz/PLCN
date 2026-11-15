@@ -1,4 +1,5 @@
-"""Read-only local and ADB artwork lookup for playlist analysis and browsing."""
+"""Read-only local, ADB and MTP artwork lookup for playlist analysis and browsing."""
+import mtp_runtime as mtp
 import os
 import shlex
 import urllib.parse
@@ -46,6 +47,10 @@ def build_existing_boxart_lookup(thumbnails_dir, system_name, type_name="Named_B
     if not thumbnails_dir or not system_name:
         return {"type": "none", "base_path": None, "filenames": set()}
 
+    if mtp.is_mtp(thumbnails_dir):
+        path = mtp.join(thumbnails_dir, system_name, type_name)
+        return {'type':'mtp', 'uri':path, 'filenames':{entry['name'] for entry in mtp.listing(path) if not entry['folder']}}
+
     try:
         from retroarch_scanner import is_adb_uri, parse_adb_uri, _adb_shell
         if is_adb_uri(thumbnails_dir):
@@ -73,6 +78,8 @@ def build_existing_boxart_lookup(thumbnails_dir, system_name, type_name="Named_B
 def find_existing_boxart(thumbnails_dir, system_name, *labels, lookup=None):
     if not thumbnails_dir:
         return False, None
+    if lookup is None and mtp.is_mtp(thumbnails_dir):
+        lookup = build_existing_boxart_lookup(thumbnails_dir, system_name)
     if lookup is not None:
         filenames = lookup.get("filenames") or set()
         base_path = lookup.get("base_path")
@@ -81,6 +88,8 @@ def find_existing_boxart(thumbnails_dir, system_name, *labels, lookup=None):
                 continue
             filename = sanitize_thumbnail_filename(label) + ".png"
             if filename in filenames:
+                if lookup.get('type') == 'mtp':
+                    return True, mtp.join(lookup['uri'], filename)
                 if lookup.get("type") == "adb":
                     remote_path = f"{base_path.rstrip('/')}/{filename}" if base_path else filename
                     serial = lookup.get("serial")
