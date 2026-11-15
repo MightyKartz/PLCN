@@ -133,7 +133,7 @@
                         <button class="filter-btn" type="button" data-filter="matched" onclick="setPreviewFilter('matched', this)"><span data-i18n="可应用">可应用</span> <strong class="filter-count">0</strong></button>
                         <button class="filter-btn" type="button" data-filter="ready" onclick="setPreviewFilter('ready', this)"><span data-i18n="无需修复">无需修复</span> <strong class="filter-count">0</strong></button>
                         <button class="filter-btn" type="button" data-filter="completed" onclick="setPreviewFilter('completed', this)"><span data-i18n="已完成">已完成</span> <strong class="filter-count">0</strong></button>
-                        <button class="filter-btn" type="button" data-filter="missing-cover" onclick="setPreviewFilter('missing-cover', this)"><span data-i18n="缺封面源">缺封面源</span> <strong class="filter-count">0</strong></button>
+                        <button class="filter-btn" type="button" data-filter="missing-cover" onclick="setPreviewFilter('missing-cover', this)"><span data-i18n="图片待处理">图片待处理</span> <strong class="filter-count">0</strong></button>
                         <button class="filter-btn" type="button" data-filter="edited" onclick="setPreviewFilter('edited', this)"><span data-i18n="已手动编辑">已手动编辑</span> <strong class="filter-count">0</strong></button>
                     </div>
                     <div class="toolbar-tools">
@@ -150,6 +150,7 @@
 
                 <div class="apply-summary-panel" id="apply-summary-panel" role="status" hidden>
                     <div class="apply-summary-text" id="apply-summary-text"></div>
+                    <p id="preview-plan-scope" class="preview-plan-scope"></p>
                 </div>
 
                 <div class="preview-area" id="preview-area" hidden>

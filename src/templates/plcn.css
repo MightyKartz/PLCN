@@ -3186,3 +3186,7 @@ body[data-ui-screenshot] *:focus {
 #content-config-core-state { color:var(--text); font-weight:600; }
 #content-config-core-state[data-state=missing], #content-config-core-state[data-state=unconfigured] { color:var(--amber); }
 @media(max-width:680px) { .content-config-summary dl { grid-template-columns:1fr; } }
+
+.preview-plan-scope { margin: 8px 0 0; color: var(--muted); font-size: .85rem; line-height: 1.6; }
+.preview-identity { display: block; color: var(--muted); font-size: .75rem; line-height: 1.5; overflow-wrap: anywhere; }
+.preview-identity[data-state="candidate"], .preview-identity[data-state="conflict"], .preview-identity[data-state="unresolved"] { color: var(--amber); }

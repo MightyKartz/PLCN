@@ -211,6 +211,7 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
             proposal['match_score'] = min(proposal['match_score'], 72)
             proposal['match_reason'] += '；中文译名来自模糊或跨系统候选，需要人工确认'
             proposal['translation_candidates'] = getattr(translator, 'last_translation_candidates', [])
+        proposal['translation_match_source'] = getattr(translator, 'last_match_source', '')
         if artwork:
             proposal['artwork'] = artwork
             if proposal['match_status'] == 'ready' and any(value['status'] != 'exists' for value in artwork.values()):
@@ -464,6 +465,7 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
                              'value': original_label or display_label,
                              'resolved_name': identity['query'] or original_label or display_label,
                          }]})
+            proposed_changes[-1]['artwork_identity_reason'] = identity['reason']
             proposed_changes[-1]['artwork_identity_status'] = identity['status']
             proposed_changes[-1]['artwork_query'] = identity['query']
             proposed_changes[-1]['artwork_gallery_status'] = gallery_status
@@ -805,4 +807,13 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
     for translator in translators.values():
         if hasattr(translator.db, 'close'):
             translator.db.close()
+    from library_model import build_library_model
+    from preview_identity import identity_state
+    model = build_library_model(source_playlist_path or str(playlist_path), playlist_system, items)
+    bindings = model['entries']
+    for proposal in proposed_changes:
+        binding = bindings[proposal['index']]
+        for key in ('game_id', 'disc_id', 'content_id'):
+            proposal[key] = binding[key]
+        proposal['identity'] = identity_state(proposal)
     return proposed_changes

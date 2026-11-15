@@ -40,6 +40,10 @@ def prepare_review(directory, thumbnails, source, overrides, options, progress, 
                             raise RuntimeError(image_error)
                         change['artwork'] = artwork_statuses(current, change.get('path'), resolver, lookups, thumbnails, item_system)
                     label = (change.get('new_label') or '').strip()
+                    if change.get('identity', {}).get('requires_review') or (options['download_thumbnails']
+                            and change.get('artwork_gallery_status') in {'unavailable', 'not_found'}):
+                        row['review'] += 1
+                        continue
                     if not label or (options['download_thumbnails'] and not change.get('thumbnail_source')):
                         row['review'] += 1
                         continue

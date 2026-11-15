@@ -48,6 +48,7 @@ def resolve_proposals(proposals, translators, playlist_path, verify_artwork, thu
         else:
             identity = resolve(context, database=db)
         names = identity['names'] if identity['reason'] in {'confirmed', 'remembered'} else release_candidates(rom_title(proposal['path']), identity['names'])
+        proposal['artwork_identity_reason'] = identity['reason']
         proposal['artwork_query'] = identity['query'] or base_title(proposal['new_label'])
         proposal['artwork_candidates'] = names
         proposal['artwork_identity_status'] = 'resolved' if names else 'unresolved'

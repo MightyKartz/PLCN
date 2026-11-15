@@ -125,6 +125,7 @@ const UI_EN = {
     '仅改中文名': 'Rename Only',
     '已完成': 'Completed',
     '缺封面源': 'Missing Cover',
+    '图片待处理': 'Artwork needs attention',
     '已手动编辑': 'Edited',
     '缺少中文名': 'Missing Chinese name',
     '名称未变化': 'Name unchanged',
