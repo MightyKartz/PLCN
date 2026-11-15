@@ -36,3 +36,6 @@ manual_overrides.json
 *.plcn-lock
 build/
 dist/
+
+# Local browser automation sessions
+.playwright-cli/
