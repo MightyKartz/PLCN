@@ -159,7 +159,8 @@ async function main() {
     await send('Input.insertText', {text: libraryPath});
     await click('#scan-device-btn');
     await waitFor(() => document.querySelectorAll('.playlist-system-tab').length === 3
-        && !document.querySelector('#library-all-systems').disabled, 'all-systems row and two systems');
+        && !document.querySelector('#library-all-systems').disabled
+        && !document.querySelector('#preview-button').disabled, 'all-systems row and scan completion');
     assert.equal(await evaluate(() => document.querySelector('#library-all-systems').getAttribute('aria-pressed')), 'true');
     assert.equal(await evaluate(() => document.querySelector('#preview-button').disabled), false);
     assert.equal(await evaluate(visible, '#game-library'), false);
