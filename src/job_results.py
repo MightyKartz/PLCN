@@ -1,4 +1,5 @@
 """Serialize playlist writeback and image results for task clients."""
+from pathlib import Path
 import os
 import urllib.parse
 
@@ -18,6 +19,11 @@ def annotate_download_summary_paths(summary, local_root=None, final_root=None):
         is_adb_uri = lambda value: False
         parse_adb_uri = None
 
+    import mtp_runtime as mtp
+    if mtp.is_mtp(final_root) and local_root:
+        for detail in summary.get('details', []):
+            if detail.get('path'):
+                detail['path'] = mtp.join(final_root, *Path(detail['path']).relative_to(local_root).parts)
     adb_target = bool(final_root and is_adb_uri(final_root) and parse_adb_uri)
     local_base = os.path.abspath(local_root) if local_root else None
 

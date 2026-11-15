@@ -1,5 +1,6 @@
 # Desktop bundle. Build independently on each target OS/architecture.
 import os
+import ctypes.util
 import sys
 from pathlib import Path
 
@@ -12,10 +13,26 @@ if not (adb_root / ("adb.exe" if sys.platform == "win32" else "adb")).is_file():
 adb_binaries = [(str(p), "platform-tools") for p in adb_root.iterdir() if p.name == "adb" or p.suffix.lower() in (".exe", ".dll")]
 adb_notices = [(str(adb_root / name), "platform-tools") for name in ("NOTICE.txt", "source.properties")]
 
+mtp_binaries = []
+mtp_notices = []
+if sys.platform == 'darwin':
+    mtp_library = ctypes.util.find_library('mtp')
+    if not mtp_library:
+        mtp_library = next((str(p) for p in (Path('/opt/homebrew/lib/libmtp.dylib'), Path('/usr/local/lib/libmtp.dylib')) if p.is_file()), None)
+    if not mtp_library:
+        raise RuntimeError('Install libmtp with brew install libmtp before packaging')
+    mtp_binaries = [(mtp_library, '.')]
+    for dependency in ('libmtp', 'libusb'):
+        for prefix in ('/opt/homebrew/opt', '/usr/local/opt'):
+            license_file = Path(prefix) / dependency / 'COPYING'
+            if license_file.exists():
+                mtp_notices.append((str(license_file), 'licenses/' + dependency))
+                break
+
 a = Analysis(
-    ['src/desktop.py'], pathex=['src'], binaries=adb_binaries,
+    ['src/desktop.py'], pathex=['src'], binaries=adb_binaries + mtp_binaries,
     # Bundle the complete UI directory, including the split CSS and domain scripts.
-    datas=[('src/templates', 'src/templates'), ('data/rom-name-cn', 'data/rom-name-cn')] + adb_notices,
+    datas=[('src/templates', 'src/templates'), ('data/rom-name-cn', 'data/rom-name-cn'), ('data/libretro-db', 'data/libretro-db')] + adb_notices + mtp_notices,
     hiddenimports=['tkinter', 'tkinter.filedialog', 'tkinter.messagebox'],
     hookspath=[], hooksconfig={}, runtime_hooks=[], excludes=[], noarchive=False,
 )

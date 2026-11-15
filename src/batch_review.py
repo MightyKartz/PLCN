@@ -1,4 +1,5 @@
 """Read-only whole-library review and application of exactly that reviewed plan."""
+import mtp_runtime as mtp
 from tempfile import TemporaryDirectory
 
 import playlist_service
@@ -23,9 +24,9 @@ def prepare_review(directory, thumbnails, source, overrides, options, progress, 
         row = {'system': system, 'path': path, 'names': 0, 'artwork': 0, 'review': 0, 'error': None}
         try:
             with TemporaryDirectory(prefix='plcn-batch-review-') as staging:
-                local = materialize_adb_file(path, cache_dir=staging) if is_adb_uri(path) else path
+                local = mtp.materialize(path, staging) if mtp.is_mtp(path) else materialize_adb_file(path, cache_dir=staging) if is_adb_uri(path) else path
                 digest = file_digest(local)
-                changes = playlist_service.analyze_playlist(local, system, source, thumbnails, manual_overrides_path=overrides)
+                changes = playlist_service.analyze_playlist(local, system, source, thumbnails, manual_overrides_path=overrides, verify_artwork=options['download_thumbnails'], source_playlist_path=path)
                 readers, selected = {}, []
                 for change in changes:
                     current = change.get('original_item_label') or change.get('original_label') or ''

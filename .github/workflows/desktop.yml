@@ -52,6 +52,9 @@ jobs:
       - name: Build and smoke test Windows package
         if: runner.os == 'Windows'
         run: python scripts/package_desktop.py --arch ${{ matrix.arch }} --installer
+      - name: Install macOS file transfer runtime
+        if: runner.os == 'macOS'
+        run: brew install libmtp
       - name: Build and smoke test macOS bundle
         if: runner.os == 'macOS'
         run: python scripts/package_desktop.py --arch ${{ matrix.arch }}

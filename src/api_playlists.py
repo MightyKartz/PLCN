@@ -1,4 +1,5 @@
 """Playlists HTTP handlers; request transport is owned by server.py."""
+import mtp_runtime as mtp
 import json
 import os
 import sys
@@ -61,7 +62,7 @@ def preview(handler, context, payload):
              rom_name_cn_path = os.path.join(sys._MEIPASS, rom_name_cn_path)
 
         from retroarch_scanner import is_adb_uri, materialize_adb_file
-        effective_playlist_path = materialize_adb_file(playlist_path) if is_adb_uri(playlist_path) else playlist_path
+        effective_playlist_path = mtp.materialize(playlist_path) if mtp.is_mtp(playlist_path) else materialize_adb_file(playlist_path) if is_adb_uri(playlist_path) else playlist_path
 
         import playlist_service as plcn
         changes = plcn.analyze_playlist(
@@ -69,7 +70,7 @@ def preview(handler, context, payload):
             system_name,
             rom_name_cn_path,
             thumbnails_dir,
-            manual_overrides_path=manual_overrides_path,
+            manual_overrides_path=manual_overrides_path, verify_artwork=(data.get('options') or {}).get('download_thumbnails', True), source_playlist_path=playlist_path,
         )
 
         handler.send_response(200)
@@ -79,8 +80,8 @@ def preview(handler, context, payload):
             "changes": changes,
             "source": {
                 "playlist_path": playlist_path,
-                "local_playlist_path": effective_playlist_path if is_adb_uri(playlist_path) else None,
-                "transport": "adb" if is_adb_uri(playlist_path) else "local"
+                "local_playlist_path": effective_playlist_path if is_adb_uri(playlist_path) or mtp.is_mtp(playlist_path) else None,
+                "transport": "mtp" if mtp.is_mtp(playlist_path) else "adb" if is_adb_uri(playlist_path) else "local"
             }
         }).encode())
     except Exception as e:

@@ -28,6 +28,8 @@ def local_test_data(tmp_path_factory):
 
 @pytest.fixture(autouse=True)
 def isolated_runtime(monkeypatch, local_test_data):
+    import mtp_runtime
+    monkeypatch.setattr(mtp_runtime, 'devices', lambda: [])
     from database import DatabaseManager
     from libretro_db import LibretroDB
     monkeypatch.setattr(DatabaseManager, 'DB_FILE', str(local_test_data / 'plcn.db'))

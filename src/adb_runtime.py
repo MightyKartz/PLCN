@@ -35,3 +35,17 @@ def check_bundled_adb():
     if 'Android Debug Bridge version' not in result.stdout:
         raise RuntimeError('Packaged ADB version check failed')
     return result.stdout.strip()
+
+
+def usb_android_devices():
+    """Expose Google USB-mode Android hardware even before ADB is available on macOS."""
+    if sys.platform != 'darwin':
+        return []
+    import plistlib
+    result = subprocess.run(['ioreg', '-r', '-c', 'IOUSBHostDevice', '-a'], capture_output=True, timeout=8, check=True)
+    if not result.stdout.strip():
+        return []
+    devices = plistlib.loads(result.stdout)
+    return [{'serial': device.get('USB Serial Number', ''),
+             'label': device.get('USB Product Name') or 'Android USB'}
+            for device in devices if device.get('idVendor') == 0x18d1]

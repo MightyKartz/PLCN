@@ -69,7 +69,7 @@ def initialize(legacy=None):
             if not isinstance(data, dict):
                 raise ValueError('旧配置必须是 JSON 对象；原文件已保留')
             for key, value in list(data.items()):
-                if isinstance(value, str) and value and (key.endswith(('_path', '_dir', '_root')) or key == 'previous_rom_name_cn_path') and not value.startswith('adb://'):
+                if isinstance(value, str) and value and (key.endswith(('_path', '_dir', '_root')) or key == 'previous_rom_name_cn_path') and not value.startswith(('adb://', 'mtp://')):
                     if not Path(value).is_absolute():
                         candidate = old / value
                         data[key] = str(candidate.resolve())

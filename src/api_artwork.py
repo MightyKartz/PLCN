@@ -62,7 +62,12 @@ def serve_thumbnail_preview(handler, context, payload):
     try:
         from retroarch_scanner import is_adb_uri, parse_adb_uri
 
-        if is_adb_uri(target_path):
+        if str(target_path).startswith('mtp://'):
+            from mtp_runtime import read
+            content = read(target_path)
+            if content is None:
+                raise FileNotFoundError(target_path)
+        elif is_adb_uri(target_path):
             serial, remote_path = parse_adb_uri(target_path)
             if not serial or not remote_path:
                 raise FileNotFoundError(target_path)
