@@ -102,7 +102,6 @@ async function click(selector) {
 
 async function screenshot(name) {
     console.log('Screenshot:', name);
-    await send('Input.dispatchMouseEvent', {type: 'mouseMoved', x: 0, y: 0});
     await delay(200); // Let theme transitions settle before capturing visual evidence.
     const {data} = await send('Page.captureScreenshot', {format: 'png'});
     fs.writeFileSync(path.join(output, name + '.png'), Buffer.from(data, 'base64'));
