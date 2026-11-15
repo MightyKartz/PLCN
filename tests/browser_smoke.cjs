@@ -410,6 +410,44 @@ async function main() {
     const savedOverrides = await evaluate(async () => (await fetch('/api/overrides/list')).json());
     assert.equal(savedOverrides.entries.some(entry => entry.new_label === '暗影狂奔（本地）'), true);
     await screenshot('06-local-correction');
+    // A separate optical fixture exercises the real read-only group endpoint and dialog.
+    const discRoot = path.join(libraryPath, 'disc-samples', 'RetroArch');
+    const discLists = path.join(discRoot, 'playlists'), discRoms = path.join(discRoot, 'Roms');
+    fs.mkdirSync(discLists, {recursive:true}); fs.mkdirSync(discRoms, {recursive:true});
+    for (const name of ['GulliverBoy Disc1.chd','GulliverBoy Disc2.chd','Game (Disc 1).bin','Game (Disc 2).chd']) fs.writeFileSync(path.join(discRoms,name),'optical metadata test fixture');
+    fs.writeFileSync(path.join(discRoms,'Game (Disc 1).cue'),'FILE "Game (Disc 1).bin" BINARY\n');
+    fs.writeFileSync(path.join(discRoms,'Game.m3u'),'Game (Disc 2).chd\nGame (Disc 1).cue\n');
+    const discPath = path.join(discLists,'Sega - Saturn.lpl');
+    fs.writeFileSync(discPath,JSON.stringify({items:['GulliverBoy Disc1.chd','GulliverBoy Disc2.chd','Game.m3u'].map(name=>({path:path.join(discRoms,name),label:name,core_path:'keep-custom-core.so'}))}));
+    const discBefore = fs.readFileSync(discPath);
+    await click('#settings-button');
+    await evaluate(root=>{const input=document.querySelector('#retroarch_root');input.value=root;input.dispatchEvent(new Event('input',{bubbles:true}));},discRoot);
+    await click('#scan-device-btn');
+    await waitFor(()=>!document.querySelector('#desktop-dialog').open && document.querySelectorAll('.playlist-system-tab').length===2,'optical fixture loaded');
+    await click('.playlist-system-tab[aria-label="Sega - Saturn"]');
+    await waitFor(()=>!document.querySelector('#game-library-discs').disabled,'optical inspection available');
+    await click('#game-library-discs');
+    await waitFor(()=>document.querySelectorAll('#disc-inspection-groups > details').length===2,'two optical groups');
+    assert.equal(await evaluate(()=>document.querySelector('#disc-inspection-summary').textContent.includes('4 张光盘')),true);
+    assert.equal(await evaluate(()=>document.querySelector('#disc-inspection-summary').textContent.includes('原列表 3 个入口')),true);
+    await click('#disc-inspection-groups > details summary');
+    await waitFor(()=>document.querySelectorAll('#disc-inspection-groups .disc-members li').length===2,'disc details expanded');
+    await screenshot('07-disc-inspection');
+    await click('#disc-inspection-dialog .disc-inspection-header button');
+    assert.deepEqual(fs.readFileSync(discPath),discBefore,'inspection must not write the playlist');
+    await click('#theme-toggle-btn');
+    await click('#game-library-discs');
+    await waitFor(()=>document.querySelectorAll('#disc-inspection-groups > details').length===2,'optical groups reopened');
+    await evaluate(()=>document.querySelector('#disc-inspection-search').focus());
+    await send('Input.insertText',{text:'Gulliver'});
+    await waitFor(()=>document.querySelectorAll('#disc-inspection-groups > details').length===1,'group search by file');
+    await click('#disc-inspection-groups > details summary');
+    await waitFor(()=>document.querySelectorAll('#disc-inspection-groups .disc-members li').length===2,'candidate details expanded');
+    assert.equal(await evaluate(()=>document.querySelector('#disc-inspection-groups').textContent.includes('候选组')),true);
+    await screenshot('07-disc-inspection-dark');
+    await click('#disc-inspection-dialog .disc-inspection-header button');
+    assert.deepEqual(fs.readFileSync(discPath),discBefore);
+
     assert.deepEqual(errors, [], 'Page errors');
     console.log(`Browser smoke OK (${width}×${height}): home → local library → SNES → translated preview`);
 }
