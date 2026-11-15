@@ -1,11 +1,15 @@
 /* Directory imports are reviewed independently from name/artwork repair. */
-const contentScan = {setup: null, previewId: null, busy: false, browserPath: '', browserParent: '', imported: null, downloaded: null};
+const contentScan = {setup: null, previewId: null, busy: false, browserPath: '', browserParent: '', imported: null, downloaded: null, revision: 0, openGeneration: 0, coreStatus: null, browsing: false};
 const contentField = name => document.getElementById('content-scan-' + name);
 
 async function openContentScan(targetRoot = '') {
     if (workbench.operation) return;
     const root = targetRoot || document.getElementById('retroarch_root').value || libraryHome.data?.sources?.find(s => ['ready','no_library'].includes(s.status) && s.transport === 'mtp')?.path;
     if (!root) { showStatus('请先连接掌机并打开或指定 RetroArch 目录', 'error'); return; }
+    const request = ++contentScan.openGeneration;
+    ++contentHintGeneration; ++contentInfoGeneration; ++contentDirectoryGeneration;
+    contentScan.browserPath = ''; contentScan.browsing = false; contentScan.coreStatus = null;
+    contentField('settings').open = false;
     contentField('status').textContent = '正在读取扫描配置…';
     contentField('preview').hidden = true; contentField('apply').hidden = true; contentField('complete').hidden = true;
     contentField('android-suggestions').hidden = true;
@@ -17,8 +21,9 @@ async function openContentScan(targetRoot = '') {
     contentField('fields').disabled = true;
     contentField('start').disabled = true;
     try {
-        contentScan.setup = await desktopRequest('/api/content/setup?root=' + encodeURIComponent(root));
-        const setup = contentScan.setup;
+        const setup = await desktopRequest('/api/content/setup?root=' + encodeURIComponent(root));
+        if (request !== contentScan.openGeneration) return;
+        contentScan.setup = setup;
         contentField('system').replaceChildren(...setup.systems.map(s => new Option(s.name, s.name)));
         const selected = document.getElementById('system_name').value || selectedLibrarySystem || currentDeviceScan?.playlists?.[0]?.system;
         if (setup.systems.some(s => s.name === selected)) contentField('system').value = selected;
@@ -35,14 +40,16 @@ async function openContentScan(targetRoot = '') {
         const profile = setup.profiles.findIndex(p => p.system === contentField('system').value);
         if (profile >= 0) { contentField('profile').value = String(profile); loadContentProfile(); }
         contentField('status').textContent = '首次指定目录、主机与核心；更新成功后会记住配置。';
-    } catch (error) { contentField('status').textContent = error.message; }
-    finally { contentField('fields').disabled = false; contentField('start').disabled = !contentScan.setup; }
+    } catch (error) { if (request === contentScan.openGeneration) contentField('status').textContent = error.message; }
+    finally { if (request === contentScan.openGeneration) { contentField('fields').disabled = !contentScan.setup; contentField('start').disabled = !contentScan.setup; } }
 }
 
 function invalidateContentScan() {
+    contentScan.revision++;
     contentField('start').textContent = '开始扫描';
     contentScan.previewId = null; contentScan.imported = null;
     contentField('preview').hidden = true; contentField('apply').hidden = true; contentField('complete').hidden = true;
+    renderContentConfiguration();
 }
 function changeContentSystem() {
     invalidateContentScan();
@@ -57,7 +64,7 @@ function changeContentSystem() {
     changeContentCore();
     contentField('android').value = '';
     contentField('android-suggestions').hidden = true;
-    return loadContentHints();
+    return contentScan.configurationTask = loadContentHints();
 }
 function changeContentCore() {
     invalidateContentScan(); contentScan.downloaded = null;
@@ -69,14 +76,19 @@ function changeContentCore() {
     contentField('core-path').value = directory && directory !== 'default'
         ? directory.replace(/[\\/]$/, '') + '/' + contentField('core').value + '_libretro' + contentScan.setup.core_suffix : '';
     contentScan.generatedCorePath = contentField('core-path').value;
+    loadContentCoreStatus();
 }
 function loadContentProfile() {
     const profile = contentScan.setup.profiles[Number(contentField('profile').value)];
-    if (contentField('profile').value === '' || !profile) return;
+    if (contentField('profile').value === '' || !profile) {
+        contentField('directory').value = ''; contentField('dat').value = ''; contentField('abi').value = '';
+        changeContentSystem(); return;
+    }
     contentField('system').value = profile.system; changeContentSystem();
     for (const [field, key] of [['directory','directory'],['android','android_directory'],['core','core_id'],['core-path','core_path'],['extensions','extensions'],['dat','dat_path'],['playlist-name','playlist_name']]) contentField(field).value = profile[key] || '';
     contentField('abi').value = profile.abi || '';
     contentField('recursive').checked = profile.recursive; contentField('dat-filter').checked = profile.dat_filter;
+    invalidateContentScan(); loadContentCoreInfo(); loadContentCoreStatus();
 }
 function contentDirectoryStorages() {
     if (!contentScan.setup?.android) return [];
@@ -88,13 +100,16 @@ function contentDirectoryStorages() {
 let contentDirectoryGeneration = 0;
 async function browseContentDirectory(path) {
     const generation = ++contentDirectoryGeneration;
+    const setup = contentScan.setup;
+    contentScan.browsing = true; invalidateContentScan();
     const target = path || contentField('directory').value || contentScan.setup.browse_root;
     document.getElementById('content-directory-use').disabled = true;
     document.getElementById('content-directory-entries').replaceChildren();
     document.getElementById('content-directory-path').textContent = '正在读取目录…';
     try {
         const data = await desktopRequest('/api/content/directories?path=' + encodeURIComponent(target));
-        if (generation !== contentDirectoryGeneration) return;
+        if (generation !== contentDirectoryGeneration || setup !== contentScan.setup) return;
+        contentScan.browsing = false;
         document.getElementById('content-directory-use').disabled = false;
         contentScan.browserPath = data.path; contentScan.browserParent = data.parent;
         const storages = contentDirectoryStorages();
@@ -113,7 +128,8 @@ async function browseContentDirectory(path) {
         }
         document.getElementById('content-directory-picker').hidden = false;
     } catch (error) {
-        if (generation !== contentDirectoryGeneration) return;
+        if (generation !== contentDirectoryGeneration || setup !== contentScan.setup) return;
+        contentScan.browsing = false;
         document.getElementById('content-directory-picker').hidden = true;
         contentField('status').textContent = error.message;
     }
@@ -123,7 +139,7 @@ function chooseContentDirectory() {
     contentField('directory').value = contentScan.browserPath;
     document.getElementById('content-directory-picker').hidden = true; invalidateContentScan();
     contentField('android').value = ''; contentField('android-suggestions').hidden = true;
-    return loadContentHints(true);
+    return contentScan.configurationTask = loadContentHints(true);
 }
 function contentPayload() {
     return {root: contentScan.setup.root, abi: contentField('abi').value, directory: contentField('directory').value,
@@ -160,7 +176,12 @@ async function contentJob(path, payload) {
 }
 async function previewContentScan() {
     if (contentScan.busy) return;
+    const setup = contentScan.setup;
+    let pending;
+    do { pending = contentScan.configurationTask; if (pending) await pending; } while (pending !== contentScan.configurationTask);
+    if (contentScan.busy || setup !== contentScan.setup) return;
     invalidateContentScan();
+    if (contentScan.browsing) { contentField('status').textContent = '正在读取目录，请稍后再开始扫描。'; return; }
     if (contentScan.browserPath && !document.getElementById('content-directory-picker').hidden) {
         if (document.getElementById('content-directory-use').disabled) {
             contentField('status').textContent = '正在读取目录，请稍后再开始扫描。'; return;
@@ -235,7 +256,7 @@ async function transferContentCore() {
     } catch (error) { contentField('status').textContent = error.message; }
 }
 function closeContentScan() {
-    if (!contentScan.busy) document.getElementById('content-scan-dialog').close();
+    if (!contentScan.busy) { contentScan.setup = null; ++contentScan.openGeneration; document.getElementById('content-scan-dialog').close(); }
 }
 document.getElementById('content-scan-dialog').addEventListener('cancel', event => { if (contentScan.busy) event.preventDefault(); });
 contentField('fields').addEventListener('input', invalidateContentScan);
@@ -257,6 +278,8 @@ function androidDirectoryCandidates(items, directory) {
 function focusContentScanField(name, message) {
     contentField('status').textContent = message;
     const field = contentField(name);
+    const settings = field.closest?.('details');
+    if (settings) settings.open = true;
     field.setAttribute('aria-invalid', 'true');
     field.scrollIntoView({block:'center'}); field.focus({preventScroll:true});
 }
@@ -274,6 +297,7 @@ let contentHintGeneration = 0;
 async function loadContentHints(detectSystem = false) {
     const generation = ++contentHintGeneration;
     const payload = contentPayload();
+    const setup = contentScan.setup, revision = contentScan.revision;
     if (!payload.directory) return;
     try {
         const playlists = currentDeviceScan?.root_path === payload.root
@@ -282,7 +306,7 @@ async function loadContentHints(detectSystem = false) {
             const data = await desktopRequest('/api/playlist/items?' + new URLSearchParams({path:playlist.path, system:playlist.system}));
             return {system:playlist.system, candidates:androidDirectoryCandidates(data.items, payload.directory)};
         }));
-        if (generation !== contentHintGeneration || contentScan.busy || payload.directory !== contentField('directory').value) return;
+        if (generation !== contentHintGeneration || setup !== contentScan.setup || revision !== contentScan.revision || contentScan.busy || payload.directory !== contentField('directory').value) return;
         const systems = [...new Set(matches.filter(match => match.candidates.length).map(match => match.system))];
         if (detectSystem && systems.length === 1 && systems[0] !== payload.system
                 && contentScan.setup.systems.some(system => system.name === systems[0])) {
@@ -292,7 +316,7 @@ async function loadContentHints(detectSystem = false) {
         }
         const result = await desktopRequest('/api/content/hints', payload);
         const candidates = [...new Set(matches.filter(match => match.system === payload.system).flatMap(match => match.candidates))];
-        if (generation !== contentHintGeneration || contentScan.busy || payload.directory !== contentField('directory').value || payload.system !== contentField('system').value) return;
+        if (generation !== contentHintGeneration || setup !== contentScan.setup || revision !== contentScan.revision || contentScan.busy || payload.directory !== contentField('directory').value || payload.system !== contentField('system').value) return;
         const androidDirectory = result.android_directory || (candidates.length === 1 ? candidates[0] : '');
         if (androidDirectory && !contentField('android').value) {
             contentField('android').value = androidDirectory;
@@ -305,11 +329,15 @@ async function loadContentHints(detectSystem = false) {
             const selected = contentScan.setup.systems.find(s => s.name === payload.system);
             const core = selected.cores.find(c => result.core_path.split(/[\\/]/).pop().startsWith(c.id + '_libretro'));
             if (core && (!contentField('core-path').value || contentField('core-path').value === contentScan.generatedCorePath)) {
+                const changedCore = contentField('core').value !== core.id;
                 contentField('core').value = core.id; contentField('core-path').value = result.core_path;
+                if (changedCore) loadContentCoreInfo();
             }
         }
+        loadContentCoreStatus();
+        renderContentConfiguration();
     } catch (error) {
-        if (generation === contentHintGeneration) contentField('status').textContent = '无法从已有列表恢复路径：' + error.message;
+        if (generation === contentHintGeneration && setup === contentScan.setup && revision === contentScan.revision) contentField('status').textContent = '无法从已有列表恢复路径：' + error.message;
     }
 }
 
@@ -317,24 +345,74 @@ let contentInfoGeneration = 0;
 async function loadContentCoreInfo() {
     const generation = ++contentInfoGeneration;
     const core = contentField('core').value;
+    const setup = contentScan.setup, system = contentField('system').value;
     const field = contentField('extensions'); const original = field.value;
     try {
         const info = await desktopRequest('/api/cores/info?core_id=' + encodeURIComponent(core));
-        if (contentScan.busy || generation !== contentInfoGeneration || core !== contentField('core').value || field.value !== original) return;
+        if (setup !== contentScan.setup || system !== contentField('system').value || contentScan.busy || generation !== contentInfoGeneration || core !== contentField('core').value || field.value !== original) return;
         const allowed = new Set(info.extensions.concat(['zip','7z']));
         const filtered = original.split(/\s+/).filter(ext => allowed.has(ext));
-        if (field.value !== filtered.join(' ')) invalidateContentScan();
+        if (field.value !== filtered.join(' ') && contentScan.previewId) invalidateContentScan();
         field.value = filtered.join(' ');
         document.getElementById('content-core-formats').textContent = '官方核心支持：' + info.extensions.join(' ') + '。压缩包作为单个入口处理。';
     } catch (error) {
-        if (generation === contentInfoGeneration) document.getElementById('content-core-formats').textContent = '官方格式信息暂不可读，当前使用主机预设，可手动核对：' + error.message;
+        if (generation === contentInfoGeneration && setup === contentScan.setup && system === contentField('system').value) document.getElementById('content-core-formats').textContent = '官方格式信息暂不可读，当前使用主机预设，可手动核对：' + error.message;
     }
 }
 
-contentField('directory').addEventListener('change', () => { contentField('android').value = ''; contentField('android-suggestions').hidden = true; loadContentHints(true); });
+contentField('directory').addEventListener('change', () => { contentField('android').value = ''; contentField('android-suggestions').hidden = true; contentScan.configurationTask = loadContentHints(true); });
 
 contentField('abi').addEventListener('change', () => { contentScan.downloaded = null; document.getElementById('content-core-transfer').disabled = true; document.getElementById('content-core-result').textContent = ''; });
 
 async function cancelContentScan() { if (contentScan.jobId) { try { await desktopRequest('/api/jobs/cancel', {job_id: contentScan.jobId}); contentField('status').textContent = '正在取消，等待当前读取完成…'; } catch (error) { contentField('status').textContent = error.message; } } }
 
 contentField('fields').addEventListener('input', event => { event.target.removeAttribute('aria-invalid'); });
+
+
+function contentCoreStatusKey() {
+    return JSON.stringify([contentScan.setup?.root, contentField('core').value, contentField('core-path').value]);
+}
+
+function renderContentConfiguration() {
+    if (!contentScan.setup) return;
+    const text = (name, value) => { document.getElementById('content-config-' + name).textContent = value; };
+    text('system', contentField('system').value);
+    text('core', contentField('core').selectedOptions[0]?.textContent || '待选择核心');
+    const storages = contentDirectoryStorages();
+    const directory = contentField('directory').value;
+    const storage = storages.find(value => directory.startsWith(value.root));
+    text('source', storage ? storage.label + ' / ' + decodeURIComponent(directory.slice(storage.root.length)) : directory || '未选择目录');
+    const root = contentScan.setup.root;
+    const targetStorage = storages.find(value => root.startsWith(value.root));
+    text('target', targetStorage ? targetStorage.label + ' / ' + decodeURIComponent(root.slice(targetStorage.root.length)) : root);
+    const status = contentScan.coreStatus?.key === contentCoreStatusKey() ? contentScan.coreStatus : null;
+    text('core-state', status?.message || '核心状态尚未检查');
+    text('core-detail', status?.detail || '指定核心路径后检查安装状态。');
+    document.getElementById('content-config-core-state').dataset.state = status?.state || 'unconfigured';
+}
+
+let contentCoreStatusGeneration = 0;
+async function loadContentCoreStatus() {
+    if (!contentScan.setup) return;
+    const generation = ++contentCoreStatusGeneration;
+    const setup = contentScan.setup, key = contentCoreStatusKey();
+    renderContentConfiguration();
+    try {
+        const result = await desktopRequest('/api/content/core-status', {root:setup.root, core_path:contentField('core-path').value});
+        if (generation !== contentCoreStatusGeneration || setup !== contentScan.setup || key !== contentCoreStatusKey()) return;
+        contentScan.coreStatus = {...result, key};
+        contentField('install-state').textContent = result.detail;
+        renderContentConfiguration();
+        if (['missing','unconfigured'].includes(result.state)) contentField('settings').open = true;
+    } catch (error) {
+        if (generation !== contentCoreStatusGeneration || setup !== contentScan.setup || key !== contentCoreStatusKey()) return;
+        contentScan.coreStatus = {key, state:'unknown', message:'核心状态检查失败', detail:error.message};
+        renderContentConfiguration();
+    }
+}
+
+contentField('core-path').addEventListener('change', loadContentCoreStatus);
+contentField('fields').addEventListener('input', renderContentConfiguration);
+document.getElementById('content-scan-dialog').addEventListener('close', () => {
+    if (!document.getElementById('content-scan-dialog').open) { contentScan.setup = null; ++contentScan.openGeneration; }
+});

@@ -455,6 +455,7 @@ test('directory hints fill the unique Android path automatically and preserve ma
         currentDeviceScan:{root_path:'mtp://device/00010001/RetroArch',playlists:[{valid:true,system:'Sega - Saturn',path:'SS.lpl'}]},
         URLSearchParams,Option:function(text,value){this.value=value;},
         desktopRequest:async url=>url.startsWith('/api/playlist/items')?{items:[{rom_path:'/storage/4A21-0000/Roms/SS/Game.cue'}]}:{}};
+    Object.assign(context,{loadContentCoreStatus:()=>{},renderContentConfiguration:()=>{}});
     vm.createContext(context);vm.runInContext(source('androidDirectoryCandidates')+source('loadContentHints'),context);
     await context.loadContentHints();
     assert.equal(fields.android.value,'/storage/4A21-0000/Roms/SS');assert.equal(fields['android-suggestions'].hidden,true);
@@ -470,6 +471,7 @@ test('choosing an SS folder detects Saturn even when the initial system is NES',
         currentDeviceScan:{root_path:'root',playlists:[{valid:true,system:'NES',path:'NES.lpl'},{valid:true,system:'Sega - Saturn',path:'SS.lpl'}]},
         changeContentSystem:()=>{changed=true;},
         desktopRequest:async url=>({items:[{rom_path:url.includes('SS.lpl')?'/storage/4A21-0000/Roms/SS/Game.cue':'/storage/4A21-0000/Roms/NES/Game.nes'}]})};
+    Object.assign(context,{loadContentCoreStatus:()=>{},renderContentConfiguration:()=>{}});
     vm.createContext(context);vm.runInContext(source('androidDirectoryCandidates')+source('loadContentHints'),context);
     await context.loadContentHints(true);
     assert.equal(fields.system.value,'Sega - Saturn');assert.equal(changed,true);

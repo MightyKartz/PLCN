@@ -340,7 +340,16 @@
             <label>扫描配置<select id="content-scan-profile" onchange="loadContentProfile()"></select></label>
             <label>游戏目录<div class="content-scan-input-action"><input id="content-scan-directory" placeholder="选择掌机上的游戏文件夹"><button class="btn btn-muted" type="button" onclick="browseContentDirectory()">选择目录</button></div></label>
             <section id="content-directory-picker" hidden aria-label="选择游戏目录"><label id="content-directory-storage-label" hidden>游戏所在存储<select id="content-directory-storage" onchange="browseContentDirectory(this.value)"></select></label><p id="content-directory-path"></p><div class="content-directory-actions"><button type="button" class="btn btn-muted" onclick="browseContentDirectory(contentScan.browserParent)">上一级</button><button type="button" class="btn" id="content-directory-use" onclick="chooseContentDirectory()">使用此目录</button><button type="button" class="btn btn-muted" onclick="document.getElementById('content-directory-picker').hidden=true">取消选择</button></div><div id="content-directory-entries"></div><p>在本机或存储卡中选择游戏目录，列表仍更新到当前游戏库。</p></section>
-            <label id="content-scan-android-label">掌机中的实际游戏目录<input id="content-scan-android" placeholder="例如 /storage/4A21-0000/Roms/SS"><small>用于 RetroArch 启动游戏，与电脑文件传输地址不同。请按掌机实际路径填写。</small></label>
+            <section class="content-config-summary" aria-label="当前扫描配置">
+                <h3>当前扫描配置</h3>
+                <dl><div><dt>主机</dt><dd id="content-config-system">正在读取…</dd></div><div><dt>默认核心</dt><dd id="content-config-core">正在读取…</dd></div></dl>
+                <p><strong>游戏来源：</strong><span id="content-config-source">未选择目录</span></p>
+                <p><strong>列表保存位置：</strong><span id="content-config-target"></span></p>
+                <p id="content-config-core-state" role="status" aria-live="polite"></p><p id="content-config-core-detail"></p>
+                <p>自动识别的配置可在下方修改；已有游戏单独设置的核心会保留。</p>
+            </section>
+            <details id="content-scan-settings"><summary>扫描设置与高级选项</summary>
+            <label id="content-scan-android-label">掌机中的实际游戏目录<input id="content-scan-android" placeholder="例如 /storage/4A21-0000/Roms/SS"><small>用于 RetroArch 启动游戏，与电脑传输地址不同。未能自动识别时，可从已有路径选择，或在 RetroArch 中查看完整路径。</small></label>
             <section id="content-scan-android-suggestions" class="content-path-suggestions" hidden aria-label="建议的掌机路径"><p>从现有列表找到以下路径，请核对它是否对应刚选的本机或存储卡目录。</p><div class="content-scan-input-action"><select id="content-scan-android-candidates" aria-label="建议的掌机游戏目录"></select><button class="btn btn-muted" type="button" onclick="useContentAndroidPath()">使用所选路径</button></div></section>
             <div class="content-scan-grid"><label>主机<select id="content-scan-system" onchange="changeContentSystem()"></select></label><label>默认核心<select id="content-scan-core" onchange="changeContentCore()"></select></label></div>
             <p id="content-scan-recommendation" class="artwork-help"></p><p id="content-core-formats" class="artwork-help" role="status"></p>
@@ -351,6 +360,7 @@
                 <div class="content-directory-actions"><button class="btn btn-muted" type="button" onclick="downloadContentCore()">官方下载</button><button id="content-core-transfer" class="btn btn-muted" type="button" onclick="transferContentCore()" disabled>传到掌机待安装</button></div><p id="content-core-result" role="status"></p>
             </details>
             <details><summary>扫描选项</summary><label>目标列表文件名<input id="content-scan-playlist-name" placeholder="主机名称.lpl"></label><label>文件格式（空格分隔）<input id="content-scan-extensions"></label><label class="content-scan-check"><input id="content-scan-recursive" type="checkbox" checked>包含子目录</label><label>街机 DAT 文件路径（可选，MAME 必填）<input id="content-scan-dat" placeholder="与所选核心及 ROM 集匹配的 XML DAT"></label><label class="content-scan-check"><input id="content-scan-dat-filter" type="checkbox">仅加入 DAT 中匹配的游戏</label><p>增量合并，保留已有条目与单独核心设置。不删除失效项。ZIP/7z 按单个游戏入口扫描，不读取包内内容。</p></details>
+            </details>
         </fieldset>
         <p id="content-scan-status" role="status" aria-live="polite"></p>
         <section id="content-scan-preview" hidden aria-label="扫描变更预览"><h3>本次更新</h3><p id="content-scan-summary"></p><div class="content-scan-table"><table><thead><tr><th>新增游戏</th><th>掌机启动路径</th></tr></thead><tbody id="content-scan-rows"></tbody></table></div><p>确认更新前请退出 RetroArch，避免它覆盖列表。写入前自动备份原列表。</p></section>

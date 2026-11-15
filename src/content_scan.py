@@ -306,3 +306,21 @@ def hints(root, system, directory, filename=None):
                 result['android_directory'] = candidates.pop()
                 break
     return result
+
+
+def core_status(root, core_path):
+    """Installation evidence available to this connection, without loading a core."""
+    if not isinstance(root, str) or not root or root.startswith('adb://') or not isinstance(core_path, str):
+        raise ValueError('请选择本地或文件传输游戏库及有效核心路径')
+    remote = mtp.is_mtp(root)
+    if remote:
+        mtp.parse(root)
+    path = core_path.strip()
+    if not path or path == 'DETECT':
+        return {'state': 'unconfigured', 'message': '待指定核心路径', 'detail': '请在扫描设置中指定核心文件，或按官方下载引导安装。'}
+    if remote:
+        return {'state': 'unknown', 'message': '安装状态未知',
+                'detail': '文件传输无法验证掌机的核心安装状态；请在 RetroArch 中确认。下载和传输不代表安装完成。'}
+    if Path(path).expanduser().is_file():
+        return {'state': 'available', 'message': '核心文件已找到', 'detail': '已确认本地文件存在，尚未验证核心能否实际加载运行。'}
+    return {'state': 'missing', 'message': '核心文件未找到', 'detail': '请更正核心路径，或先安装所选核心。'}
