@@ -25,7 +25,7 @@ def test_complete_dat_and_supplement_are_both_loaded_and_legacy_cache_is_bypasse
     assert db.get_standard_name('CN [Dragon_Force]') is None, 'Do not invent a USA region'
     assert db.get_standard_name('Grandia CN') is None, 'Do not invent a disc'
     assert any('Policenauts' in name for names in db.standard_names.values() for name in names)
-    manifest = json.loads((ROOT / 'data/libretro-db/sources.json').read_text())
+    manifest = json.loads((ROOT / 'data/libretro-db/sources.json').read_text(encoding='utf-8'))
     for system, info in manifest.items():
         main = ROOT / 'data/libretro-db/dat' / (system + '.dat')
         assert hashlib.sha256(main.read_bytes()).hexdigest() == info['sha256']
@@ -44,12 +44,12 @@ def saturn_library(tmp_path, monkeypatch):
         ('Super Robot Taisen F (Japan) (Rev A)', '超级机器人大战F'), ('Super Robot Taisen F (Japan) (Rev B)', '超级机器人大战F'),
         ('Super Robot Taisen F - Kanketsu-hen (Japan)', '超级机器人大战F - 完结篇'),
         ('Thor - Seireioukiden (Japan)', '光之继承者'), ('Lunar - Silver Star Story (Japan) (Rev A)', '露娜')]
-    with (source / 'Sega - Saturn.csv').open('w', newline='') as f:
+    with (source / 'Sega - Saturn.csv').open('w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f); writer.writerow(['Name EN', 'Name ZH']); writer.writerows(names)
     monkeypatch.setattr(single_artwork, 'catalog_names', lambda system, kind: [name for name, _ in names])
     def playlist(entries):
         path = tmp_path / 'games.lpl'
-        path.write_text(json.dumps({'items':[{'path':'/Roms/SS/' + filename + '.cue', 'label':label, 'db_name':'Sega - Saturn.lpl', 'crc32':'00000000|crc'} for filename, label in entries]}, ensure_ascii=False))
+        path.write_text(json.dumps({'items':[{'path':'/Roms/SS/' + filename + '.cue', 'label':label, 'db_name':'Sega - Saturn.lpl', 'crc32':'00000000|crc'} for filename, label in entries]}, ensure_ascii=False), encoding='utf-8')
         return path
     return source, playlist
 
@@ -106,10 +106,10 @@ def test_canonical_sources_stay_the_same_before_and_after_names_are_applied(satu
     path = playlist([('Daikoukai Jidai Gaiden (J) [T+SChi_20090423]', 'Daikoukai Jidai Gaiden (J) [T+SChi_20090423]'),
                      ('Thor - Seireioukiden (J)', 'Thor - Seireioukiden (J)')])
     first = analyze_playlist(path, 'Sega - Saturn', str(source), verify_artwork=True)
-    document = json.loads(path.read_text())
+    document = json.loads(path.read_text(encoding='utf-8'))
     for item, proposal in zip(document['items'], first):
         item['label'] = proposal['new_label']
-    path.write_text(json.dumps(document))
+    path.write_text(json.dumps(document), encoding='utf-8')
     second = analyze_playlist(path, 'Sega - Saturn', str(source), verify_artwork=True)
     assert [row['thumbnail_source'] for row in first] == [row['thumbnail_source'] for row in second]
     assert all(row['artwork_gallery_status'] == 'matched' for row in first + second)
@@ -137,7 +137,7 @@ def test_confirmed_version_survives_new_preview_with_original_remote_uri(saturn_
     source, playlist = saturn_library
     path = playlist([('龙之力量/CN [Dragon_Force]', '龙之力量')])
     remote = 'mtp://device/00010001/RetroArch/playlists/Sega%20-%20Saturn.lpl'
-    document=json.loads(path.read_text()); item=document['items'][0]
+    document=json.loads(path.read_text(encoding='utf-8')); item=document['items'][0]
     monkeypatch.setenv('PLCN_HOME',str(source.parent/'runtime'))
     artwork_identity.remember({'system':'Sega - Saturn','playlist_path':remote,'rom_path':item['path'],'label':item['label']},'Dragon Force (USA)','Named_Boxarts')
     row=analyze_playlist(path,'Sega - Saturn',str(source),verify_artwork=True,source_playlist_path=remote)[0]
@@ -149,9 +149,9 @@ def test_raw_disc_names_and_chinese_disc_labels_resolve_to_same_candidates(satur
     source, playlist=saturn_library
     path=playlist([('格兰蒂亚/Grandia CN (Disc 1)','Grandia CN (Disc 1)'),('格兰蒂亚/Grandia CN (Disc 2)','Grandia CN (Disc 2)')])
     first=analyze_playlist(path,'Sega - Saturn',str(source),verify_artwork=True)
-    document=json.loads(path.read_text())
+    document=json.loads(path.read_text(encoding='utf-8'))
     for item,row in zip(document['items'],first):item['label']=row['new_label']
-    path.write_text(json.dumps(document))
+    path.write_text(json.dumps(document), encoding='utf-8')
     second=analyze_playlist(path,'Sega - Saturn',str(source),verify_artwork=True)
     assert [row['artwork_candidates'] for row in first] == [row['artwork_candidates'] for row in second]
     assert first[0]['new_label']=='格兰蒂亚 (Disc 1)'
@@ -166,7 +166,7 @@ def test_chaos_seed_short_rom_does_not_become_darkseed(tmp_path, monkeypatch):
         ('Darkseed (Japan)', '黑暗种子'),
         ('Senkutsu Katsuryu Taisen - Chaos Seed (Japan) (Disc 1) (Game Disc) (Rev A) (10M)', '仙窟活龙大战'),
         ('Senkutsu Katsuryu Taisen - Chaos Seed (Japan) (Disc 2) (Omake Disc)', '仙窟活龙大战')]
-    with (source / 'Sega - Saturn.csv').open('w', newline='') as stream:
+    with (source / 'Sega - Saturn.csv').open('w', newline='', encoding='utf-8') as stream:
         writer = csv.writer(stream); writer.writerow(['Name EN', 'Name ZH']); writer.writerows(titles)
     translator = Translator(str(source), 'Sega - Saturn')
     assert translator.translate('ChaosSeed') == ('仙窟活龙大战', 'Senkutsu Katsuryu Taisen - Chaos Seed')
@@ -174,7 +174,7 @@ def test_chaos_seed_short_rom_does_not_become_darkseed(tmp_path, monkeypatch):
     monkeypatch.setattr(single_artwork, 'catalog_names', lambda system, kind: [title for title, _ in titles])
     playlist = tmp_path / 'SS.lpl'
     playlist.write_text(json.dumps({'items':[{'path':'/storage/card/Roms/SS/仙窟活龙大战/ChaosSeed.chd',
-        'label':'黑暗种子','db_name':'Sega - Saturn.lpl','crc32':'00000000|crc'}]}, ensure_ascii=False))
+        'label':'黑暗种子','db_name':'Sega - Saturn.lpl','crc32':'00000000|crc'}]}, ensure_ascii=False), encoding='utf-8')
     before = playlist.read_bytes()
     row = analyze_playlist(playlist, 'Sega - Saturn', str(source), verify_artwork=True)[0]
     assert row['new_label'] == '仙窟活龙大战'
@@ -187,14 +187,14 @@ def test_gulliver_short_disc_names_match_their_own_official_images(tmp_path, mon
     import single_artwork
     source = tmp_path / 'names'; source.mkdir()
     names = [f'Kuusou Kagaku Sekai Gulliver Boy (Japan) (Disc {disc})' for disc in (1, 2)]
-    with (source / 'Sega - Saturn.csv').open('w', newline='') as stream:
+    with (source / 'Sega - Saturn.csv').open('w', newline='', encoding='utf-8') as stream:
         writer = csv.writer(stream); writer.writerow(['Name EN', 'Name ZH'])
         writer.writerows((name, '空想科学世界') for name in names)
     monkeypatch.setattr(single_artwork, 'catalog_names', lambda system, kind: names)
     playlist = tmp_path / 'SS.lpl'
     for labels in [('GulliverBoy Disc1', 'GulliverBoy Disc2'), ('空想科学世界', '空想科学世界')]:
         playlist.write_text(json.dumps({'items':[{'path':f'/Roms/SS/空想科学世界/GulliverBoy Disc{disc}.chd',
-            'label':label,'db_name':'Sega - Saturn.lpl','crc32':'00000000|crc'} for disc, label in enumerate(labels, 1)]}, ensure_ascii=False))
+            'label':label,'db_name':'Sega - Saturn.lpl','crc32':'00000000|crc'} for disc, label in enumerate(labels, 1)]}, ensure_ascii=False), encoding='utf-8')
         before = playlist.read_bytes()
         rows = analyze_playlist(playlist, 'Sega - Saturn', str(source), verify_artwork=True)
         for disc, row in enumerate(rows, 1):

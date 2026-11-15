@@ -92,7 +92,7 @@ def memory_key(context):
 def remembered(context):
     path = app_paths.user_data_dir() / 'artwork-sources.json'
     try:
-        return json.loads(path.read_text()).get(memory_key(context), {})
+        return json.loads(path.read_text(encoding='utf-8')).get(memory_key(context), {})
     except (OSError, ValueError):
         return {}
 
@@ -100,7 +100,7 @@ def remembered(context):
 def remember(context, source, kind):
     path = app_paths.user_data_dir() / 'artwork-sources.json'
     with file_lock(path):
-        data = json.loads(path.read_text()) if path.exists() else {}
+        data = json.loads(path.read_text(encoding='utf-8')) if path.exists() else {}
         entry = data.setdefault(memory_key(context), {})
         entry['name'] = source
         entry.setdefault('sources', {})[kind] = source
@@ -149,7 +149,7 @@ def resolve(context, config_path=None, name_source=None, database=None):
     if known:
         return resolution(known, 'curated')
     config = Path(config_path or app_paths.config_path())
-    settings = json.loads(config.read_text()) if config.exists() else {}
+    settings = json.loads(config.read_text(encoding='utf-8')) if config.exists() else {}
     db = database or open_database(name_source or settings.get('rom_name_cn_path') or app_paths.default_source())
     try:
         systems = db.expand_system_mapping(system)

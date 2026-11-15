@@ -26,11 +26,11 @@ def library(tmp_path, monkeypatch):
 def test_incremental_import_preserves_overrides_backups_and_refresh(library):
     root, games, config = library
     (games / 'old.sfc').write_bytes(b'old'); (games / 'new.sfc').write_bytes(b'new')
-    (games / 'notes.txt').write_text('not a ROM')
+    (games / 'notes.txt').write_text('not a ROM', encoding='utf-8')
     target = root / 'playlists' / (config['system'] + '.lpl')
     old = {'version':'1.5','sort_mode':1,'items':[{'path':str(games/'old.sfc'),'label':'已修中文名',
         'core_path':'special.dylib','core_name':'Special','custom':'keep'}]}
-    target.write_text(json.dumps(old,ensure_ascii=False)); before = target.read_bytes()
+    target.write_text(json.dumps(old,ensure_ascii=False), encoding='utf-8'); before = target.read_bytes()
     plan = scan.preview(config)
     assert [a['label'] for a in plan['added']] == ['new']
     assert plan['document']['items'][0] == old['items'][0]
@@ -38,7 +38,7 @@ def test_incremental_import_preserves_overrides_backups_and_refresh(library):
     assert target.read_bytes() == before
     result = scan.apply(plan)
     assert Path(result['backup']).read_bytes() == before
-    assert json.loads(target.read_text())['default_core_path'] == config['core_path']
+    assert json.loads(target.read_text(encoding='utf-8'))['default_core_path'] == config['core_path']
     assert scan.profiles()[str(root)][0] == config
     again = scan.preview(config)
     assert again['added'] == [] and again['can_apply'] is False
@@ -48,20 +48,20 @@ def test_stale_plan_cannot_replace_changed_playlist(library):
     root, games, config = library
     (games / 'new.sfc').touch()
     plan = scan.preview(config)
-    Path(plan['target']).write_text('{"items":[]}')
+    Path(plan['target']).write_text('{"items":[]}', encoding='utf-8')
     with pytest.raises(RuntimeError, match='列表已变化'): scan.apply(plan)
-    assert Path(plan['target']).read_text() == '{"items":[]}'
+    assert Path(plan['target']).read_text(encoding='utf-8') == '{"items":[]}'
 
 
 def test_disc_entry_filtering_and_m3u_do_not_duplicate_tracks(library):
     root, games, config = library
     for name in ['Game (Disc 1).cue','Game (Disc 1).bin','Game (Disc 2).chd','other.cue','other.bin']:
         (games / name).touch()
-    (games / 'Game.m3u').write_text('Game (Disc 1).cue\nGame (Disc 2).chd\n')
+    (games / 'Game.m3u').write_text('Game (Disc 1).cue\nGame (Disc 2).chd\n', encoding='utf-8')
     config['extensions'] = 'cue chd m3u'
     target = root / 'playlists' / (config['system']+'.lpl')
     retained = {'path':str(games/'Game (Disc 1).cue'),'label':'已有逐碟记录'}
-    target.write_text(json.dumps({'items':[retained]}))
+    target.write_text(json.dumps({'items':[retained]}), encoding='utf-8')
     plan = scan.preview(config)
     assert {row['label'] for row in plan['added']} == {'Game','other'}
     assert plan['document']['items'][0] == retained
@@ -72,7 +72,7 @@ def test_dat_names_filter_bios_and_recursion(library):
     sub=games/'sub';sub.mkdir()
     for name in ['good.zip','unknown.zip','bios.zip']: (sub/name).touch()
     dat=games/'arcade.dat'
-    dat.write_text('<datafile><game name="good"><description>Game Name</description></game><game name="bios" isbios="yes"/></datafile>')
+    dat.write_text('<datafile><game name="good"><description>Game Name</description></game><game name="bios" isbios="yes"/></datafile>', encoding='utf-8')
     config.update(dat_path=str(dat),dat_filter=True)
     plan=scan.preview(config)
     assert [row['label'] for row in plan['added']] == ['Game Name']
@@ -159,7 +159,7 @@ def test_server_applies_only_its_stored_scan_plan_and_rejects_replay(library,mon
         ident=jobs.create_job();jobs.complete_job(ident,work(ident));return ident
     monkeypatch.setattr(api_content,'background',immediate)
     api_content.apply(None,context,{'preview_job_id':ident,'document':{'items':[]},'target':'untrusted.lpl'})
-    assert json.loads(Path(plan['target']).read_text())['items'][0]['label']=='New'
+    assert json.loads(Path(plan['target']).read_text(encoding='utf-8'))['items'][0]['label']=='New'
     with pytest.raises(ValueError,match='已经应用'):api_content.apply(None,context,{'preview_job_id':ident})
 
 

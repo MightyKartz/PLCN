@@ -273,6 +273,7 @@ def test_missing_default_thumbnails_dir_reads_as_all_missing(tmp_path):
     assert all(entry["status"] == "missing" for entry in statuses.values())
 
 
+@pytest.mark.skipif(os.name == "nt", reason="Local POSIX shell emulates the Android shell; unavailable on Windows")
 def test_missing_remote_artwork_dir_is_empty_inventory(tmp_path, monkeypatch):
     import subprocess
     import single_artwork as art

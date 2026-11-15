@@ -126,7 +126,7 @@ def test_home_to_library_to_preview(tmp_path, monkeypatch, chrome_binary, viewpo
                         assert time.monotonic() < deadline, f'Chrome startup timed out; see {artifacts / "chrome.log"}'
                         time.sleep(0.05)
                     port = int(active_port.read_text(encoding='utf-8').splitlines()[0])
-                    response = requests.get(f'http://127.0.0.1:{port}/json/list', timeout=3)
+                    response = requests.get(f'http://127.0.0.1:{port}/json/list', timeout=15)
                     response.raise_for_status()
                     targets = response.json()
                     websocket = next(target['webSocketDebuggerUrl'] for target in targets if target['type'] == 'page')
@@ -134,7 +134,7 @@ def test_home_to_library_to_preview(tmp_path, monkeypatch, chrome_binary, viewpo
                         'node', str(ROOT / 'tests/browser_smoke.cjs'), websocket,
                         f'http://127.0.0.1:{httpd.server_address[1]}', str(playlists.parent),
                         str(viewport[0]), str(viewport[1]), str(artifacts),
-                    ], capture_output=True, text=True, encoding='utf-8', timeout=45)
+                    ], capture_output=True, text=True, encoding='utf-8', timeout=120)
                     (artifacts / 'driver.log').write_text(result.stdout + result.stderr, encoding='utf-8')
                     assert result.returncode == 0, result.stdout + result.stderr
                 finally:

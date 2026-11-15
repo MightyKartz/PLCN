@@ -1,5 +1,5 @@
 /* Discovery updates the home screen only; opening a library is always explicit. */
-const libraryHome = {generation: 0, loading: false, data: null, error: '', openError: '', opening: '', device: null};
+const libraryHome = {generation: 0, loading: true, data: null, error: '', openError: '', opening: '', device: null};
 const homeText = (zh, en) => workbenchText(zh, en);
 function homeStatus(source) {
     const labels = {

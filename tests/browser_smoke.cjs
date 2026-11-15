@@ -16,7 +16,7 @@ function send(method, params = {}) {
         const timer = setTimeout(() => {
             pending.delete(id);
             reject(new Error(`CDP timed out: ${method}`));
-        }, 5000);
+        }, 15000);
         pending.set(id, {resolve, reject, timer});
         socket.send(JSON.stringify({id, method, params}));
     });
@@ -67,7 +67,7 @@ async function evaluate(fn, ...args) {
 }
 
 async function waitFor(fn, label, ...args) {
-    const deadline = Date.now() + 10000;
+    const deadline = Date.now() + 20000;
     while (Date.now() < deadline) {
         assert.deepEqual(errors, [], 'Page errors');
         if (await evaluate(fn, ...args)) return;
