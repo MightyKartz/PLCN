@@ -20,6 +20,13 @@ jobs:
       - run: python -m PyInstaller --noconfirm plcn.spec
       - run: ./dist/plcn --help
       - run: tar -czf dist/PLCN-Linux-x64.tar.gz -C dist plcn
+      - name: Preserve failed browser diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-browser-${{ runner.os }}-${{ matrix.arch }}
+          path: output/playwright/browser-smoke/
+          if-no-files-found: ignore
       - uses: actions/upload-artifact@v4
         with:
           name: PLCN-Linux-x64-unsigned
@@ -52,6 +59,9 @@ jobs:
       - name: Build and smoke test Windows package
         if: runner.os == 'Windows'
         run: python scripts/package_desktop.py --arch ${{ matrix.arch }} --installer
+      - name: Install macOS file transfer runtime
+        if: runner.os == 'macOS'
+        run: brew install libmtp
       - name: Build and smoke test macOS bundle
         if: runner.os == 'macOS'
         run: python scripts/package_desktop.py --arch ${{ matrix.arch }}
@@ -61,6 +71,13 @@ jobs:
       - name: Mount DMG, install and run macOS app
         if: runner.os == 'macOS'
         run: python scripts/smoke_desktop_package.py --dmg dist/PLCN-macOS-${{ matrix.arch }}.dmg
+      - name: Preserve failed browser diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-browser-${{ runner.os }}-${{ matrix.arch }}
+          path: output/playwright/browser-smoke/
+          if-no-files-found: ignore
       - uses: actions/upload-artifact@v4
         with:
           name: PLCN-${{ runner.os }}-${{ matrix.arch }}-unsigned

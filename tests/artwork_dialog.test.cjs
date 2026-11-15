@@ -261,7 +261,10 @@ test('official results take priority, fallback candidates require explicit previ
     assert.equal(calls[0][1].provider,'libretro');
     official=false; calls.length=0;
     await context.searchArtwork(true);
-    assert.equal(calls.length,2);
+    assert.equal(calls.length,1);
+    assert.equal(elements['artwork-secondary'].hidden,false);
+    assert.equal(context.state().candidate,null);
+    await context.searchArtwork(false,'wikipedia');
     assert.equal(calls[1][1].provider,'wikipedia');
     assert.equal(context.state().candidate,null);
     assert.equal(elements['artwork-confirm'].disabled,true);

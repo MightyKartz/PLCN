@@ -1,4 +1,5 @@
 """Stage one image for review, then write only its verified playlist destination."""
+import mtp_runtime as mtp
 from adb_runtime import adb_executable, subprocess_options
 import base64
 import errno
@@ -230,7 +231,7 @@ def load_entry(payload):
     if not path:
         raise ValueError('请选择游戏列表')
     with TemporaryDirectory(prefix='plcn-artwork-list-') as temporary:
-        local = materialize_adb_file(path, cache_dir=temporary) if is_adb_uri(path) else Path(path).expanduser()
+        local = mtp.materialize(path, temporary) if mtp.is_mtp(path) else materialize_adb_file(path, cache_dir=temporary) if is_adb_uri(path) else Path(path).expanduser()
         playlist = PlaylistManager(local)
     index = payload.get('index')
     if type(index) is not int or not 0 <= index < len(playlist.items):
@@ -287,6 +288,11 @@ def read_entry(payload):
 
 
 def read_target(target):
+    if mtp.is_mtp(target):
+        content = mtp.read(target)
+        if content is not None and len(content) > LIMIT:
+            raise ValueError('已有文件超过 12 MiB')
+        return content
     if not is_adb_uri(target):
         path = Path(target)
         if not path.exists():
@@ -315,6 +321,9 @@ def adb_command(serial, script):
 
 
 def remote_inventory(root, system, kind):
+    if mtp.is_mtp(root):
+        path = mtp.join(root, system, kind)
+        return {'type':'mtp', 'uri':path, 'filenames':{entry['name'] for entry in mtp.listing(path) if not entry['folder']}}
     serial, remote = parse_adb_uri(root)
     path = remote.rstrip('/') + '/' + system + '/' + kind
     quoted = shlex.quote(path)
@@ -335,8 +344,8 @@ def existing_rom_target(payload, target):
     name = sanitize_filename(rom_title(payload.get('rom_path')))
     if not name:
         return None
-    if is_adb_uri(target):
-        alias = target.rsplit('/', 1)[0] + '/' + name + '.png'
+    if is_adb_uri(target) or mtp.is_mtp(target):
+        alias = mtp.join(target.rsplit('/', 1)[0], name + '.png') if mtp.is_mtp(target) else target.rsplit('/', 1)[0] + '/' + name + '.png'
         if alias == target:
             return None
         content = read_target(alias)
@@ -359,6 +368,8 @@ def existing_rom_target(payload, target):
 
 
 def target_path(root, system, kind, filename):
+    if mtp.is_mtp(root):
+        return mtp.join(root, system, kind, filename)
     if is_adb_uri(root):
         return root.rstrip('/') + '/' + system + '/' + kind + '/' + filename
     return str(Path(root).expanduser().resolve() / system / kind / filename)
@@ -466,7 +477,7 @@ def preview(payload):
             raise ValueError(f'独立名称对应的{KIND_LABELS[kind]}图片已存在，请换一个名称，避免覆盖其他图片')
         rom_target = existing_rom_target(payload, target)
         current_target = rom_target['target'] if rom_target else (
-            target.rsplit('/', 1)[0] + '/' + sanitize_filename(payload['label']) + '.png' if renaming else target)
+            target_path(root, system, kind, sanitize_filename(payload['label']) + '.png') if renaming else target)
         plans.append({'kind': kind, 'target': target, 'existing': existing,
                       'rom_target': rom_target, 'current_target': current_target})
 
@@ -548,6 +559,8 @@ def preview(payload):
 
 
 def backup_location(target, suffix):
+    if mtp.is_mtp(target):
+        return target + '.bak-' + suffix
     if target.lower().endswith('.lpl'):
         root = app_paths.user_data_dir() / 'playlist-backups'
         root.mkdir(parents=True, exist_ok=True)
@@ -556,6 +569,8 @@ def backup_location(target, suffix):
 
 
 def write_target(target, content, expected, suffix=None):
+    if mtp.is_mtp(target):
+        return mtp.write(target, content, expected, suffix=suffix)
     before = read_target(target)
     if digest(before) != expected:
         raise RuntimeError('目标图片已改变，请重新预览后确认')
@@ -671,7 +686,7 @@ def apply_independent(manifest, directory, token, receipt):
     lost response. Unchanged shared images are never overwritten or deleted.
     """
     playlist_path = manifest['playlist_path']
-    lock_path = app_paths.cache_dir() / 'locks' / ('playlist-' + digest(playlist_path.encode())) if is_adb_uri(playlist_path) else Path(playlist_path)
+    lock_path = app_paths.cache_dir() / 'locks' / ('playlist-' + digest(playlist_path.encode())) if is_adb_uri(playlist_path) or mtp.is_mtp(playlist_path) else Path(playlist_path)
     with file_lock(lock_path):
         updated = (directory / (token + '.lpl')).read_bytes()
         if digest(updated) != manifest['updated_playlist_digest']:

@@ -11,6 +11,8 @@ class ThumbnailDownloader:
     THUMBNAIL_TYPES = ["Named_Boxarts", "Named_Snaps", "Named_Titles"]
 
     def __init__(self, thumbnails_dir, max_workers=5):
+        if str(thumbnails_dir).startswith(('adb://', 'mtp://')):
+            raise ValueError('图片下载器只支持本地目录；设备图片请从游戏行的补图窗口处理')
         self.thumbnails_dir = thumbnails_dir
         self.max_workers = max_workers
         self.cancel_check = None

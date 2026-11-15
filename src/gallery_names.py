@@ -1,6 +1,7 @@
 """Conservative matching against actual Libretro gallery filenames."""
 import re
 from artwork_identity import title_key
+from rom_paths import DISC_MARKER
 
 # Verified spellings in the PCE gallery. Keep parts/sequels explicitly separate.
 PCE_ALIASES = {
@@ -26,6 +27,28 @@ def tags(name, languages=True):
             continue
         result.append(value)
     return tuple(sorted(result))
+
+
+def release_tags(name):
+    """Identity constraints; translation packaging is not a release or revision."""
+    if re.fullmatch(r'CN\s*\[[^\[\]]+\]', name, re.I):
+        return set()
+    marker = DISC_MARKER.search(name)
+    result = {'disc ' + (marker[1] or marker[2])} if marker else set()
+    for tag in tags(name):
+        if tag == 'cn' or re.match(r'^t[+-]', tag):
+            continue
+        tag = {'j': 'japan', 'u': 'usa', 'e': 'europe'}.get(tag, tag)
+        tag = re.sub(r'^(disc|disk|cd)\s*(\d+)$', r'disc \2', tag)
+        result.add(tag)
+    return result
+
+
+def release_candidates(source, names):
+    if source in names:
+        return [source]
+    constraints = release_tags(source)
+    return [name for name in names if constraints <= release_tags(name)]
 
 
 def matching_gallery_name(system, source, names):

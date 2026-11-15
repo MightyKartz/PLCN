@@ -1,0 +1,20 @@
+{
+  "Sega - Saturn": {
+    "role": "main",
+    "source": "https://raw.githubusercontent.com/libretro/libretro-database/master/metadat/redump/Sega%20-%20Saturn.dat",
+    "retrieved": "2026-11-15",
+    "version": "2026.11.14",
+    "sha256": "c35e633b092cb4c6954ff466a6f3ff53a81bcb087ad74a50e9fabf68c5443b49",
+    "game_blocks": 2632,
+    "supplement_sha256": "c84d93af36fd334177e69a26d0c887e39fc026b8e4e8207a0f13caec84ef6f91"
+  },
+  "Nintendo - Super Nintendo Entertainment System": {
+    "role": "main",
+    "source": "https://raw.githubusercontent.com/libretro/libretro-database/master/metadat/no-intro/Nintendo%20-%20Super%20Nintendo%20Entertainment%20System.dat",
+    "retrieved": "2026-11-15",
+    "version": "2026.11.14",
+    "sha256": "c46a41df05343c66c0a4d40cb13570ea9806a8539318667656fcbc835ae1c568",
+    "game_blocks": 3746,
+    "supplement_sha256": "3993e4bfe8effef13a043cf40e99b55c3f20085e7750b14f00318dd3b12e328a"
+  }
+}

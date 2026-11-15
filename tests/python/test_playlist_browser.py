@@ -13,9 +13,11 @@ from playlist_browser import read_playlist
 def test_browsing_preserves_all_entries_and_only_reads_existing_artwork(tmp_path, monkeypatch):
     def unexpected(*args, **kwargs):
         pytest.fail('Browsing must not analyze, download, or save a playlist')
-    import plcn
+    import playlist_service as plcn
+    import playlist_analysis
     from playlist_manager import PlaylistManager
     monkeypatch.setattr(plcn, 'analyze_playlist', unexpected)
+    monkeypatch.setattr(playlist_analysis, 'analyze_playlist', unexpected)
     monkeypatch.setattr(PlaylistManager, 'save', unexpected)
     monkeypatch.setattr(requests.sessions.Session, 'request', unexpected)
     root = tmp_path / '图片'

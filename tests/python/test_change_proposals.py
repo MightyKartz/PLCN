@@ -11,7 +11,8 @@ import pytest
 sys.path.append(os.path.join(os.getcwd(), "src"))
 
 import app_paths
-import plcn
+import playlist_service as plcn
+from playlist_manager import PlaylistManager
 
 
 FIXTURE_DIR = Path(__file__).resolve().parents[1] / "fixtures" / "playlists"
@@ -731,7 +732,7 @@ def test_apply_changes_reports_readback_failure_without_silent_success(tmp_path,
     def pretend_save_without_persisting(self, output_path=None):
         return None
 
-    monkeypatch.setattr(plcn.PlaylistManager, "save", pretend_save_without_persisting)
+    monkeypatch.setattr(PlaylistManager, "save", pretend_save_without_persisting)
 
     summary = plcn.apply_changes(
         str(playlist_path),
@@ -760,7 +761,7 @@ def test_apply_changes_readback_uses_index_not_any_duplicate_path(tmp_path, monk
     def pretend_save_without_persisting(self, output_path=None):
         return None
 
-    monkeypatch.setattr(plcn.PlaylistManager, "save", pretend_save_without_persisting)
+    monkeypatch.setattr(PlaylistManager, "save", pretend_save_without_persisting)
 
     summary = plcn.apply_changes(
         str(playlist_path),

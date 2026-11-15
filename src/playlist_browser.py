@@ -1,4 +1,5 @@
 """Read existing playlist entries and artwork without matching or writing names."""
+import mtp_runtime as mtp
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from urllib.parse import quote
@@ -15,7 +16,7 @@ def open_artwork_reader(thumbnails, system):
     if not thumbnails:
         return None, {}, ''
     validate_system(system)
-    if is_adb_uri(thumbnails):
+    if is_adb_uri(thumbnails) or mtp.is_mtp(thumbnails):
         from single_artwork import remote_inventory
         try:
             return None, {kind: remote_inventory(thumbnails, system, kind) for kind in THUMBNAIL_TYPES}, ''
@@ -43,7 +44,7 @@ def artwork_filenames(thumbnails, system, kind, remote_lookups=None):
 
 def artwork_statuses(label, rom_path, resolver=None, remote_lookups=None, thumbnails='', system=''):
     """Per-type state for one entry; reads only, matches and writes nothing."""
-    from plcn import find_existing_boxart
+    from playlist_artwork import find_existing_boxart
     statuses = {}
     for kind in THUMBNAIL_TYPES:
         status, path = 'missing', None
@@ -61,10 +62,10 @@ def artwork_statuses(label, rom_path, resolver=None, remote_lookups=None, thumbn
 def read_playlist(path, system='', thumbnails=''):
     if not path:
         raise ValueError('请选择游戏列表')
-    if is_adb_uri(path):
+    if is_adb_uri(path) or mtp.is_mtp(path):
         # Rapid selections can overlap: never read another request's partial pull.
         with TemporaryDirectory(prefix='plcn-browse-') as temporary:
-            playlist = PlaylistManager(materialize_adb_file(path, cache_dir=temporary))
+            playlist = PlaylistManager(mtp.materialize(path, temporary) if mtp.is_mtp(path) else materialize_adb_file(path, cache_dir=temporary))
     else:
         playlist = PlaylistManager(Path(path).expanduser())
     name = str(path).replace('\\', '/').rsplit('/', 1)[-1]

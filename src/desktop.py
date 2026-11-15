@@ -30,11 +30,21 @@ def main():
         import server
         import data_pack
         assert (app_paths.resource_root() / 'src/templates/plcn.html').is_file()
+        assert all((app_paths.resource_root() / 'src/templates' / name).is_file()
+                   for name in server.UI_ASSETS)
         assert app_paths.default_source().is_dir()
+        import hashlib
+        dat_root = app_paths.resource_root() / 'data/libretro-db'
+        for system, metadata in json.loads((dat_root / 'sources.json').read_text()).items():
+            assert hashlib.sha256((dat_root / 'dat' / (system + '.dat')).read_bytes()).hexdigest() == metadata['sha256']
+            assert hashlib.sha256((dat_root / 'supplemental' / (system + '.dat')).read_bytes()).hexdigest() == metadata['supplement_sha256']
         adb_version = None
         if getattr(sys, 'frozen', False):
             from adb_runtime import check_bundled_adb
             adb_version = check_bundled_adb()
+            if sys.platform == 'darwin':
+                import mtp_runtime
+                mtp_runtime.library()
         app_paths.initialize()
         Path(app_paths.user_data_dir() / 'self-check.json').write_text(json.dumps({'ok': True, 'platform': sys.platform, 'adb_version': adb_version}), encoding='utf-8')
         return

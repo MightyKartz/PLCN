@@ -13,6 +13,10 @@ def rom_title(path):
     return PurePosixPath(rom_filename(path)).stem
 
 
+# Parenthesized standard tags and common unparenthesized ROM suffixes.
+DISC_MARKER = re.compile(r'\((?:Disc|Disk|CD)\s*(\d+)\)|[\s_-]+(?:Disc|Disk|CD)\s*(\d+)$', re.I)
+
+
 def artwork_titles(system, path, label=''):
     """DOS launch programs are not game titles; keep ROM display paths intact."""
     if system != 'DOS':

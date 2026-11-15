@@ -2,9 +2,11 @@ import json
 import os
 import sys
 
+import pytest
+
 sys.path.append(os.path.join(os.getcwd(), "src"))
 
-from retroarch_scanner import materialize_adb_file, scan_retroarch_target
+from retroarch_scanner import materialize_adb_file, push_adb_directory, scan_retroarch_target
 
 
 def write_playlist(path, db_name="Nintendo - Super Nintendo Entertainment System.lpl"):
@@ -53,6 +55,7 @@ def test_scan_retroarch_root_lists_playlists(tmp_path):
     assert scan["root_path"] == str(root)
     assert scan["directories"]["playlists"] == str(playlists)
     assert scan["directories"]["thumbnails"] == str(thumbnails)
+    assert scan["directories"]["thumbnails_exists"] is True
     assert scan["directories"]["config"] == str(root / "retroarch.cfg")
     assert scan["totals"] == {"playlists": 1, "items": 2}
     assert scan["playlists"][0]["system"] == "Nintendo - Super Nintendo Entertainment System"
@@ -135,6 +138,7 @@ def test_auto_scan_detects_adb_retroarch_device():
     assert scan["root_path"] == "adb://RG476H01077813/sdcard/RetroArch"
     assert scan["directories"]["playlists"] == "adb://RG476H01077813/sdcard/RetroArch/playlists"
     assert scan["directories"]["thumbnails"] == "adb://RG476H01077813/sdcard/RetroArch/thumbnails"
+    assert scan["directories"]["thumbnails_exists"] is True
     assert scan["totals"] == {"playlists": 1, "items": 1}
     assert scan["playlists"][0]["path"].startswith("adb://RG476H01077813/")
     assert scan["playlists"][0]["system"] == "Nintendo - Super Nintendo Entertainment System"
@@ -211,3 +215,118 @@ def test_auto_scan_reports_connected_device_without_playlists():
     assert scan['device']['serial'] == 'serial'
     assert scan['playlists'] == []
     assert '未找到 .lpl' in scan['message']
+
+
+def test_scan_without_thumbnails_dir_reports_default_path(tmp_path):
+    root = tmp_path / "RetroArch"
+    playlists = root / "playlists"
+    playlists.mkdir(parents=True)
+    write_playlist(playlists / "Nintendo - Super Nintendo Entertainment System.lpl")
+
+    scan = scan_retroarch_target(str(root))
+
+    assert scan["directories"]["thumbnails"] == str(root / "thumbnails")
+    assert scan["directories"]["thumbnails_exists"] is False
+    assert not (root / "thumbnails").exists()
+
+
+def test_adb_scan_defaults_thumbnails_to_library_root():
+    playlist_json = json.dumps(
+        {"version": "1.5", "items": [{"path": "/roms/snes/Game.sfc", "label": "Game",
+                                      "db_name": "Nintendo - Super Nintendo Entertainment System.lpl"}]},
+        ensure_ascii=False,
+    )
+
+    def fake_adb(args, timeout=10):
+        if args == ["devices", "-l"]:
+            return "List of devices attached\nRG476H01077813\tdevice usb:1-2 model:RG_476H device:ums9620\n"
+        if args[:3] == ["-s", "RG476H01077813", "shell"]:
+            script = args[3]
+            if "/sdcard/RetroArch" in script and "playlists" in script and "find" not in script:
+                return "/sdcard/RetroArch\n"
+            if "find" in script and "/sdcard/RetroArch/playlists" in script:
+                return "/sdcard/RetroArch/playlists/Nintendo - Super Nintendo Entertainment System.lpl\n"
+            if "thumbnails" in script or "retroarch.cfg" in script:
+                return ""
+            if "stat" in script:
+                return "1780351333\n"
+        if args[:4] == ["-s", "RG476H01077813", "exec-out", "cat"]:
+            return playlist_json
+        return ""
+
+    scan = scan_retroarch_target(None, local_candidates=[], adb_runner=fake_adb)
+
+    assert scan["connected"] is True
+    assert scan["directories"]["thumbnails"] == "adb://RG476H01077813/sdcard/RetroArch/thumbnails"
+    assert scan["directories"]["thumbnails_exists"] is False
+
+
+def test_missing_default_thumbnails_dir_reads_as_all_missing(tmp_path):
+    from playlist_browser import artwork_statuses, open_artwork_reader
+
+    missing = str(tmp_path / "thumbnails")
+    resolver, lookups, error = open_artwork_reader(missing, "Nintendo - Super Nintendo Entertainment System")
+    assert error == ""
+    statuses = artwork_statuses("游戏", "/roms/snes/game.sfc", resolver, lookups, missing,
+                                "Nintendo - Super Nintendo Entertainment System")
+    assert statuses
+    assert all(entry["status"] == "missing" for entry in statuses.values())
+
+
+@pytest.mark.skipif(os.name == "nt", reason="Local POSIX shell emulates the Android shell; unavailable on Windows")
+def test_missing_remote_artwork_dir_is_empty_inventory(tmp_path, monkeypatch):
+    import subprocess
+    import single_artwork as art
+
+    def local_shell(serial, script):
+        result = subprocess.run(["/bin/sh", "-c", script], capture_output=True, text=True)
+        if result.returncode:
+            raise RuntimeError(result.stderr or "adb shell failed")
+        return result.stdout.strip()
+
+    monkeypatch.setattr(art, "adb_command", local_shell)
+    missing = tmp_path / "thumbnails"
+    inventory = art.remote_inventory("adb://serial" + str(missing), "GBA", "Named_Boxarts")
+    assert inventory["filenames"] == set()
+    file_leaf = tmp_path / "root" / "GBA"
+    file_leaf.mkdir(parents=True)
+    (file_leaf / "Named_Boxarts").write_text("x", encoding="utf-8")
+    with pytest.raises(Exception):
+        art.remote_inventory("adb://serial" + str(tmp_path / "root"), "GBA", "Named_Boxarts")
+
+
+def test_thumbnail_download_creates_missing_artwork_directories(tmp_path):
+    import io
+    from types import SimpleNamespace
+    from PIL import Image
+    from thumbnail_downloader import ThumbnailDownloader
+
+    image = io.BytesIO()
+    Image.new("RGB", (4, 4), (10, 20, 30)).save(image, format="PNG")
+    downloader = ThumbnailDownloader(str(tmp_path / "thumbnails"))
+    downloader.session = SimpleNamespace(
+        get=lambda *args, **kwargs: SimpleNamespace(status_code=200, content=image.getvalue()))
+    results = downloader.download_thumbnail("GBA", "Game (USA)", "游戏")
+    assert all(result["status"] == "success" for result in results)
+    for result in results:
+        target = tmp_path / "thumbnails" / "GBA" / result["type"]
+        assert target.is_dir()
+        assert (target / os.path.basename(result["path"])).is_file()
+
+
+def test_push_adb_directory_creates_remote_dirs(tmp_path):
+    local = tmp_path / "images" / "GBA" / "Named_Boxarts"
+    local.mkdir(parents=True)
+    (local / "游戏.png").write_bytes(b"png")
+    calls = []
+
+    def fake_adb(args, timeout=10):
+        calls.append(args)
+        return ""
+
+    push_adb_directory(str(tmp_path / "images"), "adb://serial/sdcard/thumbnails", adb_runner=fake_adb)
+
+    shell = [call[3] for call in calls if call[:3] == ["-s", "serial", "shell"]]
+    assert any(command.startswith("mkdir -p") and "thumbnails" in command for command in shell)
+    pushes = [call for call in calls if call[:3] == ["-s", "serial", "push"]]
+    assert pushes and pushes[0][-1] == "/sdcard/thumbnails"

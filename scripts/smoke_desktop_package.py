@@ -8,6 +8,7 @@ import argparse
 from contextlib import ExitStack, contextmanager
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -42,7 +43,8 @@ def service(binary, profile):
                 state = json.loads((profile / 'instance.json').read_text(encoding='utf-8'))
                 assert state['pid'] == process.pid, 'Instance state belongs to another process'
                 candidate = state['url']
-                client.get(candidate, timeout=2).raise_for_status()
+                page = client.get(candidate, timeout=2)
+                page.raise_for_status()
                 reply = client.get(candidate + '/api/instance', timeout=2)
                 reply.raise_for_status()
                 assert reply.json()['instance_id'] == state['instance_id'], 'Port reached the wrong profile'
@@ -52,7 +54,9 @@ def service(binary, profile):
                 time.sleep(.2)
         if url is None:
             raise TimeoutError('Desktop did not become ready within 45 seconds')
-        for asset in ('desktop.js', 'workflow.js', 'desktop.css'):
+        assets = set(re.findall(r'(?:src|href)="/assets/([^"/]+)"', page.text))
+        assert assets, 'Packaged page has no UI assets'
+        for asset in sorted(assets):
             response = client.get(url + '/assets/' + asset, timeout=5)
             response.raise_for_status()
             assert response.content, 'Empty packaged asset: ' + asset

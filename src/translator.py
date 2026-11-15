@@ -53,6 +53,18 @@ class Translator:
         if not text:
             return text, text
             
+        # A shortened ROM filename must resolve before fuzzy matching Darkseed.
+        if self.system_name == 'Sega - Saturn' and self.normalize_name(text) == 'chaosseed':
+            self.last_match_source = 'curated_alias'
+            return '仙窟活龙大战', 'Senkutsu Katsuryu Taisen - Chaos Seed'
+
+        if self.system_name == 'Sega - Saturn':
+            from artwork_identity import rom_search_alias
+            alias = rom_search_alias(self.system_name, text)
+            if alias == 'Kuusou Kagaku Sekai Gulliver Boy':
+                self.last_match_source = 'curated_alias'
+                return '空想科学世界', alias
+
         # 1. Exact match (English -> Chinese)
         chinese = self.db.search_by_english(text, system=self.system_name)
         if chinese:
@@ -84,12 +96,12 @@ class Translator:
         # 5. Alias / Acronym handling (Hardcoded fallbacks)
         # SRWF -> Super Robot Taisen F
         acronyms = {
-            "srwf": "Super Robot Taisen F (Japan) (Rev A) (10M, 11M, 12M, 13M)",
-            "srwff": "Super Robot Taisen F - Kanketsu-hen (Japan) (Rev A) (10M)",
+            "srwf": "Super Robot Taisen F",
+            "srwff": "Super Robot Taisen F - Kanketsu-hen",
             "srw": "Super Robot Taisen (Japan)"
         }
         
-        if norm_text in acronyms:
+        if norm_text in acronyms and self.system_name == 'Sega - Saturn':
             self.last_match_source = 'curated_alias'
             standard_english = acronyms[norm_text]
             # Try to find Chinese translation for this standard English name in DB

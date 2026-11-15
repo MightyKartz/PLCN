@@ -1,0 +1,2 @@
+# DAT digests must use the exact upstream bytes on every platform.
+data/libretro-db/**/*.dat -text

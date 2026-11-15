@@ -410,13 +410,16 @@ def _scan_adb_target(target_path, candidates, adb_runner=None):
             "connected": False, "transport": "adb", "device": device,
             "target_path": target_path, "root_path": "", "status": "not_found",
             "message": "设备未连接或未授权，请重新连接设备并允许 USB 调试后重试。",
-            "directories": {"playlists": None, "thumbnails": None, "config": None},
+            "directories": {"playlists": None, "thumbnails": None, "thumbnails_exists": False, "config": None},
             "playlists": [], "totals": {"playlists": 0, "items": 0},
             "candidates": candidates,
         }
 
     root, playlists_dir = _find_adb_root(serial, requested_path, adb_runner=adb_runner)
     thumbnails_dir = _find_adb_thumbnails(serial, root, adb_runner=adb_runner)
+    thumbnails_exists = bool(thumbnails_dir)
+    if root and not thumbnails_dir:
+        thumbnails_dir = root + "/thumbnails"
     config_file = _find_adb_config(serial, root, adb_runner=adb_runner)
     playlists = _list_adb_playlists(serial, playlists_dir, adb_runner=adb_runner)
     total_items = sum(item["item_count"] for item in playlists if item.get("valid"))
@@ -434,6 +437,7 @@ def _scan_adb_target(target_path, candidates, adb_runner=None):
         "directories": {
             "playlists": adb_uri(serial, playlists_dir) if playlists_dir else None,
             "thumbnails": adb_uri(serial, thumbnails_dir) if thumbnails_dir else None,
+            "thumbnails_exists": thumbnails_exists,
             "config": adb_uri(serial, config_file) if config_file else None,
         },
         "playlists": playlists,
@@ -531,6 +535,9 @@ def push_adb_directory(local_dir, uri, adb_runner=None):
 
 
 def scan_retroarch_target(target_path=None, *, local_candidates=None, adb_runner=None):
+    if str(target_path or '').startswith('mtp://'):
+        from mtp_runtime import scan
+        return scan(target_path)
     local_candidate_list = default_scan_candidates() if local_candidates is None else local_candidates
     adb_candidate_list = adb_scan_candidates(adb_runner=adb_runner)
     candidates = local_candidate_list + adb_candidate_list
@@ -561,7 +568,7 @@ def scan_retroarch_target(target_path=None, *, local_candidates=None, adb_runner
             "root_path": "",
             "status": "not_found",
             "message": "未找到默认 RetroArch 目录，请手动选择本地、挂载设备目录，或确认 ADB 设备已授权。",
-            "directories": {"playlists": None, "thumbnails": None, "config": None},
+            "directories": {"playlists": None, "thumbnails": None, "thumbnails_exists": False, "config": None},
             "playlists": [],
             "totals": {"playlists": 0, "items": 0},
             "candidates": candidates,
@@ -575,7 +582,7 @@ def scan_retroarch_target(target_path=None, *, local_candidates=None, adb_runner
             "root_path": "",
             "status": "not_found",
             "message": "目标目录不存在。",
-            "directories": {"playlists": None, "thumbnails": None, "config": None},
+            "directories": {"playlists": None, "thumbnails": None, "thumbnails_exists": False, "config": None},
             "playlists": [],
             "totals": {"playlists": 0, "items": 0},
             "candidates": candidates,
@@ -583,6 +590,9 @@ def scan_retroarch_target(target_path=None, *, local_candidates=None, adb_runner
 
     root, playlists_dir = _infer_layout(target)
     thumbnails_dir = _find_child_dir(root, THUMBNAIL_DIR_NAMES)
+    thumbnails_exists = thumbnails_dir is not None
+    if thumbnails_dir is None:
+        thumbnails_dir = root / "thumbnails"
     config_file = _find_config(root)
     playlists = _list_playlists(playlists_dir)
     total_items = sum(item["item_count"] for item in playlists if item.get("valid"))
@@ -598,6 +608,7 @@ def scan_retroarch_target(target_path=None, *, local_candidates=None, adb_runner
         "directories": {
             "playlists": _path_string(playlists_dir),
             "thumbnails": _path_string(thumbnails_dir),
+            "thumbnails_exists": thumbnails_exists,
             "config": _path_string(config_file),
         },
         "playlists": playlists,

@@ -20,3 +20,11 @@ def test_frozen_package_cannot_hide_missing_adb_with_host_install(tmp_path, monk
     monkeypatch.setattr(adb.shutil, 'which', lambda _: '/unrelated/adb')
     with pytest.raises(FileNotFoundError):
         adb.adb_executable()
+
+
+def test_empty_macos_usb_enumeration_means_no_devices(monkeypatch):
+    from types import SimpleNamespace
+    import adb_runtime
+    monkeypatch.setattr(adb_runtime.sys,'platform','darwin')
+    monkeypatch.setattr(adb_runtime.subprocess,'run',lambda *args,**kwargs:SimpleNamespace(stdout=b'',returncode=0))
+    assert adb_runtime.usb_android_devices()==[]

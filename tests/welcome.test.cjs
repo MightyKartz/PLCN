@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const source = fs.readFileSync('src/templates/welcome.js', 'utf8');
-function harness(fetch) {
+function harness(fetch = async()=>({ok:true,json:async()=>({sources:[],recent:[]})})) {
     const root = {value:''};
     const context = {fetch, workbench:{operation:null}, workbenchText:zh=>zh,
         document:{getElementById:()=>root}, scanDevice:async()=>{context.opened++}, opened:0};
@@ -32,8 +32,49 @@ test('failed discovery clears stale ready devices and keeps the error', async()=
     assert.equal(c.state.loading,false);
 });
 test('explicit opening respects another running operation', async()=>{
-    const c=harness(); c.workbench.operation='apply';
+    const c=harness(); await c.refreshLibrarySources(); c.workbench.operation='apply';
     await c.openLibrarySource({path:'adb://device'}); assert.equal(c.opened,0);
     c.workbench.operation=null; await c.openLibrarySource({path:'adb://device'});
     assert.equal(c.opened,1); assert.equal(c.state.opening,'');
+});
+
+test('recent library keeps the same label as its connected card', async()=>{
+    const c=harness();
+    const path='mtp://device/00010001/RetroArch';
+    c.state.data={sources:[{path,label:'内部共享存储空间'}]};
+    let saved;
+    c.desktopRequest=async(url,entry)=>{saved=entry};
+    await c.rememberOpenedLibrary({connected:true,root_path:path,playlists:[{}],device:{model:'Android MTP'}});
+    assert.equal(saved.label,'内部共享存储空间');
+    assert.equal(saved.path,path);
+});
+
+test('device selection groups MTP storages and opens a ready library without starting content scan', async()=>{
+    const c=harness();
+    const storages=[
+        {transport:'mtp',serial:'handheld',path:'mtp://handheld/00020001/RetroArch',label:'Games',status:'no_library'},
+        {transport:'mtp',serial:'handheld',path:'mtp://handheld/00010001/RetroArch',label:'Internal',status:'ready'},
+        {transport:'mtp',serial:'other',path:'mtp://other/00010001/RetroArch',label:'Other',status:'ready'}];
+    const devices=c.homeDeviceSources(storages);
+    assert.equal(devices.length,2);assert.equal(devices[0].storages.length,2);
+    assert.equal(devices[0].path,storages[1].path);assert.equal(devices[0].status,'ready');
+    assert.equal(storages[0].status,'no_library');assert.equal(c.opened,0);
+    await c.refreshLibrarySources();
+    await c.openLibrarySource(devices[0]);
+    assert.equal(c.opened,1);assert.equal(c.state.device.storages.length,2);
+});
+
+test('a handheld without existing lists remains selectable', async()=>{
+    const c=harness();
+    const devices=c.homeDeviceSources([{transport:'mtp',path:'mtp://new/00010001/RetroArch',label:'Internal',status:'no_library'}]);
+    assert.equal(devices.length,1);assert.equal(devices[0].status,'no_library');
+    await c.refreshLibrarySources();
+    await c.openLibrarySource(devices[0]);assert.equal(c.opened,1);
+});
+
+test('home remains busy until its first discovery finishes', async()=>{
+    const c=harness();
+    assert.equal(c.state.loading,true);
+    await c.openLibrarySource({path:'adb://device'});assert.equal(c.opened,0);
+    await c.refreshLibrarySources();assert.equal(c.state.loading,false);
 });
