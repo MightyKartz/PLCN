@@ -85,6 +85,7 @@ function visible(selector) {
 }
 
 async function click(selector) {
+    console.log('Click:', selector);
     await waitFor(visible, `visible ${selector}`, selector);
     await waitFor(selector => !document.querySelector(selector).disabled, `enabled ${selector}`, selector);
     const point = await evaluate(selector => {
@@ -100,6 +101,7 @@ async function click(selector) {
 }
 
 async function screenshot(name) {
+    console.log('Screenshot:', name);
     await send('Input.dispatchMouseEvent', {type: 'mouseMoved', x: 0, y: 0});
     await delay(200); // Let theme transitions settle before capturing visual evidence.
     const {data} = await send('Page.captureScreenshot', {format: 'png'});
