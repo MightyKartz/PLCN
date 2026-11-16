@@ -7,7 +7,7 @@ from playlist_analysis import analyze_playlist
 
 def test_mame_catalog_contains_correct_romset_names_not_neogeo_fuzzy_guesses():
     source = Path(__file__).resolve().parents[2] / 'data' / 'rom-name-cn' / 'MAME.csv'
-    with source.open() as handle:
+    with source.open(encoding='utf-8') as handle:
         rows = {r['MAME Name']: r for r in csv.DictReader(handle)}
     assert len(rows) > 2000
     assert rows['hook']['CN Name'] == '铁钩船长'
@@ -25,10 +25,10 @@ def test_missing_box_art_uses_same_game_snapshot_for_preview_and_download(tmp_pa
     import io
 
     system = 'MAME';source = tmp_path / 'names';source.mkdir()
-    (source / 'MAME.csv').write_text('Name EN,Name CN\nMahjong Example,麻雀示例\n')
+    (source / 'MAME.csv').write_text('Name EN,Name CN\nMahjong Example,麻雀示例\n', encoding='utf-8')
     monkeypatch.setattr('single_artwork.catalog_names', lambda system, kind: [] if kind == 'Named_Boxarts' else ['Mahjong Example'])
     playlist = tmp_path / 'games.lpl'
-    playlist.write_text(json.dumps({'items': [{'label': '麻雀示例', 'path': '/roms/麻雀示例.zip'}]}))
+    playlist.write_text(json.dumps({'items': [{'label': '麻雀示例', 'path': '/roms/麻雀示例.zip'}]}), encoding='utf-8')
     row = analyze_playlist(str(playlist), system, str(source), verify_artwork=True)[0]
     assert row['thumbnail_source'] == 'Mahjong Example'
     assert row['artwork_cover_fallback'] == 'Named_Snaps'

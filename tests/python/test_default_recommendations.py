@@ -13,12 +13,12 @@ from playlist_analysis import analyze_playlist
 ])
 def test_candidates_use_default_on_every_system_and_keep_existing_label(tmp_path, monkeypatch, system):
     source = tmp_path / 'names'; source.mkdir()
-    with (source / (system + '.csv')).open('w', newline='') as f:
+    with (source / (system + '.csv')).open('w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f);writer.writerow(['Name EN', 'Name CN'])
         writer.writerows([['Frontier (Japan)', '边境任务'], ['Frontier (USA)', '边境任务']])
     monkeypatch.setattr('single_artwork.catalog_names', lambda *args: ['Frontier (Japan)', 'Frontier (USA)'])
     path = tmp_path / 'games.lpl'
-    path.write_text(json.dumps({'items': [{'path': '/roms/边境使命.bin', 'label': '边境使命'}]}))
+    path.write_text(json.dumps({'items': [{'path': '/roms/边境使命.bin', 'label': '边境使命'}]}), encoding='utf-8')
     before = path.read_bytes()
     row = analyze_playlist(str(path), system, str(source), verify_artwork=True)[0]
     assert row['identity']['state'] == 'recommended'
