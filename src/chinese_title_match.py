@@ -42,6 +42,9 @@ def resolve_chinese_titles(proposals, translators):
                         or not isinstance(entry.get('aliases'), list)
                         or any(not isinstance(a, str) or not a.strip() for a in entry['aliases'])):
                     raise ValueError('完整标题别名需要主机、中英文名称与别名数组')
+                if (not isinstance(entry.get('english_names', []), list)
+                        or any(not isinstance(n, str) or not n.strip() for n in entry.get('english_names', []))):
+                    raise ValueError('同作品版本名称必须是字符串数组')
         if replacements is None:
             path = Path(translator.rom_name_cn_path) / 'name_alias(Chinese).json'
             metadata = json.loads(path.read_text(encoding='utf-8-sig')) if path.exists() else {}
@@ -90,12 +93,16 @@ def resolve_chinese_titles(proposals, translators):
         curated = rom_search_alias(system, query)
         if title_alias:
             curated = title_alias['english_name']
+        curated_families = {family_key(curated)} if curated else set()
+        if title_alias:
+            curated_families.update(family_key(n) for n in title_alias.get('english_names', []))
         constraints = release_tags(query) - {'a', 'b', 'chs', 'cht'}
         digits = re.findall(r'\d+', key)
         checksums = {e['resolved_name'] for e in row.get('match_diagnostics', {}).get('evidence_chain', [])
                      if e.get('source') in {'playlist_crc32', 'local_zip_crc'} and e.get('resolved_name')}
         ranked = {}
-        records = catalogs[system] + ([title_alias] if title_alias else [])
+        records = catalogs[system] + ([dict(title_alias, english_name=name)
+                   for name in [title_alias['english_name']] + title_alias.get('english_names', [])] if title_alias else [])
         for record in records:
             english, chinese = record['english_name'], record['chinese_name']
             if title_alias:
@@ -106,7 +113,7 @@ def resolve_chinese_titles(proposals, translators):
             if not candidate:
                 continue
             if curated:
-                if family_key(curated) != family_key(english):
+                if family_key(english) not in curated_families:
                     continue
                 grade, score = 4, 100
             else:

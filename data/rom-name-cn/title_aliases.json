@@ -70,5 +70,41 @@
       "阿斯特堡的恶魔"
     ],
     "source": "https://neofid-studios.com/zh/products/demons-of-asteborg-cartridge-only-for-sega-megadrive-genesis-i-ii-and-iii"
+  },
+  {
+    "system": "Nintendo - Game Boy Color",
+    "english_name": "Dragon Quest Monsters - Terry no Wonderland (Japan) (SGB Enhanced) (GB Compatible)",
+    "chinese_name": "勇者斗恶龙怪兽篇",
+    "aliases": [
+      "勇者斗恶龙 怪兽篇1",
+      "勇者斗恶龙 怪兽篇",
+      "勇者斗恶龙怪兽仙境1"
+    ],
+    "source": "https://www.nintendo.com/jp/topics/article/1e53ea46-cdf8-11e9-b641-063b7ac45a6d"
+  },
+  {
+    "system": "Nintendo - Game Boy Color",
+    "english_name": "Dragon Quest Monsters 2 - Maruta no Fushigi na Kagi - Ruka no Tabidachi (Japan) (SGB Enhanced) (GB Compatible)",
+    "english_names": [
+      "Dragon Quest Monsters 2 - Maruta no Fushigi na Kagi - Iru no Bouken (Japan) (SGB Enhanced) (GB Compatible)"
+    ],
+    "chinese_name": "勇者斗恶龙怪兽篇2",
+    "aliases": [
+      "勇者斗恶龙 怪兽篇2",
+      "勇者斗恶龙怪兽仙境2"
+    ],
+    "source": "https://www.tohan.jp/wp/wp-content/themes/tohan/pdf/2001_best.pdf"
+  },
+  {
+    "system": "Nintendo - Game Boy Color",
+    "english_name": "Star Ocean - Blue Sphere (Japan) (SGB Enhanced) (GB Compatible)",
+    "chinese_name": "星海传说 - 蓝色星球",
+    "aliases": [
+      "星之海洋 蔚藍星球",
+      "星之海洋 蔚蓝星球",
+      "星之海洋 蓝色星球",
+      "星之海洋 藍色星球"
+    ],
+    "source": "https://zh.wikipedia.org/wiki/史克威尔艾尼克斯手机游戏列表"
   }
 ]
