@@ -204,3 +204,23 @@ def test_gulliver_short_disc_names_match_their_own_official_images(tmp_path, mon
         assert playlist.read_bytes() == before
     assert release_candidates('GulliverBoy Disc1', names) == [names[0]]
     assert release_candidates('GulliverBoy Disc2', names) == [names[1]]
+
+
+def test_translated_grandia_disc_labels_do_not_conflict_with_same_english_family(saturn_library,monkeypatch):
+    monkeypatch.setattr(LibretroDB,'get_dat_path',ORIGINAL_GET_DAT_PATH)
+    source,playlist=saturn_library
+    path=playlist([('格兰蒂亚/Grandia CN (Disc 1)','格兰蒂亚 (Disc 1)'),
+                   ('格兰蒂亚/Grandia CN (Disc 2)','格兰蒂亚 (Disc 2)')])
+    rows=analyze_playlist(path,'Sega - Saturn',str(source),verify_artwork=True)
+    for number,row in enumerate(rows,1):
+        assert row['identity']['state']!='conflict',row['match_diagnostics']
+        assert row['new_label']==f'格兰蒂亚 (Disc {number})'
+
+
+def test_translated_disc_label_with_a_different_disc_number_remains_conflicting(saturn_library,monkeypatch):
+    monkeypatch.setattr(LibretroDB,'get_dat_path',ORIGINAL_GET_DAT_PATH)
+    source,playlist=saturn_library
+    path=playlist([('格兰蒂亚/Grandia CN (Disc 1)','格兰蒂亚 (Disc 2)')])
+    row=analyze_playlist(path,'Sega - Saturn',str(source),verify_artwork=True)[0]
+    assert row['identity']['state']=='conflict'
+    assert row['match_diagnostics']['conflicts']

@@ -4,7 +4,7 @@ import re
 from playlist_manager import PlaylistManager
 from translator import Translator
 from rom_fingerprint import build_rom_match_candidates
-from rom_paths import disc_group, preferred_disc_entry, rom_filename, rom_title
+from rom_paths import disc_group, preferred_disc_entry, rom_filename, rom_title, DISC_MARKER
 from manual_overrides import find_override, load_overrides
 from artwork_resolver import ArtworkResolver, sanitize_filename, validate_system
 from playlist_proposals import (
@@ -570,12 +570,22 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
             if thumbnail_source:
                 print(f"  [{i}] Found thumbnail source: '{thumbnail_source}'")
 
+            label_identity = thumbnail_source if chinese_label_source == "exact_alias" else new_label
+            if thumbnail_source and chinese_label_source == "rom_filename":
+                known_chinese = translator.db.search_by_english(thumbnail_source, system=translator.system_name)
+                # Compare a known translation in one language. A disc suffix is
+                # display metadata, but disagreeing disc numbers remain a conflict.
+                disc_numbers = {marker[1] or marker[2] for value in (original_label, rom_title(path), thumbnail_source)
+                                if (marker := DISC_MARKER.search(value))}
+                if (known_chinese and len(disc_numbers) <= 1
+                        and normalize_value(DISC_MARKER.sub('', original_label)).strip() == normalize_value(DISC_MARKER.sub('', known_chinese)).strip()):
+                    label_identity = thumbnail_source
             diagnostics = {
                 "evidence_chain": [
                     {
                         "source": "exact_alias" if chinese_label_source == "exact_alias" else "fuzzy_candidate",
                         "value": original_label,
-                        "resolved_name": thumbnail_source if chinese_label_source == "exact_alias" else new_label,
+                        "resolved_name": label_identity,
                         "note": "Chinese playlist label",
                     }
                 ]
