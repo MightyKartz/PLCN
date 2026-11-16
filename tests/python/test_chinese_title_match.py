@@ -114,3 +114,44 @@ def test_catalog_chinese_alias_preserves_user_name_and_resolves_artwork():
     assert row['new_label'] == '钢忍'
     assert row['thumbnail_source'] == 'Hagane (Japan)'
     assert row['translation_match_source'] == 'title_family'
+
+
+@pytest.mark.parametrize('system,matched', [('Sega - Mega Drive - Genesis', True),
+                                           ('Nintendo - Super Nintendo Entertainment System', False)])
+def test_full_title_alias_is_platform_scoped_and_keeps_regional_sequel_numbers(tmp_path, monkeypatch, system, matched):
+    source = tmp_path / 'names'
+    source.mkdir()
+    with (source / (system + '.csv')).open('w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(['Name EN', 'Name CN'])
+        writer.writerow(['Shadow III (USA)', '影子大师3'])
+    (source / 'title_aliases.json').write_text(json.dumps([
+        {'system': 'Sega - Mega Drive - Genesis', 'english_name': 'Shadow III (USA)',
+         'chinese_name': '超级暗影2', 'aliases': ['超级暗影3']},
+        {'system': 'Sega - Mega Drive - Genesis', 'english_name': 'New Homebrew',
+         'chinese_name': '新作', 'aliases': ['新作别名']}
+    ]))
+    monkeypatch.setattr('single_artwork.catalog_names', lambda *args: ['Shadow III (USA)'])
+    playlist = tmp_path / 'games.lpl'
+    names = ['超级暗影3', '超级暗影3外传', '新作别名']
+    playlist.write_text(json.dumps({'items': [{'label': n, 'path': '/roms/' + n + '.bin'} for n in names]}))
+    rows = analyze_playlist(str(playlist), system, str(source), verify_artwork=True)
+    assert rows[0]['identity']['requires_review'] is not matched
+    assert rows[1]['identity']['requires_review']
+    assert rows[2]['identity']['requires_review'] is not matched
+    assert [r['new_label'] for r in rows] == names
+    if matched:
+        assert rows[0]['thumbnail_source'] == 'Shadow III (USA)'
+        assert rows[2]['thumbnail_source'] is None
+        assert rows[2]['artwork_gallery_status'] == 'not_found'
+        assert not rows[0]['identity']['release_verified']
+
+
+def test_invalid_full_title_alias_rejected_at_data_boundary(tmp_path):
+    from types import SimpleNamespace
+    from chinese_title_match import resolve_chinese_titles
+
+    (tmp_path / 'title_aliases.json').write_text('[{"system": "MD", "aliases": [123]}]')
+    row = {'system': 'MD', 'path': '/roms/旧译名.bin', 'match_source': 'playlist'}
+    with pytest.raises(ValueError, match='完整标题别名'):
+        resolve_chinese_titles([row], {'MD': SimpleNamespace(rom_name_cn_path=str(tmp_path))})

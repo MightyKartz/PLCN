@@ -25,7 +25,7 @@ UPSTREAM = 'yingw/rom-name-cn'
 def source_files(source):
     root = Path(source)
     return sorted(p for p in root.iterdir() if p.is_file() and (
-        p.suffix.lower() == '.csv' or p.name in {'README.md', 'README2.md', 'CONTRIBUTING.md', 'name_alias(Chinese).json'}
+        p.suffix.lower() == '.csv' or p.name in {'README.md', 'README2.md', 'CONTRIBUTING.md', 'name_alias(Chinese).json', 'title_aliases.json'}
         or p.name.upper().startswith(('LICENSE', 'COPYING'))))
 
 

@@ -127,3 +127,16 @@ def test_region_alias_collision_is_ambiguous_and_search_keeps_candidates(tmp_pat
         assert {row['english_name'] for row in db.search_by_keyword('同名游戏', system='NES')} == {'Game (USA)', 'Game (Japan)'}
     finally:
         db.close()
+
+
+def test_full_title_alias_data_is_packaged_and_integrity_checked(tmp_path):
+    root = source(tmp_path)
+    aliases = root / 'title_aliases.json'
+    aliases.write_text('[]')
+    pack = tmp_path / 'pack'
+    manifest = build_pack(root, pack)
+    assert 'title_aliases.json' in manifest['files']
+    assert (pack / 'rom-name-cn' / aliases.name).read_text() == '[]'
+    (pack / 'rom-name-cn' / aliases.name).write_text('[{}]')
+    with pytest.raises(ValueError):
+        validate_pack(pack)
