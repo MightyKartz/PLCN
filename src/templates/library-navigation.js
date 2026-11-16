@@ -353,6 +353,7 @@ async function selectScannedPlaylist(index) {
 
 
 function renderLibraryOverview(visible) {
+    if (typeof renderWorkbenchOverview === 'function') return renderWorkbenchOverview(visible);
     const panel = document.getElementById('library-overview');
     panel.hidden = !visible;
     panel.replaceChildren();

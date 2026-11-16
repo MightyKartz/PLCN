@@ -165,7 +165,7 @@ async function main() {
     assert.equal(await evaluate(() => document.querySelector('#library-all-systems').getAttribute('aria-pressed')), 'true');
     assert.equal(await evaluate(() => document.querySelector('#preview-button').disabled), false);
     assert.equal(await evaluate(visible, '#game-library'), false);
-    assert.equal(await evaluate(() => document.querySelector('#workspace-title').textContent.includes('全部主机')), true);
+    assert.equal(await evaluate(() => document.querySelector('#workspace-title').textContent), '游戏库');
 
     const system = '.playlist-system-tab[aria-label="Nintendo - Super Nintendo Entertainment System"]';
     await click(system);
@@ -179,7 +179,7 @@ async function main() {
     assert.equal(await evaluate(() => document.querySelector('#game-library-filter-problem').textContent), '需检查 0');
     assert.equal(await evaluate(() => document.querySelector('#game-library-rows .game-image-placeholder').textContent), '缺图');
     assert.equal(await evaluate(() => document.querySelectorAll('#game-library-rows button').length), 2);
-    assert.equal(await evaluate(() => document.querySelector('#preview-button').textContent), '一键补全');
+    assert.equal(await evaluate(() => document.querySelector('#preview-button').textContent), '补全名称与封面');
     assert.equal(await evaluate(() => document.querySelector('#completion-entry-note').textContent), '自动匹配中文名与图片，预览后确认应用。');
     assert.equal(await evaluate(visible, '#completion-entry-note'), true);
     await screenshot('02-games');
@@ -187,7 +187,7 @@ async function main() {
     await click('#theme-toggle-btn');
     await click('#language-display-btn');
     assert.equal(await evaluate(() => document.querySelector('#image-directory-message').textContent.startsWith('Choose an artwork folder')), true);
-    assert.equal(await evaluate(() => document.querySelector('#preview-button').textContent), 'Auto-complete');
+    assert.equal(await evaluate(() => document.querySelector('#preview-button').textContent), 'Complete names & artwork');
     assert.equal(await evaluate(() => document.querySelector('#completion-entry-note').textContent), 'Match Chinese names and artwork automatically; preview before applying.');
     await screenshot('02-one-click-complete-en');
     await evaluate(() => document.querySelector('#choose-image-directory').click());
@@ -200,7 +200,7 @@ async function main() {
 
     await click('#library-all-systems');
     assert.equal(await evaluate(() => document.querySelector('#library-all-systems').getAttribute('aria-pressed')), 'true');
-    assert.equal(await evaluate(() => document.querySelector('#workspace-title').textContent.includes('全部主机')), true);
+    assert.equal(await evaluate(() => document.querySelector('#workspace-title').textContent), '游戏库');
     assert.equal(await evaluate(visible, '#game-library'), false);
     const playlistFiles = () => Object.fromEntries(fs.readdirSync(libraryPath + '/playlists')
         .filter(name => name.endsWith('.lpl'))
@@ -499,6 +499,7 @@ async function main() {
     fs.writeFileSync(rawTrack,Buffer.alloc(2352*100));
     fs.writeFileSync(rawCue,'FILE "Game (Disc 1).bin" BINARY\n TRACK 01 MODE1/2352\n INDEX 01 00:00:00\n');
     const rawBefore=fs.readFileSync(rawTrack),cueBefore=fs.readFileSync(rawCue);
+    if (!await evaluate(() => document.querySelector('.tools-menu').open)) await click('.tools-menu > summary');
     await click('#storage-entry');
     await evaluate(directory=>{const input=document.querySelector('#storage-workspace');input.value=directory;input.dispatchEvent(new Event('input',{bubbles:true}));},discRoot);
     await click('#storage-analyze');
@@ -519,7 +520,8 @@ async function main() {
     }
     assert.deepEqual(fs.readFileSync(discPath),discBefore,'CHD copy conversion does not change playlist');
     assert.deepEqual(fs.readFileSync(rawTrack),rawBefore);assert.deepEqual(fs.readFileSync(rawCue),cueBefore);
-    await click('#storage-close');await click('#theme-toggle-btn');await click('#storage-entry');await click('#storage-analyze');
+    await click('#storage-close');await click('#theme-toggle-btn');if (!await evaluate(() => document.querySelector('.tools-menu').open)) await click('.tools-menu > summary');
+    await click('#storage-entry');await click('#storage-analyze');
     await waitFor(()=>!storageTask.busy&&!document.querySelector('#storage-analysis').hidden,'dark CHD analysis');
     await screenshot('09-chd-analysis-dark');await click('#storage-close');
     if(canConvert){await click('#settings-button');await click('[data-desktop-view="tasks"]');await waitFor(()=>document.querySelector('[data-chd-operation]'),'CHD durable task history');await screenshot('09-chd-tasks');await click('#desktop-close');}
@@ -569,6 +571,7 @@ async function main() {
     await click('#scan-device-btn');await waitFor(()=>!document.querySelector('#desktop-dialog').open&&document.querySelector('.playlist-system-tab[aria-label="Nintendo - Game Boy Advance"]'),'cartridge library loaded');
     await click('.playlist-system-tab[aria-label="Nintendo - Game Boy Advance"]');
     if(await evaluate(()=>document.body.dataset.theme==='dark'))await click('#theme-toggle-btn');
+    if (!await evaluate(() => document.querySelector('.tools-menu').open)) await click('.tools-menu > summary');
     await click('#rom-storage-entry');
     await click('#rom-storage-fields > label:first-of-type button');
     await waitFor(()=>document.querySelector('#rom-storage-source').value.length>0,'native picker returned source');
@@ -587,7 +590,8 @@ async function main() {
     assert.equal(new Set(romHistory[0].results.map(row=>row.output)).size,3);
     assert.equal(romHistory[0].results.every(row=>row.verification==='byte_for_byte'&&fs.existsSync(row.output)),true);
     await screenshot('11-rom-zip-result');await click('#rom-storage-close');
-    await click('#theme-toggle-btn');await click('#rom-storage-entry');
+    await click('#theme-toggle-btn');if (!await evaluate(() => document.querySelector('.tools-menu').open)) await click('.tools-menu > summary');
+    await click('#rom-storage-entry');
     await click('#rom-storage-fields > label:first-of-type button');
     await waitFor(()=>document.querySelector('#rom-storage-source').value.length>0,'source reopened');
     await click('#rom-storage-analyze');await waitFor(()=>!romStorage.busy&&!document.querySelector('#rom-storage-analysis').hidden,'dark directory analysis');
@@ -614,6 +618,7 @@ async function main() {
     await click('#scan-device-btn');await waitFor(()=>!document.querySelector('#desktop-dialog').open&&document.querySelector('.playlist-system-tab[aria-label="Sega - Saturn"]'),'layout library loaded');
     await click('.playlist-system-tab[aria-label="Sega - Saturn"]');
     if(Number(width)>1100&&await evaluate(()=>document.body.dataset.theme==='dark'))await click('#theme-toggle-btn');
+    if (!await evaluate(() => document.querySelector('.tools-menu').open)) await click('.tools-menu > summary');
     await click('#rom-storage-entry');await evaluate(root=>document.querySelector('#rom-storage-source').value=root,layoutRoms);
     await click('#rom-storage-fields > label:first-of-type button');
     await waitFor(()=>document.querySelector('#rom-storage-target').value.length>0,'layout picker selected');

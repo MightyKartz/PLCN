@@ -46,7 +46,7 @@ def get_base_path():
 
 TEMPLATE_DIR = os.path.join(get_base_path(), "src", "templates")
 UI_ASSETS = (
-    'plcn.css', 'workflow.js', 'ui.js', 'config.js', 'library-navigation.js',
+    'plcn.css', 'workbench.css', 'workbench.js', 'workbench-icons.svg', 'workflow.js', 'ui.js', 'config.js', 'library-navigation.js',
     'repair-model.js', 'preview.js', 'tasks.js',
     'library.js', 'discs.js', 'm3u.js', 'storage.js', 'rom-storage.js', 'rom-relocation.js', 'chd-deployment.js', 'artwork.js', 'welcome.js', 'content-scan.js', 'desktop.js',
 )
@@ -149,7 +149,7 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
             filename = ASSET_ROUTES[path]
             content = (app_paths.resource_root() / 'src' / 'templates' / filename).read_bytes()
             self.send_response(200)
-            self.send_header('Content-Type', 'text/javascript; charset=utf-8' if filename.endswith('.js') else 'text/css; charset=utf-8')
+            self.send_header('Content-Type', 'image/svg+xml' if filename.endswith('.svg') else 'text/javascript; charset=utf-8' if filename.endswith('.js') else 'text/css; charset=utf-8')
             self.end_headers()
             self.wfile.write(content)
         elif path in GET_ROUTES:

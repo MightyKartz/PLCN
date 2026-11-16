@@ -42,13 +42,13 @@ def test_page_assets_are_served_from_the_explicit_allowlist(service):
         page = session.get(service, timeout=3)
         page.raise_for_status()
         assets = re.findall(r'(?:src|href)="/assets/([^"/]+)"', page.text)
-        assert set(assets) == set(server.UI_ASSETS)
-        for name in assets:
+        assert set(assets) | {'workbench-icons.svg'} == set(server.UI_ASSETS)
+        for name in server.UI_ASSETS:
             response = session.get(service + '/assets/' + name, timeout=3)
             assert response.status_code == 200
             assert response.content == (Path(server.TEMPLATE_DIR) / name).read_bytes()
-            mime = 'text/javascript' if name.endswith('.js') else 'text/css'
-            assert response.headers['Content-Type'] == mime + '; charset=utf-8'
+            mime = 'image/svg+xml' if name.endswith('.svg') else ('text/javascript' if name.endswith('.js') else 'text/css') + '; charset=utf-8'
+            assert response.headers['Content-Type'] == mime
         assert session.get(service + '/assets/server.py', timeout=3).status_code == 404
 
 

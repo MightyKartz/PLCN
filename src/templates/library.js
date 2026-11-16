@@ -155,7 +155,8 @@ function renderGameLibrary() {
     const retry = document.getElementById('game-library-retry');
     retry.textContent = text('重新读取', 'Retry');
     retry.hidden = !gameLibrary.error;
-    const items = gameLibrary.data?.items || [];
+    const items = (gameLibrary.data?.items || []).filter(item => typeof workbenchOverview === 'undefined'
+        || workbenchOverview.scope === 'all' || wbStorageKind(item.rom_path) === workbenchOverview.scope);
     renderGameLibraryFilters(items);
     const query = search.value.trim().toLowerCase();
     const filtered = items.filter(item => gameMatchesImageFilter(item, gameLibrary.filter)

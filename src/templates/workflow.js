@@ -162,7 +162,7 @@ function renderWorkbench() {
         document.getElementById('apply-summary-text').textContent = formatApplySummaryText(
             buildApplySummary(getIncludedChanges(), getProcessingOptions()));
     }
-    const showOverview = allSystems && Boolean(currentDeviceScan?.connected) && !state.previewValid && !state.busy;
+    const showOverview = allSystems && Boolean(currentDeviceScan?.connected) && !state.previewValid;
     renderLibraryOverview(showOverview);
     document.getElementById('workspace-empty').hidden = showOverview || state.previewValid
         || Boolean(playlistPath && workbench.operation !== 'preview');
@@ -221,6 +221,7 @@ function renderWorkbench() {
     });
     syncGameLibrary(state);
     if (typeof renderLibraryHome === 'function') renderLibraryHome();
+    if (typeof renderWorkbenchChrome === 'function') renderWorkbenchChrome(state);
 }
 
 if (typeof module !== 'undefined') module.exports = { deriveWorkbenchState, downloadTaskOutcome, repairActionStatus, previewArtworkState, previewIdentityLabel, buildRepairPreviewSummary, formatPreviewScope };
