@@ -199,6 +199,9 @@ async function main() {
         && !document.querySelector('#library-all-systems').disabled
         && !document.querySelector('#preview-button').disabled, 'all-systems row and scan completion');
     assert.equal(await evaluate(() => document.querySelector('#library-all-systems').getAttribute('aria-pressed')), 'true');
+    assert.deepEqual(await evaluate(()=>Array.from(document.querySelectorAll('.playlist-system-tab .system-display-name'),el=>el.textContent)),['ALL','GBA','SNES']);
+    assert.equal(await evaluate(()=>Array.from(document.querySelectorAll('.playlist-system-tab')).every(row=>row.firstElementChild.tagName.toLowerCase()==='svg'&&row.children.length===3)),true);
+
     assert.equal(await evaluate(() => document.querySelector('#preview-button').disabled), false);
     assert.equal(await evaluate(visible, '#game-library'), false);
     assert.equal(await evaluate(() => document.querySelector('#workspace-title').textContent), '游戏库');

@@ -50,6 +50,9 @@ function wbIcon(name) {
     const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
     use.setAttribute('href', '/assets/workbench-icons.svg#' + name); icon.append(use); return icon;
 }
+function wbSystemIcon(system) {
+    return ({NES:'console-nes',SNES:'console-snes',GB:'console-gameboy',GBC:'console-gameboy',GBA:'console-gba',SS:'console-saturn',MD:'console-megadrive',PS1:'console-playstation',MAME:'console-arcade',FBNeo:'console-arcade'})[getSystemAbbreviation(system)] || 'device-gamepad';
+}
 function wbElement(tag, className, text) {
     const el = document.createElement(tag); el.className = className;
     if (text !== undefined) el.textContent = text; return el;
@@ -179,12 +182,6 @@ function renderWorkbenchChrome(state) {
     if (!document.getElementById('playlist_path').value && currentDeviceScan?.connected) document.getElementById('workspace-title').textContent=workbenchText('游戏库','Game library');
     for (const id of ['automatic-scan-button','manual-add-button']) document.getElementById(id).hidden=state.previewValid;
     document.getElementById('workbench-task').hidden=!state.hasLibrary;
-    document.querySelectorAll('.system-display-name').forEach(el=>{
-        const button=el.closest('button');
-        if(!button?.title)return;
-        el.textContent=button.id==='library-all-systems'?workbenchText('全部主机','All systems'):wbSystemName(button.title);
-        if(['MAME','FBNeo'].includes(getSystemAbbreviation(button.title)))button.querySelector('strong')?.replaceChildren(wbIcon('device-gamepad'));
-    });
     if(workbenchOverview.data){
         const groups=workbenchGroups(workbenchOverview.data,workbenchOverview.scope);
         document.querySelectorAll('.playlist-system-tab').forEach(button=>{

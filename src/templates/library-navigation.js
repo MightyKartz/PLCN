@@ -202,15 +202,14 @@ function renderLibrarySystemTabs(container, groups) {
     allButton.type = 'button';
     allButton.id = 'library-all-systems';
     allButton.className = `playlist-system-tab${selectedLibrarySystem === '' ? ' active' : ''}`;
-    const allAbbreviation = document.createElement('strong');
-    allAbbreviation.textContent = workbenchText('全部', 'All');
+    const allIcon = wbIcon('layout-grid');
     const allName = document.createElement('span'); allName.className = 'system-display-name';
-    allName.textContent = workbenchText('全部主机', 'All systems');
+    allName.textContent = 'ALL';
     const allCount = document.createElement('span'); allCount.className = 'system-game-count';
     allCount.textContent = currentDeviceScan?.totals?.items
         ?? [...groups.values()].reduce((total, items) => total
             + items.reduce((sum, item) => sum + (Number(item.playlist.item_count) || 0), 0), 0);
-    allButton.append(allAbbreviation, allName, allCount);
+    allButton.append(allIcon, allName, allCount);
     allButton.title = workbenchText('全部主机', 'All systems');
     allButton.setAttribute('aria-label', workbenchText('全部主机', 'All systems'));
     allButton.setAttribute('aria-pressed', String(selectedLibrarySystem === ''));
@@ -224,13 +223,12 @@ function renderLibrarySystemTabs(container, groups) {
         const group = document.createElement('div');
         group.className = 'library-system-group';
         group.dataset.search = (groupName + ' ' + getSystemAbbreviation(groupName)).toLowerCase();
-        const abbreviation = document.createElement('strong');
-        abbreviation.textContent = getSystemAbbreviation(groupName);
+        const icon = wbIcon(wbSystemIcon(groupName));
         const name = document.createElement('span'); name.className = 'system-display-name';
-        name.textContent = groupName.replace(/^[^-]+ - /, '');
+        name.textContent = getSystemAbbreviation(groupName);
         const count = document.createElement('span'); count.className = 'system-game-count';
         count.textContent = items.reduce((total, item) => total + (Number(item.playlist.item_count) || 0), 0);
-        tabButton.append(abbreviation, name, count);
+        tabButton.append(icon, name, count);
         tabButton.title = groupName;
         tabButton.setAttribute('aria-label', groupName);
         tabButton.setAttribute('aria-pressed', String(groupName === selectedLibrarySystem));
