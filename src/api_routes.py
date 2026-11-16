@@ -38,6 +38,9 @@ GET_ROUTES = {
 }
 
 POST_ROUTES = {
+    '/api/chd/deployment/preview': api_chd.deployment_preview,
+    '/api/chd/deployment/apply': api_chd.deployment_apply,
+    '/api/chd/deployment/recover': api_chd.deployment_recover,
     '/api/chd/analyze': api_chd.analyze,
     '/api/chd/convert': api_chd.convert,
     '/api/m3u/preview': api_m3u.preview,

@@ -94,3 +94,8 @@
 - [MAME chdman 官方实现](https://github.com/mamedev/mame/blob/master/src/tools/chdman.cpp)
 - [Libretro Beetle Saturn 格式与多盘说明](https://docs.libretro.com/library/beetle_saturn/)
 - [Libretro 官方核心信息](https://github.com/libretro/libretro-core-info)
+
+
+## 阶段 3B 接续
+
+上述 3A 为仅电脑转换的历史范围。阶段 3B 已加入 MTP 拉取与另行确认的回传方案、引用更新、电脑备份及恢复；不把转换完成直接作为设备写入或清理授权。支持范围、运行报告要求、故障边界和真机待验收见 [回传与恢复契约](CHD_DEPLOYMENT_AND_RECOVERY.md)。

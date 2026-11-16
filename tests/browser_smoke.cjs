@@ -524,6 +524,35 @@ async function main() {
     await screenshot('09-chd-analysis-dark');await click('#storage-close');
     if(canConvert){await click('#settings-button');await click('[data-desktop-view="tasks"]');await waitFor(()=>document.querySelector('[data-chd-operation]'),'CHD durable task history');await screenshot('09-chd-tasks');await click('#desktop-close');}
 
+    if(canConvert){
+        const originalM3u=fs.readFileSync(path.join(discRoms,'Game.m3u'));
+        await click('#settings-button');await click('[data-desktop-view="tasks"]');
+        await click('[data-chd-operation] button');
+        await waitFor(()=>document.querySelector('#deploy-dialog').open,'deployment dialog');
+        assert.equal(await evaluate(()=>document.querySelector('#deploy-mode').value),'copy');
+        await click('#deploy-preview');await waitFor(()=>!document.querySelector('#deploy-apply').disabled,'copy preview ready');
+        assert.deepEqual(fs.readFileSync(rawCue),cueBefore);await screenshot('10-chd-copy-preview');
+        await click('#deploy-settings > summary');
+        await evaluate(()=>{const mode=document.querySelector('#deploy-mode');mode.value='replace';mode.dispatchEvent(new Event('input',{bubbles:true}));});
+        await click('#deploy-runtime summary');
+        await evaluate(()=>{const version=document.querySelector('#deploy-version');version.value='synthetic browser fixture';version.dispatchEvent(new Event('input',{bubbles:true}));});
+        await click('#deploy-tested');await click('#deploy-scope');
+        await click('#deploy-preview');await waitFor(()=>!document.querySelector('#deploy-apply').disabled,'replacement preview ready');
+        await screenshot('10-chd-replace-preview');
+        await click('#deploy-apply');await waitFor(()=>!chdDeployment.busy&&document.querySelector('#deploy-status').textContent.includes('已完成'),'deployment completed');
+        assert.equal(fs.existsSync(rawCue),false);assert.equal(fs.existsSync(rawTrack),false);
+        assert.equal(fs.existsSync(path.join(discRoms,'Game (Disc 1).chd')),true);
+        assert.equal(fs.readFileSync(path.join(discRoms,'Game.m3u'),'utf8').includes('Game (Disc 1).chd'),true);
+        await screenshot('10-chd-deployed');await click('#deploy-close');
+        await click('#settings-button');await click('[data-desktop-view="tasks"]');await waitFor(()=>document.querySelector('[data-chd-deployment]'),'deployment receipt displayed');
+        await click('[data-chd-deployment] button');await click('.desktop-confirm button:last-of-type');
+        await waitFor(()=>document.querySelector('[data-chd-deployment] strong').textContent.includes('已恢复'),'deployment restored');
+        assert.deepEqual(fs.readFileSync(rawCue),cueBefore);assert.deepEqual(fs.readFileSync(rawTrack),rawBefore);
+        assert.deepEqual(fs.readFileSync(path.join(discRoms,'Game.m3u')),originalM3u);
+        assert.equal(fs.existsSync(path.join(discRoms,'Game (Disc 1).chd')),false);
+        await screenshot('10-chd-restored');await click('#desktop-close');
+    }
+
     assert.deepEqual(errors, [], 'Page errors');
     console.log(`Browser smoke OK (${width}×${height}): home → local library → SNES → translated preview`);
 }

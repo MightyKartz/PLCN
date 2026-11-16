@@ -1,4 +1,5 @@
 """Server-owned M3U previews and durable operation recovery."""
+import json
 from api_common import reply, background
 import m3u_plan
 import m3u_transaction as transaction
@@ -37,7 +38,9 @@ def history(handler,context,query):
 def recover(handler,context,payload):
     ident=payload.get('id');restore=payload.get('action')=='restore'
     if payload.get('action') not in {'restore','resume'}: raise ValueError('请选择恢复或继续操作')
-    transaction.receipt_path(ident)
+    manifest=transaction.receipt_path(ident)
+    if json.loads(manifest.read_text(encoding='utf-8'))['mode']=='chd_references':
+        raise ValueError('请从 CHD 操作恢复；必须先还原原镜像，再还原引用')
     def work(jid):
         result=transaction.run(ident,restore=restore)
         if result['status'] not in {'applied','restored'}: raise RuntimeError(str(result['error'])+'；记录：'+ident)

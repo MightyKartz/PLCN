@@ -9,6 +9,8 @@ import uuid
 import app_paths
 import chd_cue
 import chd_tool
+import mtp_runtime as mtp
+from content_scan import read
 from disc_inspection import inspect_discs, Reader
 from library_model import OPTICAL_SYSTEMS
 from m3u_plan import core_support
@@ -53,7 +55,18 @@ def analyze(payload,cancelled=lambda: None,progress=lambda message: None):
         if node['format']!='cue':
             row['issues'].append('已有压缩文件，跳过' if node['format']=='chd' else '首版仅转换 BINARY 2352 扇区 CUE；M3U 作为组织文件保留')
         elif reader.remote:
-            row['issues'].append('MTP 文件本轮仅分析；拉取、回传与引用更新在阶段 3B 实施')
+            related=[node,*[next(file for file in graph['files'] if file['id']==ident) for ident in outgoing.get(node['id'],[])]]
+            if any(file['status']!='present' or file['size'] is None or file['issues'] for file in related) or len(related)<2:
+                row['issues'].append('远程 CUE 或音轨未就绪')
+            else:
+                paths=[reader.locate(file['path']) for file in related]
+                if all(paths):
+                    for path,file in zip(paths,related):
+                        sources[path]={'path':path,'size':file['size'],'sha256':mtp.digest(read(path)) if file['format']=='cue' else None}
+                    row.update(eligible=True,files=paths,source_bytes=sum(sources[path]['size'] for path in paths),
+                        output_name=node['id'][:12]+'-'+Path(node['path']).stem+'.chd')
+                    row['issues'].append('确认后拉取完整源到电脑备份，再检查 CUE 与逐轨内容；尚未验证可转换')
+                else: row['issues'].append('远程启动路径缺少传输映射')
         elif node['status']!='present' or node['issues']:
             row['issues'].append('CUE 或引用文件尚未通过检查')
         else:
@@ -83,16 +96,16 @@ def analyze(payload,cancelled=lambda: None,progress=lambda message: None):
     files=list(sources.values());size=sum(file['size'] for file in files)
     eligible=[row for row in rows if row['eligible']]
     # Budget twice the source for CHD and extraction expansion, plus one snapshot.
-    required=2*sum(row['source_bytes'] for row in eligible)+3*max((row['source_bytes'] for row in eligible),default=0)+RESERVE
+    required=(4 if reader.remote else 2)*sum(row['source_bytes'] for row in eligible)+3*max((row['source_bytes'] for row in eligible),default=0)+RESERVE
     free=shutil.disk_usage(workspace).free
     ident=uuid.uuid4().hex
     return {'id':ident,'output_directory':str(workspace/('PLCN-CHD-'+ident)),'playlist':graph['playlist_path'],'system':system,'workspace':str(workspace),
             'tool':tool,'rows':rows,'sources':files,'input_bytes':size,'required_bytes':required,'free_bytes':free,
             'space_sufficient':free>=required,'coverage':graph['coverage'],
             'observed_bytes':sum(node['size'] or 0 for node in graph['files']),
-            'estimated_savings':None,'device_space':{'status':'not_required','message':'本轮不上传；掌机空间需求和传输暂存在阶段 3B 检查'},
+            'estimated_savings':None,'device_space':{'status':'not_required','message':'本步不上传；回传方案会另行检查目标存储、电脑备份与临时卷空间'},
             'can_convert':bool(eligible) and tool['available'],
-            'mode':'local_copy','note':'只在电脑生成 CHD；不改列表、M3U、核心、存档或原光盘。压缩率未知，完成后报告实际大小。'}
+            'remote':reader.remote,'mode':'local_copy','note':'只在电脑生成 CHD；不改列表、M3U、核心、存档或原光盘。压缩率未知，完成后报告实际大小。'}
 
 
 def public(plan):
@@ -101,6 +114,9 @@ def public(plan):
 
 
 def convert(plan,selected,cancelled=lambda: None,progress=lambda message: None):
+    if plan.get('remote'):
+        from chd_remote import convert as remote_convert
+        return remote_convert(plan,selected,cancelled,progress)
     rows=[row for row in plan['rows'] if row['id'] in selected]
     if not rows or any(not row['eligible'] for row in rows): raise ValueError('请选择可转换的光盘')
     if not plan['can_convert']: raise ValueError('工具或空间条件不满足，请重新分析')
@@ -113,10 +129,10 @@ def convert(plan,selected,cancelled=lambda: None,progress=lambda message: None):
     cancelled()
     ident=plan['id']
     manifest=app_paths.user_data_dir()/'chd-operations'/ident/'manifest.json'
-    manifest.parent.mkdir(parents=True)
+    manifest.parent.mkdir(parents=True,exist_ok=bool(plan.get('transfer_sources')))
     output=Path(plan['output_directory'])
     record={'id':ident,'created_at':datetime.now(timezone.utc).isoformat(),'playlist':plan['playlist'],
-            'status':'running','tool':tool,'output_directory':str(output),'mode':'local_copy','error':None,
+            'status':'running','system':plan['system'],'transfer_sources':plan.get('transfer_sources',[]),'tool':tool,'output_directory':str(output),'mode':'from_mtp' if plan.get('transfer_sources') else 'local_copy','error':None,
             'results':[],'sources':[file for file in plan['sources'] if any(file['path'] in row['files'] for row in rows)]}
     atomic_write_json(manifest,record)
     try:
@@ -169,7 +185,7 @@ def convert(plan,selected,cancelled=lambda: None,progress=lambda message: None):
                 destination=output/row['output_name']
                 size=chd.stat().st_size;digest=chd_cue.fingerprint(chd,cancelled)
                 chd.rename(destination)
-                record['results'].append({'id':row['id'],'source':row['path'],'output':str(destination),
+                record['results'].append({'id':row['id'],'source':row.get('origin_path',row['path']),'output':str(destination),
                     'status':'content_verified','input_bytes':row['source_bytes'],'output_bytes':size,
                     'difference_bytes':row['source_bytes']-size,'sha256':digest,'tracks':actual,'log':str(log),
                     'runtime_status':'not_tested','references_updated':False,'sources_deleted':False})

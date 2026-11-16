@@ -61,7 +61,7 @@ def device_files(monkeypatch):
         if parts == ['RetroArch']:
             return {'id':0, 'folder':True}
         path = mtp.uri('device', storage, '/'.join(parts))
-        return {'id':next(i for i, p in ids.items() if p == path), 'folder':False} if path in files else None
+        return {'id':next(i for i, p in ids.items() if p == path), 'folder':False,'size':len(files[path])} if path in files else None
     def rename(handle, metadata, name):
         ident = metadata.contents.id
         old = ids[ident]
@@ -255,3 +255,45 @@ def test_import_on_windows_does_not_load_native_mtp_or_libc(monkeypatch):
     namespace = runpy.run_path(str(Path(mtp.__file__)))
     with pytest.raises(RuntimeError, match='仅支持 macOS'):
         namespace['library']()
+
+
+def test_streamed_image_upload_uses_private_stage_and_full_readback(device_files,tmp_path,monkeypatch):
+    import chd_cue
+    import chd_io
+    root,files,old_upload,lib=device_files
+    buffers=[]
+    def strdup(value):
+        buffer=ctypes.create_string_buffer(value);buffers.append(buffer);return ctypes.addressof(buffer)
+    monkeypatch.setattr(mtp,'_libc',SimpleNamespace(strdup=strdup))
+    def send(handle,source,metadata,callback,data):
+        value=Path(source.decode()).read_bytes();name=metadata.contents.name.decode()
+        progress=ctypes.cast(callback,mtp.Progress)
+        if progress(len(value),len(value),None):return 1
+        ident=old_upload(handle,65537,0,name,value);metadata.contents.id=ident;return 0
+    def receive(handle,ident,target,callback,data):
+        # fixture object IDs are assigned in insertion order.
+        value=list(files.values())[ident-1] if len(files)==1 else next(value for key,value in files.items() if key.endswith(('.tmp','.chd')))
+        if ctypes.cast(callback,mtp.Progress)(len(value),len(value),None):return 1
+        Path(target.decode()).write_bytes(value);return 0
+    lib.LIBMTP_Send_File_From_File=send;lib.LIBMTP_Get_File_To_File=receive
+    # Runtime stat_file resolves the same fake object tree used by staged metadata writes.
+    source=tmp_path/'image.chd';source.write_bytes(b'large image fixture'*10000)
+    target=mtp.join(root,'image.chd');stage=target+'.tmp';expected=chd_cue.fingerprint(source)
+    mtp.upload_file(target,source,expected,stage)
+    assert files[target]==source.read_bytes() and stage not in files
+    mtp.upload_file(target,source,expected,stage)  # Already verified: no overwrite or new object.
+    assert list(files)==[target]
+
+
+def test_download_progress_callback_propagates_cancellation(device_files,tmp_path):
+    from task_control import TaskCancelled
+    root,files,upload,lib=device_files;value=mtp.join(root,'image.chd');upload(None,65537,0,'image.chd',b'image')
+    def receive(handle,ident,target,callback,data):
+        return ctypes.cast(callback,mtp.Progress)(1,5,None)
+    lib.LIBMTP_Get_File_To_File=receive
+    calls=[0]
+    def cancelled():
+        calls[0]+=1
+        if calls[0]>1:raise TaskCancelled('cancel native transfer')
+    with pytest.raises(TaskCancelled,match='cancel native'):mtp.download_file(value,tmp_path/'partial',cancelled)
+    assert files[value]==b'image'
