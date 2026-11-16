@@ -21,6 +21,7 @@ CHINESE_NUMBERS = dict(zip('一二三四五六七八九十', map(str, range(1, 1
 def resolve_chinese_titles(proposals, translators):
     catalogs = {}
     replacements = None
+    title_aliases = None
     for row in proposals:
         query = rom_title(row['path'])
         if (not has_chinese(query) or row['match_source'] == 'manual_override'
@@ -29,6 +30,18 @@ def resolve_chinese_titles(proposals, translators):
                 or row.get('match_diagnostics', {}).get('conflicts')):
             continue
         translator = translators[row['system']]
+        if title_aliases is None:
+            path = Path(translator.rom_name_cn_path) / 'title_aliases.json'
+            title_aliases = json.loads(path.read_text(encoding='utf-8-sig')) if path.exists() else []
+            if not isinstance(title_aliases, list):
+                raise ValueError('完整标题别名必须是数组')
+            for entry in title_aliases:
+                if (not isinstance(entry, dict)
+                        or any(not isinstance(entry.get(k), str) or not entry[k].strip()
+                               for k in ('system', 'english_name', 'chinese_name'))
+                        or not isinstance(entry.get('aliases'), list)
+                        or any(not isinstance(a, str) or not a.strip() for a in entry['aliases'])):
+                    raise ValueError('完整标题别名需要主机、中英文名称与别名数组')
         if replacements is None:
             path = Path(translator.rom_name_cn_path) / 'name_alias(Chinese).json'
             metadata = json.loads(path.read_text(encoding='utf-8-sig')) if path.exists() else {}
@@ -64,19 +77,29 @@ def resolve_chinese_titles(proposals, translators):
         if any(family_key('(' + (a or b) + ')') for a, b in re.findall(r'\(([^()]*)\)|\[([^\[\]]*)\]', query)):
             continue
         system = row['system']
+        aliases = [entry for entry in title_aliases if entry['system'] == system
+                   and key in {chinese_key(a) for a in entry['aliases']}]
+        if len({family_key(a['english_name']) for a in aliases}) > 1:
+            continue
+        title_alias = aliases[0] if aliases else None
         if system not in catalogs:
             systems = translator.db.expand_system_mapping(system)
             placeholders = ','.join('?' for _ in systems)
             catalogs[system] = translator.db.get_connection().execute(
                 f'SELECT english_name, chinese_name FROM translations WHERE system_base(system) IN ({placeholders})', systems).fetchall()
         curated = rom_search_alias(system, query)
+        if title_alias:
+            curated = title_alias['english_name']
         constraints = release_tags(query) - {'a', 'b', 'chs', 'cht'}
         digits = re.findall(r'\d+', key)
         checksums = {e['resolved_name'] for e in row.get('match_diagnostics', {}).get('evidence_chain', [])
                      if e.get('source') in {'playlist_crc32', 'local_zip_crc'} and e.get('resolved_name')}
         ranked = {}
-        for record in catalogs[system]:
+        records = catalogs[system] + ([title_alias] if title_alias else [])
+        for record in records:
             english, chinese = record['english_name'], record['chinese_name']
+            if title_alias:
+                chinese = title_alias['chinese_name']
             if not chinese or not constraints <= release_tags(english) or (checksums and english not in checksums):
                 continue
             candidate = chinese_key(chinese)

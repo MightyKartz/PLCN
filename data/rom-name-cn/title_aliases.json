@@ -1,0 +1,74 @@
+[
+  {
+    "system": "Sega - Mega Drive - Genesis",
+    "english_name": "Aoki Ookami to Shiroki Mejika - Genchou Hishi (Japan)",
+    "chinese_name": "苍狼与白鹿 - 元朝秘史",
+    "aliases": [
+      "元朝秘史之苍狼与白鹿"
+    ],
+    "source": "Bundled translation catalog"
+  },
+  {
+    "system": "Sega - Mega Drive - Genesis",
+    "english_name": "Minato no Traysia (Japan)",
+    "chinese_name": "旅立的剑士",
+    "aliases": [
+      "港都少年"
+    ],
+    "source": "https://gamesdb.launchbox-app.com/games/details/696-traysia"
+  },
+  {
+    "system": "Sega - Mega Drive - Genesis",
+    "english_name": "Royal Blood (Japan)",
+    "chinese_name": "皇家血统",
+    "aliases": [
+      "皇室血裔"
+    ],
+    "source": "https://bgm.tv/subject/224248"
+  },
+  {
+    "system": "Sega - Mega Drive - Genesis",
+    "english_name": "Hybrid Front, The (Japan)",
+    "chinese_name": "轨道战争",
+    "aliases": [
+      "联合前线"
+    ],
+    "source": "https://zh.wikipedia.org/wiki/聯合前線"
+  },
+  {
+    "system": "Sega - Mega Drive - Genesis",
+    "english_name": "Shinobi III - Return of the Ninja Master (USA)",
+    "chinese_name": "影武者3 - 大师之返",
+    "aliases": [
+      "超级忍3"
+    ],
+    "source": "https://search.bilibili.com/all?keyword=超级忍III"
+  },
+  {
+    "system": "Sega - Mega Drive - Genesis",
+    "english_name": "Barver Battle Saga - Tai Kong Zhan Shi (China) (Unl)",
+    "chinese_name": "太空战士 - 魔法战士",
+    "aliases": [
+      "太空战士"
+    ],
+    "source": "https://gamesdb.launchbox-app.com/games/details/33589-brave-battle-saga-legend-of-the-magic-warrior"
+  },
+  {
+    "system": "Sega - Mega Drive - Genesis",
+    "english_name": "Pier Solar and the Great Architects (World) (En,Fr,Es) (Unl)",
+    "chinese_name": "太阳码头",
+    "aliases": [
+      "太阳能码头"
+    ],
+    "source": "https://tiebac.baidu.com/home/main/?fr=frs&ie=utf-8&un=onecup"
+  },
+  {
+    "system": "Sega - Mega Drive - Genesis",
+    "english_name": "Demons of Asteborg",
+    "chinese_name": "阿斯特堡的恶魔",
+    "aliases": [
+      "阿斯特堡的恶魔"
+    ],
+    "source": "https://neofid-studios.com/zh/products/demons-of-asteborg-cartridge-only-for-sega-megadrive-genesis-i-ii-and-iii"
+  }
+]
