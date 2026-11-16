@@ -8,4 +8,5 @@ def test_workbench_behavior():
     subprocess.run(['node', '--test', str(root / 'tests' / 'ui_workflow.test.cjs'),
                     str(root / 'tests' / 'library_browser.test.cjs'),
                     str(root / 'tests' / 'welcome.test.cjs'),
+                    str(root / 'tests' / 'content_scan_state.test.cjs'),
                     str(root / 'tests' / 'artwork_dialog.test.cjs')], cwd=root, check=True)

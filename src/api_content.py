@@ -54,3 +54,7 @@ def hints(handler, context, payload):
 
 def core_info(handler, context, query):
     reply(handler, core_catalog.info(query.get('core_id', [''])[0]))
+
+
+def core_status(handler, context, payload):
+    reply(handler, scan.core_status(payload.get('root'), payload.get('core_path')))

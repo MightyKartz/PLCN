@@ -187,3 +187,18 @@ def test_card_games_can_update_internal_playlist_without_changing_target(monkeyp
     monkeypatch.setattr(scan,'read',lambda path:json.dumps({'items':[{'path':'/storage/emulated/0/Roms/SS/Other.cue'}]}).encode())
     assert scan.hints(root,'Sega - Saturn',config['directory'])['android_directory']==''
     with pytest.raises(ValueError):scan.validate({**config,'directory':'mtp://another/00020001/Roms/SS'})
+
+
+def test_core_status_distinguishes_local_file_from_unverified_remote_install(tmp_path, monkeypatch):
+    core = tmp_path / 'core.so'
+    core.write_bytes(b'file presence is not a core-load verification')
+    assert scan.core_status(str(tmp_path), str(core))['state'] == 'available'
+    assert '尚未验证' in scan.core_status(str(tmp_path), str(core))['detail']
+    assert scan.core_status(str(tmp_path), str(tmp_path / 'missing.so'))['state'] == 'missing'
+    assert scan.core_status(str(tmp_path), '')['state'] == 'unconfigured'
+    monkeypatch.setattr(scan.mtp, 'read', lambda *a: pytest.fail('Core status must not open USB'))
+    assert scan.core_status('mtp://device/00010001/RetroArch', str(core))['state'] == 'unknown'
+    assert scan.core_status('mtp://device/00010001/RetroArch', '')['state'] == 'unconfigured'
+    for root, path in [(None, ''), ('adb://device', ''), ('/tmp', None)]:
+        with pytest.raises(ValueError):
+            scan.core_status(root, path)

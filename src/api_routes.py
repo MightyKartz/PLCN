@@ -34,6 +34,7 @@ GET_ROUTES = {
 }
 
 POST_ROUTES = {
+    '/api/content/core-status': api_content.core_status,
     '/api/content/hints': api_content.hints,
     '/api/content/preview': api_content.preview,
     '/api/content/apply': api_content.apply,

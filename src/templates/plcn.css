@@ -3176,3 +3176,13 @@ body[data-ui-screenshot] *:focus {
 
 .content-path-suggestions { border:1px solid var(--border); border-radius:8px; background:var(--surface-soft); padding:14px; margin:-4px 0 20px; }
 #content-scan-fields [aria-invalid=true] { border-color:var(--amber); }
+
+.content-config-summary { border:1px solid var(--border); border-radius:8px; padding:16px; background:var(--surface-soft); margin:4px 0 16px; text-align:left; }
+.content-config-summary h3 { margin:0 0 12px; font-size:15px; }
+.content-config-summary dl { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:0 0 12px; }
+.content-config-summary dt { color:var(--muted); font-size:12px; margin-bottom:5px; }
+.content-config-summary dd { margin:0; font-size:14px; font-weight:600; overflow-wrap:anywhere; }
+#content-scan-fields .content-config-summary p { margin:6px 0; overflow-wrap:anywhere; }
+#content-config-core-state { color:var(--text); font-weight:600; }
+#content-config-core-state[data-state=missing], #content-config-core-state[data-state=unconfigured] { color:var(--amber); }
+@media(max-width:680px) { .content-config-summary dl { grid-template-columns:1fr; } }
