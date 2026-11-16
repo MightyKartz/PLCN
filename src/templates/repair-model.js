@@ -7,14 +7,13 @@ function preparePreviewChanges(changes) {
         // This chooses artwork for preview; it does not assert the ROM's unknown revision.
         if (getRepairMode() !== 'names' && !change.thumbnail_source
                 && change.artwork_identity_status === 'resolved' && change.artwork_gallery_status === 'ambiguous'
-                && change.artwork_candidates?.length) {
+                && change.artwork_candidates?.length && !change.identity?.requires_review) {
             const ranked = [...change.artwork_candidates].sort((a, b) => {
                 const region = name => /\(Japan\)/i.test(name) ? 0 : /\(USA\)/i.test(name) ? 1 : 2;
                 return region(a) - region(b) || a.localeCompare(b, 'en', {numeric: true});
             });
             change.thumbnail_source = ranked[0];
             change.artwork_recommended = true;
-            change.artwork_gallery_status = 'matched';
             change.match_reason = '已推荐匹配封面，可单独更换；确认应用后下载';
         }
         if (getRepairMode() === 'names' && (!change.needs_review || change.artwork_review_only) && (['matched', 'rename', 'ready', 'download'].includes(change.match_status) || change.artwork_review_only)) {
@@ -255,7 +254,7 @@ function matchesFilter(change, query) {
     if (currentPreviewFilter === 'matched') return isActionableChange(change);
     if (currentPreviewFilter === 'ready') return info.kind === 'ready';
     if (currentPreviewFilter === 'completed') return info.kind === 'completed';
-    if (currentPreviewFilter === 'missing-cover') return !change.thumbnail_source;
+    if (currentPreviewFilter === 'missing-cover') return ['choose_version','no_source','unidentified','query_failed','failed'].includes(previewArtworkState(change, getRepairMode()));
     if (currentPreviewFilter === 'edited') return isEditedChange(change);
     return true;
 }
@@ -281,7 +280,7 @@ function reclassifyEditedChange(change, reason) {
 function markChangeEdited(index, reason, editedKey = '') {
     const change = currentChanges[index];
     if (!change) return;
-    if (editedKey === 'new_label') change.name_applied = false;
+    if (editedKey === 'new_label' || editedKey === 'both') { change.name_applied = false; change.identity_name_edited = true; }
     change.applied = false;
     const coverStillTargetsCurrentName = currentMatchesWriteName(change);
     if (editedKey === 'thumbnail_source' || editedKey === 'both' || (editedKey === 'new_label' && !coverStillTargetsCurrentName)) {
@@ -301,6 +300,7 @@ function markChangeEdited(index, reason, editedKey = '') {
 function getMatchReasonLabel(info, change) {
     if (!change) return info.reason || '';
     if (change.applied || change.match_status === 'applied') return uiText('已写入 playlist');
+    if (change.identity?.requires_review && !change.identity_name_edited) return previewIdentityLabel(change) + ' · ' + (change.match_reason || '');
     if (change.name_applied) return workbenchText('名称已写入，图片尚未全部完成。', 'Names saved; artwork is incomplete. ') + (change.artwork_message || '');
     if (change.pending_override || info.source === 'manual-edit') {
         return [uiText('待保存本地修正'), change.match_reason || info.reason || ''].filter(Boolean).join(' · ');
@@ -353,8 +353,9 @@ function getMatchInfo(change) {
         return {
             kind: status.kind || actionKind,
             confidence: Number.isFinite(score) ? Math.max(0, Math.min(100, Math.round(score))) : status.fallbackScore,
-            label: nameReady && ['download', 'incomplete'].includes(action) ? workbenchText('名称完成 · 图片待补全', 'Names saved · Artwork pending')
-                : action === 'incomplete' ? (change.artwork_identity_status === 'resolved'
+            label: change.identity?.requires_review && !change.identity_name_edited ? previewIdentityLabel(change)
+                : nameReady && ['download', 'incomplete'].includes(action) ? workbenchText('名称完成 · 图片待补全', 'Names saved · Artwork pending')
+                : action === 'incomplete' ? (change.artwork_identity_status === 'resolved' || (change.identity && !change.identity.requires_review)
                 ? workbenchText('待补充图片', 'Artwork needed') : workbenchText('待补充名称或图片源', 'Name or artwork source missing')) : status.label,
             badgeClass: status.badgeClass,
             rowClass: status.rowClass,

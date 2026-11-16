@@ -210,7 +210,7 @@ async function previewContentScan() {
         if (key !== JSON.stringify(contentPayload())) throw new Error('扫描配置已变化，请重新预览');
         contentScan.previewId = id;
         contentField('start').textContent = '重新扫描';
-        contentField('summary').textContent = `新增 ${result.added.length} 个游戏 · 保留 ${result.retained} 项 · 不符合格式或 DAT ${result.skipped} 个文件。${result.core_status}。${result.note}`;
+        contentField('summary').textContent = formatPreviewScope(result, 'scan') + result.core_status + '。' + result.note;
         const rows = contentField('rows'); rows.replaceChildren();
         for (const item of result.added) {
             const row = document.createElement('tr');

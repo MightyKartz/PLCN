@@ -270,6 +270,12 @@ async function main() {
     assert.equal(await evaluate(visible, '#apply-summary-panel'), true);
     assert.equal(await evaluate(() => document.querySelector('#apply-summary-text').textContent.includes('修改名称 1 项')), true);
     assert.equal(await evaluate(() => document.querySelector('#confirm-apply-button')), null);
+    assert.equal(await evaluate(() => document.querySelector('#preview-plan-scope').textContent.includes('保留游戏文件与单项核心')), true);
+    assert.equal(await evaluate(() => document.querySelector('#preview-table-body .preview-identity').textContent), '精确名称匹配');
+    assert.equal(await evaluate(() => {
+        const label = document.querySelector('#preview-table-body .preview-identity');
+        return label.getBoundingClientRect().bottom <= label.closest('td').getBoundingClientRect().bottom;
+    }), true, 'identity evidence must fit within its table cell');
     await screenshot('03-preview');
     await click('#preview-table-body .new-label-text');
     await send('Input.insertText', {text: '取消的名称'});

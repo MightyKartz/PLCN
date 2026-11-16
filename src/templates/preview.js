@@ -28,6 +28,7 @@ async function previewTask() {
         const data = await response.json();
         if (data.error) throw new Error(data.error);
 
+        if (previewKey !== workbenchInputKey()) throw new Error(workbenchText('配置已变化，请重新分析', 'Inputs changed; analyze again'));
         currentChanges = preparePreviewChanges(data.changes || []);
         workbench.previewKey = previewKey;
         lastAppliedChangeKeys = new Set();
@@ -84,7 +85,7 @@ function renderPreviewTable(changes) {
         tr.appendChild(tdSelect);
 
         const tdOriginal = document.createElement('td');
-        tdOriginal.className = 'name-cell library-name-cell';
+        tdOriginal.className = 'name-cell';
         const tableThumb = document.createElement('div');
         tableThumb.className = 'table-thumb';
         const coverUrl = getCoverPreviewUrl(change);
@@ -123,8 +124,19 @@ function renderPreviewTable(changes) {
         originalPath.textContent = String(change.path || '').split(/[\\/#]/).pop();
         originalPath.title = change.path || '';
         originalText.appendChild(originalPath);
-        tdOriginal.appendChild(tableThumb);
-        tdOriginal.appendChild(originalText);
+        const identityLabel = previewIdentityLabel(change);
+        if (identityLabel) {
+            const identity = document.createElement('small'); identity.className = 'preview-identity';
+            identity.textContent = identityLabel;
+            identity.dataset.state = change.identity?.state || '';
+            identity.title = [workbenchText('名称匹配不代表已验证 ROM 地区、修订或内容。', 'A title match does not verify ROM region, revision or content.'),
+                ...(change.identity?.evidence || []).map(value => [value.source_label || value.source, value.value, value.resolved_name].filter(Boolean).join(' · ')),
+                change.game_id ? 'Game ID: ' + change.game_id : ''].join('\n');
+            originalText.appendChild(identity);
+        }
+        const nameLayout = document.createElement('div'); nameLayout.className = 'library-name-cell';
+        nameLayout.appendChild(tableThumb); nameLayout.appendChild(originalText);
+        tdOriginal.appendChild(nameLayout);
         tdOriginal.title = [originalLabel, getCurrentItemMeta(change)].filter(Boolean).join('\n');
         tr.appendChild(tdOriginal);
         tr.appendChild(buildStatusCell(info, index));
@@ -233,71 +245,26 @@ function buildPreviewEditor(change, index, key, value, label) {
 }
 
 function getCoverStatusInfo(change) {
-    if (getRepairMode() === 'names') return {className:'skipped', label:workbenchText('本次不处理', 'Not requested'), title:workbenchText('仅修复名称，图片保持不变', 'Names only; artwork is unchanged')};
-    if (!change.thumbnail_source) {
-        if (change.artwork_candidates?.length && !['unavailable', 'not_found'].includes(change.artwork_gallery_status)) return {className:'missing',
-            label:workbenchText('待选择版本', 'Choose version'), title:change.match_reason};
-        if (hasExistingCover(change)) {
-            return {
-                className: 'exists',
-                label: uiText('已有封面 · 缺源'),
-                title: currentUILanguage === 'en' ? 'A local cover exists, but cover source is missing' : '本地封面已存在，但缺少封面源'
-            };
-        }
-        if (change.artwork_gallery_status === 'not_found' || change.artwork_gallery_status === 'unavailable') {
-            return {className: 'missing',
-                label: change.artwork_gallery_status === 'not_found'
-                    ? workbenchText('未匹配图片源', 'No artwork match') : workbenchText('图库查询失败', 'Gallery unavailable'),
-                title: change.artwork_gallery_status === 'not_found'
-                    ? workbenchText('当前名称未匹配到官方图片。请核对标准名称与盘号，或点击“更换图片”选择其他图片。', 'No official image matched the current name. Check the standard title and disc number, or use Change artwork.')
-                    : change.match_reason};
-        }
-        return {
-            className: 'missing',
-            label: change.artwork_identity_status === 'unresolved' ? workbenchText('名称未识别', 'Title not identified') : uiText('缺少封面源'),
-            title: change.artwork_identity_status === 'unresolved' ? workbenchText('请填写英文游戏全名，或在游戏列表中导入本地图片', 'Enter the full English title, or import artwork from the game list') : uiText('缺少封面源')
-        };
-    }
-
-    if (change.cover_download_status === 'failed') {
-        return {
-            className: 'failed',
-            label: change.cover_download_reason === 'not_found' ? workbenchText('图库未找到', 'No gallery match')
-                : change.cover_download_reason === 'filename_collision' ? workbenchText('文件名冲突', 'Filename collision')
-                : change.cover_download_reason === 'network_error' ? workbenchText('网络连接失败', 'Network error') : uiText('下载失败'),
-            title: change.cover_download_message || uiText('下载失败')
-        };
-    }
-
-    if (change.cover_download_status === 'success') {
-        return {
-            className: 'downloaded',
-            label: uiText('已下载'),
-            title: currentUILanguage === 'en' ? 'Cover downloaded in this task' : '本次任务已下载封面'
-        };
-    }
-
-    if (change.cover_download_status === 'skipped-download') {
-        return {
-            className: 'skipped',
-            label: uiText('已跳过下载'),
-            title: uiText('跳过下载')
-        };
-    }
-
-    if (change.thumbnail_exists || change.local_thumbnail_exists || change.cover_exists) {
-        return {
-            className: 'exists',
-            label: uiText('已有封面'),
-            title: currentUILanguage === 'en' ? 'A local cover is already available' : '本地已存在可用封面'
-        };
-    }
-
-    return {
-        className: '',
-        label: uiText('待下载'),
-        title: currentUILanguage === 'en' ? 'Will download when applying selected fixes' : '应用已选修复时下载封面'
+    const state = previewArtworkState(change, getRepairMode());
+    const labels = {
+        not_requested: ['本次不处理', 'Not requested'], exists: ['已有图片', 'Artwork exists'],
+        downloaded: ['已下载', 'Downloaded'], available: ['可补全', 'Ready to download'],
+        choose_version: ['待选择版本', 'Choose version'], no_source: ['未匹配图片源', 'No artwork match'],
+        query_failed: ['图库查询失败', 'Gallery query failed'], unidentified: ['名称未识别', 'Title not identified'],
+        failed: ['下载失败', 'Download failed']
     };
+    const titles = {
+        not_requested: ['此次图片保持不变', 'Artwork is unchanged in this plan'],
+        exists: ['本地图片可用，图片源状态不影响已有文件', 'Local artwork is available regardless of source lookup'],
+        available: ['确认应用后下载；图片推荐不证明 ROM 地区或修订', 'Download after confirmation; a recommendation does not verify the ROM release'],
+        no_source: ['当前查询未匹配图片源；不代表官方图库缺少这个游戏', 'This query found no artwork source; this does not establish that the gallery lacks the game'],
+        unidentified: ['先核对游戏名称，或导入本地图片', 'Identify the title first, or import local artwork'],
+        query_failed: ['图库请求失败，请重试；不能据此判断缺图', 'Gallery lookup failed; retry before determining availability']
+    };
+    return {className:['exists','downloaded'].includes(state) ? 'exists' : state === 'not_requested' ? 'skipped'
+        : ['failed','query_failed'].includes(state) ? 'failed' : 'missing',
+        label:workbenchText(...labels[state]),
+        title:titles[state] ? workbenchText(...titles[state]) : change.cover_download_message || change.match_reason || ''};
 }
 
 function getCurrentItemLabel(change) {
@@ -340,6 +307,8 @@ function refreshPreviewRowState(index) {
         rowCheck.disabled = !canSelect;
     }
 
+    const identity = row.querySelector('.preview-identity');
+    if (identity) { identity.textContent = previewIdentityLabel(change); identity.dataset.state = change.identity_name_edited ? 'manual' : change.identity?.state || ''; }
     const statusCell = row.children[2];
     if (statusCell) statusCell.replaceWith(buildStatusCell(info, index));
 
@@ -365,6 +334,16 @@ function buildStatusCell(info, index) {
     statusMainline.appendChild(status);
     statusStack.appendChild(statusMainline);
     const change = currentChanges[index];
+    if (change.identity?.requires_review && !change.identity_name_edited && change.new_label) {
+        const accept = document.createElement('button'); accept.type = 'button'; accept.className = 'save-row-override';
+        accept.textContent = workbenchText('采用此名称', 'Use this title');
+        accept.title = workbenchText('确认当前显示名称；不代表已验证 ROM 版本', 'Accept the displayed title; this does not verify the ROM release');
+        accept.onclick = () => {
+            markChangeEdited(index, '人工确认当前名称', 'new_label');
+            renderPreviewTable(currentChanges); updateSummary(currentChanges);
+        };
+        statusStack.appendChild(accept);
+    }
     if (isEditedChange(change)) {
         const save = document.createElement('button');
         save.type = 'button'; save.className = 'save-row-override';

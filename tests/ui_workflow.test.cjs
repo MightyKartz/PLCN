@@ -90,7 +90,8 @@ function source(name) {
 }
 test('known search names do not become download sources and explain gallery failures separately', () => {
     const context={document:{getElementById:()=>({value:'both'})}, workbenchText:zh=>zh,
-        getRepairMode:()=> 'both', uiText:x=>x, hasExistingCover:()=>false};
+        getRepairMode:()=> 'both', uiText:x=>x, hasExistingCover:()=>false,
+        previewArtworkState:require('../src/templates/workflow.js').previewArtworkState};
     vm.createContext(context);
     vm.runInContext(source('getCoverStatusInfo'),context);
     const game={new_label:'仙剑奇侠传',original_item_label:'仙剑奇侠传',thumbnail_source:null,

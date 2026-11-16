@@ -2,6 +2,8 @@
 function repairActionStatus(change, mode = 'both') {
     const unfinished = Object.values(change.artwork || {}).some(image => image.status !== 'exists');
     if ((change.applied || change.match_status === 'applied') && (mode === 'names' || !unfinished)) return 'applied';
+    if (change.identity?.requires_review && !change.identity_name_edited) return 'incomplete';
+    if (mode !== 'names' && ['not_found','unavailable'].includes(change.artwork_gallery_status) && !change.artwork_source_confirmed) return 'incomplete';
     if (change.artwork_blocked && mode !== 'names') return 'incomplete';
     if (!String(change.new_label || '').trim()) return 'incomplete';
     const current = String(change.original_item_label || change.original_label || '').trim();
@@ -13,6 +15,64 @@ function repairActionStatus(change, mode = 'both') {
         : !Boolean(change.thumbnail_exists || change.local_thumbnail_exists || change.cover_exists);
     if (mode === 'artwork') return missing ? 'download' : 'ready';
     return renamed ? (missing ? 'matched' : 'rename') : (missing ? 'download' : 'ready');
+}
+
+// Derived from current evidence and task results, never cached as another source of truth.
+function previewArtworkState(change, mode = 'both') {
+    if (mode === 'names' || change.cover_download_status === 'skipped-download') return 'not_requested';
+    if (change.cover_download_status === 'failed') return change.cover_download_reason === 'not_found' ? 'no_source' : 'failed';
+    if (change.cover_download_status === 'success') return 'downloaded';
+    if (change.thumbnail_exists || change.local_thumbnail_exists || change.cover_exists) return 'exists';
+    if (change.artwork_gallery_status === 'unavailable') return 'query_failed';
+    if (change.artwork_identity_status === 'unresolved' || change.identity?.state === 'unresolved') return 'unidentified';
+    if (change.artwork_gallery_status === 'not_found') return 'no_source';
+    if (change.thumbnail_source) return 'available';
+    if (change.artwork_candidates?.length) return 'choose_version';
+    return 'no_source';
+}
+
+function previewIdentityLabel(change) {
+    const labels = {
+        confirmed_rule: ['人工规则匹配', 'Confirmed rule'], checksum_match: ['校验值匹配', 'Checksum match'],
+        database_title: ['数据库名称匹配', 'Database title match'], exact_title: ['精确名称匹配', 'Exact title match'],
+        title_family: ['游戏名称已识别', 'Title family identified'], candidate: ['模糊候选 · 待核对', 'Candidate · Review needed'],
+        conflict: ['身份证据冲突', 'Conflicting identity evidence'], unresolved: ['身份未识别', 'Identity not identified']
+    };
+    if (change.identity_name_edited) return workbenchText('手动指定名称', 'Manually specified title');
+    const label = labels[change.identity?.state];
+    return label ? workbenchText(...label) : '';
+}
+
+function buildRepairPreviewSummary(changes, mode) {
+    const counts = {all:changes.length, matched:0, review:0, duplicate:0, ready:0, completed:0, 'missing-cover':0, edited:0,
+        renamed:0, downloads:0, selected:0, queryFailed:0, candidates:0};
+    for (const change of changes) {
+        const info = getMatchInfo(change);
+        const actionable = isActionableChange(change);
+        if (actionable) counts.matched++;
+        if (['review','duplicate'].includes(info.kind)) counts.review++;
+        if (['duplicate','ready','completed'].includes(info.kind)) counts[info.kind]++;
+        const artwork = previewArtworkState(change, mode);
+        if (['choose_version','no_source','unidentified','query_failed','failed'].includes(artwork)) counts['missing-cover']++;
+        if (artwork === 'query_failed') counts.queryFailed++;
+        if (change.identity?.requires_review && !change.identity_name_edited) counts.candidates++;
+        if (isEditedChange(change)) counts.edited++;
+        if (actionable && change.enabled !== false) {
+            counts.selected++;
+            if (mode !== 'artwork' && !currentMatchesWriteName(change)) counts.renamed++;
+            if (mode !== 'names' && needsCoverDownload(change, info)) counts.downloads++;
+        }
+    }
+    return counts;
+}
+
+function formatPreviewScope(summary, scope) {
+    if (scope === 'scan') return workbenchText(
+        `新增 ${summary.added.length} 项 · 保留 ${summary.retained} 项 · 跳过 ${summary.skipped} 个文件。此次仅更新列表；名称与图片在更新后单独分析。`,
+        `Add ${summary.added.length} entries · Keep ${summary.retained} · Skip ${summary.skipped} files. This plan updates playlists only; analyze names and artwork afterwards.`);
+    return workbenchText(
+        `本次所选：修改名称 ${summary.renamed} 项 · 补全图片 ${summary.downloads} 项。待处理 ${summary.review} 项，其中身份待核对 ${summary.candidates} 项、图库查询失败 ${summary.queryFailed} 项。保留游戏文件与单项核心。`,
+        `Selected: rename ${summary.renamed} · Complete artwork for ${summary.downloads}. ${summary.review} need attention, including ${summary.candidates} identity reviews and ${summary.queryFailed} gallery errors. Keep game files and per-entry cores.`);
 }
 
 function downloadTaskOutcome(status, summary) {
@@ -149,15 +209,8 @@ function renderWorkbench() {
         ? workbench.taskMessage || workbenchText('正在处理，请稍候…', 'Working, please wait…') : '';
     document.getElementById('workbench-busy').hidden = !state.busy || workbench.operation === 'artwork';
     document.getElementById('task-status-button').hidden = !workbench.jobId;
-    const counts = {all: currentChanges.length, matched: 0, review: 0, duplicate: 0, ready: 0, completed: 0, 'missing-cover': 0, edited: 0};
-    for (const change of currentChanges) {
-        const info = getMatchInfo(change);
-        if (isActionableChange(change)) counts.matched++;
-        if (['review', 'duplicate'].includes(info.kind)) counts.review++;
-        if (['duplicate', 'ready', 'completed'].includes(info.kind)) counts[info.kind]++;
-        if (!change.thumbnail_source) counts['missing-cover']++;
-        if (isEditedChange(change)) counts.edited++;
-    }
+    const counts = buildRepairPreviewSummary(currentChanges, getRepairMode());
+    document.getElementById('preview-plan-scope').textContent = formatPreviewScope(counts, 'repair');
     document.querySelectorAll('.filter-btn').forEach(button => {
         button.disabled = state.busy;
         button.classList.toggle('active', button.dataset.filter === currentPreviewFilter);
@@ -168,4 +221,4 @@ function renderWorkbench() {
     if (typeof renderLibraryHome === 'function') renderLibraryHome();
 }
 
-if (typeof module !== 'undefined') module.exports = { deriveWorkbenchState, downloadTaskOutcome, repairActionStatus };
+if (typeof module !== 'undefined') module.exports = { deriveWorkbenchState, downloadTaskOutcome, repairActionStatus, previewArtworkState, previewIdentityLabel, buildRepairPreviewSummary, formatPreviewScope };

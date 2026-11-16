@@ -9,4 +9,5 @@ def test_workbench_behavior():
                     str(root / 'tests' / 'library_browser.test.cjs'),
                     str(root / 'tests' / 'welcome.test.cjs'),
                     str(root / 'tests' / 'content_scan_state.test.cjs'),
+                    str(root / 'tests' / 'preview_state.test.cjs'),
                     str(root / 'tests' / 'artwork_dialog.test.cjs')], cwd=root, check=True)
