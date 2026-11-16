@@ -3,7 +3,7 @@ from pathlib import PurePosixPath
 import re
 
 from artwork_identity import resolve, base_title
-from gallery_names import release_candidates, matching_gallery_name
+from gallery_names import release_candidates, matching_artwork_name
 from rom_paths import rom_title, DISC_MARKER
 from playlist_proposals import classify_match
 from match_evidence import build_match_diagnostics
@@ -74,7 +74,7 @@ def resolve_proposals(proposals, translators, playlist_path, verify_artwork, thu
                     availability[kind] = {'status': 'unavailable', 'message': str(catalog)}
                 else:
                     matches = list(dict.fromkeys(match for name in names
-                        if (match := matching_gallery_name(proposal['system'], name, catalog))))
+                        if (match := matching_artwork_name(proposal['system'], name, catalog))))
                     availability[kind] = {'status': 'available' if matches else 'not_found', 'names': matches}
             proposal['artwork_availability'] = availability
             boxart = availability['Named_Boxarts']
@@ -84,7 +84,7 @@ def resolve_proposals(proposals, translators, playlist_path, verify_artwork, thu
                 selected = None
                 proposal['artwork_gallery_status'] = boxart['status']
             elif selected:
-                selected = matching_gallery_name(proposal['system'], selected, catalogs['Named_Boxarts'])
+                selected = matching_artwork_name(proposal['system'], selected, catalogs['Named_Boxarts'])
                 proposal['artwork_gallery_status'] = 'matched'
             else:
                 proposal['artwork_gallery_status'] = 'ambiguous'

@@ -214,7 +214,8 @@ function applyCompletedJobToPreview(result) {
         }
         change.applied = Object.values(change.artwork).every(image => image.status === 'exists');
         change.artwork_message = [...new Set(imageResults.filter(detail => detail.status === 'failed').map(detail => detail.message).filter(Boolean))].join(' · ');
-        change.artwork_blocked = imageResults.some(detail => ['not_found', 'filename_collision'].includes(detail.reason));
+        change.artwork_blocked = imageResults.some(detail => detail.reason === 'filename_collision'
+            || (detail.reason === 'not_found' && detail.type === 'Named_Boxarts'));
         change.match_status = change.applied ? 'applied' : change.artwork_blocked ? 'review' : 'download';
         change.enabled = !change.applied && !change.artwork_blocked;
         change.needs_review = change.artwork_blocked;
@@ -254,7 +255,7 @@ function matchesFilter(change, query) {
     if (currentPreviewFilter === 'matched') return isActionableChange(change);
     if (currentPreviewFilter === 'ready') return info.kind === 'ready';
     if (currentPreviewFilter === 'completed') return info.kind === 'completed';
-    if (currentPreviewFilter === 'missing-cover') return ['choose_version','no_source','unidentified','query_failed','failed'].includes(previewArtworkState(change, getRepairMode()));
+    if (currentPreviewFilter === 'missing-cover') return ['partial','choose_version','no_source','unidentified','query_failed','failed'].includes(previewArtworkState(change, getRepairMode()));
     if (currentPreviewFilter === 'edited') return isEditedChange(change);
     return true;
 }

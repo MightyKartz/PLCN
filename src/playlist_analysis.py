@@ -440,7 +440,7 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
 
         if normalized_system == 'DOS':
             from artwork_identity import resolve as resolve_artwork_identity
-            from gallery_names import matching_gallery_name
+            from gallery_names import matching_artwork_name
             from single_artwork import catalog_names
             identity = resolve_artwork_identity({'system': 'DOS', 'label': original_label or '',
                                                  'rom_path': path, 'playlist_path': str(playlist_path),
@@ -460,7 +460,7 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
                     gallery_status = 'unavailable'
                     reason = '名称已识别，但图库查询失败；请重试搜索或导入本地图片'
                 else:
-                    source = matching_gallery_name('DOS', identity['query'], dos_gallery['names'])
+                    source = matching_artwork_name('DOS', identity['query'], dos_gallery['names'])
                     gallery_status = 'matched' if source else 'not_found'
                     reason = '已找到官方 DOS 封面' if source else '名称已识别，官方 DOS 图库未找到匹配封面；可搜索其他名称或导入本地图片'
             add_proposal(i, item, original_label or display_label, original_label or display_label,
@@ -818,11 +818,29 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
         from saturn_artwork import resolve_proposals
         resolve_proposals(proposed_changes, translators, source_playlist_path or str(playlist_path), verify_artwork, thumbnails_dir)
     from automatic_name_match import resolve as resolve_automatic_names
+    from disc_title_inheritance import inherit_confirmed_titles
+    inherit_confirmed_titles(proposed_changes)
     resolve_automatic_names(proposed_changes, translators)
     from title_family import resolve_artwork
     resolve_artwork(proposed_changes, verify_artwork)
     from display_names import normalize_proposals
     normalize_proposals(proposed_changes)
+    if verify_artwork and thumbnails_dir:
+        from playlist_browser import open_artwork_reader, artwork_statuses
+        from playlist_artwork import cover_preview_url
+        readers = {}
+        for proposal in proposed_changes:
+            system = proposal['system']
+            if system not in readers:
+                readers[system] = open_artwork_reader(thumbnails_dir, system)
+            reader, image_lookups, image_error = readers[system]
+            proposal['artwork'] = artwork_statuses(proposal['new_label'], proposal['path'], reader, image_lookups, thumbnails_dir, system)
+            boxart = proposal['artwork']['Named_Boxarts']
+            proposal['cover_exists'] = proposal['thumbnail_exists'] = proposal['local_thumbnail_exists'] = boxart['status'] == 'exists'
+            proposal['cover_path'] = boxart['path']
+            proposal['cover_preview_url'] = cover_preview_url(boxart['path'])
+            if image_error:
+                proposal['artwork_message'] = image_error
     targets = {}
     for proposal in proposed_changes:
         key = (proposal['system'], sanitize_filename(proposal['new_label']).casefold())
