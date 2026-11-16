@@ -26,7 +26,7 @@ def receipt_path(ident):
 def receipts():
     records=[json.loads(path.read_text(encoding='utf-8')) for path in
              sorted(operations_dir().glob('*/manifest.json'),key=lambda path:path.stat().st_mtime,reverse=True)]
-    return [record for record in records if record['mode']!='chd_references'][:100]
+    return [record for record in records if record['mode'] not in {'chd_references','rom_references'}][:100]
 
 
 def patch_value(document, keys):

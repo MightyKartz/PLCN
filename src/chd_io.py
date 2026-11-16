@@ -33,7 +33,9 @@ def digest(path,cancelled=lambda: None):
         with tempfile.TemporaryDirectory(prefix='plcn-image-check-') as temporary:
             target=Path(temporary)/'image'
             return copy_to(path,target,cancelled)
-    return chd_cue.fingerprint(path,cancelled) if Path(path).exists() else None
+    target=Path(path)
+    if target.is_symlink(): raise ValueError('源或目标已变为符号链接，请先核对：'+str(path))
+    return chd_cue.fingerprint(target,cancelled) if target.exists() else None
 
 
 def volume(path):

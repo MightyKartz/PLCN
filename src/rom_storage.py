@@ -16,7 +16,7 @@ import zipfile
 import app_paths
 import chd_io as io
 from content_scan import folders, join, read
-from disc_inspection import Reader, METADATA_LIMIT
+from disc_inspection import Reader, METADATA_LIMIT, parse_references, reference_path
 import mtp_runtime as mtp
 from safe_io import atomic_write_json
 from task_control import TaskCancelled
@@ -46,9 +46,13 @@ RESERVE = 64*1024*1024
 
 
 def history():
-    return [json.loads(path.read_text(encoding='utf-8')) for path in sorted(
+    records=[json.loads(path.read_text(encoding='utf-8')) for path in sorted(
         (app_paths.user_data_dir()/'rom-storage').glob('*/manifest.json'),
         key=lambda value:value.stat().st_mtime, reverse=True)[:100]]
+    for record in records:
+        for row in record['results']:
+            row.setdefault('id',hashlib.sha256(io.key(row['source']).encode()).hexdigest()[:24])
+    return records
 
 
 def analyze(payload, cancelled=lambda: None, progress=lambda message: None):
@@ -64,6 +68,7 @@ def analyze(payload, cancelled=lambda: None, progress=lambda message: None):
     if re.match(r'^\w+://',workspace): raise ValueError('ZIP 工作目录必须位于电脑')
     workspace = Path(workspace).expanduser().resolve()
     if not workspace.is_dir(): raise ValueError('电脑工作目录不存在')
+    playlist = io.key(playlist)
     reader = Reader(playlist)
     # Both browser-selected directories must belong to this library transport/device.
     source, target = reader.locate(source), reader.locate(target)
@@ -101,8 +106,8 @@ def analyze(payload, cancelled=lambda: None, progress=lambda message: None):
             raw_cart = extension in CARTRIDGES.get(system,set())
             standalone = raw_cart or (extension=='chd' and system in OPTICAL)
             companions = [other['name'] for other in entries if not other['folder'] and
-                PurePosixPath(other['name']).suffix.lower() in {'.ips','.bps','.ups','.msu','.pcm'} and
-                (PurePosixPath(other['name']).stem==PurePosixPath(name).stem or other['name'].startswith(PurePosixPath(name).stem+'-'))]
+                PurePosixPath(other['name']).suffix.lower() in {'.ips','.bps','.ups','.xdelta','.msu','.pcm'} and
+                (PurePosixPath(other['name']).stem.casefold()==PurePosixPath(name).stem.casefold() or other['name'].casefold().startswith(PurePosixPath(name).stem.casefold()+'-'))]
             if companions:
                 standalone = False; row['issues'].append('存在补丁／增强资源，保留目录：'+'、'.join(companions))
             if standalone:
@@ -123,6 +128,18 @@ def analyze(payload, cancelled=lambda: None, progress=lambda message: None):
                     row['sha256'] = io.digest(path,cancelled)
                     if row['sha256'] is None: raise ValueError('源 ROM 已消失，请重新分析：'+path)
             rows.append(row)
+    by_path={row['source']:row for row in rows}
+    for row in rows:
+        if row['format']!='m3u' or system not in OPTICAL or row['size']>METADATA_LIMIT: continue
+        values,errors=parse_references(read(row['source']),'m3u')
+        members=[]
+        for value in values:
+            access=reader.locate(reference_path(row['source'],value['value']))
+            member=by_path.get(io.key(access)) if access else None
+            if member and member['format']=='chd' and member['layout'] in {'candidate','already_flat'}: members.append(member['id'])
+        if not errors and len(members)==len(values) and len(members)>=2 and len(set(members))==len(members):
+            row.update(members=members,layout='already_flat' if io.key(row['target'])==row['source'] else 'candidate',sha256=io.digest(row['source'],cancelled))
+            row['issues']=['已识别独立 CHD 多盘入口；目录整理时联动盘文件与 M3U 引用，保留盘序']
     counts = Counter(row['name'].casefold() for row in rows if row['layout']!='keep')
     existing = {entry['name'].casefold() for entry in target_entries}
     for row in rows:
@@ -151,6 +168,7 @@ def convert(plan, selected, cancelled=lambda: None, progress=lambda message: Non
     manifest.parent.mkdir(parents=True)
     record = {'id':plan['id'],'created_at':datetime.now(timezone.utc).isoformat(),'status':'running',
               'playlist':plan['playlist'],'system':plan['system'],'output_directory':str(output),
+              'target_directory':plan['target_directory'],'source_directory':plan['source_directory'],'workspace':plan['workspace'],
               'mode':'local_zip_copy','sources':rows,'results':[],'error':None,'device_saved_bytes':0}
     atomic_write_json(manifest,record)
     try:
@@ -181,7 +199,7 @@ def convert(plan, selected, cancelled=lambda: None, progress=lambda message: Non
                 destination = output/row['id']; destination.mkdir()
                 final = destination/(PurePosixPath(row['name']).stem+'.zip')
                 archive.rename(final)
-                record['results'].append({'source':row['source'],'source_sha256':row['sha256'],'output':str(final),
+                record['results'].append({'id':row['id'],'source':row['source'],'source_sha256':row['sha256'],'output':str(final),
                     'sha256':archive_hash,'member':row['name'],'input_bytes':row['size'],'output_bytes':final.stat().st_size,
                     'copy_size_delta_bytes':final.stat().st_size-row['size'],'cores':row['cores'],'verification':'byte_for_byte'})
                 atomic_write_json(manifest,record)

@@ -403,10 +403,10 @@
     </dialog>
     <dialog id="rom-storage-dialog" aria-labelledby="rom-storage-title" oncancel="if(romStorage.busy)event.preventDefault();else invalidateRomStorage()">
         <header class="disc-inspection-header"><div><h2 id="rom-storage-title">目录整理与 ROM 压缩</h2><p>检查源目录 → 核对冲突与格式 → 生成电脑 ZIP 副本</p></div><button id="rom-storage-close" class="btn btn-muted" type="button" onclick="closeRomStorage()">关闭</button></header>
-        <p class="storage-scope">目录整理先显示建议。ZIP 保留原文件和启动引用，完成后逐字节核对解压内容；掌机节省空间为 0。移动与引用切换将在下一阶段提供。</p>
+        <p class="storage-scope">先分析目录与冲突，再单独预览整理或 ZIP 回传方案。默认仅复制，更新引用与清理需核对存档、运行报告及备份。</p>
         <details id="rom-storage-settings" open><summary>目录与输出设置</summary><fieldset id="rom-storage-fields" oninput="invalidateRomStorage()"><legend>目录与输出位置</legend>
             <label>游戏源目录<div class="storage-input"><input id="rom-storage-source" readonly placeholder="选择本机或存储卡上的游戏目录"><button type="button" class="btn btn-muted" onclick="pickRomStorage('source')">选择目录</button></div></label>
-            <label>主机平铺目标目录（仅预览）<div class="storage-input"><input id="rom-storage-target" readonly placeholder="默认与源目录相同"><button type="button" class="btn btn-muted" onclick="pickRomStorage('target')">选择目录</button></div></label>
+            <label>主机平铺目标目录<div class="storage-input"><input id="rom-storage-target" readonly placeholder="默认与源目录相同"><button type="button" class="btn btn-muted" onclick="pickRomStorage('target')">选择目录</button></div></label>
             <label>电脑 ZIP 工作目录<div class="storage-input"><input id="rom-storage-workspace" placeholder="留空使用应用数据目录"><button type="button" class="btn btn-muted" onclick="pickRomWorkspace()">选择目录</button></div></label>
             <section id="rom-storage-picker" hidden aria-label="选择存储与目录"><label>存储空间<select id="rom-storage-storage" onchange="browseRomStorage(this.value)"></select></label><p id="rom-storage-path"></p><div class="content-directory-actions"><button id="rom-storage-up" type="button" class="btn btn-muted" onclick="browseRomStorage(romStorage.parent)">上一级</button><button id="rom-storage-use" type="button" class="btn" onclick="chooseRomStorage()">使用此目录</button><button type="button" class="btn btn-muted" onclick="closeRomPicker()">取消选择</button></div><div id="rom-storage-directories"></div></section>
         </fieldset>
@@ -414,7 +414,20 @@
         <p id="rom-storage-status" role="status" aria-live="polite">选择主机列表和源目录；街机 ROM 集与多文件镜像保留原结构。</p>
         <section id="rom-storage-analysis" hidden><div id="rom-storage-summary" class="storage-summary"></div><p id="rom-storage-budget"></p><div id="rom-storage-rows"></div></section>
         <section id="rom-storage-result" hidden></section>
-        <footer><button id="rom-storage-cancel" class="btn btn-muted" type="button" onclick="cancelRomStorage()" hidden>取消任务</button><button id="rom-storage-analyze" class="btn btn-muted" type="button" onclick="analyzeRomStorage()">分析目录与 ZIP 支持</button><button id="rom-storage-convert" class="btn" type="button" onclick="convertRomStorage()" disabled>确认生成电脑 ZIP 副本</button></footer>
+        <footer><button id="rom-storage-cancel" class="btn btn-muted" type="button" onclick="cancelRomStorage()" hidden>取消任务</button><button id="rom-storage-analyze" class="btn btn-muted" type="button" onclick="analyzeRomStorage()">分析目录与 ZIP 支持</button><button id="rom-storage-relocate" class="btn btn-muted" type="button" onclick="previewRomLayout()" disabled>预览目录整理</button><button id="rom-storage-convert" class="btn" type="button" onclick="convertRomStorage()" disabled>确认生成电脑 ZIP 副本</button></footer>
+    </dialog>
+    <dialog id="relocate-dialog" aria-labelledby="relocate-title" oncancel="if(romRelocation.busy)event.preventDefault();else invalidateRelocation()">
+        <header class="disc-inspection-header"><div><h2 id="relocate-title">目录整理与 ZIP 回传</h2><p>核对目标与存档 → 预览引用和备份 → 确认执行</p></div><button id="relocate-close" class="btn btn-muted" type="button" onclick="closeRomRelocation()">关闭</button></header>
+        <p id="relocate-origin" class="storage-scope"></p>
+        <details id="relocate-settings" open><summary>执行方式与运行报告</summary><fieldset id="relocate-fields" oninput="invalidateRelocation()"><legend>本次整理</legend>
+            <label>执行方式<select id="relocate-mode"><option value="copy">仅复制到目标，保留原文件与引用</option><option value="switch">复制并更新引用，保留原文件</option><option value="replace">复制、更新引用并清理有备份的原文件</option></select></label>
+            <p>先仅复制，再在 RetroArch 中使用目标文件验证运行、游戏内存档及所需换盘。更新引用时保留名称、人工核心和图片选择；原存档与即时存档不移动。</p>
+            <label>已验证的原核心版本<input id="relocate-version" placeholder="从 RetroArch 核心信息核对；复制模式可留空"></label>
+            <label class="relocate-check"><input id="relocate-tested" type="checkbox">已用目标路径／ZIP 在原核心验证运行、游戏内存档与所需换盘</label>
+            <label class="relocate-check"><input id="relocate-scope" type="checkbox">预览目录包含全部相关列表与描述文件，执行前已退出 RetroArch</label>
+        </fieldset></details>
+        <p id="relocate-status" role="status" aria-live="polite"></p><section id="relocate-review" hidden><h3>本次方案</h3><ul id="relocate-details"></ul></section>
+        <footer><button id="relocate-cancel" class="btn btn-muted" type="button" onclick="cancelRomRelocation()" hidden>取消任务</button><button id="relocate-preview" class="btn btn-muted" type="button" onclick="previewRomRelocation()">预览变更与备份</button><button id="relocate-apply" class="btn" type="button" onclick="applyRomRelocation()" disabled>确认执行此方案</button></footer>
     </dialog>
     <dialog id="deploy-dialog" aria-labelledby="deploy-title" oncancel="if(chdDeployment.busy)event.preventDefault();else invalidateDeployment()">
         <header class="disc-inspection-header"><div><h2 id="deploy-title">CHD 回传与替换</h2><p>核对内容验证结果 → 预览目标与备份 → 确认执行</p></div><button id="deploy-close" class="btn btn-muted" type="button" onclick="closeChdDeployment()">关闭</button></header>
@@ -442,6 +455,7 @@
     <script src="/assets/m3u.js"></script>
     <script src="/assets/storage.js"></script>
     <script src="/assets/rom-storage.js"></script>
+    <script src="/assets/rom-relocation.js"></script>
     <script src="/assets/chd-deployment.js"></script>
     <script src="/assets/artwork.js"></script>
     <script src="/assets/welcome.js"></script>

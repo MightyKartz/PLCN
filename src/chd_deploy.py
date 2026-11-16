@@ -20,7 +20,7 @@ from m3u_plan import core_support
 from library_model import OPTICAL_SYSTEMS
 import m3u_transaction as tx
 import mtp_runtime as mtp
-from safe_io import atomic_write_json, file_lock
+from safe_io import atomic_write_bytes, atomic_write_json, file_lock
 from task_control import TaskCancelled
 
 RESERVE=64*1024*1024
@@ -133,13 +133,20 @@ def prepare(payload,cancelled=lambda: None,progress=lambda message: None):
 
 
 def public(plan):
-    return {key:value for key,value in plan.items() if key not in {'metadata_plan','scope_snapshot'}}
+    return {key:value for key,value in plan.items() if key not in {'metadata_plan','scope_snapshot','origin_analysis'}} | {
+        'copies':[{key:value for key,value in item.items() if key!='content_base64'} for item in plan['copies']]}
 
 
 def check_scope(record,after=False):
     checked=references.scope(record['roots'],record['playlist'])
     current={path:[list(value) for value in values] for path,values in checked['directories'].items()}
-    # Deleted CUEs legitimately disappear only after references have been updated.
+    # Owned new descriptors are checked by their output hash, not the pre-operation inventory.
+    for item in record['copies']:
+        if item['created'] and item['target'] not in record['scope_snapshot']['documents']:
+            parent=item['target'].rsplit('/',1)[0]
+            name=mtp.parse(item['target'])[2][-1] if mtp.is_mtp(item['target']) else Path(item['target']).name
+            if parent in current: current[parent]=[entry for entry in current[parent] if entry[0]!=name]
+    # Deleted descriptors legitimately disappear after references have been updated.
     expected=copy.deepcopy(record['scope_snapshot']['directories'])
     for file in record.get('sources',[]):
         if file.get('state') in {'deleting','deleted'}:
@@ -187,6 +194,9 @@ def run(ident,restore=False,cancelled=lambda: None,progress=lambda message: None
                 consumed=defaultdict(int)
                 for file in backup_files(record):
                     if file.get('backup_verified'): consumed[io.volume(file['backup'])]+=file['size']
+                for item in record['copies']:
+                    if item.get('state') in {'uploading','verified'} and io.digest(item['target'],cancelled)==item['sha256']:
+                        consumed[io.volume(item['target'])]+=item['size']
                 if record['references_id'] and tx.receipt_path(record['references_id']).exists():
                     nested=json.loads(tx.receipt_path(record['references_id']).read_text(encoding='utf-8'))
                     for file in nested['files']:
@@ -205,7 +215,11 @@ def run(ident,restore=False,cancelled=lambda: None,progress=lambda message: None
                     progress('建立电脑备份：'+source)
                     file['backup']=str(backup/(f'{number}-'+uuid.uuid4().hex+'.bin'))
                     atomic_write_json(manifest,record)
-                    if io.copy_to(source,file['backup'],cancelled)!=file['sha256']: raise ValueError('电脑备份与已确认指纹不一致')
+                    if 'content_base64' in file:
+                        atomic_write_bytes(file['backup'],base64.b64decode(file['content_base64']))
+                        actual=io.digest(file['backup'],cancelled)
+                    else: actual=io.copy_to(source,file['backup'],cancelled)
+                    if actual!=file['sha256']: raise ValueError('电脑备份与已确认指纹不一致')
                     file.update(backup_verified=True,state='kept' if 'path' in file else 'pending');atomic_write_json(manifest,record)
                 if record['references_id'] and not tx.receipt_path(record['references_id']).exists():
                     metadata=copy.deepcopy(record['metadata'])
@@ -244,10 +258,17 @@ def run(ident,restore=False,cancelled=lambda: None,progress=lambda message: None
                         if result['status']!='restored': raise ValueError('引用恢复未完成：'+str(result['error']))
                 checked=references.scope(record['roots'],record['playlist'],cancelled)
                 record['restored_retained_outputs']=[]
-                for item in record['copies']:
+                owned={item['target'] for item in record['copies'] if item['created']}
+                live={ref['target'] for ref in checked['references'] if ref['owner'] not in owned}
+                while True:
+                    reached={ref['target'] for ref in checked['references'] if ref['owner'] in live}
+                    if reached<=live: break
+                    live.update(reached)
+                removable=owned-live
+                for item in sorted(record['copies'],key=lambda item:not item['target'].lower().endswith('.m3u')):
                     cancelled();item['state']='restored'
                     if item['created'] and io.digest(item['target'],cancelled) is not None:
-                        consumers=[ref['owner'] for ref in checked['references'] if ref['target']==item['target']]
+                        consumers=[ref['owner'] for ref in checked['references'] if ref['target']==item['target'] and ref['owner'] not in removable]
                         if consumers or checked['errors']:
                             item['state']='retained';record['restored_retained_outputs'].append({'path':item['target'],'consumers':consumers,'issues':checked['errors']})
                         else: io.remove(item['target'],item['sha256'],cancelled)
@@ -281,6 +302,7 @@ def run(ident,restore=False,cancelled=lambda: None,progress=lambda message: None
                         if mtp.digest(read(file['path']))!=file['after_digest']: raise ValueError('引用未保持已确认的新内容，停止清理')
                     for item in record['copies']:
                         if io.digest(item['target'],cancelled)!=item['sha256']: raise ValueError('CHD 在回传后变化，停止清理')
+                    tx.check_dependencies(record['metadata']['dependencies'])
                     deleting={file['path'] for file in record['deletions']}
                     for file in record['sources']:
                         if file['path'] not in deleting or file['state']=='deleted': continue

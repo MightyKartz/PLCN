@@ -4,7 +4,7 @@ const romField=name=>document.getElementById('rom-storage-'+name);
 function romPayload(){return {playlist_path:document.getElementById('playlist_path').value,system:document.getElementById('system_name').value,
     source_directory:romField('source').value,target_directory:romField('target').value,workspace:romField('workspace').value.trim()};}
 function romKey(){return JSON.stringify(romPayload());}
-function invalidateRomStorage(){romStorage.revision++;romStorage.analysis=null;romStorage.key=null;romStorage.report=null;romStorage.selected.clear();romField('analysis').hidden=true;romField('convert').disabled=true;romField('result').hidden=true;}
+function invalidateRomStorage(){romStorage.revision++;romStorage.analysis=null;romStorage.key=null;romStorage.report=null;romStorage.selected.clear();romField('analysis').hidden=true;romField('convert').disabled=true;romField('relocate').disabled=true;romField('result').hidden=true;}
 function closeRomPicker(){romStorage.pickerRevision++;romStorage.browsePath=null;romField('picker').hidden=true;if(!romStorage.busy)romField('analyze').disabled=false;}
 function openRomStorage(){
     if(workbench.operation)return;
@@ -60,15 +60,16 @@ function chooseRomStorage(){
 }
 function updateRomSelection(){
     const report=romStorage.report;if(!report)return;
-    const selected=report.rows.filter(row=>romStorage.selected.has(row.id));
+    const selected=report.rows.filter(row=>romStorage.selected.has(row.id)&&row.zip_eligible);
+    romField('relocate').disabled=romStorage.busy||!romStorage.analysis||!report.rows.some(row=>romStorage.selected.has(row.id)&&['candidate','conflict'].includes(row.layout));
     const required=3*selected.reduce((sum,row)=>sum+row.size,0)+64*1024*1024;
-    romField('budget').textContent='已选 '+selected.length+' 个 ROM；电脑预算 '+storageBytes(required)+'；可用 '+storageBytes(report.free_bytes);
+    romField('budget').textContent='所选可转 ZIP '+selected.length+' 个 ROM；电脑预算 '+storageBytes(required)+'；可用 '+storageBytes(report.free_bytes);
     romField('convert').disabled=romStorage.busy||!romStorage.analysis||!selected.length||required>report.free_bytes;
 }
 async function romJob(route,payload){
     if(!beginWorkbenchOperation('rom-storage'))throw new Error('请等待当前任务');
     romStorage.busy=true;romField('fields').disabled=true;
-    for(const name of ['close','analyze','convert'])romField(name).disabled=true;
+    for(const name of ['close','analyze','convert','relocate'])romField(name).disabled=true;
     for(const input of romField('rows').querySelectorAll('input'))input.disabled=true;
     romField('cancel').hidden=false;
     try{
@@ -106,11 +107,11 @@ async function analyzeRomStorage(){
         romField('rows').replaceChildren();
         for(const row of result.rows){
             const article=desktopElement('article',undefined,romField('rows'));article.className='storage-row';article.dataset.layout=row.layout;
-            const label=desktopElement('label',undefined,article),check=document.createElement('input');check.type='checkbox';check.disabled=!row.zip_eligible;check.checked=row.zip_eligible;
-            if(row.zip_eligible)romStorage.selected.add(row.id);
+            const label=desktopElement('label',undefined,article),check=document.createElement('input');check.type='checkbox';check.disabled=!row.zip_eligible&&!['candidate','conflict'].includes(row.layout);check.checked=row.zip_eligible||row.layout==='candidate';
+            if(check.checked)romStorage.selected.add(row.id);
             check.onchange=()=>{if(check.checked)romStorage.selected.add(row.id);else romStorage.selected.delete(row.id);updateRomSelection();};
             label.appendChild(check);desktopElement('strong',row.name,label);
-            for(const line of [({candidate:'可平铺候选（移动与引用待后续确认）',already_flat:'已在主机目录',conflict:'同名冲突 · 保留原文件',keep:'保留目录结构'}[row.layout])+' · '+storageBytes(row.size),
+            for(const line of [({candidate:'可平铺候选（单独预览移动方案）',already_flat:'已在主机目录',conflict:'同名冲突 · 保留原文件',keep:'保留目录结构'}[row.layout])+' · '+storageBytes(row.size),
                 '源：'+row.source,...(row.layout!=='keep'?['平铺目标：'+row.target]:[]),...row.issues,
                 row.zip_eligible?'可生成单成员 ZIP；保留文件名，解压内容逐字节核对':'本轮不生成 ZIP',
                 ...row.cores.map(core=>core.declares_zip_extraction?'上游声明可解包 · '+core.path:'该核心解包支持未核对 · '+core.path)])desktopElement('p',line,article);
@@ -123,11 +124,18 @@ async function convertRomStorage(){
     if(romStorage.key!==romKey()){invalidateRomStorage();romField('status').textContent='列表或目录已变化，请重新分析';return;}
     romStorage.analysis=null;
     try{
-        const {result}=await romJob('/api/rom-storage/convert',{analysis_job_id:id,file_ids:[...romStorage.selected]});
+        const {result}=await romJob('/api/rom-storage/convert',{analysis_job_id:id,file_ids:romStorage.report.rows.filter(row=>row.zip_eligible&&romStorage.selected.has(row.id)).map(row=>row.id)});
         const panel=romField('result');panel.replaceChildren();panel.hidden=false;romField('analysis').hidden=true;
         for(const line of ['ZIP 电脑副本已完成 · 掌机节省空间 0 B','输出目录：'+result.output_directory,
             ...result.results.map(row=>row.output+' · '+storageBytes(row.input_bytes)+' → '+storageBytes(row.output_bytes)+' · 解压内容逐字节一致'),
             '原文件和列表保留；核心加载、存档及设备替换尚未验收。任务记录可在设置 → 任务与恢复查看。'])desktopElement('p',line,panel);
+        const deploy=desktopElement('button','预览 ZIP 回传／替换',panel);deploy.type='button';deploy.className='btn btn-muted';deploy.onclick=()=>{closeRomStorage();openRomRelocation({conversion_id:result.id,file_ids:result.results.map(row=>row.id),playlist:result.playlist});};
         romField('status').textContent='已完成电脑副本与解压校验。';romField('dialog').scrollTop=romField('dialog').scrollHeight;
     }catch(error){romField('status').textContent=error.message+'；已完成副本与中断记录见任务与恢复。';}
+}
+
+function previewRomLayout(){
+    if(!romStorage.analysis||romStorage.key!==romKey()){invalidateRomStorage();romField('status').textContent='目录或列表已变化，请重新分析';return;}
+    const source={analysis_job_id:romStorage.analysis,file_ids:romStorage.report.rows.filter(row=>romStorage.selected.has(row.id)&&['candidate','conflict'].includes(row.layout)).map(row=>row.id),playlist:romPayload().playlist_path};
+    closeRomStorage();openRomRelocation(source);
 }

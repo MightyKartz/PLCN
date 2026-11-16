@@ -15,7 +15,7 @@ test('stale analysis never enables conversion after library change',async()=>{
     assert.equal(c.store.analysis,null);assert.equal(field('convert').disabled,true);
 });
 test('one-shot conversion sends only server plan ID and selected IDs',async()=>{
-    const {c}=harness(),pending=deferred();c.romKey=()=> 'same';Object.assign(c.store,{analysis:'plan',key:'same',selected:new Set(['rom'])});let count=0;
+    const {c}=harness(),pending=deferred();c.romKey=()=> 'same';Object.assign(c.store,{analysis:'plan',key:'same',selected:new Set(['rom']),report:{rows:[{id:'rom',zip_eligible:true}]}});let count=0;
     c.romJob=(route,payload)=>{count++;assert.equal(route,'/api/rom-storage/convert');assert.deepEqual(JSON.parse(JSON.stringify(payload)),{analysis_job_id:'plan',file_ids:['rom']});return pending.promise;};
     const task=c.convertRomStorage();await c.convertRomStorage();assert.equal(count,1);pending.resolve({result:null});await task;
     assert.equal(c.store.analysis,null);

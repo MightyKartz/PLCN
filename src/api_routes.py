@@ -39,6 +39,9 @@ GET_ROUTES = {
 }
 
 POST_ROUTES = {
+    '/api/rom-storage/relocation/preview': api_rom_storage.relocation_preview,
+    '/api/rom-storage/relocation/apply': api_rom_storage.relocation_apply,
+    '/api/rom-storage/relocation/recover': api_rom_storage.relocation_recover,
     '/api/rom-storage/analyze': api_rom_storage.analyze,
     '/api/rom-storage/convert': api_rom_storage.convert,
     '/api/chd/deployment/preview': api_chd.deployment_preview,
