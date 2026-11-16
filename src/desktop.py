@@ -10,7 +10,7 @@ import app_paths
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--pick', choices=['file', 'directory'])
+    parser.add_argument('--pick', choices=['file', 'directory', 'executable'])
     parser.add_argument('--initial', default='')
     parser.add_argument('--result')
     parser.add_argument('--self-check', action='store_true')

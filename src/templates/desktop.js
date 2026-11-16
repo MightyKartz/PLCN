@@ -161,6 +161,15 @@ async function refreshDesktop() {
             if (!state.jobs.length) desktopElement('p', desktopText('暂无任务。', 'No tasks yet.'), body);
             clearTimeout(desktopPoll);
             if (state.active_jobs) desktopPoll = setTimeout(refreshDesktop, 2000);
+            desktopElement('h3','电脑 CHD 转换',body);
+            for(const record of state.chd_operations || []){
+                const entry=desktopElement('div',undefined,body);entry.className='desktop-entry';entry.dataset.chdOperation=record.id;
+                desktopElement('strong',({running:'运行中／中断，请核对',completed:'已完成',failed:'失败',cancelled:'已取消'}[record.status]||record.status)+' · '+record.created_at,entry);
+                desktopElement('p','输出目录：'+record.output_directory,entry);
+                desktopElement('p','已验证 '+record.results.length+' 张光盘；原文件保留，启动引用未更新，掌机运行未验收',entry);
+                for(const result of record.results)desktopElement('p',result.output+' · SHA-256 '+result.sha256,entry);
+                if(record.error)desktopElement('p',record.error,entry);
+            }
             desktopElement('h3',desktopText('多盘操作与恢复','Multi-disc operations and recovery'),body);
             for(const record of state.m3u_operations || []){
                 const entry=desktopElement('div',undefined,body);entry.className='desktop-entry';entry.dataset.m3uOperation=record.id;

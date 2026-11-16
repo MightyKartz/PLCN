@@ -7,7 +7,7 @@ import sys
 
 
 def helper_pick(kind, initial=''):
-    if kind not in {'file', 'directory'}:
+    if kind not in {'file', 'directory', 'executable'}:
         raise ValueError('Invalid picker type')
     import tkinter as tk
     from tkinter import filedialog
@@ -15,7 +15,7 @@ def helper_pick(kind, initial=''):
     root.withdraw()
     root.attributes('-topmost', True)
     try:
-        options = {'title': 'PLCN — 选择游戏列表' if kind == 'file' else 'PLCN — 选择目录'}
+        options = {'title': {'file':'PLCN — 选择游戏列表','directory':'PLCN — 选择目录','executable':'PLCN — 选择 chdman 程序'}[kind]}
         # On macOS, a parent makes the native panel a sheet attached to that
         # window. Our hidden helper window has no usable on-screen position;
         # let macOS place a standalone panel instead of an off-screen sheet.
@@ -23,6 +23,8 @@ def helper_pick(kind, initial=''):
             options['parent'] = root
         if initial and Path(initial).is_dir():
             options['initialdir'] = initial
+        if kind == 'executable':
+            return filedialog.askopenfilename(filetypes=[('chdman executable', '*')], **options)
         if kind == 'file':
             return filedialog.askopenfilename(filetypes=[('RetroArch playlist', '*.lpl')], **options)
         return filedialog.askdirectory(**options)

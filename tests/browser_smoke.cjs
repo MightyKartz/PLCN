@@ -494,6 +494,36 @@ async function main() {
 
     assert.deepEqual(fs.readFileSync(discPath),discBefore);
 
+    // Synthetic optical sectors exercise local CHD copy conversion through the real APIs.
+    const rawTrack=path.join(discRoms,'Game (Disc 1).bin'),rawCue=path.join(discRoms,'Game (Disc 1).cue');
+    fs.writeFileSync(rawTrack,Buffer.alloc(2352*100));
+    fs.writeFileSync(rawCue,'FILE "Game (Disc 1).bin" BINARY\n TRACK 01 MODE1/2352\n INDEX 01 00:00:00\n');
+    const rawBefore=fs.readFileSync(rawTrack),cueBefore=fs.readFileSync(rawCue);
+    await click('#storage-entry');
+    await evaluate(directory=>{const input=document.querySelector('#storage-workspace');input.value=directory;input.dispatchEvent(new Event('input',{bubbles:true}));},discRoot);
+    await click('#storage-analyze');
+    await waitFor(()=>!storageTask.busy&&!document.querySelector('#storage-analysis').hidden,'CHD analysis displayed');
+    assert.equal(await evaluate(()=>document.querySelectorAll('#storage-rows input:checked').length),1);
+    await screenshot('09-chd-analysis-light');
+    const canConvert=await evaluate(()=>!document.querySelector('#storage-convert').disabled);
+    if(process.env.PLCN_REQUIRE_CHD==='1')assert.equal(canConvert,true,'Required real chdman must be available');
+    if(canConvert){
+        await click('#storage-convert');
+        await waitFor(()=>!storageTask.busy&&!document.querySelector('#storage-result').hidden,'CHD conversion result');
+        assert.equal(await evaluate(()=>document.querySelector('#storage-result').textContent.includes('内容已比对')),true);
+        const state=await evaluate(async()=>(await fetch('/api/desktop')).json());
+        const operation=state.chd_operations[0];assert.equal(operation.status,'completed');
+        assert.equal(fs.existsSync(operation.results[0].output),true);
+        assert.equal(operation.results[0].runtime_status,'not_tested');
+        await screenshot('09-chd-verified');
+    }
+    assert.deepEqual(fs.readFileSync(discPath),discBefore,'CHD copy conversion does not change playlist');
+    assert.deepEqual(fs.readFileSync(rawTrack),rawBefore);assert.deepEqual(fs.readFileSync(rawCue),cueBefore);
+    await click('#storage-close');await click('#theme-toggle-btn');await click('#storage-entry');await click('#storage-analyze');
+    await waitFor(()=>!storageTask.busy&&!document.querySelector('#storage-analysis').hidden,'dark CHD analysis');
+    await screenshot('09-chd-analysis-dark');await click('#storage-close');
+    if(canConvert){await click('#settings-button');await click('[data-desktop-view="tasks"]');await waitFor(()=>document.querySelector('[data-chd-operation]'),'CHD durable task history');await screenshot('09-chd-tasks');await click('#desktop-close');}
+
     assert.deepEqual(errors, [], 'Page errors');
     console.log(`Browser smoke OK (${width}×${height}): home → local library → SNES → translated preview`);
 }
