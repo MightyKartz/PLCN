@@ -40,7 +40,7 @@ def inherit_confirmed_titles(proposals):
             diagnostics = row.get('match_diagnostics') or {}
             checksum_evidence = any(e.get('source') in {'playlist_crc32', 'local_zip_crc'} and e.get('resolved_name')
                                     for e in diagnostics.get('evidence_chain', []))
-            if (row in confirmed or (diagnostics.get('conflicts') and (not wrong_disc_alias or checksum_evidence))
+            if (row in confirmed or checksum_evidence or (diagnostics.get('conflicts') and not wrong_disc_alias)
                     or row.get('match_source') not in {'fallback', 'rom-name-cn', 'playlist', 'libretro-dat'}
                     or (row.get('translation_match_source') not in {'', 'fallback', 'fuzzy_candidate'} and not wrong_disc_alias)):
                 continue

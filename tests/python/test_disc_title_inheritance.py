@@ -47,3 +47,17 @@ def test_refreshed_remote_preview_checks_all_three_image_types(tmp_path, monkeyp
     assert row['identity']['requires_review'] is False
     assert row['artwork']['Named_Boxarts']['status'] == row['artwork']['Named_Snaps']['status'] == 'exists'
     assert row['artwork']['Named_Titles']['status'] == 'missing'
+
+
+def test_resolved_checksum_is_not_replaced_by_another_discs_title():
+    import copy
+    from disc_title_inheritance import inherit_confirmed_titles
+    source = {'system': 'PS1', 'path': '/roms/Game (Japan) (Disc 1).cue', 'new_label': '游戏',
+              'match_source': 'manual_override', 'thumbnail_source': 'Game (Japan) (Disc 1)', 'proposal_id': 'source'}
+    target = {'system': 'PS1', 'path': '/roms/Game (Japan) (Disc 2).cue', 'new_label': '游戏',
+              'original_item_label': 'Game (Japan) (Disc 2)', 'match_source': 'rom-name-cn', 'translation_match_source': 'exact_alias',
+              'thumbnail_source': 'Game (Japan) (Disc 1)', 'match_diagnostics': {'evidence_chain': [
+                  {'source': 'playlist_crc32', 'resolved_name': 'Game (Japan) (Disc 1)'}]}}
+    before = copy.deepcopy(target)
+    inherit_confirmed_titles([source, target])
+    assert target == before
