@@ -20,7 +20,7 @@ def rom_title(path):
 
 
 # Parenthesized standard tags and common unparenthesized ROM suffixes.
-DISC_MARKER = re.compile(r'\((?:Disc|Disk|CD)\s*(\d+)(?:\s*of\s*\d+)?\)|(?:[\s_-]+|\[)(?:Disc|Disk|CD)\s*(\d+)(?:\s*of\s*\d+)?\]?$', re.I)
+DISC_MARKER = re.compile(r'[（(](?:(?:Disc|Disk|CD)\s*|第|光盘|光碟|碟|盘)(\d+)(?:\s*of\s*\d+)?(?:盘|碟)?[）)]|(?:[\s_-]+|\[)(?:Disc|Disk|CD)\s*(\d+)(?:\s*of\s*\d+)?\]?$', re.I)
 
 
 def artwork_titles(system, path, label=''):

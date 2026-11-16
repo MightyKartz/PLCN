@@ -584,11 +584,14 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
                     known_chinese, _ = translator.translate(thumbnail_source)
                 # Compare a known translation in one language. A disc suffix is
                 # display metadata, but disagreeing disc numbers remain a conflict.
-                disc_numbers = {marker[1] or marker[2] for value in (original_label, rom_title(path), thumbnail_source)
+                disc_numbers = {int(marker[1] or marker[2]) for value in (original_label, rom_title(path), thumbnail_source)
                                 if (marker := DISC_MARKER.search(value))}
+                from display_names import base_display_title
                 if (known_chinese and len(disc_numbers) <= 1
-                        and normalize_value(DISC_MARKER.sub('', original_label)).strip() == normalize_value(DISC_MARKER.sub('', known_chinese)).strip()):
+                        and normalize_value(base_display_title(original_label)) == normalize_value(base_display_title(known_chinese))):
                     label_identity = thumbnail_source
+                    if not getattr(translator, 'last_match_source', ''):
+                        translator.last_match_source = 'exact'
             diagnostics = {
                 "evidence_chain": [
                     {
@@ -818,6 +821,8 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
     resolve_automatic_names(proposed_changes, translators)
     from title_family import resolve_artwork
     resolve_artwork(proposed_changes, verify_artwork)
+    from display_names import normalize_proposals
+    normalize_proposals(proposed_changes)
     targets = {}
     for proposal in proposed_changes:
         key = (proposal['system'], sanitize_filename(proposal['new_label']).casefold())

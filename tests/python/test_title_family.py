@@ -29,7 +29,7 @@ def test_known_family_selects_artwork_and_keeps_packaging_markers(tmp_path, ps1_
                'Biohazard 2 (Japan) (Disc 1) (Leon-hen)', 'Biohazard 2 (Japan) (Disc 2) (Claire-hen)']
     monkeypatch.setattr('single_artwork.catalog_names', lambda *args: catalog)
     changes = analyze_playlist(str(playlist), 'Sony - PlayStation', str(ps1_names), verify_artwork=True)
-    assert [c['new_label'] for c in changes] == ['阿兰朵拉', '生化危机2 (A)', '生化危机2 (B)']
+    assert [c['new_label'] for c in changes] == ['阿兰朵拉', '生化危机2（第1盘）', '生化危机2（第2盘）']
     for c in changes:
         assert c['identity']['state'] == 'title_family'
         assert c['identity']['requires_review'] is False
@@ -37,6 +37,8 @@ def test_known_family_selects_artwork_and_keeps_packaging_markers(tmp_path, ps1_
         assert c['artwork_recommended'] is True
         assert c['thumbnail_source'] in catalog
     assert changes[0]['thumbnail_source'] == 'Alundra (Japan)'
+    assert '(Disc 1)' in changes[1]['thumbnail_source']
+    assert '(Disc 2)' in changes[2]['thumbnail_source']
     assert 'Alundra 2 (Japan)' not in changes[0]['artwork_candidates']
     monkeypatch.setattr('batch_review.scan_retroarch_target', lambda _: {'playlists': [{'system': 'Sony - PlayStation', 'path': str(playlist)}]})
     review = prepare_review(str(tmp_path), '', str(ps1_names), None,
@@ -48,7 +50,7 @@ def test_known_family_selects_artwork_and_keeps_packaging_markers(tmp_path, ps1_
     playlist.write_text(json.dumps({'items': renamed}), encoding='utf-8')
     again = analyze_playlist(str(playlist), 'Sony - PlayStation', str(ps1_names), verify_artwork=True)
     assert [c['new_label'] for c in again] == [c['new_label'] for c in changes]
-    assert all(not c['identity']['requires_review'] for c in again)
+    assert all(not c['identity']['requires_review'] for c in again), [(c['new_label'], c['identity']) for c in again]
 
 
 @pytest.mark.parametrize('name', ['Alundra 2', 'Alundra - Special Edition', 'Alundra (Hack)', 'Alundra (HD)'])
@@ -82,7 +84,7 @@ def test_disc_constraints_and_failed_gallery_do_not_become_verified_releases(tmp
     monkeypatch.setattr('single_artwork.catalog_names', lambda *a: [
         'Biohazard 2 (Japan) (Disc 1) (Leon-hen)', 'Biohazard 2 (Japan) (Disc 2) (Claire-hen)'])
     row = analyze_playlist(str(playlist), 'Sony - PlayStation', str(ps1_names), verify_artwork=True)[0]
-    assert row['new_label'] == '生化危机2 (Disc 2)'
+    assert row['new_label'] == '生化危机2（第2盘）'
     assert row['artwork_candidates'] == ['Biohazard 2 (Japan) (Disc 2) (Claire-hen)']
     def failed(*args):
         raise RuntimeError('offline')

@@ -73,4 +73,5 @@ class JobManager:
 
     def get_job(self, job_id):
         with self.lock:
-            return self.jobs.get(job_id)
+            job = self.jobs.get(job_id)
+            return dict(job) if job is not None else None

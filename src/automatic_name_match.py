@@ -26,6 +26,8 @@ def resolve(proposals, translators):
     catalogs = {}
     for row in proposals:
         system = row['system']
+        if row.get('translation_match_source') in {'exact', 'exact_alias', 'curated_alias', 'title_family'}:
+            continue
         if (row.get('translation_match_source') != 'fuzzy_candidate' and row.get('match_source') != 'playlist') or row.get('match_diagnostics', {}).get('conflicts'):
             continue
         if any(term in system for term in ('Arcade', 'FBNeo', 'MAME', 'DOS')):
@@ -71,7 +73,8 @@ def resolve(proposals, translators):
             continue
         score, english, chinese = best[0]
         current = row.get('original_item_label') or ''
-        if re.search(r'[\u3400-\u9fff]', current) and family_key(current) != family_key(chinese):
+        from display_names import base_display_title
+        if re.search(r'[\u3400-\u9fff]', current) and family_key(base_display_title(current)) != family_key(base_display_title(chinese)):
             continue
         row.update(new_label=keep_disc_marker(chinese, rom_title(row['path'])), thumbnail_source=english,
                    translation_match_source='title_family', translation_candidates=[], automatic_name_match=True,

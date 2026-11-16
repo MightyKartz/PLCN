@@ -73,8 +73,8 @@ def test_saturn_preview_uses_canonical_sources_without_guessing_versions(saturn_
     assert changes[2]['new_label'] == '大航海时代2'
     assert changes[2]['thumbnail_source'] is None, 'Parent-folder identity must be confirmed'
     assert changes[2]['artwork_candidates'] == ['Daikoukai Jidai II (Japan)']
-    assert changes[3]['new_label'] == '格兰蒂亚 (Disc 1)'
-    assert changes[4]['new_label'] == '格兰蒂亚 (Disc 2)'
+    assert changes[3]['new_label'] == '格兰蒂亚（第1盘）'
+    assert changes[4]['new_label'] == '格兰蒂亚（第2盘）'
     assert all('(Disc 1)' in candidate for candidate in changes[3]['artwork_candidates'])
     assert all('(Disc 2)' in candidate for candidate in changes[4]['artwork_candidates'])
     assert all('Kanketsu-hen' not in name for name in changes[5]['artwork_candidates'])
@@ -156,8 +156,8 @@ def test_raw_disc_names_and_chinese_disc_labels_resolve_to_same_candidates(satur
     path.write_text(json.dumps(document), encoding='utf-8')
     second=analyze_playlist(path,'Sega - Saturn',str(source),verify_artwork=True)
     assert [row['artwork_candidates'] for row in first] == [row['artwork_candidates'] for row in second]
-    assert first[0]['new_label']=='格兰蒂亚 (Disc 1)'
-    assert first[1]['new_label']=='格兰蒂亚 (Disc 2)'
+    assert first[0]['new_label']=='格兰蒂亚（第1盘）'
+    assert first[1]['new_label']=='格兰蒂亚（第2盘）'
 
 
 def test_chaos_seed_short_rom_does_not_become_darkseed(tmp_path, monkeypatch):
@@ -200,7 +200,7 @@ def test_gulliver_short_disc_names_match_their_own_official_images(tmp_path, mon
         before = playlist.read_bytes()
         rows = analyze_playlist(playlist, 'Sega - Saturn', str(source), verify_artwork=True)
         for disc, row in enumerate(rows, 1):
-            assert row['new_label'] == f'空想科学世界 (Disc {disc})'
+            assert row['new_label'] == f'空想科学世界（第{disc}盘）'
             assert row['thumbnail_source'] == names[disc - 1]
             assert row['artwork_candidates'] == [names[disc - 1]]
         assert playlist.read_bytes() == before
@@ -216,7 +216,7 @@ def test_translated_grandia_disc_labels_do_not_conflict_with_same_english_family
     rows=analyze_playlist(path,'Sega - Saturn',str(source),verify_artwork=True)
     for number,row in enumerate(rows,1):
         assert row['identity']['state']!='conflict',row['match_diagnostics']
-        assert row['new_label']==f'格兰蒂亚 (Disc {number})'
+        assert row['new_label']==f'格兰蒂亚（第{number}盘）'
 
 
 def test_translated_disc_label_with_a_different_disc_number_remains_conflicting(saturn_library,monkeypatch):

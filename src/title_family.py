@@ -13,6 +13,7 @@ METADATA = re.compile(
 
 def family_key(name):
     """Retain unknown edition/hack tags and all sequel/subtitle text."""
+    name = DISC_MARKER.sub('', name).replace('（', '(').replace('）', ')')
     title = re.sub(r'\(([^()]*)\)|\[([^\[\]]*)\]',
                    lambda m: '' if METADATA.fullmatch(m[1] or m[2]) else m[0], name)
     title = DISC_MARKER.sub('', title)
@@ -24,8 +25,8 @@ def keep_disc_marker(label, filename):
     disc = DISC_MARKER.search(filename)
     if disc and not DISC_MARKER.search(label):
         label += ' (Disc ' + (disc[1] or disc[2]) + ')'
-    side = re.search(r'\(([AB])\)', filename, re.I)
-    if side and not re.search(r'\([AB]\)', label, re.I):
+    side = re.search(r'[（(]([AB])[）)]', filename, re.I)
+    if side and not re.search(r'[（(][AB][）)]', label, re.I):
         label += ' (' + side[1].upper() + ')'
     return label
 
@@ -64,6 +65,11 @@ def resolve_artwork(proposals, verify_artwork):
                        if tag not in {'a', 'b', 'chs', 'cht'}}
         names = sorted(name for name in catalog if family_key(name) == family_key(source)
                        and constraints <= release_tags(name))
+        side = re.search(r'[（(]([AB])[）)]', source, re.I)
+        if side:
+            number = ord(side[1].upper()) - ord('A') + 1
+            numbered = [name for name in names if (disc := DISC_MARKER.search(name)) and int(disc[1] or disc[2]) == number]
+            names = numbered or [name for name in names if not DISC_MARKER.search(name)]
         row['artwork_candidates'] = names
         row['artwork_gallery_status'] = 'matched' if names else 'not_found'
         row['thumbnail_source'] = recommend_source(names) if names else None
