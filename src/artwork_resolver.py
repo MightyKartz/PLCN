@@ -4,6 +4,7 @@ from rom_paths import rom_title
 import os
 from pathlib import Path
 import re
+import zlib
 from PIL import Image, UnidentifiedImageError
 
 THUMBNAIL_TYPES = ('Named_Boxarts', 'Named_Snaps', 'Named_Titles')
@@ -35,8 +36,35 @@ def valid_png(content):
         with Image.open(io.BytesIO(content)) as image:
             image.load()
         return True
-    except (OSError, ValueError, UnidentifiedImageError, Image.DecompressionBombError):
+    except (OSError, ValueError, SyntaxError, UnidentifiedImageError, Image.DecompressionBombError):
         return False
+
+
+def repair_png_metadata(content):
+    """Remove bad optional metadata CRCs, retaining every image-data byte."""
+    if not content.startswith(b'\x89PNG\r\n\x1a\n'):
+        return content
+    position = 8
+    chunks = [content[:8]]
+    repaired = False
+    metadata = {b'iCCP', b'zTXt', b'tEXt', b'iTXt', b'eXIf', b'tIME', b'pHYs'}
+    while position < len(content):
+        if position + 12 > len(content):
+            return content
+        size = int.from_bytes(content[position:position + 4], 'big')
+        end = position + size + 12
+        if end > len(content):
+            return content
+        kind = content[position + 4:position + 8]
+        checksum = int.from_bytes(content[end - 4:end], 'big')
+        if zlib.crc32(content[position + 4:end - 4]) != checksum:
+            if kind not in metadata:
+                return content
+            repaired = True
+        else:
+            chunks.append(content[position:end])
+        position = end
+    return b''.join(chunks) if repaired else content
 
 
 def valid_image_file(path):

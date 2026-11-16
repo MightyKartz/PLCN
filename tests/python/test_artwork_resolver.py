@@ -165,3 +165,43 @@ def test_mixed_playlist_resolves_each_entry_system(tmp_path, monkeypatch):
     assert [row['system'] for row in results] == ['NES', 'SNES']
     assert [row['new_label'] for row in results] == ['红色', '绿色']
     assert all(set(row['artwork']) == set(ThumbnailDownloader.THUMBNAIL_TYPES) for row in results)
+
+
+def test_corrupt_png_metadata_is_removed_without_changing_pixels(tmp_path):
+    from artwork_resolver import repair_png_metadata, valid_png
+    from single_artwork import normalize_image
+    original = png()
+    data = b'iCCP' + b'bad optional profile'
+    damaged = original[:33] + len(data[4:]).to_bytes(4, 'big') + data + b'\0\0\0\0' + original[33:]
+    assert not valid_png(damaged)
+    assert repair_png_metadata(damaged) == original
+    converted, size = normalize_image(damaged)
+    assert valid_png(converted) and size == (2, 2)
+    downloader = ThumbnailDownloader(str(tmp_path))
+    downloader.session.get = lambda *a, **kw: SimpleNamespace(status_code=200, content=damaged)
+    results = downloader.download_thumbnail('NES', 'Game', '中文')
+    assert all(r['status'] == 'success' for r in results)
+    assert all(Path(r['path']).read_bytes() == original for r in results)
+
+
+@pytest.mark.parametrize('kind', [b'IHDR', b'IDAT', b'tRNS', b'Unknown'])
+def test_bad_pixel_or_unknown_chunk_checksums_are_never_repaired(kind):
+    from artwork_resolver import repair_png_metadata, valid_png
+    original = png()
+    if kind in {b'IHDR', b'IDAT'}:
+        offset = original.index(kind)
+        damaged = original[:offset + 4] + bytes([original[offset + 4] ^ 1]) + original[offset + 5:]
+    else:
+        data = kind + b'bad'
+        damaged = original[:33] + (len(data) - 4).to_bytes(4, 'big') + data + b'\0\0\0\0' + original[33:]
+    assert repair_png_metadata(damaged) == damaged
+    assert not valid_png(damaged)
+
+
+def test_png_repair_keeps_valid_bytes_and_rejects_truncation():
+    from artwork_resolver import repair_png_metadata, valid_png
+    original = png()
+    assert repair_png_metadata(original) == original
+    assert repair_png_metadata(b'<html>not an image</html>') == b'<html>not an image</html>'
+    assert repair_png_metadata(original[:-6]) == original[:-6]
+    assert not valid_png(original[:-6])

@@ -3,7 +3,7 @@ import requests
 import urllib.parse
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from artwork_resolver import artwork_path, sanitize_filename, valid_image_file, valid_png
+from artwork_resolver import artwork_path, sanitize_filename, valid_image_file, valid_png, repair_png_metadata
 from safe_io import atomic_write_bytes, file_lock
 
 class ThumbnailDownloader:
@@ -142,12 +142,13 @@ class ThumbnailDownloader:
                         url = f"{self.BASE_URL}/{urllib.parse.quote(system, safe='')}/{type_name}/{urllib.parse.quote(self.sanitize_filename(matched) + '.png', safe='')}"
                         response = self.session.get(url, timeout=10)
                 if response.status_code == 200:
-                    if len(response.content) > 32 * 1024 * 1024 or not valid_png(response.content):
+                    content = repair_png_metadata(response.content) if len(response.content) <= 32 * 1024 * 1024 else response.content
+                    if len(content) > 32 * 1024 * 1024 or not valid_png(content):
                         results.append({'type': type_name, 'game': game_chinese_name, 'source': game_english_name,
                                         'system': system, 'status': 'failed', 'reason': 'invalid_image',
                                         'message': '服务器返回了无效图片', 'path': target_path, 'url': url})
                         continue
-                    atomic_write_bytes(target_path, response.content)
+                    atomic_write_bytes(target_path, content)
                     results.append({
                         "type": type_name,
                         "game": game_chinese_name,
