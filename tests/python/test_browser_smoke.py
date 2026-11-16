@@ -93,7 +93,9 @@ def test_home_to_library_to_preview(tmp_path, monkeypatch, chrome_binary, viewpo
         return original_analyze(*args, **kwargs)
     monkeypatch.setattr(playlist_service, 'analyze_playlist', slow_analyze)
     import native_dialog
-    monkeypatch.setattr(native_dialog, 'pick', lambda kind='directory', initial='': initial if initial and Path(initial).is_dir() else str(tmp_path / '游戏库/rom-samples/RetroArch/Roms'))
+    incoming = tmp_path / 'incoming'; incoming.mkdir()
+    (incoming / 'Imported demo.sfc').write_bytes(b'game import fixture')
+    monkeypatch.setattr(native_dialog, 'pick', lambda kind='directory', initial='': [str(incoming / 'Imported demo.sfc')] if kind == 'files' else initial if initial and Path(initial).is_dir() else str(tmp_path / '游戏库/rom-samples/RetroArch/Roms'))
     source = tmp_path / 'names'
     source.mkdir()
     playlists = tmp_path / '游戏库/playlists'
@@ -120,7 +122,8 @@ def test_home_to_library_to_preview(tmp_path, monkeypatch, chrome_binary, viewpo
                 chrome = subprocess.Popen([
                     chrome_binary, '--headless=new', '--remote-debugging-port=0',
                     f'--user-data-dir={profile}', '--no-first-run', '--no-default-browser-check',
-                    '--disable-background-networking', 'about:blank',
+                    '--disable-background-networking', '--disable-renderer-backgrounding',
+                    '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows', 'about:blank',
                 ], stdout=log, stderr=log)
                 try:
                     deadline = time.monotonic() + 45
@@ -145,7 +148,7 @@ def test_home_to_library_to_preview(tmp_path, monkeypatch, chrome_binary, viewpo
                         'node', str(ROOT / 'tests/browser_smoke.cjs'), websocket,
                         f'http://127.0.0.1:{httpd.server_address[1]}', str(playlists.parent),
                         str(viewport[0]), str(viewport[1]), str(artifacts),
-                    ], capture_output=True, text=True, encoding='utf-8', timeout=120)
+                    ], capture_output=True, text=True, encoding='utf-8', timeout=180)
                     (artifacts / 'driver.log').write_text(result.stdout + result.stderr, encoding='utf-8')
                     assert result.returncode == 0, result.stdout + result.stderr
                 finally:

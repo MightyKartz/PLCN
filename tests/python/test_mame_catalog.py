@@ -42,7 +42,7 @@ def test_missing_box_art_uses_same_game_snapshot_for_preview_and_download(tmp_pa
     assert all(r['status'] == 'success' for r in results)
     assert results[0]['gallery_kind'] == 'Named_Snaps'
     assert '/Named_Snaps/' in results[0]['url']
-    assert '/Named_Boxarts/' in results[0]['path']
+    assert Path(results[0]['path']).parent.name == 'Named_Boxarts'
     assert all(valid_png(Path(r['path']).read_bytes()) for r in results)
     # After application a refreshed preview sees an ordinary valid image;
     # it does not offer the fallback as another pending download.

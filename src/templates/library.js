@@ -1,5 +1,5 @@
-/* Browsing reads the selected file; only previewTask creates repair proposals. */
-const gameLibrary = { key: null, controller: null, data: null, error: '', loading: false, limit: 100, filter: 'all', notice: '' };
+/* Browsing is read-only; management actions use server-owned review plans. */
+const gameLibrary = { key: null, controller: null, data: null, error: '', loading: false, limit: 100, filter: 'all', notice: '', selection: new Set(), view: 'grid', activeIndex: null };
 
 function gameLibraryInput() {
     return ['playlist_path', 'system_name'].map(id => document.getElementById(id).value.trim()).concat(getThumbnailsDirectory());
@@ -7,6 +7,8 @@ function gameLibraryInput() {
 
 function resetGameLibrary() {
     gameLibrary.controller?.abort();
+    gameLibrary.selection.clear();
+    gameLibrary.activeIndex = null;
     Object.assign(gameLibrary, { key: null, controller: null, data: null, error: '', loading: false, limit: 100, filter: 'all', notice: '' });
 }
 
@@ -215,6 +217,8 @@ function renderGameLibrary() {
             row.appendChild(cell);
         }
         const actions = document.createElement('td');
+        appendGameSelection(row.children[1], item);
+        appendGameManagementActions(actions, item);
         if (!hasImageDirectory) { row.appendChild(actions); tbody.appendChild(row); continue; }
         const button = document.createElement('button');
         button.id = 'game-artwork-action-' + item.index;
@@ -244,16 +248,22 @@ function renderGameLibrary() {
         row.appendChild(actions);
         tbody.appendChild(row);
     }
-    document.getElementById('game-library-table').hidden = !filtered.length;
+    document.getElementById('game-library-table').hidden = !filtered.length || gameLibrary.view !== 'list';
     const more = document.getElementById('game-library-more');
     more.hidden = filtered.length <= gameLibrary.limit;
     more.textContent = text('显示更多游戏', 'Show more games');
     ['图片', '游戏名称', 'ROM 文件名', ''].forEach((label, index) => {
         document.getElementById('game-library-heading-' + index).textContent = text(label, ['Artwork', 'Game name', 'ROM filename', ''][index]);
     });
+    renderGameBrowser(filtered.slice(0, gameLibrary.limit));
+    renderGameSelection(filtered.slice(0, gameLibrary.limit));
 }
 
-function retryGameLibrary() {
+function retryGameLibrary(activeIndex = null) {
+    const input = gameLibraryInput();
+    const key = JSON.stringify(input);
     resetGameLibrary();
+    Object.assign(gameLibrary, {key, loading:true, activeIndex});
+    loadGameLibrary(input, key);
     renderWorkbench();
 }

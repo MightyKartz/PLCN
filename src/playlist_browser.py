@@ -106,4 +106,4 @@ def read_playlist(path, system='', thumbnails=''):
                         'image_status': image_status, 'image_message': image_error, 'image_path': image,
                         'artwork_status': {kind: statuses[kind]['status'] for kind in THUMBNAIL_TYPES},
                         'image_url': '/api/thumbnail/preview?path=' + quote(image, safe='') + '&v=read-' + read_version if image else None})
-    return {'playlist_path': path, 'name': name, 'system': system, 'items': entries, 'library_model': model}
+    return {'playlist_path': path, 'expected': playlist.loaded_digest, 'name': name, 'system': system, 'items': entries, 'library_model': model}

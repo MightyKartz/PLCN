@@ -2,7 +2,8 @@
 let currentChanges = [];
 let currentPreviewFilter = 'all';
 
-async function previewTask() {
+async function previewTask(scope = null) {
+    const selected = scope ? new Map(scope.entries) : null;
     const playlistPath = document.getElementById('playlist_path').value;
     const systemName = document.getElementById('system_name').value;
     const thumbnailsDir = getThumbnailsDirectory();
@@ -29,7 +30,10 @@ async function previewTask() {
         if (data.error) throw new Error(data.error);
 
         if (previewKey !== workbenchInputKey()) throw new Error(workbenchText('配置已变化，请重新分析', 'Inputs changed; analyze again'));
-        currentChanges = preparePreviewChanges(data.changes || []);
+        const changes = (data.changes || []).filter(change => !selected || selected.get(change.index) === change.path);
+        if (selected && changes.length !== selected.size) throw new Error(workbenchText('列表已变化，请重新读取后选择游戏', 'The playlist changed. Reload it before selecting games'));
+        currentChanges = preparePreviewChanges(changes);
+        workbench.previewScope = scope;
         workbench.previewKey = previewKey;
         lastAppliedChangeKeys = new Set();
         setLibraryBrowserVisible(true);

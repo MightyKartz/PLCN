@@ -94,7 +94,7 @@ async function changePreviewOptions(control) {
         showStatus(workbenchText('至少保留一个操作', 'Choose at least one operation'), 'info');
         return;
     }
-    await previewTask();
+    await previewTask(workbench.previewScope);
 }
 
 function openFilePicker(inputId, directoryMode, returnFocus = document.activeElement) {
