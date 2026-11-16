@@ -43,9 +43,11 @@ def resolve_artwork(proposals, verify_artwork):
     from single_artwork import catalog_names
     catalogs = {}
     for row in proposals:
-        if row.get('translation_match_source') != 'title_family' or (row['system'] == 'Sega - Saturn' and not row.get('automatic_name_match')):
+        if not row.get('default_recommendation') and (row.get('translation_match_source') != 'title_family' or (row['system'] == 'Sega - Saturn' and not row.get('automatic_name_match'))):
             continue
         if row.get('match_diagnostics', {}).get('conflicts'):
+            continue
+        if not row.get('thumbnail_source'):
             continue
         row['artwork_identity_status'] = 'resolved'
         if not verify_artwork:

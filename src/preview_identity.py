@@ -20,6 +20,8 @@ def identity_state(change):
         state = 'conflict'
     elif source == 'manual_override':
         state = 'confirmed_rule'
+    elif change.get('default_recommendation'):
+        state = 'recommended'
     elif (translation in {'fuzzy_candidate', 'cross_system_candidate'} or change.get('translation_candidates')
           or change.get('artwork_identity_reason') == 'parent_title' or change.get('artwork_identity_status') == 'ambiguous'):
         state = 'candidate'

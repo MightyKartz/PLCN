@@ -57,7 +57,8 @@ def test_title_components_aliases_mixed_scripts_and_ambiguity(tmp_path, monkeypa
     rows = analyze_playlist(str(playlist), system, str(source), verify_artwork=True)
     assert all(not r['identity']['requires_review'] for r in rows[:3])
     assert [r['new_label'] for r in rows[:3]] == queries[:3]
-    assert all(r['identity']['requires_review'] for r in rows[3:])
+    assert all(not r['identity']['requires_review'] for r in rows[3:])
+    assert all(r['identity']['state'] == 'recommended' for r in rows[3:])
 
 
 def test_manual_display_title_and_checksum_identity_are_preserved(tmp_path):
@@ -136,9 +137,11 @@ def test_full_title_alias_is_platform_scoped_and_keeps_regional_sequel_numbers(t
     names = ['超级暗影3', '超级暗影3外传', '新作别名']
     playlist.write_text(json.dumps({'items': [{'label': n, 'path': '/roms/' + n + '.bin'} for n in names]}), encoding='utf-8')
     rows = analyze_playlist(str(playlist), system, str(source), verify_artwork=True)
-    assert rows[0]['identity']['requires_review'] is not matched
-    assert rows[1]['identity']['requires_review']
-    assert rows[2]['identity']['requires_review'] is not matched
+    assert not rows[0]['identity']['requires_review']
+    assert bool(rows[0].get('default_recommendation')) is not matched
+    assert rows[1]['identity']['state'] == 'recommended'
+    assert not rows[2]['identity']['requires_review']
+    assert bool(rows[2].get('default_recommendation')) is not matched
     assert [r['new_label'] for r in rows] == names
     if matched:
         assert rows[0]['thumbnail_source'] == 'Shadow III (USA)'

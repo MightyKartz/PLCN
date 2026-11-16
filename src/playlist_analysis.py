@@ -823,6 +823,8 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
     from disc_title_inheritance import inherit_confirmed_titles
     inherit_confirmed_titles(proposed_changes)
     resolve_automatic_names(proposed_changes, translators)
+    from default_recommendations import resolve as resolve_default_recommendations
+    resolve_default_recommendations(proposed_changes, translators)
     from title_family import resolve_artwork
     resolve_artwork(proposed_changes, verify_artwork)
     from display_names import normalize_proposals

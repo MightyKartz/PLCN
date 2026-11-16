@@ -37,8 +37,8 @@ def assert_change_contract(change, expected):
     assert change["thumbnail_source"] == expected["thumbnail_source"]
     assert change["match_source"] == expected["match_source"]
     assert change["match_score"] == expected["match_score"]
-    assert change["needs_review"] is expected["needs_review"]
-    if "match_status" in expected:
+    assert change["needs_review"] is (False if change.get("default_recommendation") else expected["needs_review"])
+    if "match_status" in expected and not change.get("default_recommendation"):
         assert change["match_status"] == expected["match_status"]
 
     evidence_chain = change.get("match_diagnostics", {}).get("evidence_chain")
