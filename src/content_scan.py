@@ -13,6 +13,7 @@ import app_paths
 import mtp_runtime as mtp
 from safe_io import atomic_write_bytes, atomic_write_json, file_lock
 from task_control import checkpoint
+from system_resources import is_system_resource
 
 # Defaults are product recommendations, not hardware performance guarantees.
 SYSTEMS = {
@@ -217,6 +218,9 @@ def preview(config, progress=lambda *args: None, cancel_check=None):
         if android_path in existing or rel in ignored:
             continue
         stem = PurePosixPath(rel).stem
+        if is_system_resource({'path': path, 'label': dat.get(stem, stem)}, system):
+            skipped += 1
+            continue
         if config['dat_filter'] and stem not in dat:
             skipped += 1
             continue

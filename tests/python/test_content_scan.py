@@ -53,6 +53,16 @@ def test_stale_plan_cannot_replace_changed_playlist(library):
     assert Path(plan['target']).read_text(encoding='utf-8') == '{"items":[]}'
 
 
+def test_arcade_scan_skips_bios_files_without_dat_filter(library):
+    root, games, config = library
+    config['system'] = 'FBNeo - Arcade Games'
+    for name in ('neogeo.zip', 'pgm.zip', 'skns.zip', 'nmk004.zip', 'bioship.zip'):
+        (games / name).write_bytes(b'ROM')
+    plan = scan.preview(config)
+    assert [item['label'] for item in plan['added']] == ['bioship']
+    assert all((games / name).exists() for name in ('neogeo.zip', 'pgm.zip', 'skns.zip', 'nmk004.zip'))
+
+
 def test_disc_entry_filtering_and_m3u_do_not_duplicate_tracks(library):
     root, games, config = library
     for name in ['Game (Disc 1).cue','Game (Disc 1).bin','Game (Disc 2).chd','other.cue','other.bin']:
