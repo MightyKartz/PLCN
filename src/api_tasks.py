@@ -66,7 +66,7 @@ def stream_progress(handler, context, payload):
         except BrokenPipeError:
             break
 
-        if job['status'] in ['completed', 'failed', 'cancelled']:
+        if data['status'] in ['completed', 'failed', 'cancelled']:
             break
 
         time.sleep(0.5)
