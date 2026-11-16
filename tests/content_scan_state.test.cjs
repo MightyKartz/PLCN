@@ -19,7 +19,7 @@ function harness() {
             showModal(){ this.open = true; }, close(){ this.open = false; }});
         return fields.get(name);
     };
-    const context = {contentScan:{setup:{root:'mtp://device/00010001/RetroArch',android:true},revision:0,openGeneration:0},
+    const context = {uiText:text=>text,contentScan:{setup:{root:'mtp://device/00010001/RetroArch',android:true},revision:0,openGeneration:0},
         contentHintGeneration:0,contentCoreStatusGeneration:0,contentInfoGeneration:0,contentDirectoryGeneration:0,
         contentField:field,document:{getElementById:field},currentDeviceScan:null,
         renderContentConfiguration(){},loadContentCoreStatus(){},invalidateContentScan(){},

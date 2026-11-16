@@ -446,7 +446,7 @@ test('starting without an Android path focuses the field without submitting a sc
         'android-suggestions':{hidden:false},status:{},start:{}};
     fields.android.setAttribute=()=>{}; fields.android.scrollIntoView=()=>{};
     fields.android.focus=()=>{focused='android';};
-    const context={contentScan:{busy:false,setup:{android:true}},contentField:n=>fields[n],
+    const context={uiText:text=>text,contentScan:{busy:false,setup:{android:true}},contentField:n=>fields[n],
         invalidateContentScan:()=>{},loadContentHints:async()=>{},contentJob:async()=>{requests++;}};
     vm.createContext(context);
     vm.runInContext(source('focusContentScanField')+source('previewContentScan'),context);
@@ -458,7 +458,7 @@ test('starting without an Android path focuses the field without submitting a sc
 test('confirming a suggested Android path invalidates preview without starting or writing', () => {
     let invalidated=false;
     const fields={'android-candidates':{value:'/storage/4A21-0000/Roms/SS'},android:{removeAttribute:()=>{}},status:{}};
-    const context={contentField:n=>fields[n],invalidateContentScan:()=>{invalidated=true;}};
+    const context={uiText:text=>text,contentField:n=>fields[n],invalidateContentScan:()=>{invalidated=true;}};
     vm.createContext(context);vm.runInContext(source('useContentAndroidPath'),context);
     context.useContentAndroidPath();
     assert.equal(fields.android.value,'/storage/4A21-0000/Roms/SS');assert.equal(invalidated,true);
@@ -469,7 +469,7 @@ test('directory hints fill the unique Android path automatically and preserve ma
     const fields={directory:{value:'mtp://device/00020001/Roms/SS'},system:{value:'Sega - Saturn'},
         android:{value:'',removeAttribute:()=>{}},status:{},'android-suggestions':{},
         'android-candidates':{replaceChildren:()=>{}}};
-    const context={contentHintGeneration:0,contentScan:{setup:{android:true}},contentField:n=>fields[n],
+    const context={uiText:text=>text,contentHintGeneration:0,contentScan:{setup:{android:true}},contentField:n=>fields[n],
         contentPayload:()=>({root:'mtp://device/00010001/RetroArch',directory:fields.directory.value,system:fields.system.value}),
         currentDeviceScan:{root_path:'mtp://device/00010001/RetroArch',playlists:[{valid:true,system:'Sega - Saturn',path:'SS.lpl'}]},
         URLSearchParams,Option:function(text,value){this.value=value;},
@@ -485,7 +485,7 @@ test('directory hints fill the unique Android path automatically and preserve ma
 test('choosing an SS folder detects Saturn even when the initial system is NES', async () => {
     let changed=false;
     const fields={directory:{value:'mtp://device/00020001/Roms/SS'},system:{value:'NES'}};
-    const context={contentHintGeneration:0,contentScan:{setup:{systems:[{name:'Sega - Saturn'}]}},contentField:n=>fields[n],
+    const context={uiText:text=>text,contentHintGeneration:0,contentScan:{setup:{systems:[{name:'Sega - Saturn'}]}},contentField:n=>fields[n],
         contentPayload:()=>({root:'root',directory:fields.directory.value,system:'NES'}),URLSearchParams,
         currentDeviceScan:{root_path:'root',playlists:[{valid:true,system:'NES',path:'NES.lpl'},{valid:true,system:'Sega - Saturn',path:'SS.lpl'}]},
         changeContentSystem:()=>{changed=true;},

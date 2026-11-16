@@ -5,12 +5,12 @@ const contentField = name => document.getElementById('content-scan-' + name);
 async function openContentScan(targetRoot = '') {
     if (workbench.operation) return;
     const root = targetRoot || document.getElementById('retroarch_root').value || libraryHome.data?.sources?.find(s => ['ready','no_library'].includes(s.status) && s.transport === 'mtp')?.path;
-    if (!root) { showStatus('请先连接掌机并打开或指定 RetroArch 目录', 'error'); return; }
+    if (!root) { showStatus(uiText('请先连接掌机并打开或指定 RetroArch 目录'), 'error'); return; }
     const request = ++contentScan.openGeneration;
     ++contentHintGeneration; ++contentInfoGeneration; ++contentDirectoryGeneration;
     contentScan.browserPath = ''; contentScan.browsing = false; contentScan.coreStatus = null;
     contentField('settings').open = false;
-    contentField('status').textContent = '正在读取扫描配置…';
+    contentField('status').textContent = uiText('正在读取扫描配置…');
     contentField('preview').hidden = true; contentField('apply').hidden = true; contentField('complete').hidden = true;
     contentField('android-suggestions').hidden = true;
     contentScan.setup = null; contentScan.previewId = null; contentScan.imported = null; contentScan.downloaded = null;
@@ -27,11 +27,11 @@ async function openContentScan(targetRoot = '') {
         contentField('system').replaceChildren(...setup.systems.map(s => new Option(s.name, s.name)));
         const selected = document.getElementById('system_name').value || selectedLibrarySystem || currentDeviceScan?.playlists?.[0]?.system;
         if (setup.systems.some(s => s.name === selected)) contentField('system').value = selected;
-        contentField('profile').replaceChildren(new Option('新建扫描配置', ''),
+        contentField('profile').replaceChildren(new Option(uiText('新建扫描配置'), ''),
             ...setup.profiles.map((p, index) => new Option(p.system + ' · ' + p.directory, String(index))));
         contentField('android-label').hidden = !setup.android;
         contentField('download').hidden = !setup.android;
-        contentField('install-state').textContent = setup.android ? 'MTP 无法验证应用私有目录，请在 RetroArch 中确认核心已安装。' : '请填写当前设备已安装核心文件的完整路径。';
+        contentField('install-state').textContent = setup.android ? uiText('MTP 无法验证应用私有目录，请在 RetroArch 中确认核心已安装。') : uiText('请填写当前设备已安装核心文件的完整路径。');
         contentField('directory').value = ''; contentField('android').value = ''; contentField('dat').value = '';
         contentField('core-path').value = ''; contentField('abi').value = '';
         contentField('recursive').checked = true; contentField('dat-filter').checked = false;
@@ -39,14 +39,14 @@ async function openContentScan(targetRoot = '') {
         changeContentSystem();
         const profile = setup.profiles.findIndex(p => p.system === contentField('system').value);
         if (profile >= 0) { contentField('profile').value = String(profile); loadContentProfile(); }
-        contentField('status').textContent = '首次指定目录、主机与核心；更新成功后会记住配置。';
+        contentField('status').textContent = uiText('首次指定目录、主机与核心；更新成功后会记住配置。');
     } catch (error) { if (request === contentScan.openGeneration) contentField('status').textContent = error.message; }
     finally { if (request === contentScan.openGeneration) { contentField('fields').disabled = !contentScan.setup; contentField('start').disabled = !contentScan.setup; } }
 }
 
 function invalidateContentScan() {
     contentScan.revision++;
-    contentField('start').textContent = '开始扫描';
+    contentField('start').textContent = uiText('开始扫描');
     contentScan.previewId = null; contentScan.imported = null;
     contentField('preview').hidden = true; contentField('apply').hidden = true; contentField('complete').hidden = true;
     renderContentConfiguration();
@@ -54,13 +54,13 @@ function invalidateContentScan() {
 function changeContentSystem() {
     invalidateContentScan();
     const system = contentScan.setup.systems.find(s => s.name === contentField('system').value);
-    contentField('core').replaceChildren(...system.cores.map(c => new Option(c.name + (c.id === system.recommended ? ' · 默认推荐' : ''), c.id)));
+    contentField('core').replaceChildren(...system.cores.map(c => new Option(c.name + (c.id === system.recommended ? uiText(' · 默认推荐') : ''), c.id)));
     contentField('extensions').value = system.extensions;
     const existing = currentDeviceScan?.root_path === contentScan.setup.root ? currentDeviceScan.playlists.find(p => p.valid && p.system === system.name) : null;
     contentField('playlist-name').value = existing ? decodeURIComponent(existing.path.split('/').pop()) : system.name + '.lpl';
-    contentField('recommendation').textContent = system.name === 'MAME' ? 'MAME 核心必须与 ROM 集及 DAT 版本一致，不自动认定任意版本可用。'
-        : system.name === 'Sega - Saturn' ? 'Beetle Saturn 是兼容性候选，需在掌机验证性能；缺少 BIOS 时也无法正常运行。'
-        : '默认推荐可更换。已有游戏单独设置的核心将保留，不自动升级已安装核心。';
+    contentField('recommendation').textContent = system.name === 'MAME' ? uiText('MAME 核心必须与 ROM 集及 DAT 版本一致，不自动认定任意版本可用。')
+        : system.name === 'Sega - Saturn' ? uiText('Beetle Saturn 是兼容性候选，需在掌机验证性能；缺少 BIOS 时也无法正常运行。')
+        : uiText('默认推荐可更换。已有游戏单独设置的核心将保留，不自动升级已安装核心。');
     changeContentCore();
     contentField('android').value = '';
     contentField('android-suggestions').hidden = true;
@@ -105,7 +105,7 @@ async function browseContentDirectory(path) {
     const target = path || contentField('directory').value || contentScan.setup.browse_root;
     document.getElementById('content-directory-use').disabled = true;
     document.getElementById('content-directory-entries').replaceChildren();
-    document.getElementById('content-directory-path').textContent = '正在读取目录…';
+    document.getElementById('content-directory-path').textContent = uiText('正在读取目录…');
     try {
         const data = await desktopRequest('/api/content/directories?path=' + encodeURIComponent(target));
         if (generation !== contentDirectoryGeneration || setup !== contentScan.setup) return;
@@ -149,7 +149,7 @@ function contentPayload() {
         dat_path: contentField('dat').value, dat_filter: contentField('dat-filter').checked};
 }
 async function contentJob(path, payload) {
-    if (contentScan.busy || !beginWorkbenchOperation('content-scan')) throw new Error('请等待当前任务完成');
+    if (contentScan.busy || !beginWorkbenchOperation('content-scan')) throw new Error(uiText('请等待当前任务完成'));
     contentScan.busy = true;
     contentField('fields').disabled = true; contentField('close').disabled = true;
     for (const name of ['start','apply','complete']) contentField(name).disabled = true;
@@ -162,8 +162,8 @@ async function contentJob(path, payload) {
             events.onmessage = event => {
                 const job = JSON.parse(event.data);
                 if (job.status === 'completed') { events.close(); resolve(job.result); }
-                else if (job.error || ['failed','cancelled'].includes(job.status)) { events.close(); reject(new Error(job.error || '任务已取消')); }
-                else contentField('status').textContent = job.message || '处理中…';
+                else if (job.error || ['failed','cancelled'].includes(job.status)) { events.close(); reject(new Error(job.error || uiText('任务已取消'))); }
+                else contentField('status').textContent = currentUILanguage==='en'?`Processing… ${job.total?job.progress+' / '+job.total:''}`:job.message||uiText('处理中…');
             };
         });
         return {id: started.job_id, result};
@@ -181,35 +181,35 @@ async function previewContentScan() {
     do { pending = contentScan.configurationTask; if (pending) await pending; } while (pending !== contentScan.configurationTask);
     if (contentScan.busy || setup !== contentScan.setup) return;
     invalidateContentScan();
-    if (contentScan.browsing) { contentField('status').textContent = '正在读取目录，请稍后再开始扫描。'; return; }
+    if (contentScan.browsing) { contentField('status').textContent = uiText('正在读取目录，请稍后再开始扫描。'); return; }
     if (contentScan.browserPath && !document.getElementById('content-directory-picker').hidden) {
         if (document.getElementById('content-directory-use').disabled) {
-            contentField('status').textContent = '正在读取目录，请稍后再开始扫描。'; return;
+            contentField('status').textContent = uiText('正在读取目录，请稍后再开始扫描。'); return;
         }
         await chooseContentDirectory();
     }
     if (!contentField('directory').value.trim()) {
-        focusContentScanField('directory', '请先选择需要扫描的游戏目录。'); return;
+        focusContentScanField('directory', uiText('请先选择需要扫描的游戏目录。')); return;
     }
     if (contentScan.setup.android && !contentField('android').value.trim()) {
         await loadContentHints();
         if (!contentField('android').value.trim()) {
             focusContentScanField('android', contentField('android-suggestions').hidden
-                ? '尚未识别掌机中的实际路径。请在 RetroArch 的“加载内容”中查看这个目录的完整路径后填写。'
-                : '已找到现有列表中的建议路径，请核对后点击“使用所选路径”，再开始扫描。');
+                ? uiText('尚未识别掌机中的实际路径。请在 RetroArch 的“加载内容”中查看这个目录的完整路径后填写。')
+                : uiText('已找到现有列表中的建议路径，请核对后点击“使用所选路径”，再开始扫描。'));
             return;
         }
     }
     if (!contentField('core-path').value.trim()) {
-        focusContentScanField('core-path', '请确认已安装核心的完整路径；缺少核心时可展开“从官方下载安装”。'); return;
+        focusContentScanField('core-path', uiText('请确认已安装核心的完整路径；缺少核心时可展开“从官方下载安装”。')); return;
     }
     try {
         ++contentInfoGeneration;
         const payload = contentPayload(); const key = JSON.stringify(payload);
         const {id, result} = await contentJob('/api/content/preview', payload);
-        if (key !== JSON.stringify(contentPayload())) throw new Error('扫描配置已变化，请重新预览');
+        if (key !== JSON.stringify(contentPayload())) throw new Error(uiText('扫描配置已变化，请重新预览'));
         contentScan.previewId = id;
-        contentField('start').textContent = '重新扫描';
+        contentField('start').textContent = uiText('重新扫描');
         contentField('summary').textContent = formatPreviewScope(result, 'scan') + result.core_status + '。' + result.note;
         const rows = contentField('rows'); rows.replaceChildren();
         for (const item of result.added) {
@@ -218,7 +218,7 @@ async function previewContentScan() {
             rows.appendChild(row);
         }
         contentField('preview').hidden = false; contentField('apply').hidden = !result.can_apply;
-        contentField('status').textContent = result.can_apply ? '扫描完成，请核对后确认更新列表。' : '没有新增游戏或配置变化。';
+        contentField('status').textContent = result.can_apply ? uiText('扫描完成，请核对后确认更新列表。') : uiText('没有新增游戏或配置变化。');
     } catch (error) { contentField('status').textContent = error.message; }
 }
 async function applyContentScan() {
@@ -226,7 +226,7 @@ async function applyContentScan() {
     try {
         const {result} = await contentJob('/api/content/apply', {preview_job_id: contentScan.previewId});
         contentScan.previewId = null; contentScan.imported = result; contentField('apply').hidden = true; contentField('complete').hidden = false;
-        contentField('status').textContent = `已更新列表，新增 ${result.added} 项、保留 ${result.retained} 项。` + (result.backup ? '原列表已备份。' : '已创建新列表。') + (result.warning || '');
+        contentField('status').textContent = workbenchText(`已更新列表，新增 ${result.added} 项、保留 ${result.retained} 项。`,`Playlist updated: ${result.added} added, ${result.retained} retained. `) + (result.backup ? uiText('原列表已备份。') : uiText('已创建新列表。')) + (result.warning || '');
     } catch (error) { invalidateContentScan(); contentField('status').textContent = error.message; }
 }
 async function completeImportedContent() {
@@ -243,7 +243,7 @@ async function downloadContentCore() {
         contentScan.downloaded = result;
         document.getElementById('content-core-result').textContent = `${result.message}\n来源：${result.source}\nSHA-256：${result.sha256}\n核心支持格式：${result.extensions}`;
         document.getElementById('content-core-transfer').disabled = false;
-        contentField('status').textContent = '核心已下载，尚未安装；可传到掌机后在 RetroArch 中安装。';
+        contentField('status').textContent = uiText('核心已下载，尚未安装；可传到掌机后在 RetroArch 中安装。');
     } catch (error) { contentField('status').textContent = error.message; }
 }
 async function transferContentCore() {
@@ -252,7 +252,7 @@ async function transferContentCore() {
     try {
         const {result} = await contentJob('/api/cores/transfer', {core_id:downloaded.core_id,abi:downloaded.abi,root:contentScan.setup.root});
         document.getElementById('content-core-result').textContent = result.message;
-        contentField('status').textContent = '已传输，待 RetroArch 端安装。';
+        contentField('status').textContent = uiText('已传输，待 RetroArch 端安装。');
     } catch (error) { contentField('status').textContent = error.message; }
 }
 function closeContentScan() {
@@ -290,7 +290,7 @@ function useContentAndroidPath() {
     contentField('android').value = value;
     contentField('android').removeAttribute('aria-invalid');
     invalidateContentScan();
-    contentField('status').textContent = '已选择掌机路径。核对后点击“开始扫描”，扫描不会立即写入列表。';
+    contentField('status').textContent = uiText('已选择掌机路径。核对后点击“开始扫描”，扫描不会立即写入列表。');
 }
 
 let contentHintGeneration = 0;
@@ -321,7 +321,7 @@ async function loadContentHints(detectSystem = false) {
         if (androidDirectory && !contentField('android').value) {
             contentField('android').value = androidDirectory;
             contentField('android').removeAttribute('aria-invalid');
-            contentField('status').textContent = '已从现有配置或游戏列表自动识别掌机目录，可直接开始扫描。';
+            contentField('status').textContent = uiText('已从现有配置或游戏列表自动识别掌机目录，可直接开始扫描。');
         }
         contentField('android-candidates').replaceChildren(...candidates.map(value => new Option(value, value)));
         contentField('android-suggestions').hidden = candidates.length === 0 || Boolean(contentField('android').value);
@@ -337,7 +337,7 @@ async function loadContentHints(detectSystem = false) {
         loadContentCoreStatus();
         renderContentConfiguration();
     } catch (error) {
-        if (generation === contentHintGeneration && setup === contentScan.setup && revision === contentScan.revision) contentField('status').textContent = '无法从已有列表恢复路径：' + error.message;
+        if (generation === contentHintGeneration && setup === contentScan.setup && revision === contentScan.revision) contentField('status').textContent = uiText('无法从已有列表恢复路径：') + error.message;
     }
 }
 
@@ -354,9 +354,9 @@ async function loadContentCoreInfo() {
         const filtered = original.split(/\s+/).filter(ext => allowed.has(ext));
         if (field.value !== filtered.join(' ') && contentScan.previewId) invalidateContentScan();
         field.value = filtered.join(' ');
-        document.getElementById('content-core-formats').textContent = '官方核心支持：' + info.extensions.join(' ') + '。压缩包作为单个入口处理。';
+        document.getElementById('content-core-formats').textContent = uiText('官方核心支持：') + info.extensions.join(' ') + uiText('。压缩包作为单个入口处理。');
     } catch (error) {
-        if (generation === contentInfoGeneration && setup === contentScan.setup && system === contentField('system').value) document.getElementById('content-core-formats').textContent = '官方格式信息暂不可读，当前使用主机预设，可手动核对：' + error.message;
+        if (generation === contentInfoGeneration && setup === contentScan.setup && system === contentField('system').value) document.getElementById('content-core-formats').textContent = uiText('官方格式信息暂不可读，当前使用主机预设，可手动核对：') + error.message;
     }
 }
 
@@ -364,7 +364,7 @@ contentField('directory').addEventListener('change', () => { contentField('andro
 
 contentField('abi').addEventListener('change', () => { contentScan.downloaded = null; document.getElementById('content-core-transfer').disabled = true; document.getElementById('content-core-result').textContent = ''; });
 
-async function cancelContentScan() { if (contentScan.jobId) { try { await desktopRequest('/api/jobs/cancel', {job_id: contentScan.jobId}); contentField('status').textContent = '正在取消，等待当前读取完成…'; } catch (error) { contentField('status').textContent = error.message; } } }
+async function cancelContentScan() { if (contentScan.jobId) { try { await desktopRequest('/api/jobs/cancel', {job_id: contentScan.jobId}); contentField('status').textContent = uiText('正在取消，等待当前读取完成…'); } catch (error) { contentField('status').textContent = error.message; } } }
 
 contentField('fields').addEventListener('input', event => { event.target.removeAttribute('aria-invalid'); });
 
@@ -377,17 +377,17 @@ function renderContentConfiguration() {
     if (!contentScan.setup) return;
     const text = (name, value) => { document.getElementById('content-config-' + name).textContent = value; };
     text('system', contentField('system').value);
-    text('core', contentField('core').selectedOptions[0]?.textContent || '待选择核心');
+    text('core', contentField('core').selectedOptions[0]?.textContent || uiText('待选择核心'));
     const storages = contentDirectoryStorages();
     const directory = contentField('directory').value;
     const storage = storages.find(value => directory.startsWith(value.root));
-    text('source', storage ? storage.label + ' / ' + decodeURIComponent(directory.slice(storage.root.length)) : directory || '未选择目录');
+    text('source', storage ? storage.label + ' / ' + decodeURIComponent(directory.slice(storage.root.length)) : directory || uiText('未选择目录'));
     const root = contentScan.setup.root;
     const targetStorage = storages.find(value => root.startsWith(value.root));
     text('target', targetStorage ? targetStorage.label + ' / ' + decodeURIComponent(root.slice(targetStorage.root.length)) : root);
     const status = contentScan.coreStatus?.key === contentCoreStatusKey() ? contentScan.coreStatus : null;
-    text('core-state', status?.message || '核心状态尚未检查');
-    text('core-detail', status?.detail || '指定核心路径后检查安装状态。');
+    text('core-state', uiText(status?.message || '核心状态尚未检查'));
+    text('core-detail', uiText(status?.detail || '指定核心路径后检查安装状态。'));
     document.getElementById('content-config-core-state').dataset.state = status?.state || 'unconfigured';
 }
 
@@ -406,7 +406,7 @@ async function loadContentCoreStatus() {
         if (['missing','unconfigured'].includes(result.state)) contentField('settings').open = true;
     } catch (error) {
         if (generation !== contentCoreStatusGeneration || setup !== contentScan.setup || key !== contentCoreStatusKey()) return;
-        contentScan.coreStatus = {key, state:'unknown', message:'核心状态检查失败', detail:error.message};
+        contentScan.coreStatus = {key, state:'unknown', message:uiText('核心状态检查失败'), detail:error.message};
         renderContentConfiguration();
     }
 }

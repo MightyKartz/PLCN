@@ -14,16 +14,16 @@
 <body>
     <div class="app-shell">
         <header class="topbar">
-            <div class="device-identity"><span class="icon" data-ui-icon="device-gamepad"></span><button id="workbench-device" type="button" onclick="openDesktop('library')" aria-label="设备详情">当前掌机</button><span id="workbench-connection" class="connection-state">未连接</span></div>
-            <div id="storage-scope" class="storage-segments" role="group" aria-label="游戏存储范围"><button type="button" data-scope="all" onclick="setStorageScope('all')" aria-pressed="true" data-i18n="全部存储">全部存储</button><button type="button" data-scope="internal" onclick="setStorageScope('internal')" aria-pressed="false" data-i18n="内部存储">内部存储</button><button type="button" data-scope="card" onclick="setStorageScope('card')" aria-pressed="false" data-i18n="存储卡">存储卡</button></div>
+            <div class="device-identity"><span class="icon" data-ui-icon="device-gamepad"></span><button id="workbench-device" type="button" onclick="openDesktop('library')" aria-label="设备详情" data-i18n-aria-label="设备详情" data-i18n="当前掌机">当前掌机</button><span id="workbench-connection" class="connection-state" data-i18n="未连接">未连接</span></div>
+            <div id="storage-scope" class="storage-segments" role="group" aria-label="游戏存储范围" data-i18n-aria-label="游戏存储范围"><button type="button" data-scope="all" onclick="setStorageScope('all')" aria-pressed="true" data-i18n="全部存储">全部存储</button><button type="button" data-scope="internal" onclick="setStorageScope('internal')" aria-pressed="false" data-i18n="内部存储">内部存储</button><button type="button" data-scope="card" onclick="setStorageScope('card')" aria-pressed="false" data-i18n="存储卡">存储卡</button></div>
             <div class="top-spacer"></div>
 
-            <div class="utility-group" aria-label="工具">
-                <button id="task-center-button" class="btn btn-muted top-toggle task-center-button" type="button" onclick="openDesktop('tasks')" title="任务中心" aria-label="任务中心"><span class="icon" data-ui-icon="circle-check"></span><span id="task-center-badge" class="task-center-badge" hidden></span></button>
-                <button class="btn btn-muted top-toggle" id="language-display-btn" type="button" onclick="toggleUILanguage()" title="切换界面语言" aria-label="切换界面语言">
+            <div class="utility-group" aria-label="工具" data-i18n-aria-label="工具">
+                <button id="task-center-button" class="btn btn-muted top-toggle task-center-button" type="button" onclick="openDesktop('tasks')" title="任务中心" aria-label="任务中心" data-i18n-title="任务中心" data-i18n-aria-label="任务中心"><span class="icon" data-ui-icon="circle-check"></span><span id="task-center-badge" class="task-center-badge" hidden></span></button>
+                <button class="btn btn-muted top-toggle" id="language-display-btn" type="button" onclick="toggleUILanguage()" title="切换界面语言" aria-label="切换界面语言" data-i18n-title="切换界面语言" data-i18n-aria-label="切换界面语言">
                     <svg class="ui-language-icon" data-icon="ui-to-en" width="20" height="20" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 1 0 20"></path><path d="M12 2a14.5 14.5 0 0 0 0 20"></path><path d="M2 12h20"></path></svg>
                 </button>
-                <button class="btn btn-muted top-toggle" id="theme-toggle-btn" type="button" onclick="toggleTheme()" title="切换浅色/深色主题" aria-label="切换浅色/深色主题" aria-pressed="false">
+                <button class="btn btn-muted top-toggle" id="theme-toggle-btn" type="button" onclick="toggleTheme()" title="切换浅色/深色主题" aria-label="切换浅色/深色主题" aria-pressed="false" data-i18n-title="切换浅色/深色主题" data-i18n-aria-label="切换浅色/深色主题">
                     <svg class="theme-toggle-icon" data-icon="theme-to-dark" width="20" height="20" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path d="M20.4 14.4A7.8 7.8 0 0 1 9.6 3.6a8.2 8.2 0 1 0 10.8 10.8Z"></path></svg>
                 </button>
             </div>
@@ -45,8 +45,8 @@
                     <section class="library-heading sr-only" inert>
                         <div class="library-heading-row"><h2 data-i18n="当前游戏库">当前游戏库</h2></div>
                         <p id="library-location"></p>
-                        <label id="device-storage-field" class="device-storage-field" hidden>存储空间<select id="device-storage-select" onchange="selectDeviceStorage()"></select></label>
-                        <button class="btn btn-muted" data-input-control id="home-back" onclick="showLibraryHome()" type="button">打开其他游戏库</button>
+                        <label id="device-storage-field" class="device-storage-field" hidden><span data-i18n="存储空间">存储空间</span><select id="device-storage-select" onchange="selectDeviceStorage()"></select></label>
+                        <button class="btn btn-muted" data-input-control id="home-back" onclick="showLibraryHome()" type="button" data-i18n="打开其他游戏库">打开其他游戏库</button>
                     </section>
                 <section class="library-browser" id="library-browser">
                     <div class="library-browser-header">
@@ -58,53 +58,53 @@
 
 
 
-                    <input id="library-system-search" class="library-system-search" type="search" aria-label="搜索主机" placeholder="搜索主机" oninput="filterLibrarySystems()">
+                    <input id="library-system-search" class="library-system-search" type="search" aria-label="搜索主机" placeholder="搜索主机" oninput="filterLibrarySystems()" data-i18n-placeholder="搜索主机" data-i18n-aria-label="搜索主机">
                     <p id="library-system-empty" class="artwork-help" hidden></p>
                     <div class="playlist-list playlist-system-list" id="scanned-playlists">
                         <div class="playlist-empty" data-i18n="扫描后显示 .lpl 游戏列表">扫描后显示 .lpl 游戏列表</div>
                     </div>
                 </section>
                 </div>
-                <div class="sidebar-footer"><details class="tools-menu"><summary><span class="icon" data-ui-icon="tool"></span>工具</summary><div><button id="storage-entry" type="button" onclick="this.closest('details').open=false; openStorageOptimization()">光盘 CHD 转换</button><button id="rom-storage-entry" type="button" onclick="this.closest('details').open=false; openRomStorage()">目录整理与 ROM 压缩</button></div></details><button class="sidebar-settings" type="button" onclick="openDesktop('library')"><span class="icon" data-ui-icon="settings"></span>设置</button></div>
+                <div class="sidebar-footer"><details class="tools-menu"><summary><span class="icon" data-ui-icon="tool"></span><span data-i18n="工具">工具</span></summary><div><button id="storage-entry" type="button" onclick="this.closest('details').open=false; openStorageOptimization()" data-i18n="光盘 CHD 转换">光盘 CHD 转换</button><button id="rom-storage-entry" type="button" onclick="this.closest('details').open=false; openRomStorage()" data-i18n="目录整理与 ROM 压缩">目录整理与 ROM 压缩</button></div></details><button class="sidebar-settings" type="button" onclick="openDesktop('library')"><span class="icon" data-ui-icon="settings"></span><span data-i18n="设置">设置</span></button></div>
             </aside>
 
             <section class="main-panel filters-compact">
-                <div id="library-read-banner" class="library-read-banner" role="status" hidden><span class="library-read-spinner" aria-hidden="true"></span><span id="library-read-banner-message"></span><button class="btn btn-small btn-muted" id="library-read-banner-retry" type="button" onclick="retryLibraryRead()" hidden>重试</button></div>
+                <div id="library-read-banner" class="library-read-banner" role="status" hidden><span class="library-read-spinner" aria-hidden="true"></span><span id="library-read-banner-message"></span><button class="btn btn-small btn-muted" id="library-read-banner-retry" type="button" onclick="retryLibraryRead()" hidden data-i18n="重试">重试</button></div>
                 <section class="desktop-welcome" id="library-onboarding">
-                    <header class="home-intro"><h1 id="home-title">打开游戏库</h1><p id="home-description"></p></header>
+                    <header class="home-intro"><h1 id="home-title" data-i18n="打开游戏库">打开游戏库</h1><p id="home-description"></p></header>
                     <p id="home-message" role="alert" hidden></p>
                     <section class="home-section" aria-labelledby="home-devices-title">
-                        <div class="home-section-heading"><h2 id="home-devices-title">已连接设备与目录</h2><button class="btn btn-muted" id="scan-default-btn" onclick="refreshLibrarySources()" type="button">重新检测</button></div>
+                        <div class="home-section-heading"><h2 id="home-devices-title" data-i18n="已连接设备与目录">已连接设备与目录</h2><button class="btn btn-muted" id="scan-default-btn" onclick="refreshLibrarySources()" type="button" data-i18n="重新检测">重新检测</button></div>
                         <div id="home-devices" aria-live="polite"></div>
 
                     </section>
-                    <section class="home-section" aria-labelledby="home-recent-title" hidden><div class="home-section-heading"><h2 id="home-recent-title">最近使用</h2></div><div id="home-recent"></div></section>
+                    <section class="home-section" aria-labelledby="home-recent-title" hidden><div class="home-section-heading"><h2 id="home-recent-title" data-i18n="最近使用">最近使用</h2></div><div id="home-recent"></div></section>
                 </section>
                 <div class="workbench-content">
                 <div class="panel-header">
-                    <h1 class="panel-title" id="workspace-title">选择游戏列表</h1>
+                    <h1 class="panel-title" id="workspace-title" data-i18n="选择游戏列表">选择游戏列表</h1>
 
                     <div class="panel-actions">
-                        <button id="automatic-scan-button" class="btn" type="button" data-input-control onclick="openAutoScan()"><span class="icon" data-ui-icon="scan"></span>扫描新增游戏</button>
-                        <button id="browse-games-button" class="btn btn-muted" type="button" onclick="invalidateWorkbenchPreview()" hidden>返回游戏列表</button>
+                        <button id="automatic-scan-button" class="btn" type="button" data-input-control onclick="openAutoScan()"><span class="icon" data-ui-icon="scan"></span><span data-i18n="扫描新增游戏">扫描新增游戏</span></button>
+                        <button id="browse-games-button" class="btn btn-muted" type="button" onclick="invalidateWorkbenchPreview()" hidden data-i18n="返回游戏列表">返回游戏列表</button>
                         <div class="completion-entry">
-                            <span id="completion-entry-note">自动匹配中文名与图片，预览后确认应用。</span>
+                            <span id="completion-entry-note" data-i18n="自动匹配中文名与图片，预览后确认应用。">自动匹配中文名与图片，预览后确认应用。</span>
                             <button id="preview-button" class="btn btn-muted" onclick="startCompletion()" disabled type="button" aria-describedby="completion-entry-note" data-i18n="一键补全">一键补全</button>
                         </div>
-                        <button id="manual-add-button" class="btn btn-text" type="button" data-input-control onclick="openContentScan()">＋ 手动添加</button><button id="apply-button" class="btn btn-success" onclick="applyChanges()" disabled type="button">确认应用</button>
+                        <button id="manual-add-button" class="btn btn-text" type="button" data-input-control onclick="openContentScan()" data-i18n="＋ 手动添加">＋ 手动添加</button><button id="apply-button" class="btn btn-success" onclick="applyChanges()" disabled type="button" data-i18n="确认应用">确认应用</button>
                     </div>
                 </div>
                 <p id="workspace-empty" class="workspace-note" data-i18n="选择左侧列表，然后预览名称与图片变更。">选择左侧列表，然后预览名称与图片变更。</p>
-                <section id="library-overview" class="library-overview" aria-label="游戏库概览" hidden></section>
-                <section id="game-library" class="game-library" aria-label="当前游戏列表" hidden>
+                <section id="library-overview" class="library-overview" aria-label="游戏库概览" hidden data-i18n-aria-label="游戏库概览"></section>
+                <section id="game-library" class="game-library" aria-label="当前游戏列表" hidden data-i18n-aria-label="当前游戏列表">
                     <div class="game-library-toolbar">
                         <input id="game-library-search" type="search" oninput="filterGameLibrary()">
-                        <div class="game-library-filters" role="group" aria-label="图片筛选">
+                        <div class="game-library-filters" role="group" aria-label="图片筛选" data-i18n-aria-label="图片筛选">
                             <button id="game-library-filter-all" type="button" onclick="setGameLibraryFilter('all')"></button>
                             <button id="game-library-filter-missing" type="button" onclick="setGameLibraryFilter('missing')"></button>
                             <button id="game-library-filter-problem" type="button" onclick="setGameLibraryFilter('problem')"></button>
                         </div>
-                        <button id="game-library-discs" class="btn btn-muted" type="button" onclick="openDiscInspection()" hidden>多盘与引用检查</button>
+                        <button id="game-library-discs" class="btn btn-muted" type="button" onclick="openDiscInspection()" hidden data-i18n="多盘与引用检查">多盘与引用检查</button>
                         <p id="game-library-status" role="status"></p>
                         <p id="game-library-note" class="sr-only"></p>
                     </div>
@@ -139,12 +139,12 @@
                         <button class="filter-btn" type="button" data-filter="edited" onclick="setPreviewFilter('edited', this)"><span data-i18n="已手动编辑">已手动编辑</span> <strong class="filter-count">0</strong></button>
                     </div>
                     <div class="toolbar-tools">
-                        <button class="btn btn-muted" id="filter-toggle-btn" type="button" title="收起/展开筛选项" onclick="toggleFilterBar()" aria-expanded="false">
+                        <button class="btn btn-muted" id="filter-toggle-btn" type="button" title="收起/展开筛选项" onclick="toggleFilterBar()" aria-expanded="false" data-i18n-title="收起/展开筛选项">
                             <svg viewBox="0 0 24 24" style="width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 2;"><path d="M4 5h16l-6 7v5l-4 2v-7z"></path></svg>
                             <span data-i18n="筛选">筛选</span>
                         </button>
                         <div class="search-field">
-                            <input aria-label="搜索游戏名或 ROM 名称" type="text" id="preview-search" data-i18n-placeholder="搜索游戏名 / rom 名称" placeholder="搜索游戏名 / rom 名称" oninput="renderPreviewTable(currentChanges)">
+                            <input aria-label="搜索游戏名或 ROM 名称" type="text" id="preview-search" data-i18n-placeholder="搜索游戏名 / rom 名称" placeholder="搜索游戏名 / rom 名称" oninput="renderPreviewTable(currentChanges)" data-i18n-aria-label="搜索游戏名或 ROM 名称">
                             <span class="search-symbol">⌕</span>
                         </div>
                     </div>
@@ -196,16 +196,16 @@
     <dialog id="fileModal" class="file-picker-dialog" aria-labelledby="modalTitle" onclose="fileListVersion++; filePickerReturnFocus?.focus()">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="modalTitle">选择文件</h3>
-                <button class="close" id="file-picker-close" type="button" aria-label="关闭文件选择器" onclick="closeModal()">&times;</button>
+                <h3 id="modalTitle" data-i18n="选择文件">选择文件</h3>
+                <button class="close" id="file-picker-close" type="button" aria-label="关闭文件选择器" onclick="closeModal()" data-i18n-aria-label="关闭文件选择器">&times;</button>
             </div>
             <div id="currentPath"></div>
             <div class="modal-body">
                 <ul id="fileList" class="file-list"></ul>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-ghost" onclick="selectCurrentDir()" id="selectDirBtn" style="display: none;" type="button">选择当前目录</button>
-                <button class="btn btn-muted" onclick="closeModal()" type="button">取消</button>
+                <button class="btn btn-ghost" onclick="selectCurrentDir()" id="selectDirBtn" style="display: none;" type="button" data-i18n="选择当前目录">选择当前目录</button>
+                <button class="btn btn-muted" onclick="closeModal()" type="button" data-i18n="取消">取消</button>
             </div>
         </div>
     </dialog>
@@ -214,8 +214,8 @@
     <input id="system_name" type="hidden">
 
     <dialog id="desktop-dialog" aria-labelledby="desktop-title">
-        <header><h2 id="desktop-title" data-i18n="设置">设置</h2><button id="desktop-close" class="btn btn-muted" onclick="closeDesktopSettings()" type="button">关闭</button></header>
-        <nav class="desktop-toolbar" aria-label="设置页面">
+        <header><h2 id="desktop-title" data-i18n="设置">设置</h2><button id="desktop-close" class="btn btn-muted" onclick="closeDesktopSettings()" type="button" data-i18n="关闭">关闭</button></header>
+        <nav class="desktop-toolbar" aria-label="设置页面" data-i18n-aria-label="设置页面">
             <button id="settings-library-tab" data-desktop-view="library" class="btn" onclick="openDesktop('library')" data-i18n="设备与游戏库">设备与游戏库</button>
             <button data-desktop-view="data" class="btn" onclick="openDesktop('data')" data-i18n="资料来源">资料来源</button>
             <button id="settings-preferences-tab" data-desktop-view="preferences" class="btn" onclick="openDesktop('preferences')" data-i18n="偏好设置">偏好设置</button>
@@ -228,14 +228,14 @@
                             <label for="retroarch_root" data-i18n="游戏库目录">游戏库目录</label>
                             <div class="input-group">
                                 <input type="text" id="retroarch_root" data-input-control placeholder="/path/to/RetroArch">
-                                <button class="btn btn-small btn-muted" onclick="openFilePicker('retroarch_root', true)" title="选择 RetroArch 目录" data-input-control type="button" data-i18n="浏览">浏览</button>
+                                <button class="btn btn-small btn-muted" onclick="openFilePicker('retroarch_root', true)" title="选择 RetroArch 目录" data-input-control type="button" data-i18n="浏览" data-i18n-title="选择 RetroArch 目录">浏览</button>
                             </div>
                         </div>
-                        <div class="device-actions"><button class="btn btn-muted" id="device-switch-button" type="button" onclick="desktopDialog.close(); showLibraryHome()">切换设备</button>
+                        <div class="device-actions"><button class="btn btn-muted" id="device-switch-button" type="button" onclick="desktopDialog.close(); showLibraryHome()" data-i18n="切换设备">切换设备</button>
 
                             <button class="btn" id="scan-device-btn" onclick="scanDevice(false)" data-i18n="扫描目录" type="button">扫描目录</button>
                         </div>
-                        <div class="device-summary" id="device-summary">等待扫描 RetroArch 目录</div>
+                        <div class="device-summary" id="device-summary" data-i18n="等待扫描 RetroArch 目录">等待扫描 RetroArch 目录</div>
 
                         <details class="directory-details">
                             <summary data-i18n="目录详情">目录详情</summary>
@@ -244,21 +244,21 @@
                                     <div class="detected-icon">PL</div>
                                     <div>
                                         <div class="detected-label" data-i18n="游戏列表目录">游戏列表目录</div>
-                                        <div class="detected-path" id="device-playlists-dir">未检测</div>
+                                        <div class="detected-path" id="device-playlists-dir" data-i18n="未检测">未检测</div>
                                     </div>
                                 </div>
                                 <div class="detected-row">
                                     <div class="detected-icon">IMG</div>
                                     <div>
                                         <div class="detected-label" data-i18n="封面缩略图目录">封面缩略图目录</div>
-                                        <div class="detected-path" id="device-thumbnails-dir">未检测</div>
+                                        <div class="detected-path" id="device-thumbnails-dir" data-i18n="未检测">未检测</div>
                                     </div>
                                 </div>
                                 <div class="detected-row">
                                     <div class="detected-icon">CFG</div>
                                     <div>
                                         <div class="detected-label" data-i18n="配置文件">配置文件</div>
-                                        <div class="detected-path" id="device-config-file">未检测</div>
+                                        <div class="detected-path" id="device-config-file" data-i18n="未检测">未检测</div>
                                     </div>
                                 </div>
                             </div>
@@ -277,7 +277,7 @@
                     </div>
     </section>
         <section id="preference-settings" aria-labelledby="settings-preferences-tab" hidden>
-            <div class="form-group"><label for="preference-language" data-i18n="界面语言">界面语言</label><select id="preference-language" onchange="applyUILanguage(this.value);localStorage.setItem('plcn-ui-language',currentUILanguage);openDesktop('preferences')"><option value="zh">简体中文</option><option value="en">English</option></select></div>
+            <div class="form-group"><label for="preference-language" data-i18n="界面语言">界面语言</label><select id="preference-language" onchange="applyUILanguage(this.value);localStorage.setItem('plcn-ui-language',currentUILanguage);openDesktop('preferences')"><option value="zh" lang="zh">简体中文</option><option value="en">English</option></select></div>
             <div class="form-group"><label for="preference-theme" data-i18n="外观">外观</label><select id="preference-theme" onchange="applyTheme(this.value);localStorage.setItem('plcn-theme',currentTheme)"><option value="light" data-i18n="浅色">浅色</option><option value="dark" data-i18n="深色">深色</option></select></div>
             <p class="artwork-help" data-i18n="语言与外观偏好会自动保存。">语言与外观偏好会自动保存。</p>
         </section>
@@ -287,7 +287,7 @@
                                 <label for="rom_name_cn_path" data-i18n="rom-name-cn 路径">rom-name-cn 路径</label>
                                 <div class="input-group">
                                     <input type="text" id="rom_name_cn_path" data-input-control placeholder="data/rom-name-cn">
-                                    <button class="btn btn-small btn-muted" onclick="openFilePicker('rom_name_cn_path', true)" title="选择目录" data-input-control type="button" data-i18n="浏览">浏览</button>
+                                    <button class="btn btn-small btn-muted" onclick="openFilePicker('rom_name_cn_path', true)" title="选择目录" data-input-control type="button" data-i18n="浏览" data-i18n-title="选择目录">浏览</button>
                                 </div>
                             </div>
 
@@ -298,7 +298,7 @@
         <header><h2 id="artwork-title"></h2><button id="artwork-close" class="btn btn-muted" type="button" onclick="closeArtworkDialog()"></button></header>
         <p id="artwork-game"></p>
         <p id="artwork-scope" class="artwork-help"></p>
-        <section id="artwork-shared" hidden><p id="artwork-shared-message"></p><ul id="artwork-shared-games"></ul><label id="artwork-new-label-title" for="artwork-new-label">当前游戏的独立名称</label><input id="artwork-new-label" type="text" oninput="artworkIndependentNameChanged()"><p id="artwork-shared-help" class="artwork-help"></p></section>
+        <section id="artwork-shared" hidden><p id="artwork-shared-message"></p><ul id="artwork-shared-games"></ul><label id="artwork-new-label-title" for="artwork-new-label" data-i18n="当前游戏的独立名称">当前游戏的独立名称</label><input id="artwork-new-label" type="text" oninput="artworkIndependentNameChanged()"><p id="artwork-shared-help" class="artwork-help"></p></section>
         <fieldset id="artwork-kinds" class="artwork-kinds">
             <legend id="artwork-kind-label"></legend>
             <label class="artwork-kind" for="artwork-kind-Named_Boxarts"><input id="artwork-kind-Named_Boxarts" type="checkbox" value="Named_Boxarts" onchange="artworkKindChanged()"><span id="artwork-kind-name-Named_Boxarts"></span><small id="artwork-kind-status-Named_Boxarts" class="artwork-kind-status" role="status"></small></label>
@@ -310,7 +310,7 @@
         <label id="artwork-source-label" for="artwork-source"></label>
         <div class="artwork-source-controls"><input id="artwork-source" type="text" oninput="artworkSearchChanged()" onkeydown="if(event.key === 'Enter') searchArtwork()"><button id="artwork-search" class="btn btn-muted" type="button" onclick="searchArtwork()"></button></div>
         <div id="artwork-results"></div>
-        <button id="artwork-secondary" class="btn btn-muted" type="button" hidden onclick="searchArtwork(false, 'wikipedia')">搜索备用来源</button>
+        <button id="artwork-secondary" class="btn btn-muted" type="button" hidden onclick="searchArtwork(false, 'wikipedia')" data-i18n="搜索备用来源">搜索备用来源</button>
         <label id="artwork-upload-label" for="artwork-upload"></label>
         <input id="artwork-upload" type="file" accept="image/png,image/jpeg,image/webp" onchange="importArtwork(this.files[0])">
         <p id="artwork-message" role="status" aria-live="polite"></p>
@@ -335,7 +335,7 @@
         <footer><button id="artwork-confirm" class="btn" type="button" onclick="confirmArtwork()" disabled></button></footer>
     </dialog>
     <dialog id="batch-review-dialog" aria-labelledby="batch-review-title">
-        <header class="batch-review-header"><h2 id="batch-review-title">一键补全 · 全部主机</h2><button id="batch-run-close" class="btn btn-muted" type="button" onclick="closeBatchRun()" data-i18n="关闭">关闭</button></header>
+        <header class="batch-review-header"><h2 id="batch-review-title" data-i18n="一键补全 · 全部主机">一键补全 · 全部主机</h2><button id="batch-run-close" class="btn btn-muted" type="button" onclick="closeBatchRun()" data-i18n="关闭">关闭</button></header>
         <p id="batch-review-status" role="status" aria-live="polite"></p>
         <progress id="batch-run-progress"></progress>
         <div class="batch-review-table-wrap" hidden><table><thead><tr><th data-i18n="主机">主机</th><th data-i18n="修改名称">修改名称</th><th data-i18n="补全图片">补全图片</th><th data-i18n="需手动处理">需手动处理</th><th data-i18n="结果">结果</th></tr></thead><tbody id="batch-review-rows"></tbody></table></div>
@@ -343,120 +343,120 @@
         <footer class="batch-review-footer"><button id="batch-run-tasks" class="btn btn-muted" type="button" onclick="showBatchRunTasks()" data-i18n="查看任务明细" hidden>查看任务明细</button><button id="batch-run-cancel" class="btn btn-muted" type="button" onclick="cancelBatchRun()" data-i18n="取消">取消</button><button id="batch-run-done" class="btn" type="button" onclick="closeBatchRun()" data-i18n="完成" hidden>完成</button></footer>
     </dialog>
     <dialog id="content-scan-dialog" aria-labelledby="content-scan-title">
-        <header><div><h2 id="content-scan-title">手动添加游戏</h2><p>指定目录、主机与核心，预览后增量加入游戏列表。</p></div><button id="content-scan-close" class="btn btn-muted" type="button" onclick="closeContentScan()">关闭</button></header>
+        <header><div><h2 id="content-scan-title" data-i18n="手动添加游戏">手动添加游戏</h2><p data-i18n="指定目录、主机与核心，预览后增量加入游戏列表。">指定目录、主机与核心，预览后增量加入游戏列表。</p></div><button id="content-scan-close" class="btn btn-muted" type="button" onclick="closeContentScan()" data-i18n="关闭">关闭</button></header>
         <div class="content-scan-body">
         <fieldset id="content-scan-fields">
-            <label>扫描配置<select id="content-scan-profile" onchange="loadContentProfile()"></select></label>
-            <label>游戏目录<div class="content-scan-input-action"><input id="content-scan-directory" placeholder="选择掌机上的游戏文件夹"><button class="btn btn-muted" type="button" onclick="browseContentDirectory()">选择目录</button></div></label>
-            <section id="content-directory-picker" hidden aria-label="选择游戏目录"><label id="content-directory-storage-label" hidden>游戏所在存储<select id="content-directory-storage" onchange="browseContentDirectory(this.value)"></select></label><p id="content-directory-path"></p><div class="content-directory-actions"><button type="button" class="btn btn-muted" onclick="browseContentDirectory(contentScan.browserParent)">上一级</button><button type="button" class="btn" id="content-directory-use" onclick="chooseContentDirectory()">使用此目录</button><button type="button" class="btn btn-muted" onclick="document.getElementById('content-directory-picker').hidden=true">取消选择</button></div><div id="content-directory-entries"></div><p>在本机或存储卡中选择游戏目录，列表仍更新到当前游戏库。</p></section>
-            <section class="content-config-summary" aria-label="当前扫描配置">
-                <h3>当前扫描配置</h3>
-                <dl><div><dt>主机</dt><dd id="content-config-system">正在读取…</dd></div><div><dt>默认核心</dt><dd id="content-config-core">正在读取…</dd></div></dl>
-                <p><strong>游戏来源：</strong><span id="content-config-source">未选择目录</span></p>
-                <p><strong>列表保存位置：</strong><span id="content-config-target"></span></p>
+            <label><span data-i18n="扫描配置">扫描配置</span><select id="content-scan-profile" onchange="loadContentProfile()"></select></label>
+            <label><span data-i18n="游戏目录">游戏目录</span><div class="content-scan-input-action"><input id="content-scan-directory" placeholder="选择掌机上的游戏文件夹" data-i18n-placeholder="选择掌机上的游戏文件夹"><button class="btn btn-muted" type="button" onclick="browseContentDirectory()" data-i18n="选择目录">选择目录</button></div></label>
+            <section id="content-directory-picker" hidden aria-label="选择游戏目录" data-i18n-aria-label="选择游戏目录"><label id="content-directory-storage-label" hidden><span data-i18n="游戏所在存储">游戏所在存储</span><select id="content-directory-storage" onchange="browseContentDirectory(this.value)"></select></label><p id="content-directory-path"></p><div class="content-directory-actions"><button type="button" class="btn btn-muted" onclick="browseContentDirectory(contentScan.browserParent)" data-i18n="上一级">上一级</button><button type="button" class="btn" id="content-directory-use" onclick="chooseContentDirectory()" data-i18n="使用此目录">使用此目录</button><button type="button" class="btn btn-muted" onclick="document.getElementById('content-directory-picker').hidden=true" data-i18n="取消选择">取消选择</button></div><div id="content-directory-entries"></div><p data-i18n="在本机或存储卡中选择游戏目录，列表仍更新到当前游戏库。">在本机或存储卡中选择游戏目录，列表仍更新到当前游戏库。</p></section>
+            <section class="content-config-summary" aria-label="当前扫描配置" data-i18n-aria-label="当前扫描配置">
+                <h3 data-i18n="当前扫描配置">当前扫描配置</h3>
+                <dl><div><dt data-i18n="主机">主机</dt><dd id="content-config-system" data-i18n="正在读取…">正在读取…</dd></div><div><dt data-i18n="默认核心">默认核心</dt><dd id="content-config-core" data-i18n="正在读取…">正在读取…</dd></div></dl>
+                <p><strong data-i18n="游戏来源：">游戏来源：</strong><span id="content-config-source" data-i18n="未选择目录">未选择目录</span></p>
+                <p><strong data-i18n="列表保存位置：">列表保存位置：</strong><span id="content-config-target"></span></p>
                 <p id="content-config-core-state" role="status" aria-live="polite"></p><p id="content-config-core-detail"></p>
-                <p>自动识别的配置可在下方修改；已有游戏单独设置的核心会保留。</p>
+                <p data-i18n="自动识别的配置可在下方修改；已有游戏单独设置的核心会保留。">自动识别的配置可在下方修改；已有游戏单独设置的核心会保留。</p>
             </section>
-            <details id="content-scan-settings"><summary>扫描设置与高级选项</summary>
-            <label id="content-scan-android-label">掌机中的实际游戏目录<input id="content-scan-android" placeholder="例如 /storage/4A21-0000/Roms/SS"><small>用于 RetroArch 启动游戏，与电脑传输地址不同。未能自动识别时，可从已有路径选择，或在 RetroArch 中查看完整路径。</small></label>
-            <section id="content-scan-android-suggestions" class="content-path-suggestions" hidden aria-label="建议的掌机路径"><p>从现有列表找到以下路径，请核对它是否对应刚选的本机或存储卡目录。</p><div class="content-scan-input-action"><select id="content-scan-android-candidates" aria-label="建议的掌机游戏目录"></select><button class="btn btn-muted" type="button" onclick="useContentAndroidPath()">使用所选路径</button></div></section>
-            <div class="content-scan-grid"><label>主机<select id="content-scan-system" onchange="changeContentSystem()"></select></label><label>默认核心<select id="content-scan-core" onchange="changeContentCore()"></select></label></div>
+            <details id="content-scan-settings"><summary data-i18n="扫描设置与高级选项">扫描设置与高级选项</summary>
+            <label id="content-scan-android-label"><span data-i18n="掌机中的实际游戏目录">掌机中的实际游戏目录</span><input id="content-scan-android" placeholder="例如 /storage/4A21-0000/Roms/SS" data-i18n-placeholder="例如 /storage/4A21-0000/Roms/SS"><small data-i18n="用于 RetroArch 启动游戏，与电脑传输地址不同。未能自动识别时，可从已有路径选择，或在 RetroArch 中查看完整路径。">用于 RetroArch 启动游戏，与电脑传输地址不同。未能自动识别时，可从已有路径选择，或在 RetroArch 中查看完整路径。</small></label>
+            <section id="content-scan-android-suggestions" class="content-path-suggestions" hidden aria-label="建议的掌机路径" data-i18n-aria-label="建议的掌机路径"><p data-i18n="从现有列表找到以下路径，请核对它是否对应刚选的本机或存储卡目录。">从现有列表找到以下路径，请核对它是否对应刚选的本机或存储卡目录。</p><div class="content-scan-input-action"><select id="content-scan-android-candidates" aria-label="建议的掌机游戏目录" data-i18n-aria-label="建议的掌机游戏目录"></select><button class="btn btn-muted" type="button" onclick="useContentAndroidPath()" data-i18n="使用所选路径">使用所选路径</button></div></section>
+            <div class="content-scan-grid"><label><span data-i18n="主机">主机</span><select id="content-scan-system" onchange="changeContentSystem()"></select></label><label><span data-i18n="默认核心">默认核心</span><select id="content-scan-core" onchange="changeContentCore()"></select></label></div>
             <p id="content-scan-recommendation" class="artwork-help"></p><p id="content-core-formats" class="artwork-help" role="status"></p>
-            <label>已安装核心的完整路径<input id="content-scan-core-path" placeholder="在 RetroArch 的设置 → 目录 → 核心中查看"><small id="content-scan-install-state">MTP 无法验证应用私有目录，填写路径不代表已安装。请先在 RetroArch 中确认核心可用。</small></label>
-            <details id="content-scan-download"><summary>缺少核心？从官方下载安装</summary>
-                <p>下载来源：Libretro 官方 Buildbot。请选择 RetroArch 应用的架构（不是仅看掌机 CPU）。下载不会自动安装或替换现有核心。</p>
-                <label>RetroArch 应用架构<select id="content-scan-abi"><option value="">请选择应用架构</option><option value="arm64-v8a">Android ARM 64 位</option><option value="armeabi-v7a">Android ARM 32 位</option><option value="x86_64">Android x86 64 位</option><option value="x86">Android x86 32 位</option></select></label>
-                <div class="content-directory-actions"><button class="btn btn-muted" type="button" onclick="downloadContentCore()">官方下载</button><button id="content-core-transfer" class="btn btn-muted" type="button" onclick="transferContentCore()" disabled>传到掌机待安装</button></div><p id="content-core-result" role="status"></p>
+            <label><span data-i18n="已安装核心的完整路径">已安装核心的完整路径</span><input id="content-scan-core-path" placeholder="在 RetroArch 的设置 → 目录 → 核心中查看" data-i18n-placeholder="在 RetroArch 的设置 → 目录 → 核心中查看"><small id="content-scan-install-state" data-i18n="MTP 无法验证应用私有目录，填写路径不代表已安装。请先在 RetroArch 中确认核心可用。">MTP 无法验证应用私有目录，填写路径不代表已安装。请先在 RetroArch 中确认核心可用。</small></label>
+            <details id="content-scan-download"><summary data-i18n="缺少核心？从官方下载安装">缺少核心？从官方下载安装</summary>
+                <p data-i18n="下载来源：Libretro 官方 Buildbot。请选择 RetroArch 应用的架构（不是仅看掌机 CPU）。下载不会自动安装或替换现有核心。">下载来源：Libretro 官方 Buildbot。请选择 RetroArch 应用的架构（不是仅看掌机 CPU）。下载不会自动安装或替换现有核心。</p>
+                <label><span data-i18n="RetroArch 应用架构">RetroArch 应用架构</span><select id="content-scan-abi"><option value="" data-i18n="请选择应用架构">请选择应用架构</option><option value="arm64-v8a" data-i18n="Android ARM 64 位">Android ARM 64 位</option><option value="armeabi-v7a" data-i18n="Android ARM 32 位">Android ARM 32 位</option><option value="x86_64" data-i18n="Android x86 64 位">Android x86 64 位</option><option value="x86" data-i18n="Android x86 32 位">Android x86 32 位</option></select></label>
+                <div class="content-directory-actions"><button class="btn btn-muted" type="button" onclick="downloadContentCore()" data-i18n="官方下载">官方下载</button><button id="content-core-transfer" class="btn btn-muted" type="button" onclick="transferContentCore()" disabled data-i18n="传到掌机待安装">传到掌机待安装</button></div><p id="content-core-result" role="status"></p>
             </details>
-            <details><summary>扫描选项</summary><label>目标列表文件名<input id="content-scan-playlist-name" placeholder="主机名称.lpl"></label><label>文件格式（空格分隔）<input id="content-scan-extensions"></label><label class="content-scan-check"><input id="content-scan-recursive" type="checkbox" checked>包含子目录</label><label>街机 DAT 文件路径（可选，MAME 必填）<input id="content-scan-dat" placeholder="与所选核心及 ROM 集匹配的 XML DAT"></label><label class="content-scan-check"><input id="content-scan-dat-filter" type="checkbox">仅加入 DAT 中匹配的游戏</label><p>增量合并，保留已有条目与单独核心设置。不删除失效项。ZIP/7z 按单个游戏入口扫描，不读取包内内容。</p></details>
+            <details><summary data-i18n="扫描选项">扫描选项</summary><label><span data-i18n="目标列表文件名">目标列表文件名</span><input id="content-scan-playlist-name" placeholder="主机名称.lpl" data-i18n-placeholder="主机名称.lpl"></label><label><span data-i18n="文件格式（空格分隔）">文件格式（空格分隔）</span><input id="content-scan-extensions"></label><label class="content-scan-check"><input id="content-scan-recursive" type="checkbox" checked><span data-i18n="包含子目录">包含子目录</span></label><label><span data-i18n="街机 DAT 文件路径（可选，MAME 必填）">街机 DAT 文件路径（可选，MAME 必填）</span><input id="content-scan-dat" placeholder="与所选核心及 ROM 集匹配的 XML DAT" data-i18n-placeholder="与所选核心及 ROM 集匹配的 XML DAT"></label><label class="content-scan-check"><input id="content-scan-dat-filter" type="checkbox"><span data-i18n="仅加入 DAT 中匹配的游戏">仅加入 DAT 中匹配的游戏</span></label><p data-i18n="增量合并，保留已有条目与单独核心设置。不删除失效项。ZIP/7z 按单个游戏入口扫描，不读取包内内容。">增量合并，保留已有条目与单独核心设置。不删除失效项。ZIP/7z 按单个游戏入口扫描，不读取包内内容。</p></details>
             </details>
         </fieldset>
         <p id="content-scan-status" role="status" aria-live="polite"></p>
-        <section id="content-scan-preview" hidden aria-label="扫描变更预览"><h3>本次更新</h3><p id="content-scan-summary"></p><div class="content-scan-table"><table><thead><tr><th>新增游戏</th><th>掌机启动路径</th></tr></thead><tbody id="content-scan-rows"></tbody></table></div><p>确认更新前请退出 RetroArch，避免它覆盖列表。写入前自动备份原列表。</p></section>
+        <section id="content-scan-preview" hidden aria-label="扫描变更预览" data-i18n-aria-label="扫描变更预览"><h3 data-i18n="本次更新">本次更新</h3><p id="content-scan-summary"></p><div class="content-scan-table"><table><thead><tr><th data-i18n="新增游戏">新增游戏</th><th data-i18n="掌机启动路径">掌机启动路径</th></tr></thead><tbody id="content-scan-rows"></tbody></table></div><p data-i18n="确认更新前请退出 RetroArch，避免它覆盖列表。写入前自动备份原列表。">确认更新前请退出 RetroArch，避免它覆盖列表。写入前自动备份原列表。</p></section>
         </div>
-        <footer><button id="content-scan-cancel" class="btn btn-muted" type="button" onclick="cancelContentScan()" hidden>取消任务</button><button id="content-scan-start" class="btn btn-muted" type="button" onclick="previewContentScan()">开始扫描</button><button id="content-scan-apply" class="btn" type="button" onclick="applyContentScan()" hidden>确认更新列表</button><button id="content-scan-complete" class="btn" type="button" onclick="completeImportedContent()" hidden>预览名称与图片补全</button></footer>
+        <footer><button id="content-scan-cancel" class="btn btn-muted" type="button" onclick="cancelContentScan()" hidden data-i18n="取消任务">取消任务</button><button id="content-scan-start" class="btn btn-muted" type="button" onclick="previewContentScan()" data-i18n="开始扫描">开始扫描</button><button id="content-scan-apply" class="btn" type="button" onclick="applyContentScan()" hidden data-i18n="确认更新列表">确认更新列表</button><button id="content-scan-complete" class="btn" type="button" onclick="completeImportedContent()" hidden data-i18n="预览名称与图片补全">预览名称与图片补全</button></footer>
     </dialog>
     <dialog id="disc-inspection-dialog" aria-labelledby="disc-inspection-title">
-        <header class="disc-inspection-header"><div><h2 id="disc-inspection-title">多盘与引用检查</h2><p>只读检查，不改写列表、核心或游戏文件。候选组仍需核对。</p></div><button type="button" class="btn btn-muted" onclick="closeDiscInspection()">关闭</button></header>
+        <header class="disc-inspection-header"><div><h2 id="disc-inspection-title" data-i18n="多盘与引用检查">多盘与引用检查</h2><p data-i18n="只读检查，不改写列表、核心或游戏文件。候选组仍需核对。">只读检查，不改写列表、核心或游戏文件。候选组仍需核对。</p></div><button type="button" class="btn btn-muted" onclick="closeDiscInspection()" data-i18n="关闭">关闭</button></header>
         <p id="disc-inspection-summary" role="status" aria-live="polite"></p><div id="disc-inspection-coverage" class="disc-coverage"></div>
-        <div class="disc-inspection-tools"><input id="disc-inspection-search" type="search" placeholder="搜索游戏或文件路径" aria-label="搜索游戏组" oninput="discInspection.limit=100;renderDiscInspection()"><select id="disc-inspection-filter" aria-label="筛选游戏组" onchange="discInspection.limit=100;renderDiscInspection()"><option value="all">全部分组</option><option value="attention">需检查</option><option value="m3u">已有 M3U</option><option value="candidate">候选分组</option></select></div>
-        <div id="disc-inspection-groups"></div><button id="disc-inspection-more" type="button" class="btn btn-muted" onclick="discInspection.limit+=100;renderDiscInspection()" hidden>显示更多</button>
+        <div class="disc-inspection-tools"><input id="disc-inspection-search" type="search" placeholder="搜索游戏或文件路径" aria-label="搜索游戏组" oninput="discInspection.limit=100;renderDiscInspection()" data-i18n-placeholder="搜索游戏或文件路径" data-i18n-aria-label="搜索游戏组"><select id="disc-inspection-filter" aria-label="筛选游戏组" onchange="discInspection.limit=100;renderDiscInspection()" data-i18n-aria-label="筛选游戏组"><option value="all" data-i18n="全部分组">全部分组</option><option value="attention" data-i18n="需检查">需检查</option><option value="m3u" data-i18n="已有 M3U">已有 M3U</option><option value="candidate" data-i18n="候选分组">候选分组</option></select></div>
+        <div id="disc-inspection-groups"></div><button id="disc-inspection-more" type="button" class="btn btn-muted" onclick="discInspection.limit+=100;renderDiscInspection()" hidden data-i18n="显示更多">显示更多</button>
     </dialog>
     <dialog id="m3u-dialog" aria-labelledby="m3u-title">
-        <header class="disc-inspection-header"><div><h2 id="m3u-title">多盘 M3U 方案</h2><p>选择与排序 → 预览文件、列表和存档变化 → 确认应用</p></div><button id="m3u-close" class="btn btn-muted" type="button" onclick="closeM3uEditor()">关闭</button></header>
-        <fieldset id="m3u-fields"><label>显示名称<input id="m3u-label"></label><label>M3U 文件名<input id="m3u-filename"></label>
-        <label>操作范围<select id="m3u-mode"><option value="switch">保存 M3U 并更新当前列表</option><option value="file">仅保存 M3U，保留当前列表</option></select></label>
-        <ol id="m3u-discs"></ol><details><summary>存档衔接选项</summary><label>延续哪张盘的游戏内存档<select id="m3u-save-source"></select></label><label class="m3u-check"><input id="m3u-preserve-states" type="checkbox">保留原即时存档，不迁移；切换后从游戏内存档继续</label><p>无法确认实际存档目录、覆盖设置或核心规则时，不自动切换列表，可选择仅保存 M3U。</p></details></fieldset>
-        <p id="m3u-status" role="status" aria-live="polite"></p><section id="m3u-review" hidden><h3>本次方案</h3><p id="m3u-scope"></p><pre id="m3u-content"></pre><ul id="m3u-details"></ul></section>
-        <footer><button id="m3u-preview" class="btn btn-muted" type="button" onclick="previewM3u()">预览方案</button><button id="m3u-apply" class="btn" type="button" onclick="applyM3u()" disabled>确认应用方案</button></footer>
+        <header class="disc-inspection-header"><div><h2 id="m3u-title" data-i18n="多盘 M3U 方案">多盘 M3U 方案</h2><p data-i18n="选择与排序 → 预览文件、列表和存档变化 → 确认应用">选择与排序 → 预览文件、列表和存档变化 → 确认应用</p></div><button id="m3u-close" class="btn btn-muted" type="button" onclick="closeM3uEditor()" data-i18n="关闭">关闭</button></header>
+        <fieldset id="m3u-fields"><label><span data-i18n="显示名称">显示名称</span><input id="m3u-label"></label><label><span data-i18n="M3U 文件名">M3U 文件名</span><input id="m3u-filename"></label>
+        <label><span data-i18n="操作范围">操作范围</span><select id="m3u-mode"><option value="switch" data-i18n="保存 M3U 并更新当前列表">保存 M3U 并更新当前列表</option><option value="file" data-i18n="仅保存 M3U，保留当前列表">仅保存 M3U，保留当前列表</option></select></label>
+        <ol id="m3u-discs"></ol><details><summary data-i18n="存档衔接选项">存档衔接选项</summary><label><span data-i18n="延续哪张盘的游戏内存档">延续哪张盘的游戏内存档</span><select id="m3u-save-source"></select></label><label class="m3u-check"><input id="m3u-preserve-states" type="checkbox"><span data-i18n="保留原即时存档，不迁移；切换后从游戏内存档继续">保留原即时存档，不迁移；切换后从游戏内存档继续</span></label><p data-i18n="无法确认实际存档目录、覆盖设置或核心规则时，不自动切换列表，可选择仅保存 M3U。">无法确认实际存档目录、覆盖设置或核心规则时，不自动切换列表，可选择仅保存 M3U。</p></details></fieldset>
+        <p id="m3u-status" role="status" aria-live="polite"></p><section id="m3u-review" hidden><h3 data-i18n="本次方案">本次方案</h3><p id="m3u-scope"></p><pre id="m3u-content"></pre><ul id="m3u-details"></ul></section>
+        <footer><button id="m3u-preview" class="btn btn-muted" type="button" onclick="previewM3u()" data-i18n="预览方案">预览方案</button><button id="m3u-apply" class="btn" type="button" onclick="applyM3u()" disabled data-i18n="确认应用方案">确认应用方案</button></footer>
     </dialog>
     <script src="/assets/workflow.js"></script>
     <script src="/assets/ui.js"></script>
     <dialog id="storage-dialog" aria-labelledby="storage-title" oncancel="if(storageTask.busy)event.preventDefault();else invalidateStoragePlan()">
-        <header class="disc-inspection-header"><div><h2 id="storage-title">存储优化</h2><p>分析空间 → 选择光盘 → 电脑转换与内容验证</p></div><button id="storage-close" class="btn btn-muted" type="button" onclick="closeStorageOptimization()">关闭</button></header>
-        <p class="storage-scope">本步仅在电脑生成 CHD 副本，保留原文件和启动引用。完成后可另行预览回传与替换方案。</p>
-        <details id="storage-settings" open><summary>工作目录与转换工具</summary><fieldset id="storage-fields" oninput="invalidateStoragePlan()"><legend>转换设置</legend>
-            <label>电脑工作目录<div class="storage-input"><input id="storage-workspace" placeholder="留空使用应用数据目录"><button class="btn btn-muted" type="button" onclick="pickStoragePath('workspace','directory')">选择目录</button></div></label>
-            <label>本机 chdman<div class="storage-input"><input id="storage-tool" placeholder="自动从 PATH 查找 chdman"><button class="btn btn-muted" type="button" onclick="pickStoragePath('tool','executable')">选择程序</button></div></label>
-            <p>使用本机 MAME chdman，不自动下载或分发。<a href="https://www.mamedev.org/release.html" target="_blank" rel="noopener">官方 MAME 工具</a></p>
+        <header class="disc-inspection-header"><div><h2 id="storage-title" data-i18n="存储优化">存储优化</h2><p data-i18n="分析空间 → 选择光盘 → 电脑转换与内容验证">分析空间 → 选择光盘 → 电脑转换与内容验证</p></div><button id="storage-close" class="btn btn-muted" type="button" onclick="closeStorageOptimization()" data-i18n="关闭">关闭</button></header>
+        <p class="storage-scope" data-i18n="本步仅在电脑生成 CHD 副本，保留原文件和启动引用。完成后可另行预览回传与替换方案。">本步仅在电脑生成 CHD 副本，保留原文件和启动引用。完成后可另行预览回传与替换方案。</p>
+        <details id="storage-settings" open><summary data-i18n="工作目录与转换工具">工作目录与转换工具</summary><fieldset id="storage-fields" oninput="invalidateStoragePlan()"><legend data-i18n="转换设置">转换设置</legend>
+            <label><span data-i18n="电脑工作目录">电脑工作目录</span><div class="storage-input"><input id="storage-workspace" placeholder="留空使用应用数据目录" data-i18n-placeholder="留空使用应用数据目录"><button class="btn btn-muted" type="button" onclick="pickStoragePath('workspace','directory')" data-i18n="选择目录">选择目录</button></div></label>
+            <label><span data-i18n="本机 chdman">本机 chdman</span><div class="storage-input"><input id="storage-tool" placeholder="自动从 PATH 查找 chdman" data-i18n-placeholder="自动从 PATH 查找 chdman"><button class="btn btn-muted" type="button" onclick="pickStoragePath('tool','executable')" data-i18n="选择程序">选择程序</button></div></label>
+            <p><span data-i18n="使用本机 MAME chdman，不自动下载或分发。">使用本机 MAME chdman，不自动下载或分发。</span><a href="https://www.mamedev.org/release.html" target="_blank" rel="noopener" data-i18n="官方 MAME 工具">官方 MAME 工具</a></p>
         </fieldset>
         </details>
-        <p id="storage-status" role="status" aria-live="polite">选择当前列表后分析；节省比例在转换前未知。</p>
+        <p id="storage-status" role="status" aria-live="polite" data-i18n="选择当前列表后分析；节省比例在转换前未知。">选择当前列表后分析；节省比例在转换前未知。</p>
         <section id="storage-analysis" hidden><div id="storage-summary" class="storage-summary"></div><p id="storage-budget" role="status"></p><div id="storage-rows"></div></section>
         <section id="storage-result" hidden></section>
-        <footer><button id="storage-cancel" class="btn btn-muted" type="button" onclick="cancelStorageTask()" hidden>取消任务</button><button id="storage-analyze" class="btn btn-muted" type="button" onclick="analyzeStorage()">分析空间与工具</button><button id="storage-convert" class="btn" type="button" onclick="convertStorage()" disabled>确认仅在电脑转换</button></footer>
+        <footer><button id="storage-cancel" class="btn btn-muted" type="button" onclick="cancelStorageTask()" hidden data-i18n="取消任务">取消任务</button><button id="storage-analyze" class="btn btn-muted" type="button" onclick="analyzeStorage()" data-i18n="分析空间与工具">分析空间与工具</button><button id="storage-convert" class="btn" type="button" onclick="convertStorage()" disabled data-i18n="确认仅在电脑转换">确认仅在电脑转换</button></footer>
     </dialog>
     <dialog id="rom-storage-dialog" aria-labelledby="rom-storage-title" oncancel="if(romStorage.busy)event.preventDefault();else invalidateRomStorage()">
-        <header class="disc-inspection-header"><div><h2 id="rom-storage-title">目录整理与 ROM 压缩</h2><p>检查源目录 → 核对冲突与格式 → 生成电脑 ZIP 副本</p></div><button id="rom-storage-close" class="btn btn-muted" type="button" onclick="closeRomStorage()">关闭</button></header>
-        <p class="storage-scope">先分析目录与冲突，再单独预览整理或 ZIP 回传方案。默认仅复制，更新引用与清理需核对存档、运行报告及备份。</p>
-        <details id="rom-storage-settings" open><summary>目录与输出设置</summary><fieldset id="rom-storage-fields" oninput="invalidateRomStorage()"><legend>目录与输出位置</legend>
-            <label>游戏源目录<div class="storage-input"><input id="rom-storage-source" readonly placeholder="选择本机或存储卡上的游戏目录"><button type="button" class="btn btn-muted" onclick="pickRomStorage('source')">选择目录</button></div></label>
-            <label>主机平铺目标目录<div class="storage-input"><input id="rom-storage-target" readonly placeholder="默认与源目录相同"><button type="button" class="btn btn-muted" onclick="pickRomStorage('target')">选择目录</button></div></label>
-            <label>电脑 ZIP 工作目录<div class="storage-input"><input id="rom-storage-workspace" placeholder="留空使用应用数据目录"><button type="button" class="btn btn-muted" onclick="pickRomWorkspace()">选择目录</button></div></label>
-            <section id="rom-storage-picker" hidden aria-label="选择存储与目录"><label>存储空间<select id="rom-storage-storage" onchange="browseRomStorage(this.value)"></select></label><p id="rom-storage-path"></p><div class="content-directory-actions"><button id="rom-storage-up" type="button" class="btn btn-muted" onclick="browseRomStorage(romStorage.parent)">上一级</button><button id="rom-storage-use" type="button" class="btn" onclick="chooseRomStorage()">使用此目录</button><button type="button" class="btn btn-muted" onclick="closeRomPicker()">取消选择</button></div><div id="rom-storage-directories"></div></section>
+        <header class="disc-inspection-header"><div><h2 id="rom-storage-title" data-i18n="目录整理与 ROM 压缩">目录整理与 ROM 压缩</h2><p data-i18n="检查源目录 → 核对冲突与格式 → 生成电脑 ZIP 副本">检查源目录 → 核对冲突与格式 → 生成电脑 ZIP 副本</p></div><button id="rom-storage-close" class="btn btn-muted" type="button" onclick="closeRomStorage()" data-i18n="关闭">关闭</button></header>
+        <p class="storage-scope" data-i18n="先分析目录与冲突，再单独预览整理或 ZIP 回传方案。默认仅复制，更新引用与清理需核对存档、运行报告及备份。">先分析目录与冲突，再单独预览整理或 ZIP 回传方案。默认仅复制，更新引用与清理需核对存档、运行报告及备份。</p>
+        <details id="rom-storage-settings" open><summary data-i18n="目录与输出设置">目录与输出设置</summary><fieldset id="rom-storage-fields" oninput="invalidateRomStorage()"><legend data-i18n="目录与输出位置">目录与输出位置</legend>
+            <label><span data-i18n="游戏源目录">游戏源目录</span><div class="storage-input"><input id="rom-storage-source" readonly placeholder="选择本机或存储卡上的游戏目录" data-i18n-placeholder="选择本机或存储卡上的游戏目录"><button type="button" class="btn btn-muted" onclick="pickRomStorage('source')" data-i18n="选择目录">选择目录</button></div></label>
+            <label><span data-i18n="主机平铺目标目录">主机平铺目标目录</span><div class="storage-input"><input id="rom-storage-target" readonly placeholder="默认与源目录相同" data-i18n-placeholder="默认与源目录相同"><button type="button" class="btn btn-muted" onclick="pickRomStorage('target')" data-i18n="选择目录">选择目录</button></div></label>
+            <label><span data-i18n="电脑 ZIP 工作目录">电脑 ZIP 工作目录</span><div class="storage-input"><input id="rom-storage-workspace" placeholder="留空使用应用数据目录" data-i18n-placeholder="留空使用应用数据目录"><button type="button" class="btn btn-muted" onclick="pickRomWorkspace()" data-i18n="选择目录">选择目录</button></div></label>
+            <section id="rom-storage-picker" hidden aria-label="选择存储与目录" data-i18n-aria-label="选择存储与目录"><label><span data-i18n="存储空间">存储空间</span><select id="rom-storage-storage" onchange="browseRomStorage(this.value)"></select></label><p id="rom-storage-path"></p><div class="content-directory-actions"><button id="rom-storage-up" type="button" class="btn btn-muted" onclick="browseRomStorage(romStorage.parent)" data-i18n="上一级">上一级</button><button id="rom-storage-use" type="button" class="btn" onclick="chooseRomStorage()" data-i18n="使用此目录">使用此目录</button><button type="button" class="btn btn-muted" onclick="closeRomPicker()" data-i18n="取消选择">取消选择</button></div><div id="rom-storage-directories"></div></section>
         </fieldset>
         </details>
-        <p id="rom-storage-status" role="status" aria-live="polite">选择主机列表和源目录；街机 ROM 集与多文件镜像保留原结构。</p>
+        <p id="rom-storage-status" role="status" aria-live="polite" data-i18n="选择主机列表和源目录；街机 ROM 集与多文件镜像保留原结构。">选择主机列表和源目录；街机 ROM 集与多文件镜像保留原结构。</p>
         <section id="rom-storage-analysis" hidden><div id="rom-storage-summary" class="storage-summary"></div><p id="rom-storage-budget"></p><div id="rom-storage-rows"></div></section>
         <section id="rom-storage-result" hidden></section>
-        <footer><button id="rom-storage-cancel" class="btn btn-muted" type="button" onclick="cancelRomStorage()" hidden>取消任务</button><button id="rom-storage-analyze" class="btn btn-muted" type="button" onclick="analyzeRomStorage()">分析目录与 ZIP 支持</button><button id="rom-storage-relocate" class="btn btn-muted" type="button" onclick="previewRomLayout()" disabled>预览目录整理</button><button id="rom-storage-convert" class="btn" type="button" onclick="convertRomStorage()" disabled>确认生成电脑 ZIP 副本</button></footer>
+        <footer><button id="rom-storage-cancel" class="btn btn-muted" type="button" onclick="cancelRomStorage()" hidden data-i18n="取消任务">取消任务</button><button id="rom-storage-analyze" class="btn btn-muted" type="button" onclick="analyzeRomStorage()" data-i18n="分析目录与 ZIP 支持">分析目录与 ZIP 支持</button><button id="rom-storage-relocate" class="btn btn-muted" type="button" onclick="previewRomLayout()" disabled data-i18n="预览目录整理">预览目录整理</button><button id="rom-storage-convert" class="btn" type="button" onclick="convertRomStorage()" disabled data-i18n="确认生成电脑 ZIP 副本">确认生成电脑 ZIP 副本</button></footer>
     </dialog>
     <dialog id="relocate-dialog" aria-labelledby="relocate-title" oncancel="if(romRelocation.busy)event.preventDefault();else invalidateRelocation()">
-        <header class="disc-inspection-header"><div><h2 id="relocate-title">目录整理与 ZIP 回传</h2><p>核对目标与存档 → 预览引用和备份 → 确认执行</p></div><button id="relocate-close" class="btn btn-muted" type="button" onclick="closeRomRelocation()">关闭</button></header>
+        <header class="disc-inspection-header"><div><h2 id="relocate-title" data-i18n="目录整理与 ZIP 回传">目录整理与 ZIP 回传</h2><p data-i18n="核对目标与存档 → 预览引用和备份 → 确认执行">核对目标与存档 → 预览引用和备份 → 确认执行</p></div><button id="relocate-close" class="btn btn-muted" type="button" onclick="closeRomRelocation()" data-i18n="关闭">关闭</button></header>
         <p id="relocate-origin" class="storage-scope"></p>
-        <details id="relocate-settings" open><summary>执行方式与运行报告</summary><fieldset id="relocate-fields" oninput="invalidateRelocation()"><legend>本次整理</legend>
-            <label>执行方式<select id="relocate-mode"><option value="copy">仅复制到目标，保留原文件与引用</option><option value="switch">复制并更新引用，保留原文件</option><option value="replace">复制、更新引用并清理有备份的原文件</option></select></label>
-            <p>先仅复制，再在 RetroArch 中使用目标文件验证运行、游戏内存档及所需换盘。更新引用时保留名称、人工核心和图片选择；原存档与即时存档不移动。</p>
-            <label>已验证的原核心版本<input id="relocate-version" placeholder="从 RetroArch 核心信息核对；复制模式可留空"></label>
-            <label class="relocate-check"><input id="relocate-tested" type="checkbox">已用目标路径／ZIP 在原核心验证运行、游戏内存档与所需换盘</label>
-            <label class="relocate-check"><input id="relocate-scope" type="checkbox">预览目录包含全部相关列表与描述文件，执行前已退出 RetroArch</label>
+        <details id="relocate-settings" open><summary data-i18n="执行方式与运行报告">执行方式与运行报告</summary><fieldset id="relocate-fields" oninput="invalidateRelocation()"><legend data-i18n="本次整理">本次整理</legend>
+            <label><span data-i18n="执行方式">执行方式</span><select id="relocate-mode"><option value="copy" data-i18n="仅复制到目标，保留原文件与引用">仅复制到目标，保留原文件与引用</option><option value="switch" data-i18n="复制并更新引用，保留原文件">复制并更新引用，保留原文件</option><option value="replace" data-i18n="复制、更新引用并清理有备份的原文件">复制、更新引用并清理有备份的原文件</option></select></label>
+            <p data-i18n="先仅复制，再在 RetroArch 中使用目标文件验证运行、游戏内存档及所需换盘。更新引用时保留名称、人工核心和图片选择；原存档与即时存档不移动。">先仅复制，再在 RetroArch 中使用目标文件验证运行、游戏内存档及所需换盘。更新引用时保留名称、人工核心和图片选择；原存档与即时存档不移动。</p>
+            <label><span data-i18n="已验证的原核心版本">已验证的原核心版本</span><input id="relocate-version" placeholder="从 RetroArch 核心信息核对；复制模式可留空" data-i18n-placeholder="从 RetroArch 核心信息核对；复制模式可留空"></label>
+            <label class="relocate-check"><input id="relocate-tested" type="checkbox"><span data-i18n="已用目标路径／ZIP 在原核心验证运行、游戏内存档与所需换盘">已用目标路径／ZIP 在原核心验证运行、游戏内存档与所需换盘</span></label>
+            <label class="relocate-check"><input id="relocate-scope" type="checkbox"><span data-i18n="预览目录包含全部相关列表与描述文件，执行前已退出 RetroArch">预览目录包含全部相关列表与描述文件，执行前已退出 RetroArch</span></label>
         </fieldset></details>
-        <p id="relocate-status" role="status" aria-live="polite"></p><section id="relocate-review" hidden><h3>本次方案</h3><ul id="relocate-details"></ul></section>
-        <footer><button id="relocate-cancel" class="btn btn-muted" type="button" onclick="cancelRomRelocation()" hidden>取消任务</button><button id="relocate-preview" class="btn btn-muted" type="button" onclick="previewRomRelocation()">预览变更与备份</button><button id="relocate-apply" class="btn" type="button" onclick="applyRomRelocation()" disabled>确认执行此方案</button></footer>
+        <p id="relocate-status" role="status" aria-live="polite"></p><section id="relocate-review" hidden><h3 data-i18n="本次方案">本次方案</h3><ul id="relocate-details"></ul></section>
+        <footer><button id="relocate-cancel" class="btn btn-muted" type="button" onclick="cancelRomRelocation()" hidden data-i18n="取消任务">取消任务</button><button id="relocate-preview" class="btn btn-muted" type="button" onclick="previewRomRelocation()" data-i18n="预览变更与备份">预览变更与备份</button><button id="relocate-apply" class="btn" type="button" onclick="applyRomRelocation()" disabled data-i18n="确认执行此方案">确认执行此方案</button></footer>
     </dialog>
     <dialog id="deploy-dialog" aria-labelledby="deploy-title" oncancel="if(chdDeployment.busy)event.preventDefault();else invalidateDeployment()">
-        <header class="disc-inspection-header"><div><h2 id="deploy-title">CHD 回传与替换</h2><p>核对内容验证结果 → 预览目标与备份 → 确认执行</p></div><button id="deploy-close" class="btn btn-muted" type="button" onclick="closeChdDeployment()">关闭</button></header>
+        <header class="disc-inspection-header"><div><h2 id="deploy-title" data-i18n="CHD 回传与替换">CHD 回传与替换</h2><p data-i18n="核对内容验证结果 → 预览目标与备份 → 确认执行">核对内容验证结果 → 预览目标与备份 → 确认执行</p></div><button id="deploy-close" class="btn btn-muted" type="button" onclick="closeChdDeployment()" data-i18n="关闭">关闭</button></header>
         <p id="deploy-origin" class="storage-scope"></p>
-        <details id="deploy-settings" open><summary>选择光盘与执行方式</summary><fieldset id="deploy-fields" oninput="invalidateDeployment()"><legend>本次范围</legend>
+        <details id="deploy-settings" open><summary data-i18n="选择光盘与执行方式">选择光盘与执行方式</summary><fieldset id="deploy-fields" oninput="invalidateDeployment()"><legend data-i18n="本次范围">本次范围</legend>
             <div id="deploy-discs"></div>
-            <label>执行方式<select id="deploy-mode"><option value="copy">仅回传 CHD，保留原文件与引用</option><option value="switch">回传并更新引用，保留原文件</option><option value="replace">回传、更新引用并清理可移除原文件（保留电脑备份）</option></select></label>
-            <details id="deploy-runtime"><summary>更新引用前的运行验证</summary><p>先采用“仅回传”，在掌机原核心中加载这些 CHD，验证游戏内存档与所需换盘。以下为用户运行报告，MTP 无法独立确认核心安装版本。确认执行前请退出 RetroArch。</p>
-                <label>实际使用的核心版本<input id="deploy-version" placeholder="在 RetroArch 核心信息中核对"></label>
-                <label class="deploy-check"><input id="deploy-tested" type="checkbox">已用这些 CHD 在原核心验证启动、游戏内存档与所需换盘</label>
-                <label class="deploy-check"><input id="deploy-scope" type="checkbox">清理前确认：预览中的目录包含全部相关列表与光盘描述引用</label>
+            <label><span data-i18n="执行方式">执行方式</span><select id="deploy-mode"><option value="copy" data-i18n="仅回传 CHD，保留原文件与引用">仅回传 CHD，保留原文件与引用</option><option value="switch" data-i18n="回传并更新引用，保留原文件">回传并更新引用，保留原文件</option><option value="replace" data-i18n="回传、更新引用并清理可移除原文件（保留电脑备份）">回传、更新引用并清理可移除原文件（保留电脑备份）</option></select></label>
+            <details id="deploy-runtime"><summary data-i18n="更新引用前的运行验证">更新引用前的运行验证</summary><p data-i18n="先采用“仅回传”，在掌机原核心中加载这些 CHD，验证游戏内存档与所需换盘。以下为用户运行报告，MTP 无法独立确认核心安装版本。确认执行前请退出 RetroArch。">先采用“仅回传”，在掌机原核心中加载这些 CHD，验证游戏内存档与所需换盘。以下为用户运行报告，MTP 无法独立确认核心安装版本。确认执行前请退出 RetroArch。</p>
+                <label><span data-i18n="实际使用的核心版本">实际使用的核心版本</span><input id="deploy-version" placeholder="在 RetroArch 核心信息中核对" data-i18n-placeholder="在 RetroArch 核心信息中核对"></label>
+                <label class="deploy-check"><input id="deploy-tested" type="checkbox"><span data-i18n="已用这些 CHD 在原核心验证启动、游戏内存档与所需换盘">已用这些 CHD 在原核心验证启动、游戏内存档与所需换盘</span></label>
+                <label class="deploy-check"><input id="deploy-scope" type="checkbox"><span data-i18n="清理前确认：预览中的目录包含全部相关列表与光盘描述引用">清理前确认：预览中的目录包含全部相关列表与光盘描述引用</span></label>
             </details>
         </fieldset>
         </details>
-        <p id="deploy-status" role="status" aria-live="polite"></p><section id="deploy-review" hidden><h3>本次方案</h3><ul id="deploy-details"></ul></section>
-        <footer><button id="deploy-cancel" class="btn btn-muted" type="button" onclick="cancelChdDeployment()" hidden>取消任务</button><button id="deploy-preview" class="btn btn-muted" type="button" onclick="previewChdDeployment()">预览回传方案</button><button id="deploy-apply" class="btn" type="button" onclick="applyChdDeployment()" disabled>确认执行方案</button></footer>
+        <p id="deploy-status" role="status" aria-live="polite"></p><section id="deploy-review" hidden><h3 data-i18n="本次方案">本次方案</h3><ul id="deploy-details"></ul></section>
+        <footer><button id="deploy-cancel" class="btn btn-muted" type="button" onclick="cancelChdDeployment()" hidden data-i18n="取消任务">取消任务</button><button id="deploy-preview" class="btn btn-muted" type="button" onclick="previewChdDeployment()" data-i18n="预览回传方案">预览回传方案</button><button id="deploy-apply" class="btn" type="button" onclick="applyChdDeployment()" disabled data-i18n="确认执行方案">确认执行方案</button></footer>
     </dialog>
-    <dialog id="auto-scan-dialog" class="auto-scan-dialog" aria-labelledby="auto-scan-title"><header><div><h2 id="auto-scan-title">扫描新增游戏</h2><p>自动发现 Roms / Games 等目录中的主机文件夹；其他目录可手动添加。</p></div><button class="btn btn-muted" type="button" onclick="closeAutoScan()">关闭</button></header><p id="auto-scan-status" role="status">选择扫描范围后开始分析。</p><div id="auto-scan-roots"></div><div id="auto-scan-results"></div><footer><label><input id="auto-scan-complete" type="checkbox" checked>导入后补全名称与封面</label><button class="btn btn-muted" type="button" onclick="openContentScan()">手动指定目录</button><button id="auto-scan-cancel" class="btn btn-muted" type="button" onclick="cancelAutoScan()" hidden>取消任务</button><button id="auto-scan-start" class="btn" type="button" onclick="previewAutoScan()">开始扫描</button><button id="auto-scan-apply" class="btn" type="button" onclick="applyAutoScan()" hidden>确认导入</button></footer></dialog>
+    <dialog id="auto-scan-dialog" class="auto-scan-dialog" aria-labelledby="auto-scan-title"><header><div><h2 id="auto-scan-title" data-i18n="扫描新增游戏">扫描新增游戏</h2><p data-i18n="自动发现 Roms / Games 等目录中的主机文件夹；其他目录可手动添加。">自动发现 Roms / Games 等目录中的主机文件夹；其他目录可手动添加。</p></div><button class="btn btn-muted" type="button" onclick="closeAutoScan()" data-i18n="关闭">关闭</button></header><p id="auto-scan-status" role="status" data-i18n="选择扫描范围后开始分析。">选择扫描范围后开始分析。</p><div id="auto-scan-roots"></div><div id="auto-scan-results"></div><footer><label><input id="auto-scan-complete" type="checkbox" checked><span data-i18n="导入后补全名称与封面">导入后补全名称与封面</span></label><button class="btn btn-muted" type="button" onclick="openContentScan()" data-i18n="手动指定目录">手动指定目录</button><button id="auto-scan-cancel" class="btn btn-muted" type="button" onclick="cancelAutoScan()" hidden data-i18n="取消任务">取消任务</button><button id="auto-scan-start" class="btn" type="button" onclick="previewAutoScan()" data-i18n="开始扫描">开始扫描</button><button id="auto-scan-apply" class="btn" type="button" onclick="applyAutoScan()" hidden data-i18n="确认导入">确认导入</button></footer></dialog>
     <dialog id="library-read-dialog" class="library-read-dialog" aria-labelledby="library-read-title" aria-describedby="library-read-message">
         <div class="library-read-spinner" id="library-read-spinner" aria-hidden="true"></div>
-        <h2 id="library-read-title">正在读取游戏库</h2>
-        <p id="library-read-message" role="status" aria-live="polite">正在读取配置…</p>
-        <p id="library-read-note" class="library-read-note">首次读取掌机可能需要一些时间，请保持连接。</p>
-        <div id="library-read-actions" hidden><button class="btn" id="library-read-retry" type="button" onclick="retryLibraryRead()">重新读取</button><button class="btn btn-muted" id="library-read-switch" type="button" onclick="leaveLibraryRead()">切换设备</button></div>
+        <h2 id="library-read-title" data-i18n="正在读取游戏库">正在读取游戏库</h2>
+        <p id="library-read-message" role="status" aria-live="polite" data-i18n="正在读取配置…">正在读取配置…</p>
+        <p id="library-read-note" class="library-read-note" data-i18n="首次读取掌机可能需要一些时间，请保持连接。">首次读取掌机可能需要一些时间，请保持连接。</p>
+        <div id="library-read-actions" hidden><button class="btn" id="library-read-retry" type="button" onclick="retryLibraryRead()" data-i18n="重新读取">重新读取</button><button class="btn btn-muted" id="library-read-switch" type="button" onclick="leaveLibraryRead()" data-i18n="切换设备">切换设备</button></div>
     </dialog>
     <script src="/assets/workbench.js"></script>
     <script src="/assets/config.js"></script>
