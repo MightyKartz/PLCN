@@ -87,9 +87,9 @@ async function closeM3uEditor(){
     if(m3uEditor.busy)return;invalidateM3uPreview();m3uField('dialog').close();
     if(m3uEditor.changed){m3uEditor.changed=false;closeDiscInspection();await scanDevice(false);}
 }
-async function recoverM3u(id,action){
+async function recoverM3u(id,action,mode=''){
     assertWorkbenchIdle();
-    const text=action==='restore'?'恢复此多盘操作？仅移除本次新建且未变化的文件，原光盘与存档不会删除。':'核对当前文件后继续这次未完成操作？';
+    const text=mode.startsWith('game_') ? workbenchText(action==='restore'?'恢复此次列表修改？已复制的游戏文件会保留。':'核对当前列表后继续此次修改？',action==='restore'?'Restore this playlist change? Copied game files will be kept.':'Check the current playlist and continue this change?') : action==='restore'?'恢复此多盘操作？仅移除本次新建且未变化的文件，原光盘与存档不会删除。':'核对当前文件后继续这次未完成操作？';
     if(!await desktopConfirm(text))return;
     const {result}=await m3uJob('/api/m3u/recover',{id,action});
     desktopClearPreview();reflectM3uResult(result);await refreshDesktop();return result;

@@ -4,6 +4,8 @@
 
 A RetroArch game library and handheld management assistant. Scan games, organize playlists, and complete names and artwork in a local browser UI. Launch the desktop package with a double click; Python, Node.js and Xcode are not required.
 
+The game library now includes a cover grid, a detailed list and a docked game inspector. Select multiple games to complete only their metadata or remove their playlist entries while keeping ROMs, artwork and saves. **Add games** opens an inline source/preview/destination workspace for verified file copies. Display-name edits preserve ROM filenames, core settings and existing artwork. Playlist changes can be restored from Settings → Tasks and recovery.
+
 ## Features
 
 - System-based game library with real artwork, search and storage filters.
@@ -35,9 +37,10 @@ Starting with v3.2.5, Windows/macOS packages include ADB. Android USB access sti
 
 1. Open your connected handheld, SD card or local RetroArch library.
 2. **Scan new games** to discover supported system folders and review incremental playlist additions.
-3. **Complete names & artwork** for existing playlists, or **Add manually** to choose folders and cores yourself.
-4. Use Tools for disc inspection, CHD conversion, directory organization and ROM ZIP copies. Review changes before writing and quit RetroArch first.
-5. Open the top-right task icon for progress, retry, cancellation and recovery. Click the device name for details; Settings also provides data sources and language/theme preferences.
+3. **Add games** to choose computer files, a destination and a system in the inline workspace. For files already on the device, use the folder-scan option in that workspace.
+4. Open a card to inspect it or edit its display name. Multi-select games to complete only their metadata or remove their playlist entries.
+5. Use Tools for disc inspection, CHD conversion, directory organization and ROM ZIP copies. Review changes before writing and quit RetroArch first.
+6. Open the top-right task icon for progress, retry, cancellation and recovery. Click the device name for details; Settings also provides data sources and language/theme preferences.
 
 Artwork searches prioritize Libretro, with alternate-source previews and local import available. Source and edition hints are shown before confirmation. Writes remove matching raw-disc companion entries such as CUE/BIN, without deleting ROM files or merging editions/discs just because their translated labels match.
 

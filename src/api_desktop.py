@@ -25,7 +25,7 @@ def desktop(handler, context, payload):
 def pick(handler, context, payload):
     from native_dialog import pick
     selected = pick(payload.get('kind', 'directory'), payload.get('initial', ''))
-    reply(handler, {'path': selected})
+    reply(handler, {'paths': selected} if isinstance(selected, list) else {'path': selected})
 
 
 def shutdown(handler, context, payload):

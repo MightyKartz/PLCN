@@ -101,7 +101,7 @@ function deriveWorkbenchState(input) {
     };
 }
 
-const workbench = { operation: null, previewKey: null, taskMessage: '', jobId: null };
+const workbench = { operation: null, previewKey: null, previewScope: null, taskMessage: '', jobId: null };
 
 function workbenchText(zh, en) { return currentUILanguage === 'en' ? en : zh; }
 function workbenchInputKey() {
@@ -131,6 +131,7 @@ function endWorkbenchOperation() {
 }
 function invalidateWorkbenchPreview() {
     workbench.previewKey = null;
+    workbench.previewScope = null;
     currentChanges = [];
     currentPreviewFilter = 'all';
     document.getElementById('preview-search').value = '';

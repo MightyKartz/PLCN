@@ -245,11 +245,33 @@ async function main() {
     assert.equal(await evaluate(visible, '#image-directory-notice'), false);
     assert.equal(await evaluate(() => document.querySelector('#game-library-filter-problem').textContent), '需检查 0');
     assert.equal(await evaluate(() => document.querySelector('#game-library-rows .game-image-placeholder').textContent), '缺图');
-    assert.equal(await evaluate(() => document.querySelectorAll('#game-library-rows button').length), 2);
+    assert.equal(await evaluate(visible, '#game-library-grid'), true);
+    assert.equal(await evaluate(()=>document.querySelectorAll('#game-library-grid .game-cover-card').length),1);
     assert.equal(await evaluate(() => document.querySelector('#preview-button').textContent), '补全名称与封面');
     assert.equal(await evaluate(() => document.querySelector('#completion-entry-note').textContent), '自动匹配中文名与图片，预览后确认应用。');
     assert.equal(await evaluate(visible, '#completion-entry-note'), true);
     await screenshot('02-games');
+    await click('#game-library-grid .game-card-open');
+    await waitFor(()=>gameInspector.details,'inspector metadata loaded');
+    assert.equal(await evaluate(visible,'#game-inspector'),true);
+    assert.equal(await evaluate(()=>document.querySelectorAll('dialog[open]').length),0);
+    await screenshot('02-game-inspector');
+    await click('#inspector-edit-name');
+    await evaluate(()=>{const input=document.querySelector('#inspector-name');input.value='My Shadowrun';input.dispatchEvent(new Event('input',{bubbles:true}));});
+    await click('#inspector-preview-name');
+    await waitFor(()=>Boolean(gameInspector.preview),'name preview ready');
+    await click('#inspector-save');
+    await waitFor(()=>gameLibrary.data?.items[0]?.label==='My Shadowrun','name saved in playlist');
+    await waitFor(()=>gameLibrary.activeIndex===0&&Boolean(gameInspector.details),'inspector retained after name edit');
+    await evaluate(async()=>{
+        const state=await desktopRequest('/api/desktop');
+        const edit=state.m3u_operations.find(record=>record.mode==='game_edit');
+        const {result}=await runGameJob('/api/m3u/recover',{id:edit.id,action:'restore'},()=>{});
+        if(result.status!=='restored')throw new Error('Name recovery failed');
+        resetGameLibrary();renderWorkbench();
+    });
+    await waitFor(()=>gameLibrary.data?.items[0]?.label==='Shadowrun (USA)','name restored');
+    await click('#game-view-list');
 
     await click('#theme-toggle-btn');
     await click('#language-display-btn');
@@ -268,7 +290,60 @@ async function main() {
     await waitFor(()=>document.querySelector('#auto-scan-status').textContent.startsWith('Scan complete:'),'English scan summary');
     await screenshot('02-english-auto-scan');
     await click('#auto-scan-dialog header > button');
+    // Import through the native-picker boundary, remove via the batch toolbar,
+    // then restore both playlist transactions. ROM copies remain on disk.
     await click('#manual-add-button');
+    await waitFor(()=>document.querySelector('#gm-pick-files'),'game import loaded');
+    await click('#gm-pick-files');
+    await waitFor(()=>document.querySelector('#gm-sources').textContent.includes('Imported demo.sfc'),'game files selected');
+    await evaluate(libraryPath=>{document.querySelector('#gm-destination').value=libraryPath+'/Roms/SNES';gmInvalidate();},libraryPath);
+    await click('#gm-preview');
+    await waitFor(()=>!gameManagement.busy&&!document.querySelector('#gm-apply').hidden,'import preview');
+    assert.equal(await evaluate(()=>document.querySelector('#gm-apply').textContent),'Import games');
+    assert.equal(await evaluate(()=>document.querySelectorAll('dialog[open]').length),0);
+    await screenshot('02-game-import-preview');
+    await click('#gm-apply');
+    await waitFor(()=>document.querySelector('#gm-status').textContent.startsWith('Done:')&&!workbench.operation,'import completed');
+    await waitFor(()=>gameLibrary.data?.items.length===2,'new game visible');
+    assert.equal(fs.readFileSync(path.join(libraryPath,'Roms/SNES/Imported demo.sfc'),'utf8'),'game import fixture');
+    await click('#gm-dialog header button');
+    await click('#game-view-grid');
+    await click('#game-library-grid [data-game-card="1"] .game-card-select');
+    await click('#game-selection-complete');
+    await waitFor(()=>Boolean(workbench.previewKey)&&!workbench.operation,'selected metadata preview');
+    assert.equal(await evaluate(()=>currentChanges.length),1);
+    assert.equal(await evaluate(()=>currentChanges[0].index),1);
+    await click('#option-write-names');
+    await waitFor(()=>Boolean(workbench.previewKey)&&!workbench.operation,'selected scope retained after option change');
+    assert.equal(await evaluate(()=>currentChanges.length),1);
+    assert.equal(await evaluate(()=>currentChanges[0].index),1);
+    await click('#option-write-names');
+    await waitFor(()=>Boolean(workbench.previewKey)&&!workbench.operation,'selected name completion restored');
+    await evaluate(()=>invalidateWorkbenchPreview());
+    await waitFor(()=>gameLibrary.data?.items.length===2,'return to graphical library');
+    await click('#game-view-list');
+    await click('#game-library-rows tr:nth-child(2) input[type=checkbox]');
+    await click('#game-selection-remove');
+    await waitFor(()=>!gameManagement.busy&&!document.querySelector('#gm-apply').hidden,'remove preview');
+    assert.equal(await evaluate(()=>document.querySelector('#gm-results').querySelectorAll('strong').length),1);
+    await screenshot('02-game-removal-preview');
+    await click('#gm-apply');
+    await waitFor(()=>document.querySelector('#gm-status').textContent.startsWith('Done:')&&!workbench.operation,'removal completed');
+    assert.equal(fs.existsSync(path.join(libraryPath,'Roms/SNES/Imported demo.sfc')),true);
+    await evaluate(async()=>{
+        const state=await desktopRequest('/api/desktop');
+        for(const mode of ['game_remove','game_import']){
+            const record=state.m3u_operations.find(record=>record.mode===mode);
+            const {result}=await gmJob('/api/m3u/recover',{id:record.id,action:'restore'});
+            if(result.status!=='restored')throw new Error('Recovery did not restore the playlist');
+        }
+        resetGameLibrary();renderWorkbench();
+    });
+    await click('#gm-dialog header button');
+    await waitFor(()=>gameLibrary.data?.items.length===1,'original games restored');
+    await click('#manual-add-button');
+    await waitFor(()=>document.querySelector('#gm-manual-scan'),'game import options');
+    await click('#gm-manual-scan');
     await waitFor(()=>!document.querySelector('#content-scan-fields').disabled,'English manual setup loaded');
     assert.equal(await evaluate(()=>document.querySelector('#content-scan-title').textContent),'Add games manually');
     assert.doesNotMatch(await evaluate(()=>document.querySelector('#content-scan-dialog footer').innerText),/\p{Script=Han}/u);

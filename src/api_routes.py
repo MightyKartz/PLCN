@@ -14,6 +14,7 @@ import api_tasks
 import api_data
 import api_desktop
 import api_config
+import api_games
 
 GET_ROUTES = {
     '/api/jobs/status': api_tasks.workbench_status,
@@ -41,6 +42,9 @@ GET_ROUTES = {
 }
 
 POST_ROUTES = {
+    '/api/games/preview': api_games.preview,
+    '/api/games/details': api_games.details,
+    '/api/games/apply': api_games.apply,
     '/api/content/auto-preview': api_content.auto_preview,
     '/api/content/auto-apply': api_content.auto_apply,
     '/api/rom-storage/relocation/preview': api_rom_storage.relocation_preview,

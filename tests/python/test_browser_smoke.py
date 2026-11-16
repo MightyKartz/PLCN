@@ -93,7 +93,9 @@ def test_home_to_library_to_preview(tmp_path, monkeypatch, chrome_binary, viewpo
         return original_analyze(*args, **kwargs)
     monkeypatch.setattr(playlist_service, 'analyze_playlist', slow_analyze)
     import native_dialog
-    monkeypatch.setattr(native_dialog, 'pick', lambda kind='directory', initial='': initial if initial and Path(initial).is_dir() else str(tmp_path / '游戏库/rom-samples/RetroArch/Roms'))
+    incoming = tmp_path / 'incoming'; incoming.mkdir()
+    (incoming / 'Imported demo.sfc').write_bytes(b'game import fixture')
+    monkeypatch.setattr(native_dialog, 'pick', lambda kind='directory', initial='': [str(incoming / 'Imported demo.sfc')] if kind == 'files' else initial if initial and Path(initial).is_dir() else str(tmp_path / '游戏库/rom-samples/RetroArch/Roms'))
     source = tmp_path / 'names'
     source.mkdir()
     playlists = tmp_path / '游戏库/playlists'

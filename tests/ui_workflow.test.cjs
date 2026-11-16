@@ -216,13 +216,14 @@ test('a manual artwork override belongs to its library and survives only same-li
     assert.equal(context.pathSettingsRoot,'library-b');
 });
 
-test('preview options reject turning both operations off, and otherwise reanalyze', async () => {
-    let previews=0, mode='names';
+test('preview options reject turning both operations off and preserve the selected game scope', async () => {
+    let previews=0, mode='names', receivedScope=null;
+    const scope={entries:[[1,'/selected.sfc']]};
     const control={checked:false};
     const context={getProcessingOptions:()=>({write_names:mode!=='none',download_thumbnails:mode==='both'}),
-        previewTask:async()=>{previews++;},showStatus:()=>{},workbenchText:zh=>zh};
+        previewTask:async value=>{previews++;receivedScope=value;},workbench:{previewScope:scope},showStatus:()=>{},workbenchText:zh=>zh};
     vm.createContext(context);vm.runInContext(source('changePreviewOptions'),context);
-    await context.changePreviewOptions(control);assert.equal(previews,1);
+    await context.changePreviewOptions(control);assert.equal(previews,1);assert.equal(receivedScope,scope);
     mode='none';await context.changePreviewOptions(control);
     assert.equal(control.checked,true);assert.equal(previews,1);
 });
