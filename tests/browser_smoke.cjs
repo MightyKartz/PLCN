@@ -78,7 +78,8 @@ async function waitFor(fn, label, ...args) {
     const deadline = Date.now() + 20000;
     while (Date.now() < deadline) {
         assert.deepEqual(errors, [], 'Page errors');
-        if (await evaluate(fn, ...args)) return;
+        const result = await evaluate(fn, ...args);
+        if (result) return result;
         await delay(100);
     }
     throw new Error(`Timed out waiting for ${label}`);
@@ -96,22 +97,18 @@ async function click(selector) {
     console.log('Click:', selector);
     await waitFor(visible, `visible ${selector}`, selector);
     await waitFor(selector => !document.querySelector(selector).disabled, `enabled ${selector}`, selector);
-    await waitFor(selector => {
-        const element=document.querySelector(selector);
-        element.scrollIntoView({block:'center'});
-        const rect=element.getBoundingClientRect();
-        return element.contains(document.elementFromPoint(rect.left+rect.width/2,rect.top+rect.height/2));
-    }, `unobscured ${selector}`, selector);
-    const point = await evaluate(async selector => {
-        const element = document.querySelector(selector);
-        element.scrollIntoView({block: 'center', behavior: 'instant'});
+    const point = await waitFor(async selector => {
+        document.querySelector(selector)?.scrollIntoView({block: 'center', behavior: 'instant'});
         // Match a real pointer: let the scrolled layout paint before hit testing.
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        // A read response may have rendered a new control during those frames.
+        const element = document.querySelector(selector);
+        if (!element || element.disabled) return null;
         const rect = element.getBoundingClientRect();
         const x = rect.left + rect.width / 2, y = rect.top + rect.height / 2;
-        if (!element.contains(document.elementFromPoint(x, y))) throw new Error(`Obscured control: ${selector}`);
+        if (!element.contains(document.elementFromPoint(x, y))) return null;
         return {x, y};
-    }, selector);
+    }, `unobscured painted control ${selector}`, selector);
     await send('Input.dispatchMouseEvent', {type: 'mouseMoved', ...point});
     await send('Input.dispatchMouseEvent', {type: 'mousePressed', button: 'left', clickCount: 1, ...point});
     await send('Input.dispatchMouseEvent', {type: 'mouseReleased', button: 'left', clickCount: 1, ...point});
