@@ -73,6 +73,19 @@ def resolve_artwork(proposals, verify_artwork):
             constraints = set(row['chinese_title_constraints'])
         names = sorted(name for name in catalog if family_key(name) in families
                        and constraints <= release_tags(name))
+        if not names:
+            key = (system, 'Named_Snaps')
+            if key not in catalogs:
+                try:
+                    catalogs[key] = catalog_names(system, 'Named_Snaps')
+                except (OSError, ValueError, RuntimeError) as error:
+                    catalogs[key] = error
+            snapshots = catalogs[key]
+            if not isinstance(snapshots, Exception):
+                names = sorted(name for name in snapshots if family_key(name) in families
+                               and constraints <= release_tags(name))
+                if names:
+                    row['artwork_cover_fallback'] = 'Named_Snaps'
         side = re.search(r'[（(]([AB])[）)]', source, re.I)
         if side:
             number = ord(side[1].upper()) - ord('A') + 1
@@ -84,3 +97,5 @@ def resolve_artwork(proposals, verify_artwork):
         row['artwork_recommended'] = bool(names)
         row['match_reason'] = ('游戏名称已识别，已推荐匹配封面，可单独更换'
                                if names else '游戏名称已识别，图库未找到匹配封面')
+        if row.get('artwork_cover_fallback'):
+            row['match_reason'] = '缺少封面，默认使用同一游戏截图作为展示图，可单独更换'

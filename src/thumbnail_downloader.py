@@ -1,4 +1,6 @@
 import os
+import hashlib
+import app_paths
 import requests
 import urllib.parse
 from pathlib import Path
@@ -17,6 +19,8 @@ class ThumbnailDownloader:
         self.max_workers = max_workers
         self.cancel_check = None
         self.artwork_constraints = {}
+        self.cover_fallbacks = {}
+        self.replace_hashes = {}
         
         # Setup session with retry
         from requests.adapters import HTTPAdapter
@@ -106,7 +110,12 @@ class ThumbnailDownloader:
             target_filename = self.sanitize_filename(game_chinese_name) + ".png"
             target_path = os.path.join(target_dir, target_filename)
             
-            if valid_image_file(target_path):
+            expected = self.replace_hashes.get((system, game_english_name, game_chinese_name), {}).get(type_name)
+            replace = (expected and valid_image_file(target_path)
+                       and hashlib.sha256(Path(target_path).read_bytes()).hexdigest() == expected)
+            if replace:
+                atomic_write_bytes(app_paths.user_data_dir() / 'artwork-backups' / (expected + '.png'), Path(target_path).read_bytes())
+            if valid_image_file(target_path) and not replace:
                 results.append({
                     "type": type_name,
                     "game": game_chinese_name,
@@ -132,6 +141,7 @@ class ThumbnailDownloader:
             try:
                 # Use session with retry
                 matched = None
+                download_kind = type_name
                 response = self.session.get(url, timeout=10)
                 if response.status_code == 404 and not (self.cancel_check and self.cancel_check()):
                     from single_artwork import catalog_names
@@ -140,6 +150,16 @@ class ThumbnailDownloader:
                         constraints=self.artwork_constraints.get((system, game_english_name, game_chinese_name)))
                     if matched and matched != game_english_name and not (self.cancel_check and self.cancel_check()):
                         url = f"{self.BASE_URL}/{urllib.parse.quote(system, safe='')}/{type_name}/{urllib.parse.quote(self.sanitize_filename(matched) + '.png', safe='')}"
+                        response = self.session.get(url, timeout=10)
+                fallback_kind = self.cover_fallbacks.get((system, game_english_name, game_chinese_name))
+                if response.status_code == 404 and type_name == 'Named_Boxarts' and fallback_kind == 'Named_Snaps':
+                    from single_artwork import catalog_names
+                    from gallery_names import matching_artwork_name
+                    matched = matching_artwork_name(system, game_english_name, catalog_names(system, fallback_kind),
+                        constraints=self.artwork_constraints.get((system, game_english_name, game_chinese_name)))
+                    if matched:
+                        download_kind = fallback_kind
+                        url = f"{self.BASE_URL}/{urllib.parse.quote(system, safe='')}/{fallback_kind}/{urllib.parse.quote(self.sanitize_filename(matched) + '.png', safe='')}"
                         response = self.session.get(url, timeout=10)
                 if response.status_code == 200:
                     content = repair_png_metadata(response.content) if len(response.content) <= 32 * 1024 * 1024 else response.content
@@ -155,8 +175,9 @@ class ThumbnailDownloader:
                         "source": game_english_name,
                         "system": system,
                         "status": "success",
-                        "message": "已匹配官方图库并下载" if matched else "下载成功",
+                        "message": "已使用同一游戏截图作为展示图" if download_kind != type_name else "已匹配官方图库并下载" if matched else "下载成功",
                         "gallery_source": matched or game_english_name,
+                        "gallery_kind": download_kind,
                         "path": target_path,
                         "url": url
                     })

@@ -70,7 +70,9 @@ def apply_playlist(path, changes, thumbnails, *, options, progress, cancel_check
                     content = read_target(destination)
                     mtp_digests[destination] = mtp.digest(content)
                     if content is not None and valid_png(content):
-                        existing_mtp.add(str(relative))
+                        expected = change.get('replace_artwork_hashes', {}).get(kind)
+                        if not expected or hashlib.sha256(content).hexdigest() != expected:
+                            existing_mtp.add(str(relative))
                     else:
                         for alias in dict.fromkeys([change.get('original_item_label'), change.get('thumbnail_source'), rom_title(change.get('path'))]):
                             if not alias or alias == label:
@@ -110,6 +112,27 @@ def apply_playlist(path, changes, thumbnails, *, options, progress, cancel_check
                 mtp.push_directory(local_images, thumbnails, expected_hashes=mtp_digests, include_files=reviewed_files - existing_mtp)
             else:
                 push_adb_directory(local_images, thumbnails)
+        from artwork_provenance import save
+        provenance = {}
+        for detail in summary.get('details', []):
+            if detail.get('status') != 'success' or not detail.get('path'):
+                continue
+            local_image = Path(detail['path'])
+            if not local_image.is_file():
+                continue
+            relative = local_image.relative_to(local_images)
+            destination = mtp.join(thumbnails, *relative.parts) if mtp.is_mtp(thumbnails) else thumbnails.rstrip('/') + '/' + relative.as_posix() if is_adb_uri(thumbnails) else str(Path(thumbnails) / relative)
+            change = next(c for c in changes if c.get('system') == detail.get('system')
+                          and detail.get('game') in {c.get('new_label'), c.get('original_item_label')})
+            provenance[destination] = {'source': detail.get('gallery_source') or detail['source'],
+                                      'sha256': hashlib.sha256(local_image.read_bytes()).hexdigest(),
+                                      'automatic': not (change.get('artwork_source_confirmed') or change.get('match_source') == 'manual_override'
+                                                        or change.get('artwork_identity_reason') in {'confirmed', 'remembered'})}
+        if provenance:
+            try:
+                save(provenance)
+            except (OSError, ValueError) as error:
+                progress(len(changes), len(changes), '图片已完成，但来源记录未保存：' + str(error))
         annotate_download_summary_paths(summary, local_root=local_images, final_root=thumbnails)
         result = build_apply_job_result(summary, apply_summary=applied, changes=changes,
                                         transport='mtp' if mtp.is_mtp(path) else 'adb' if remote else 'local', remote_backup=remote_backup)

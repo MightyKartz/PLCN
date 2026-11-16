@@ -106,5 +106,32 @@
       "星之海洋 藍色星球"
     ],
     "source": "https://zh.wikipedia.org/wiki/史克威尔艾尼克斯手机游戏列表"
+  },
+  {
+    "system": "MAME",
+    "english_name": "Sengoku Ace (Japan)",
+    "chinese_name": "彩京战国",
+    "aliases": [
+      "彩京战国"
+    ],
+    "source": "https://github.com/mamedev/mame/blob/master/src/mame/psikyo/psikyo.cpp"
+  },
+  {
+    "system": "MAME",
+    "english_name": "Mahjong G-Taste",
+    "chinese_name": "御姐麻雀",
+    "aliases": [
+      "御姐麻雀"
+    ],
+    "source": "https://github.com/mamedev/mame/blob/master/src/mame/psikyo/psikyosh.cpp"
+  },
+  {
+    "system": "MAME",
+    "english_name": "Mahjong Tenkaigen",
+    "chinese_name": "麻雀天开眼",
+    "aliases": [
+      "麻雀天开眼"
+    ],
+    "source": "https://github.com/mamedev/mame/blob/master/src/mame/dynax/dynax.cpp"
   }
 ]
