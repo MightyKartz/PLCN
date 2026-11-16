@@ -93,6 +93,10 @@ def matching_artwork_name(system, source, names, constraints=None):
             return {tag for tag in tags(name) if not presentation.fullmatch(tag)}
         variants = [name for name in names if title_key(name) == title_key(source)
                     and set(constraints) <= release_tags(name) and edition(name) == edition(source)]
+        if not variants and any(term in system for term in ('Arcade', 'FBNeo', 'MAME')):
+            variants = [name for name in names if title_key(name) == title_key(source)
+                        and set(constraints) <= release_tags(name)
+                        and not re.search(r'\b(?:hack|bootleg|prototype)\b', name, re.I)]
         if variants:
             from title_family import recommend_source
             return recommend_source(variants)

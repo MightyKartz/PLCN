@@ -43,7 +43,9 @@ def resolve_artwork(proposals, verify_artwork):
     from single_artwork import catalog_names
     catalogs = {}
     for row in proposals:
-        if not row.get('default_recommendation') and (row.get('translation_match_source') != 'title_family' or (row['system'] == 'Sega - Saturn' and not row.get('automatic_name_match'))):
+        arcade_default = (any(term in row['system'] for term in ('Arcade', 'FBNeo', 'MAME'))
+                          and row.get('match_source') != 'manual_override' and not row.get('artwork_source_confirmed'))
+        if not arcade_default and not row.get('default_recommendation') and (row.get('translation_match_source') != 'title_family' or (row['system'] == 'Sega - Saturn' and not row.get('automatic_name_match'))):
             continue
         if row.get('match_diagnostics', {}).get('conflicts'):
             continue
@@ -71,8 +73,21 @@ def resolve_artwork(proposals, verify_artwork):
         if change_sources := row.get('chinese_title_sources'):
             families.update(family_key(name) for name in change_sources)
             constraints = set(row['chinese_title_constraints'])
-        names = sorted(name for name in catalog if family_key(name) in families
+        from artwork_resolver import sanitize_filename
+        families.update(family_key(sanitize_filename(name)) for name in [source] + list(row.get('chinese_title_sources', [])))
+        names = sorted(name for name in catalog if family_key(sanitize_filename(name)) in families
                        and constraints <= release_tags(name))
+        # Arcade DATs and thumbnail packs use different region, board and date
+        # annotations. A default display image may use another release of the
+        # same full title, while retaining sequels and subtitles.
+        if arcade_default:
+            row['artwork_cover_recovery'] = 'Named_Snaps'
+            row.setdefault('chinese_title_sources', [source])
+            row.setdefault('chinese_title_constraints', [])
+        if not names and arcade_default:
+            from artwork_identity import title_key
+            names = sorted(name for name in catalog if title_key(name) == title_key(source)
+                           and not re.search(r'\b(?:hack|bootleg|prototype)\b', name, re.I))
         if not names:
             key = (system, 'Named_Snaps')
             if key not in catalogs:
@@ -82,8 +97,12 @@ def resolve_artwork(proposals, verify_artwork):
                     catalogs[key] = error
             snapshots = catalogs[key]
             if not isinstance(snapshots, Exception):
-                names = sorted(name for name in snapshots if family_key(name) in families
+                names = sorted(name for name in snapshots if family_key(sanitize_filename(name)) in families
                                and constraints <= release_tags(name))
+                if not names and arcade_default:
+                    from artwork_identity import title_key
+                    names = sorted(name for name in snapshots if title_key(name) == title_key(source)
+                                   and not re.search(r'\b(?:hack|bootleg|prototype)\b', name, re.I))
                 if names:
                     row['artwork_cover_fallback'] = 'Named_Snaps'
         side = re.search(r'[（(]([AB])[）)]', source, re.I)

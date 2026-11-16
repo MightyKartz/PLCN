@@ -26,6 +26,7 @@ class LibretroDB:
         self.dat_dir = os.path.join(storage_path, "libretro-db", "dat")
         os.makedirs(self.dat_dir, exist_ok=True)
         self.standard_names = {} # normalized_name -> standard_english_name
+        self.rom_names = {} # literal ZIP/checksum aliases, before title normalization
         
     def get_dat_path(self, system_name):
         """Returns the path to the DAT file for the given system."""
@@ -97,6 +98,7 @@ class LibretroDB:
         For mapped systems (like FBNeo), loads all mapped system DATs plus the main system DAT."""
         
         self.standard_names = {} # Clear previous entries before loading new system(s)
+        self.rom_names = {}
         
         # Check if this is a mapped system
         base_system = system_name.split('(')[0].strip()
@@ -191,6 +193,9 @@ class LibretroDB:
                         # Index those aliases so FBNeo paths like aof3.zip resolve reliably.
                         for alias in current_rom_aliases:
                             self._add_standard_name_alias(alias, standard_name)
+                            names = self.rom_names.setdefault(alias.casefold(), [])
+                            if standard_name not in names:
+                                names.append(standard_name)
                                 
                     current_block = None
                 elif current_block == 'game':
@@ -273,6 +278,9 @@ class LibretroDB:
         if not self.standard_names:
             return None
         
+        literal = self.rom_names.get(str(name).casefold())
+        if literal:
+            return literal[0] if len(literal) == 1 else None
         norm_name = self.normalize_name(name)
         
         # Strategy 1: Try exact normalized match

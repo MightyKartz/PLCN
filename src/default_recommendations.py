@@ -57,3 +57,7 @@ def resolve(proposals, translators):
                    chinese_title_sources=[r['english_name'] for r in records
                                           if r['chinese_name'] == chosen['chinese_name'] or r['english_name'] == source],
                    chinese_title_constraints=sorted(constraints))
+        if any(term in system for term in ('Arcade', 'FBNeo', 'MAME')):
+            # Chinese catalog synonyms can belong to different arcade games.
+            # The ZIP/DAT title owns the image family, not its translated label.
+            row['chinese_title_sources'] = [source]

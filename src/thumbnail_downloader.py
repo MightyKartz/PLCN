@@ -163,6 +163,20 @@ class ThumbnailDownloader:
                         response = self.session.get(url, timeout=10)
                 if response.status_code == 200:
                     content = repair_png_metadata(response.content) if len(response.content) <= 32 * 1024 * 1024 else response.content
+                    if (type_name == 'Named_Boxarts' and download_kind == type_name
+                            and fallback_kind == 'Named_Snaps'
+                            and (len(content) > 32 * 1024 * 1024 or not valid_png(content))):
+                        from single_artwork import catalog_names
+                        from gallery_names import matching_artwork_name
+                        snapshot = matching_artwork_name(system, game_english_name, catalog_names(system, 'Named_Snaps'),
+                            constraints=self.artwork_constraints.get((system, game_english_name, game_chinese_name)))
+                        if snapshot:
+                            snapshot_url = f"{self.BASE_URL}/{urllib.parse.quote(system, safe='')}/Named_Snaps/{urllib.parse.quote(self.sanitize_filename(snapshot) + '.png', safe='')}"
+                            snapshot_response = self.session.get(snapshot_url, timeout=10)
+                            if snapshot_response.status_code == 200 and len(snapshot_response.content) <= 32 * 1024 * 1024:
+                                snapshot_content = repair_png_metadata(snapshot_response.content)
+                                if valid_png(snapshot_content):
+                                    content, matched, download_kind, url = snapshot_content, snapshot, 'Named_Snaps', snapshot_url
                     if len(content) > 32 * 1024 * 1024 or not valid_png(content):
                         results.append({'type': type_name, 'game': game_chinese_name, 'source': game_english_name,
                                         'system': system, 'status': 'failed', 'reason': 'invalid_image',
