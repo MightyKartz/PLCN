@@ -814,6 +814,8 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
     if 'Sega - Saturn' in translators:
         from saturn_artwork import resolve_proposals
         resolve_proposals(proposed_changes, translators, source_playlist_path or str(playlist_path), verify_artwork, thumbnails_dir)
+    from automatic_name_match import resolve as resolve_automatic_names
+    resolve_automatic_names(proposed_changes, translators)
     from title_family import resolve_artwork
     resolve_artwork(proposed_changes, verify_artwork)
     targets = {}
