@@ -46,7 +46,7 @@ def test_preview_read_only_application_save_copy_identity_and_restore(library):
     assert plan['content']=='Game (Disc 1).chd\nGame (Disc 2).chd\n'
     result=tx.start(plan)
     assert result['status']=='applied',result
-    doc=json.loads(playlist.read_text());assert len(doc['items'])==2
+    doc=json.loads(playlist.read_text(encoding='utf-8'));assert len(doc['items'])==2
     assert Path(doc['items'][0]['path'])==roms/'Game.m3u' and doc['items'][0]['custom']=='keep'
     assert doc['items'][1]['label']=='保留条目'
     assert (saves/'Game.bkr').read_bytes()==b'my save'
@@ -108,7 +108,7 @@ def test_partial_write_is_recoverable_and_later_external_edits_are_not_overwritt
     result=tx.start(plans.prepare(payload));assert result['status']=='applied'
     (roms/'Game.m3u').write_text('external change\n',encoding='utf-8')
     result=tx.run(result['operation_id'],restore=True)
-    assert result['status']=='restore_pending' and (roms/'Game.m3u').read_text()=='external change\n'
+    assert result['status']=='restore_pending' and (roms/'Game.m3u').read_text(encoding='utf-8')=='external change\n'
 
 
 def test_resume_partial_transaction_and_preserve_unrelated_metadata_on_restore(library,monkeypatch):
@@ -120,10 +120,10 @@ def test_resume_partial_transaction_and_preserve_unrelated_metadata_on_restore(l
     monkeypatch.setattr(tx,'write_checked',fail_once)
     result=tx.start(plans.prepare(payload));assert result['status']=='partial'
     result=tx.run(result['operation_id']);assert result['status']=='applied',result
-    index=tx.app_paths.user_data_dir()/'library-identities.json';data=json.loads(index.read_text())
+    index=tx.app_paths.user_data_dir()/'library-identities.json';data=json.loads(index.read_text(encoding='utf-8'))
     data['game_ids']['unrelated-key']='unrelated-value';index.write_text(json.dumps(data))
     result=tx.run(result['operation_id'],restore=True);assert result['status']=='restored',result
-    assert json.loads(index.read_text())['game_ids']['unrelated-key']=='unrelated-value'
+    assert json.loads(index.read_text(encoding='utf-8'))['game_ids']['unrelated-key']=='unrelated-value'
     assert playlist.read_bytes()==before
 
 
@@ -148,7 +148,7 @@ def test_saved_artwork_choice_and_existing_images_extend_to_new_entry(library):
     images=playlist.parent.parent/'thumbnails'
     directory=images/SYSTEM/'Named_Boxarts';directory.mkdir(parents=True)
     original=directory/'Game (Disc 1).png';Image.new('RGB',(8,8),'blue').save(original)
-    artwork_identity.remember({'system':SYSTEM,'playlist_path':str(playlist),'rom_path':json.loads(playlist.read_text())['items'][0]['path'],
+    artwork_identity.remember({'system':SYSTEM,'playlist_path':str(playlist),'rom_path':json.loads(playlist.read_text(encoding='utf-8'))['items'][0]['path'],
                                'label':'游戏'},'Manual cover (Japan)','Named_Boxarts')
     payload['thumbnails']=str(images)
     plan=plans.prepare(payload);assert plan['can_apply'],plan['issues']
@@ -163,7 +163,7 @@ def test_saved_artwork_choice_and_existing_images_extend_to_new_entry(library):
 
 def test_split_existing_m3u_keeps_unselected_disc_as_independent_entry(library):
     playlist,roms,_,_,payload=library
-    doc=json.loads(playlist.read_text());third=roms/'Game (Disc 3).chd';third.touch()
+    doc=json.loads(playlist.read_text(encoding='utf-8'));third=roms/'Game (Disc 3).chd';third.touch()
     original_third={**doc['items'][1],'path':str(third),'label':'第三盘人工名称','custom':'third-only'}
     doc['items'].insert(2,original_third)
     playlist.write_text(json.dumps(doc,ensure_ascii=False),encoding='utf-8')
@@ -174,13 +174,13 @@ def test_split_existing_m3u_keeps_unselected_disc_as_independent_entry(library):
     payload.update(group_id=group['id'],disc_ids=group['discs'][:2])
     plan=plans.prepare(payload);assert plan['can_apply'],plan['issues']
     result=tx.start(plan);assert result['status']=='applied'
-    assert next(item for item in json.loads(playlist.read_text())['items'] if Path(item['path'])==third)==original_third
+    assert next(item for item in json.loads(playlist.read_text(encoding='utf-8'))['items'] if Path(item['path'])==third)==original_third
 
 
 def test_corrupted_computer_backup_prevents_restore_before_any_change(library):
     playlist,roms,_,_,payload=library
     result=tx.start(plans.prepare(payload));before=playlist.read_bytes()
-    receipt=json.loads(tx.receipt_path(result['operation_id']).read_text())
+    receipt=json.loads(tx.receipt_path(result['operation_id']).read_text(encoding='utf-8'))
     Path(next(entry['before'] for entry in receipt['files'] if entry['kind']=='playlist')).write_bytes(b'corrupted')
     result=tx.run(result['operation_id'],restore=True)
     assert result['status']=='restore_pending' and playlist.read_bytes()==before and (roms/'Game.m3u').exists()
@@ -237,7 +237,7 @@ def test_changed_source_identity_or_manual_choice_cannot_apply_stale_plan(librar
     playlist,roms,_,_,payload=library
     plan=plans.prepare(payload)
     index_path=tx.app_paths.user_data_dir()/'library-identities.json'
-    index=json.loads(index_path.read_text())
+    index=json.loads(index_path.read_text(encoding='utf-8'))
     key=next(key for key in index['game_ids'] if 'Disc 1' in key)
     index['game_ids'][key]=str(uuid.uuid4());index_path.write_text(json.dumps(index))
     with pytest.raises(ValueError,match='来源关联'):tx.start(plan)
@@ -247,7 +247,7 @@ def test_changed_source_identity_or_manual_choice_cannot_apply_stale_plan(librar
 def test_missing_core_options_location_blocks_switch_but_not_file_creation(library,monkeypatch):
     playlist,_,_,_,payload=library
     config=playlist.parent.parent/'retroarch.cfg'
-    config.write_text('\n'.join(line for line in config.read_text().splitlines() if not line.startswith('core_options_path')))
+    config.write_text('\n'.join(line for line in config.read_text(encoding='utf-8').splitlines() if not line.startswith('core_options_path')))
     assert not plans.prepare(payload)['can_apply']
     payload['mode']='file'
     monkeypatch.setattr(plans,'core_support',lambda _:pytest.fail('File-only review should not make core requests'))
