@@ -553,6 +553,48 @@ async function main() {
         await screenshot('10-chd-restored');await click('#desktop-close');
     }
 
+    // Cartridge directory analysis and real ZIP generation: separate synthetic library.
+    const cartRoot=path.join(libraryPath,'rom-samples','RetroArch'),cartLists=path.join(cartRoot,'playlists'),cartRoms=path.join(cartRoot,'Roms');
+    fs.mkdirSync(cartLists,{recursive:true});fs.mkdirSync(cartRoms,{recursive:true});
+    const cartPaths=[];
+    for(const [folder,name] of [['one','同名游戏.gba'],['two','同名游戏.gba'],['three','独立游戏.gba']]){
+        const directory=path.join(cartRoms,folder);fs.mkdirSync(directory);const file=path.join(directory,name);fs.writeFileSync(file,Buffer.alloc(100000,cartPaths.length));cartPaths.push(file);
+    }
+    fs.writeFileSync(path.join(cartRoms,'multi.cue'),'FILE "data.bin" BINARY\n');
+    const cartPlaylist=path.join(cartLists,'Nintendo - Game Boy Advance.lpl');
+    fs.writeFileSync(cartPlaylist,JSON.stringify({items:cartPaths.map(file=>({path:file,label:path.basename(file),core_path:'/cores/mgba_libretro.so'}))}));
+    const cartBefore=fs.readFileSync(cartPlaylist),sourceBefore=cartPaths.map(file=>fs.readFileSync(file));
+    await click('#settings-button');
+    await evaluate(root=>{const input=document.querySelector('#retroarch_root');input.value=root;input.dispatchEvent(new Event('input',{bubbles:true}));},cartRoot);
+    await click('#scan-device-btn');await waitFor(()=>!document.querySelector('#desktop-dialog').open&&document.querySelector('.playlist-system-tab[aria-label="Nintendo - Game Boy Advance"]'),'cartridge library loaded');
+    await click('.playlist-system-tab[aria-label="Nintendo - Game Boy Advance"]');
+    if(await evaluate(()=>document.body.dataset.theme==='dark'))await click('#theme-toggle-btn');
+    await click('#rom-storage-entry');
+    await click('#rom-storage-fields > label:first-of-type button');
+    await waitFor(()=>document.querySelector('#rom-storage-source').value.length>0,'native picker returned source');
+    await evaluate(directory=>{const input=document.querySelector('#rom-storage-workspace');input.value=directory;input.dispatchEvent(new Event('input',{bubbles:true}));},cartRoot);
+    await click('#rom-storage-analyze');
+    await waitFor(()=>!romStorage.busy&&!document.querySelector('#rom-storage-analysis').hidden,'directory and cartridge ZIP analysis');
+    assert.equal(await evaluate(()=>document.querySelectorAll('#rom-storage-rows [data-layout="conflict"]').length),2);
+    assert.equal(await evaluate(()=>document.querySelectorAll('#rom-storage-rows [data-layout="keep"]').length),1);
+    assert.equal(await evaluate(()=>document.querySelectorAll('#rom-storage-rows input:checked').length),3);
+    await evaluate(()=>document.querySelector('#rom-storage-dialog').scrollTop=0);await screenshot('11-rom-layout-light');
+    await click('#rom-storage-convert');await waitFor(()=>!romStorage.busy&&!document.querySelector('#rom-storage-result').hidden,'ZIP computer copies completed');
+    assert.deepEqual(fs.readFileSync(cartPlaylist),cartBefore);
+    for(let index=0;index<cartPaths.length;index++)assert.deepEqual(fs.readFileSync(cartPaths[index]),sourceBefore[index]);
+    const romHistory=await evaluate(async()=> (await (await fetch('/api/desktop')).json()).rom_storage_operations);
+    assert.equal(romHistory[0].results.length,3);assert.equal(romHistory[0].device_saved_bytes,0);
+    assert.equal(new Set(romHistory[0].results.map(row=>row.output)).size,3);
+    assert.equal(romHistory[0].results.every(row=>row.verification==='byte_for_byte'&&fs.existsSync(row.output)),true);
+    await screenshot('11-rom-zip-result');await click('#rom-storage-close');
+    await click('#theme-toggle-btn');await click('#rom-storage-entry');
+    await click('#rom-storage-fields > label:first-of-type button');
+    await waitFor(()=>document.querySelector('#rom-storage-source').value.length>0,'source reopened');
+    await click('#rom-storage-analyze');await waitFor(()=>!romStorage.busy&&!document.querySelector('#rom-storage-analysis').hidden,'dark directory analysis');
+    await evaluate(()=>document.querySelector('#rom-storage-dialog').scrollTop=0);await screenshot('11-rom-layout-dark');await click('#rom-storage-close');
+    await click('#settings-button');await click('[data-desktop-view="tasks"]');await waitFor(()=>document.querySelector('[data-rom-storage-operation]'),'ZIP durable history');
+    await screenshot('11-rom-zip-tasks');await click('#desktop-close');
+
     assert.deepEqual(errors, [], 'Page errors');
     console.log(`Browser smoke OK (${width}×${height}): home → local library → SNES → translated preview`);
 }
