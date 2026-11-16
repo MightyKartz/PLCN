@@ -156,3 +156,27 @@ def test_invalid_full_title_alias_rejected_at_data_boundary(tmp_path):
     row = {'system': 'MD', 'path': '/roms/旧译名.bin', 'match_source': 'playlist'}
     with pytest.raises(ValueError, match='完整标题别名'):
         resolve_chinese_titles([row], {'MD': SimpleNamespace(rom_name_cn_path=str(tmp_path))})
+
+
+def test_declared_same_game_variants_are_recommended_without_claiming_rom_version(tmp_path, monkeypatch):
+    system = 'Nintendo - Game Boy Color'
+    source = tmp_path / 'names'
+    source.mkdir()
+    with (source / (system + '.csv')).open('w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(['Name EN', 'Name CN'])
+        writer.writerows([['Monster II - Boy (Japan)', '怪兽仙境2 - 男孩版'],
+                          ['Monster II - Girl (Japan)', '怪兽仙境2 - 女孩版']])
+    (source / 'title_aliases.json').write_text(json.dumps([
+        {'system': system, 'english_name': 'Monster II - Boy (Japan)',
+         'english_names': ['Monster II - Girl (Japan)'],
+         'chinese_name': '怪兽篇2', 'aliases': ['怪兽篇2']}]), encoding='utf-8')
+    monkeypatch.setattr('single_artwork.catalog_names', lambda *args: ['Monster II - Boy (Japan)', 'Monster II - Girl (Japan)'])
+    playlist = tmp_path / 'games.lpl'
+    playlist.write_text(json.dumps({'items': [{'label': '怪兽篇2', 'path': '/roms/怪兽篇2.gbc'}]}), encoding='utf-8')
+    row = analyze_playlist(str(playlist), system, str(source), verify_artwork=True)[0]
+    assert not row['identity']['requires_review']
+    assert not row['identity']['release_verified']
+    assert row['new_label'] == '怪兽篇2'
+    assert row['artwork_candidates'] == ['Monster II - Boy (Japan)', 'Monster II - Girl (Japan)']
+    assert row['thumbnail_source'] in row['artwork_candidates']
