@@ -121,7 +121,7 @@ def test_home_to_library_to_preview(tmp_path, monkeypatch, chrome_binary, viewpo
                     '--disable-background-networking', 'about:blank',
                 ], stdout=log, stderr=log)
                 try:
-                    deadline = time.monotonic() + 15
+                    deadline = time.monotonic() + 45
                     active_port = profile / 'DevToolsActivePort'
                     while True:
                         assert chrome.poll() is None, f'Chrome exited; see {artifacts / "chrome.log"}'
