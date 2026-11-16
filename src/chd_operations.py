@@ -156,7 +156,7 @@ def convert(plan,selected,cancelled=lambda: None,progress=lambda message: None):
                 log=output/f'{number:03d}-commands.log'
                 for stage,args in [('转换',['createcd','-i',str(cue),'-o',str(chd),'-np','1']),
                                    ('完整性校验',['verify','-i',str(chd)]),
-                                   ('解压回读',['extractcd','-i',str(chd),'-o',str(work/'roundtrip.cue'),'-sb'])]:
+                                   ('解压回读',['extractcd','-i',str(chd),'-o',str(work/'roundtrip.cue')])]:
                     progress(f'{number}/{len(rows)} · {stage} · '+Path(row['path']).name)
                     chd_tool.run(tool['path'],args,work,cancelled,log)
                 actual=chd_cue.signature(chd_cue.layout(work/'roundtrip.cue'),cancelled)

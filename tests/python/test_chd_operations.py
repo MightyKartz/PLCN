@@ -40,9 +40,9 @@ def test_layout_hashes_raw_tracks_and_rejects_unproven_grammar(optical):
     tracks=chd_cue.layout(cue)
     assert [(track['length']//2352,track['index01']) for track in tracks]==[(58,0),(42,2)]
     assert len(chd_cue.signature(tracks))==2
-    cue.write_text('FILE "音轨.bin" BINARY\n TRACK 01 MODE1/2048\n INDEX 01 00:00:00\n')
+    cue.write_text('FILE "音轨.bin" BINARY\n TRACK 01 MODE1/2048\n INDEX 01 00:00:00\n',encoding='utf-8')
     with pytest.raises(ValueError,match='尚未支持'): chd_cue.layout(cue)
-    cue.write_text('FILE "音轨.bin" BINARY\n TRACK 01 AUDIO\n INDEX 01 00:00:01\n')
+    cue.write_text('FILE "音轨.bin" BINARY\n TRACK 01 AUDIO\n INDEX 01 00:00:01\n',encoding='utf-8')
     with pytest.raises(ValueError,match='未引用'): chd_cue.layout(cue)
     binary.write_bytes(b'bad sector')
     with pytest.raises(ValueError,match='完整'): chd_cue.layout(cue)
