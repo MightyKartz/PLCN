@@ -21,7 +21,7 @@ from PIL import Image, ImageOps
 import requests
 
 import app_paths
-from artwork_resolver import THUMBNAIL_TYPES, sanitize_filename, validate_system, valid_png
+from artwork_resolver import THUMBNAIL_TYPES, sanitize_filename, validate_system, valid_png, repair_png_metadata
 from playlist_manager import PlaylistManager
 from rom_paths import rom_title, remove_disc_companions
 from retroarch_scanner import is_adb_uri, materialize_adb_file, parse_adb_uri, push_adb_file
@@ -211,6 +211,9 @@ def search(payload):
 def normalize_image(content):
     if len(content) > LIMIT:
         raise ValueError('图片不能超过 12 MiB')
+    content = repair_png_metadata(content)
+    if content.startswith(b'\x89PNG\r\n\x1a\n') and not valid_png(content):
+        raise ValueError('图片无法读取或已损坏')
     try:
         with Image.open(io.BytesIO(content)) as image:
             if image.format not in {'PNG', 'JPEG', 'WEBP'} or image.width * image.height > 32_000_000:
@@ -222,7 +225,7 @@ def normalize_image(content):
             if len(result) > LIMIT:
                 raise ValueError('转换后的 PNG 超过 12 MiB，请先缩小图片')
             return result, image.size
-    except (OSError, Image.DecompressionBombError) as error:
+    except (OSError, SyntaxError, Image.DecompressionBombError) as error:
         raise ValueError('图片无法读取或已损坏') from error
 
 
