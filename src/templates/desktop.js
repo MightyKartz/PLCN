@@ -173,6 +173,19 @@ async function refreshDesktop() {
                 desktopElement('p','已验证 '+record.results.length+' 个 ZIP；原文件和引用保留，掌机节省空间 0 B',entry);
                 for(const result of record.results)desktopElement('p',result.output+' · SHA-256 '+result.sha256,entry);
                 if(record.error)desktopElement('p',record.error,entry);
+                if(record.results.length)desktopButton(entry,'预览 ZIP 回传／替换',()=>{desktopDialog.close();openRomRelocation({conversion_id:record.id,file_ids:record.results.map(row=>row.id),playlist:record.playlist});});
+            }
+            desktopElement('h3','目录整理／ZIP 回传与恢复',body);
+            for(const record of state.rom_relocations || []){
+                const entry=desktopElement('div',undefined,body);entry.className='desktop-entry';entry.dataset.romRelocation=record.id;
+                desktopElement('strong',({backing_up:'备份中／中断',completed:'已完成',partial:'部分完成',restoring:'恢复中',restore_pending:'恢复待处理',restored:'已恢复'}[record.status]||record.status)+' · '+record.created_at,entry);
+                desktopElement('p',record.playlist+' · '+record.mode,entry);desktopElement('p','电脑备份：'+record.backup_directory,entry);
+                desktopElement('p','本次文件净释放：'+storageBytes(record.actual_image_delta_bytes)+'（不含电脑与元数据备份）',entry);
+                for(const output of record.restored_retained_outputs||[])desktopElement('p','保留仍有新引用或未能完整检查的输出：'+output.path,entry);
+                if(record.error)desktopElement('p',record.error,entry);
+                if(record.status!=='restored')desktopButton(entry,'恢复原目录与引用',()=>recoverRomRelocation(record.id,'restore'));
+                if(!['completed','restored'].includes(record.status))desktopButton(entry,'核对后继续整理',()=>recoverRomRelocation(record.id,'resume'));
+                if(record.status==='completed'&&record.mode==='copy')desktopButton(entry,'预览更新引用／移动',()=>{desktopDialog.close();openRomRelocation({operation_id:record.id,file_ids:record.selected_ids,playlist:record.playlist});});
             }
             desktopElement('h3','电脑 CHD 转换',body);
             for(const record of state.chd_operations || []){

@@ -3,6 +3,12 @@ from pathlib import PurePosixPath
 import re
 
 
+def split_archive(path):
+    """Separate RetroArch's physical archive and optional member locator."""
+    match = re.fullmatch(r'(.+\.(?:zip|7z|rar))#(.+)', path, re.I)
+    return (match[1], match[2]) if match else (path, None)
+
+
 def rom_filename(path):
     normalized = str(path or '').replace('\\', '/')
     member = re.split(r'\.(?:zip|7z|rar)#', normalized, flags=re.IGNORECASE)[-1]

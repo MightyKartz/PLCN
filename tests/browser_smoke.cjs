@@ -595,6 +595,59 @@ async function main() {
     await click('#settings-button');await click('[data-desktop-view="tasks"]');await waitFor(()=>document.querySelector('[data-rom-storage-operation]'),'ZIP durable history');
     await screenshot('11-rom-zip-tasks');await click('#desktop-close');
 
+    // Stage 4B: move a synthetic CHD-only multi-disc set, then restore both operations.
+    const layoutRoot=path.join(libraryPath,'layout-samples','RetroArch'),layoutLists=path.join(layoutRoot,'playlists'),layoutRoms=path.join(layoutRoot,'Roms'),layoutNested=path.join(layoutRoms,'多盘游戏');
+    for(const directory of [layoutLists,layoutNested,path.join(layoutRoot,'saves'),path.join(layoutRoot,'states')])fs.mkdirSync(directory,{recursive:true});
+    const layoutDiscs=['多盘 (Disc 1).chd','多盘 (Disc 2).chd'].map(name=>path.join(layoutNested,name)),layoutM3u=path.join(layoutNested,'多盘.m3u');
+    for(const file of layoutDiscs)fs.writeFileSync(file,'synthetic move fixture '+path.basename(file));
+    fs.writeFileSync(layoutM3u,layoutDiscs.map(file=>path.basename(file)).join('\n')+'\n');
+    const layoutPlaylist=path.join(layoutLists,'Sega - Saturn.lpl');
+    fs.writeFileSync(layoutPlaylist,JSON.stringify({items:[{path:layoutM3u,label:'人工多盘名',core_path:'/cores/mednafen_saturn_libretro.so',custom:'keep'}]}));
+    const flags=['auto_overrides_enable','game_specific_options','sort_savefiles_enable','sort_savefiles_by_content_enable','savefiles_in_content_dir','sort_savestates_enable','sort_savestates_by_content_enable','savestates_in_content_dir'];
+    fs.writeFileSync(path.join(layoutRoot,'core-options.cfg'),'');
+    fs.writeFileSync(path.join(layoutRoot,'retroarch.cfg'),flags.map(key=>key+' = "false"').join('\n')+'\n'+
+        'savefile_directory = "'+path.join(layoutRoot,'saves').replaceAll('\\','/')+'"\n'+
+        'savestate_directory = "'+path.join(layoutRoot,'states').replaceAll('\\','/')+'"\n'+
+        'core_options_path = "'+path.join(layoutRoot,'core-options.cfg').replaceAll('\\','/')+'"\n');
+    const layoutBefore=new Map([layoutPlaylist,layoutM3u,...layoutDiscs].map(file=>[file,fs.readFileSync(file)]));
+    await click('#settings-button');await evaluate(root=>{const input=document.querySelector('#retroarch_root');input.value=root;input.dispatchEvent(new Event('input',{bubbles:true}));},layoutRoot);
+    await click('#scan-device-btn');await waitFor(()=>!document.querySelector('#desktop-dialog').open&&document.querySelector('.playlist-system-tab[aria-label="Sega - Saturn"]'),'layout library loaded');
+    await click('.playlist-system-tab[aria-label="Sega - Saturn"]');
+    if(Number(width)>1100&&await evaluate(()=>document.body.dataset.theme==='dark'))await click('#theme-toggle-btn');
+    await click('#rom-storage-entry');await evaluate(root=>document.querySelector('#rom-storage-source').value=root,layoutRoms);
+    await click('#rom-storage-fields > label:first-of-type button');
+    await waitFor(()=>document.querySelector('#rom-storage-target').value.length>0,'layout picker selected');
+    await evaluate(root=>{const input=document.querySelector('#rom-storage-workspace');input.value=root;input.dispatchEvent(new Event('input',{bubbles:true}));},layoutRoot);
+    await click('#rom-storage-analyze');await waitFor(()=>!romStorage.busy&&!document.querySelector('#rom-storage-analysis').hidden,'CHD and M3U layout analyzed');
+    assert.equal(await evaluate(()=>document.querySelectorAll('#rom-storage-rows input:checked').length),3);
+    assert.equal(await evaluate(()=>document.querySelector('#rom-storage-convert').disabled),true);
+    await click('#rom-storage-relocate');await click('#relocate-preview');await waitFor(()=>!document.querySelector('#relocate-apply').disabled,'layout copy preview');
+    for(const [file,bytes] of layoutBefore)assert.deepEqual(fs.readFileSync(file),bytes);
+    await screenshot('12-layout-copy-preview');await click('#relocate-apply');
+    await waitFor(()=>!romRelocation.busy&&document.querySelector('#relocate-status').textContent.includes('已完成'),'copy completed');
+    const copies=await evaluate(async()=> (await (await fetch('/api/desktop')).json()).rom_relocations);const copyId=copies[0].id;
+    assert.equal(copies[0].mode,'copy');for(const file of [layoutM3u,...layoutDiscs])assert.equal(fs.existsSync(file),true);
+    await click('#relocate-settings > summary');
+    await evaluate(()=>{const input=document.querySelector('#relocate-mode');input.value='replace';input.dispatchEvent(new Event('input',{bubbles:true}));});
+    await evaluate(()=>{const input=document.querySelector('#relocate-version');input.value='synthetic browser fixture';input.dispatchEvent(new Event('input',{bubbles:true}));});
+    await click('#relocate-tested');await click('#relocate-scope');await click('#relocate-preview');
+    await waitFor(()=>!document.querySelector('#relocate-apply').disabled,'layout move preview ready');await screenshot('12-layout-move-preview');
+    await click('#relocate-apply');await waitFor(()=>!romRelocation.busy&&document.querySelector('#relocate-status').textContent.includes('已完成'),'layout move completed');
+    const moves=await evaluate(async()=> (await (await fetch('/api/desktop')).json()).rom_relocations);const moveId=moves.find(row=>row.mode==='replace').id;
+    for(const file of [layoutM3u,...layoutDiscs])assert.equal(fs.existsSync(file),false);
+    assert.equal(fs.readFileSync(path.join(layoutRoms,'多盘.m3u'),'utf8'),layoutDiscs.map(file=>path.basename(file)).join('\n')+'\n');
+    assert.equal(JSON.parse(fs.readFileSync(layoutPlaylist,'utf8')).items[0].path.replaceAll('\\','/'),path.join(layoutRoms,'多盘.m3u').replaceAll('\\','/'));
+    await screenshot('12-layout-moved');await click('#relocate-close');
+    await click('#settings-button');await click('[data-desktop-view="tasks"]');
+    await waitFor(id=>document.querySelector('[data-rom-relocation="'+id+'"]'),'layout move receipt',moveId);
+    await click('[data-rom-relocation="'+moveId+'"] button');await click('.desktop-confirm button:last-of-type');
+    await waitFor(id=>document.querySelector('[data-rom-relocation="'+id+'"] strong').textContent.includes('已恢复'),'move restored',moveId);
+    await click('[data-rom-relocation="'+copyId+'"] button');await click('.desktop-confirm button:last-of-type');
+    await waitFor(id=>document.querySelector('[data-rom-relocation="'+id+'"] strong').textContent.includes('已恢复'),'copy restored',copyId);
+    for(const [file,bytes] of layoutBefore)assert.deepEqual(fs.readFileSync(file),bytes);
+    for(const file of [layoutM3u,...layoutDiscs])assert.equal(fs.existsSync(path.join(layoutRoms,path.basename(file))),false);
+    await screenshot('12-layout-restored');await click('#desktop-close');
+
     assert.deepEqual(errors, [], 'Page errors');
     console.log(`Browser smoke OK (${width}×${height}): home → local library → SNES → translated preview`);
 }
