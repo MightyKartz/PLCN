@@ -34,7 +34,7 @@ ZIP 转换只生成电脑副本：
 
 [RetroArch 内容加载实现](https://github.com/libretro/RetroArch/blob/master/tasks/task_content.c)根据核心的 block_extract 等条件处理压缩内容。ZIP 扩展名未出现在核心 info 的原始内容扩展名中，不能据此直接认定不支持；同样不能因扫描器接受 ZIP 就认定所有核心都支持。
 
-NES／MD 可提供普通文件的目录建议，但当前核心解包支持不在本项核对表，不转换 ZIP。街机 ROM 集完全排除；光盘 ZIP、软盘、7z／RAR 重新打包以及系统子模式不在范围内。同文件名关联的 IPS／BPS／UPS 补丁、MSU／PCM 增强资源会阻止该 ROM 的 ZIP 转换并提示保留目录。未知或非当前列表的 ROM 不推测核心。
+NES／MD 可提供普通文件的目录建议，但当前核心解包支持不在本项核对表，不转换 ZIP。街机 ROM 集完全排除；光盘 ZIP、软盘、7z／RAR 重新打包以及系统子模式不在范围内。同文件名关联的 IPS／BPS／UPS／XDELTA 补丁、MSU／PCM 增强资源会阻止该 ROM 的 ZIP 转换并提示保留目录。未知或非当前列表的 ROM 不推测核心。
 
 ## 状态与执行契约
 

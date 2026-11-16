@@ -105,8 +105,8 @@ def analyze(payload, cancelled=lambda: None, progress=lambda message: None):
             raw_cart = extension in CARTRIDGES.get(system,set())
             standalone = raw_cart or (extension=='chd' and system in OPTICAL)
             companions = [other['name'] for other in entries if not other['folder'] and
-                PurePosixPath(other['name']).suffix.lower() in {'.ips','.bps','.ups','.msu','.pcm'} and
-                (PurePosixPath(other['name']).stem==PurePosixPath(name).stem or other['name'].startswith(PurePosixPath(name).stem+'-'))]
+                PurePosixPath(other['name']).suffix.lower() in {'.ips','.bps','.ups','.xdelta','.msu','.pcm'} and
+                (PurePosixPath(other['name']).stem.casefold()==PurePosixPath(name).stem.casefold() or other['name'].casefold().startswith(PurePosixPath(name).stem.casefold()+'-'))]
             if companions:
                 standalone = False; row['issues'].append('存在补丁／增强资源，保留目录：'+'、'.join(companions))
             if standalone:

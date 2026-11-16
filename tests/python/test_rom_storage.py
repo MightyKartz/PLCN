@@ -164,3 +164,12 @@ def test_no_zip_publication_if_roundtrip_changes_bytes(library,monkeypatch):
     with pytest.raises(ValueError,match='解压内容不一致'):ops.convert(plan,[plan['rows'][0]['id']])
     record=ops.history()[0];assert record['status']=='failed' and not record['results']
     assert not list(Path(record['output_directory']).glob('**/*.zip'))
+
+
+@pytest.mark.parametrize('suffix',['BPS','XDELTA'])
+def test_case_variant_patch_companion_preserves_directory(library,suffix):
+    payload,rom,playlist=library;renamed=rom.with_name('Game.gba');rom.rename(renamed)
+    playlist.write_text(json.dumps({'items':[{'path':str(renamed),'core_path':'/cores/mgba_libretro.so'}]}),encoding='utf-8')
+    (renamed.parent/('game.'+suffix)).write_bytes(b'patch fixture')
+    row=ops.analyze(payload)['rows'][0]
+    assert row['layout']=='keep' and not row['zip_eligible'] and any('补丁' in issue for issue in row['issues'])
