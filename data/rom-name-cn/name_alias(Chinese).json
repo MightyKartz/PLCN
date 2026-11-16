@@ -1,4 +1,8 @@
 {
+    "Hagane": {
+        "alias": ["钢忍"],
+        "default": "修罗战士 - 钢"
+    },
     "Super Mario": {
         "alias": [
             "超级马里奥",

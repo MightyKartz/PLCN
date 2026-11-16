@@ -5,6 +5,7 @@ from rom_paths import DISC_MARKER
 
 
 METADATA = re.compile(
+    r'(?:Japan|USA|Europe|Asia|World)(?:,\s*(?:Japan|USA|Europe|Asia|World))+|'
     r'Japan|USA|Europe|World|France|Germany|Italy|Spain|Taiwan|Korea|China|Australia|'
     r'J|U|E|CN|CHS|CHT|A|B|Leon-hen|Claire-hen|'
     r'(?:Disc|Disk|CD)\s*\d+(?:\s*of\s*\d+)?|Rev(?:ision)?\s*[\w.]+|\d+M(?:,\s*\d+M)*|'
@@ -63,7 +64,11 @@ def resolve_artwork(proposals, verify_artwork):
         # A/B and translation tags are packaging, not a verified disc/region.
         constraints = {tag for tag in release_tags(source)
                        if tag not in {'a', 'b', 'chs', 'cht'}}
-        names = sorted(name for name in catalog if family_key(name) == family_key(source)
+        families = {family_key(source)}
+        if change_sources := row.get('chinese_title_sources'):
+            families.update(family_key(name) for name in change_sources)
+            constraints = set(row['chinese_title_constraints'])
+        names = sorted(name for name in catalog if family_key(name) in families
                        and constraints <= release_tags(name))
         side = re.search(r'[（(]([AB])[）)]', source, re.I)
         if side:
