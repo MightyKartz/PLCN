@@ -136,7 +136,7 @@ def test_json_boundary_rejects_invalid_payload_without_changing_config(service, 
 
 @pytest.mark.parametrize('batch', [False, True], ids=['single', 'batch'])
 def test_playlist_routes_preview_write_and_report_progress(service, tmp_path, monkeypatch, batch):
-    monkeypatch.setenv('PLCN_HOME', str(tmp_path / 'home'))
+    monkeypatch.setenv('RETROARCH_ASSISTANT_HOME', str(tmp_path / 'home'))
     monkeypatch.setattr(server, 'job_manager', server.JobManager())
     source = tmp_path / 'source'
     source.mkdir()

@@ -38,8 +38,9 @@ jobs:
             manually. Tools include disc lists, CHD conversion, ROM organization and recovery.
             Task details, retry and cancellation are available from the top-right task icon.
 
-            Existing PLCN settings, backups and recovery records remain compatible. The plcn CLI,
-            PLCN_HOME and application IDs are preserved. No ROM files are moved by rebranding.
+            Uses the retroarch-assistant CLI, RETROARCH_ASSISTANT_HOME and RetroArchAssistant data directories.
+            Existing users must run the explicit one-time migration described in DOC/MIGRATION.md.
+            Settings, manual rules, backups and recovery records can be migrated; ROM files are not moved.
 
             Download a matching installer below; no Python, Node.js or Xcode is needed.
             Packages include ADB. Android authorization and vendor drivers may still be required.

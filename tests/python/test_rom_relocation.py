@@ -18,7 +18,7 @@ FLAGS=['auto_overrides_enable','game_specific_options','sort_savefiles_enable','
 
 @pytest.fixture
 def library(tmp_path,monkeypatch):
-    home=tmp_path/'home';home.mkdir();monkeypatch.setenv('PLCN_HOME',str(home))
+    home=tmp_path/'home';home.mkdir();monkeypatch.setenv('RETROARCH_ASSISTANT_HOME',str(home))
     root=tmp_path/'RetroArch';source=root/'Roms';target=root/'GBA';lists=root/'playlists'
     for path in [source,target,lists,root/'saves',root/'states']:path.mkdir(parents=True,exist_ok=True)
     options=root/'core-options.cfg';options.write_text('',encoding='utf-8')

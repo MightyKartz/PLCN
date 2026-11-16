@@ -17,9 +17,9 @@ jobs:
         with:
           python-version: '3.13'
       - run: python -m pip install -r requirements.txt
-      - run: python -m PyInstaller --noconfirm plcn.spec
-      - run: ./dist/plcn --help
-      - run: tar -czf dist/RetroArchAssistant-Linux-x64.tar.gz -C dist plcn
+      - run: python -m PyInstaller --noconfirm retroarch_assistant.spec
+      - run: ./dist/retroarch-assistant --help
+      - run: tar -czf dist/RetroArchAssistant-Linux-x64.tar.gz -C dist retroarch-assistant
       - name: Preserve failed browser diagnostics
         if: failure()
         uses: actions/upload-artifact@v4

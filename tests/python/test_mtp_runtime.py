@@ -146,7 +146,7 @@ def test_single_image_preview_and_confirm_never_write_playlist(tmp_path, monkeyp
     import io
     from PIL import Image
     import single_artwork as art
-    monkeypatch.setenv('PLCN_HOME', str(tmp_path / 'runtime'))
+    monkeypatch.setenv('RETROARCH_ASSISTANT_HOME', str(tmp_path / 'runtime'))
     root = mtp.uri('device', 65537, 'RetroArch')
     playlist = mtp.join(root, 'playlists', 'NES.lpl')
     files = {playlist: json.dumps({'items':[{'label':'中文 #', 'path':'/roms/A.nes'}]}).encode()}
@@ -198,7 +198,7 @@ def test_mtp_image_retry_reuses_existing_images_and_does_not_push_playlist(tmp_p
     def response(session, url, **kwargs):
         requests.append(url); return SimpleNamespace(status_code=200, content=png)
     monkeypatch.setattr(__import__('requests').Session, 'get', response)
-    monkeypatch.setenv('PLCN_HOME',str(tmp_path/'runtime'))
+    monkeypatch.setenv('RETROARCH_ASSISTANT_HOME',str(tmp_path/'runtime'))
     changes=[{'artwork_source_confirmed':True,'index':0,'path':item['path'],'original_item_label':'游戏','original_item_snapshot':item.copy(),
               'original_label':'Game','new_label':'游戏','system':'Saturn','thumbnail_source':'Game (Japan)'}]
     result = playlist_transport.apply_playlist(path, changes, images, options={'write_names':True}, progress=lambda *args:None, cancel_check=lambda:False)
@@ -321,7 +321,7 @@ def test_mtp_replaces_only_reviewed_old_artwork_hashes_and_keeps_playlist(tmp_pa
         files[value] = content;writes.append(value)
     monkeypatch.setattr(mtp, 'write', write)
     monkeypatch.setattr(__import__('requests').Session, 'get', lambda *a, **kw: SimpleNamespace(status_code=200, content=new))
-    monkeypatch.setenv('PLCN_HOME', str(tmp_path / 'runtime'))
+    monkeypatch.setenv('RETROARCH_ASSISTANT_HOME', str(tmp_path / 'runtime'))
     row = {'index': 0, 'path': item['path'], 'original_item_label': '游戏', 'original_item_snapshot': item,
            'original_label': '游戏', 'new_label': '游戏', 'system': 'MAME', 'thumbnail_source': 'Correct Game',
            'replace_artwork_hashes': {kind: digest for kind in THUMBNAIL_TYPES}}

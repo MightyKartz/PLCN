@@ -668,7 +668,7 @@ async function main() {
     assert.equal(await evaluate(()=>document.querySelectorAll('#storage-rows input:checked').length),1);
     await screenshot('09-chd-analysis-light');
     const canConvert=await evaluate(()=>!document.querySelector('#storage-convert').disabled);
-    if(process.env.PLCN_REQUIRE_CHD==='1')assert.equal(canConvert,true,'Required real chdman must be available');
+    if(process.env.RETROARCH_ASSISTANT_REQUIRE_CHD==='1')assert.equal(canConvert,true,'Required real chdman must be available');
     if(canConvert){
         await click('#storage-convert');
         await waitFor(()=>!storageTask.busy&&!document.querySelector('#storage-result').hidden,'CHD conversion result');

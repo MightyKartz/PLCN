@@ -3,7 +3,7 @@
 block_cipher = None
 
 a = Analysis(
-    ['src/plcn.py'],
+    ['src/retroarch_assistant.py'],
     pathex=[],
     binaries=[],
     datas=[
@@ -29,7 +29,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='plcn',
+    name='retroarch-assistant',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

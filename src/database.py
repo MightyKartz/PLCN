@@ -10,7 +10,7 @@ from safe_io import file_lock
 import app_paths
 
 class DatabaseManager:
-    DB_FILE = str(app_paths.cache_dir() / 'plcn.db')
+    DB_FILE = str(app_paths.cache_dir() / 'library.db')
     
     
     # System mappings for known discrepancies

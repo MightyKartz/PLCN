@@ -105,9 +105,9 @@ git push origin vX.Y.Z
 ## 发布后验证
 
 ```bash
-gh run list --repo MightyKartz/PLCN --workflow release.yml --limit 3
-gh run watch --repo MightyKartz/PLCN <run-id>
-gh release view vX.Y.Z --repo MightyKartz/PLCN --json tagName,name,url,assets
+gh run list --repo MightyKartz/retroarch-assistant --workflow release.yml --limit 3
+gh run watch --repo MightyKartz/retroarch-assistant <run-id>
+gh release view vX.Y.Z --repo MightyKartz/retroarch-assistant --json tagName,name,url,assets
 ```
 
 确认 release 页面使用的是当前 `RELEASE_NOTES.md` 正文，并且 Linux、macOS、Windows 三个平台资产都存在后，再对外引用 release 链接。

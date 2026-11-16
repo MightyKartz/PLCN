@@ -6,7 +6,7 @@ import pytest
 from scripts.smoke_desktop_package import preserve_windows_shortcuts
 
 
-@pytest.mark.parametrize('brand', ['PLCN', 'RetroArch Assistant'])
+@pytest.mark.parametrize('brand', ['RetroArch Assistant'])
 def test_installer_shortcut_guard_restores_portable_install(tmp_path, monkeypatch, brand):
     programs, desktop = tmp_path / 'Programs', tmp_path / 'Desktop'
     programs.mkdir()

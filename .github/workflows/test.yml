@@ -13,8 +13,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       # This runner must execute the real browser tests, never silently skip them.
-      PLCN_REQUIRE_CHD: ${{ matrix.os == 'ubuntu-24.04' && matrix.python == '3.13' && '1' || '0' }}
-      PLCN_REQUIRE_BROWSER: ${{ matrix.os == 'ubuntu-24.04' && matrix.python == '3.13' && '1' || '0' }}
+      RETROARCH_ASSISTANT_REQUIRE_CHD: ${{ matrix.os == 'ubuntu-24.04' && matrix.python == '3.13' && '1' || '0' }}
+      RETROARCH_ASSISTANT_REQUIRE_BROWSER: ${{ matrix.os == 'ubuntu-24.04' && matrix.python == '3.13' && '1' || '0' }}
     strategy:
       fail-fast: false
       matrix:

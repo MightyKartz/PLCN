@@ -94,12 +94,12 @@ def transfer(core, abi, device_root):
     if hashlib.sha256(binary).hexdigest() != manifest['sha256']:
         raise ValueError('缓存核心已变化，请重新下载')
     serial, storage, _ = mtp.parse(device_root)
-    directory = mtp.uri(serial, storage, 'Download/PLCN-cores')
+    directory = mtp.uri(serial, storage, 'Download/RetroArchAssistant-cores')
     target = mtp.join(directory, manifest['filename'])
     mtp.write(target, binary, mtp.digest(mtp.read(target)))
     info_name = core + '_libretro.info'
     info_target = mtp.join(directory, info_name)
     mtp.write(info_target, (root / info_name).read_bytes(), mtp.digest(mtp.read(info_target)))
-    return {'status': 'transferred', 'target': target, 'directory': 'Download/PLCN-cores',
-            'message': '已传到掌机，待安装。请在 RetroArch → 加载核心 → 安装或恢复核心中选择 Download/PLCN-cores/' + manifest['filename']
+    return {'status': 'transferred', 'target': target, 'directory': 'Download/RetroArchAssistant-cores',
+            'message': '已传到掌机，待安装。请在 RetroArch → 加载核心 → 安装或恢复核心中选择 Download/RetroArchAssistant-cores/' + manifest['filename']
                        + '；随后在在线更新器中更新核心信息文件。'}

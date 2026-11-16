@@ -19,43 +19,18 @@ from thumbnail_downloader import ThumbnailDownloader
 
 @pytest.fixture
 def desktop_home(tmp_path, monkeypatch):
-    monkeypatch.setenv('PLCN_HOME', str(tmp_path / 'user'))
+    monkeypatch.setenv('RETROARCH_ASSISTANT_HOME', str(tmp_path / 'user'))
     return tmp_path / 'user'
 
 
 def test_platform_paths_and_resource_independence(tmp_path, monkeypatch):
-    assert app_paths.user_data_dir('win32', {'LOCALAPPDATA': str(tmp_path)}, tmp_path) == tmp_path / 'PLCN'
-    assert app_paths.user_data_dir('darwin', {}, tmp_path) == tmp_path / 'Library/Application Support/PLCN'
-    assert app_paths.user_data_dir('linux', {'XDG_DATA_HOME': str(tmp_path)}, tmp_path) == tmp_path / 'PLCN'
+    assert app_paths.user_data_dir('win32', {'LOCALAPPDATA': str(tmp_path)}, tmp_path) == tmp_path / 'RetroArchAssistant'
+    assert app_paths.user_data_dir('darwin', {}, tmp_path) == tmp_path / 'Library/Application Support/RetroArchAssistant'
+    assert app_paths.user_data_dir('linux', {'XDG_DATA_HOME': str(tmp_path)}, tmp_path) == tmp_path / 'RetroArchAssistant'
     root = app_paths.resource_root()
     monkeypatch.chdir(tmp_path)
     assert app_paths.resource_root() == root
     assert app_paths.default_source().is_dir()
-
-
-def test_migration_preserves_originals_resolves_paths_and_is_idempotent(tmp_path, desktop_home):
-    old = tmp_path / 'old'; old.mkdir()
-    config = old / 'config.json'
-    config.write_text(json.dumps({'playlist_path': 'lists/中文.lpl', 'rom_name_cn_path': 'missing/data', 'manual_overrides_path': 'manual_overrides.json'}), encoding='utf-8')
-    (old / 'manual_overrides.json').write_text('[{"label":"中文"}]', encoding='utf-8')
-    original = config.read_bytes()
-    app_paths.initialize(old)
-    migrated = json.loads(app_paths.config_path().read_text(encoding='utf-8'))
-    assert migrated['playlist_path'] == str((old / 'lists/中文.lpl').resolve())
-    assert 'rom_name_cn_path' not in migrated
-    assert Path(migrated['manual_overrides_path']).read_text(encoding='utf-8') == '[{"label":"中文"}]'
-    app_paths.config_path().write_text('{"user_changed":true}')
-    app_paths.initialize(old)
-    assert json.loads(app_paths.config_path().read_text()) == {'user_changed': True}
-    assert config.read_bytes() == original
-
-
-def test_existing_user_config_is_never_overwritten(tmp_path, desktop_home):
-    desktop_home.mkdir()
-    app_paths.config_path().write_text('{"mine":true}')
-    old = tmp_path / 'old'; old.mkdir(); (old / 'config.json').write_text('{"mine":false}')
-    app_paths.initialize(old)
-    assert json.loads(app_paths.config_path().read_text())['mine'] is True
 
 
 def test_single_instance_lock_releases_on_close(tmp_path):

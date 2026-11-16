@@ -1,4 +1,4 @@
-"""Product names; legacy PLCN storage and application IDs remain compatible."""
+"""Product names and desktop bundle identity."""
 NAME = 'RetroArch 助手'
 ENGLISH_NAME = 'RetroArch Assistant'
 BINARY_NAME = 'RetroArchAssistant'

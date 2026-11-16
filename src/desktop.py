@@ -1,4 +1,4 @@
-"""No-console desktop entry; CLI remains available through plcn.py."""
+"""No-console desktop entry; CLI remains available through retroarch_assistant.py."""
 import argparse
 import json
 from pathlib import Path

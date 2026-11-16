@@ -13,7 +13,7 @@ import core_catalog
 
 @pytest.fixture
 def library(tmp_path, monkeypatch):
-    monkeypatch.setenv('PLCN_HOME', str(tmp_path / 'home'))
+    monkeypatch.setenv('RETROARCH_ASSISTANT_HOME', str(tmp_path / 'home'))
     root = tmp_path / 'RetroArch'; (root / 'playlists').mkdir(parents=True)
     games = tmp_path / 'Roms'; games.mkdir()
     core = tmp_path / 'snes9x_libretro.dylib'; core.write_bytes(b'installed')
@@ -91,7 +91,7 @@ def test_dat_names_filter_bios_and_recursion(library):
 
 
 def test_mtp_paths_are_android_paths_and_unavailable_storage_never_deletes(monkeypatch, tmp_path):
-    monkeypatch.setenv('PLCN_HOME', str(tmp_path))
+    monkeypatch.setenv('RETROARCH_ASSISTANT_HOME', str(tmp_path))
     root='mtp://device/00010001/RetroArch'
     config=scan.validate({'root':root,'directory':'mtp://device/00010001/Roms/SS',
         'android_directory':'/storage/CARD/Roms/SS','system':'Sega - Saturn','core_id':'mednafen_saturn',
@@ -117,7 +117,7 @@ def core_archive(elf_class=2, machine=183):
 
 
 def test_official_core_download_checks_abi_records_source_and_never_claims_installed(tmp_path,monkeypatch):
-    monkeypatch.setenv('PLCN_HOME',str(tmp_path))
+    monkeypatch.setenv('RETROARCH_ASSISTANT_HOME',str(tmp_path))
     archive,binary=core_archive()
     urls=[]
     def get(url):
@@ -184,7 +184,7 @@ def test_custom_playlist_target_preserves_name_and_rejects_path_escape(library):
 
 
 def test_card_games_can_update_internal_playlist_without_changing_target(monkeypatch,tmp_path):
-    monkeypatch.setenv('PLCN_HOME',str(tmp_path))
+    monkeypatch.setenv('RETROARCH_ASSISTANT_HOME',str(tmp_path))
     root='mtp://device/00010001/RetroArch'
     config=scan.validate({'root':root,'directory':'mtp://device/00020001/Roms/SS',
         'android_directory':'/storage/CARD/Roms/SS','system':'Sega - Saturn','core_id':'mednafen_saturn',

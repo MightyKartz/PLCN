@@ -102,7 +102,7 @@ def test_changed_source_rebuilds_cache(tmp_path):
 
 
 def test_default_cache_keeps_existing_job_on_its_source_snapshot(tmp_path, monkeypatch):
-    monkeypatch.setattr(DatabaseManager, 'DB_FILE', str(tmp_path / 'runtime' / 'plcn.db'))
+    monkeypatch.setattr(DatabaseManager, 'DB_FILE', str(tmp_path / 'runtime' / 'library.db'))
     root = source(tmp_path)
     first = open_database(root)
     (root / 'Nintendo - Game Boy.csv').write_text('Name EN,Name CN\nSame Game,修改后\n', encoding='utf-8')

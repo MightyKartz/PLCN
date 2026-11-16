@@ -2,7 +2,7 @@
 
 本次开发分支已更名为 RetroArch 助手，以下安装包名称对应更名后的构建；历史 Release 仍使用 PLCN 前缀，尚未发布新的更名安装包。
 
-本轮是 v3.3 桌面体验版；当前发行版为 v3.3.1，历史发行版从 v3.2.5 起提供内置 ADB 的 Windows / macOS 安装包。桌面基础 PR：[MightyKartz/PLCN#5](https://github.com/MightyKartz/PLCN/pull/5)，UI 精简 PR：[MightyKartz/PLCN#6](https://github.com/MightyKartz/PLCN/pull/6)。
+本轮是 v3.3 桌面体验版；当前发行版为 v3.3.1，历史发行版从 v3.2.5 起提供内置 ADB 的 Windows / macOS 安装包。桌面基础 PR：[MightyKartz/retroarch-assistant#5](https://github.com/MightyKartz/retroarch-assistant/pull/5)，UI 精简 PR：[MightyKartz/retroarch-assistant#6](https://github.com/MightyKartz/retroarch-assistant/pull/6)。
 
 ## 普通用户
 
@@ -49,14 +49,14 @@ macOS：选择对应架构的 `RetroArchAssistant-macOS-arm64.dmg`（Apple Silic
 
 | 内容 | Windows | macOS |
 | --- | --- | --- |
-| 配置、规则、数据包、历史、日志 | `%LOCALAPPDATA%\PLCN` | `~/Library/Application Support/PLCN` |
-| 可重建缓存、DAT | `%LOCALAPPDATA%\PLCN\cache` | `~/Library/Caches/PLCN` |
+| 配置、规则、数据包、历史、日志 | `%LOCALAPPDATA%\RetroArchAssistant` | `~/Library/Application Support/RetroArchAssistant` |
+| 可重建缓存、DAT | `%LOCALAPPDATA%\RetroArchAssistant\cache` | `~/Library/Caches/RetroArchAssistant` |
 
-Linux 使用 XDG 用户数据/缓存目录。`PLCN_HOME` 可显式指定独立数据目录，用于便携场景和测试；设置后缓存也放在该目录下。它应为可写、仅当前用户使用的目录。
+Linux 使用 XDG 用户数据/缓存目录。`RETROARCH_ASSISTANT_HOME` 可显式指定独立数据目录，用于便携场景和测试；设置后缓存也放在该目录下。它应为可写、仅当前用户使用的目录。
 
-首次启动复制已知旧程序目录中的 `config.json` 与人工规则，不删除原件；将旧相对路径转换为绝对路径，失效的内置数据路径改回资源默认值。已有新配置不覆盖。迁移记录为 `migration.json`，桌面日志为 `logs/desktop.log`，超过 5 MiB 时在下次启动轮换。之前自行移动程序、把配置放在其它目录的情况，需从高级设置重新选择路径或手动迁移。
+首次启动只创建新数据目录，不会自动读取旧位置。升级用户应先执行[一次性迁移](MIGRATION.md)。桌面日志为 `logs/desktop.log`，超过 5 MiB 时在下次启动轮换。
 
-源文件与内置名称数据只读使用；运行时不再依赖安装目录可写。根目录旧版 `plcn.db` 不再使用，可以删除；当前缓存可从 CSV 重建。原始列表和相邻备份仍留在用户游戏库。
+源文件与内置名称数据只读使用；运行时不依赖安装目录可写。名称缓存数据库为 `library.db`，可从 CSV 重建。原始列表和相邻备份仍留在用户游戏库。
 
 ## 从源码与本地打包
 
@@ -64,7 +64,7 @@ Linux 使用 XDG 用户数据/缓存目录。`PLCN_HOME` 可显式指定独立�
 
 ```powershell
 # Windows，项目根目录
-.\venv\Scripts\python.exe src\plcn.py ui
+.\venv\Scripts\python.exe src\retroarch_assistant.py ui
 # 无控制台入口（系统的 pythonw 或虚拟环境 pythonw）
 .\venv\Scripts\pythonw.exe src\desktop.py
 
@@ -79,11 +79,11 @@ python scripts/package_desktop.py --arch x64 --installer
 
 浏览器冒烟测试随 `pytest` 运行，也可以单独执行 `python -m pytest -q tests/python/test_browser_smoke.py`。需要 Node.js 22 或更新版本，以及 Chrome / Chromium；不需要 ChromeDriver 或额外 npm 依赖。测试在独立用户数据和浏览器配置目录内，使用离线名称样本及复制的列表，在 1440×900 和 1100×700 下完成“首页 → 打开本地库 → 切换主机 → 生成预览”，验证中文名称、关键控件可见性和无页面 JavaScript 异常，并检查列表文件未被改写。
 
-默认自动查找浏览器，可用环境变量 `CHROME_BIN` 指定可执行文件的完整路径。未找到浏览器时会明确跳过；设置 `PLCN_REQUIRE_BROWSER=1` 则会失败，回归 CI 的 Ubuntu / Python 3.13 任务强制启用此检查。截图和日志保存在 `output/playwright/browser-smoke/`，失败时额外保存页面 HTML、截图及错误信息，CI 会上传该目录。
+默认自动查找浏览器，可用环境变量 `CHROME_BIN` 指定可执行文件的完整路径。未找到浏览器时会明确跳过；设置 `RETROARCH_ASSISTANT_REQUIRE_BROWSER=1` 则会失败，回归 CI 的 Ubuntu / Python 3.13 任务强制启用此检查。截图和日志保存在 `output/playwright/browser-smoke/`，失败时额外保存页面 HTML、截图及错误信息，CI 会上传该目录。
 
 后端按领域拆分：`api_routes.py` 注册 GET / POST 路径，`api_library.py`、`api_playlists.py`、`api_artwork.py`、`api_tasks.py`、`api_data.py`、`api_desktop.py`、`api_config.py` 实现接口；`server.py` 负责同源会话、请求解析、静态资源及服务启动。处理函数接收请求、运行上下文和已解析的参数，配置路径与任务管理器始终由当前服务提供；新增接口应在路由表中显式注册。
 
-`plcn.py` 只处理 CLI 参数与分发，`playlist_service.py` 是统一公开入口，通过显式导出保留原有函数和提案类型；HTTP 与 CLI 使用同一核心，核心不依赖服务启动。内部职责如下：
+`retroarch_assistant.py` 只处理 CLI 参数与分发，`playlist_service.py` 是统一公开入口，通过显式导出保留原有函数和提案类型；HTTP 与 CLI 使用同一核心，核心不依赖服务启动。内部职责如下：
 
 - `playlist_analysis.py`：名称、ROM、DAT 证据分析与提案生成。
 - `playlist_proposals.py`：提案数据结构、匹配元数据、标识及原始条目快照校验。
@@ -95,7 +95,7 @@ python scripts/package_desktop.py --arch x64 --installer
 
 `batch_review.py` 保存只读汇总所需的提案与文件摘要，`playlist_transport.py` 复用本地／ADB 写回协议；`job_manager.py` 管理任务状态，`job_results.py` 转换任务结果；原 `desktop_api.py` 已由上述领域模块替代。
 
-macOS 在对应架构机器上执行 `python3 scripts/package_desktop.py --arch arm64` 或 `--arch x64`。脚本使用 onedir/app bundle，核对 Python 实际架构，并从临时工作目录启动 `--self-check` 验证资源和写入目录；不支持跨 OS 编译。Linux 继续保留 `plcn.spec` 的 CLI 打包。
+macOS 在对应架构机器上执行 `python3 scripts/package_desktop.py --arch arm64` 或 `--arch x64`。脚本使用 onedir/app bundle，核对 Python 实际架构，并从临时工作目录启动 `--self-check` 验证资源和写入目录；不支持跨 OS 编译。Linux 继续保留 `retroarch_assistant.spec` 的 CLI 打包。
 
 构建后可验证实际分发包（CI 对 Windows、macOS 两种架构均执行）：
 
@@ -104,7 +104,7 @@ python scripts/smoke_desktop_package.py --installer dist/RetroArchAssistant-Wind
 python scripts/smoke_desktop_package.py --dmg dist/RetroArchAssistant-macOS-arm64.dmg
 ```
 
-Windows 验收会静默安装到临时中文路径，运行程序后卸载，检查注册项清理和用户数据保留；若系统已有 PLCN 安装器注册项则拒绝运行，请使用干净测试机。macOS 会只读挂载 DMG，复制应用后卸载镜像，再启动复制出的程序。两者都验证资源、同配置重复启动、不同配置端口隔离和正常退出。所有用户数据使用临时 `PLCN_HOME`，不会修改日常配置。失败时日志目录保留并打印到终端。
+Windows 验收会静默安装到临时中文路径，运行程序后卸载，检查注册项清理和用户数据保留；若系统已有 PLCN 安装器注册项则拒绝运行，请使用干净测试机。macOS 会只读挂载 DMG，复制应用后卸载镜像，再启动复制出的程序。两者都验证资源、同配置重复启动、不同配置端口隔离和正常退出。所有用户数据使用临时 `RETROARCH_ASSISTANT_HOME`，不会修改日常配置。失败时日志目录保留并打印到终端。
 
 便携版本可以使用 `--binary <可执行文件路径>` 做同样的程序验收。`RetroArchAssistant --no-browser` 可启动服务而不打开浏览器，供自动验收使用。这些检查不覆盖系统文件选择器、Gatekeeper、SmartScreen 或签名验收。
 
@@ -114,24 +114,24 @@ Windows 验收会静默安装到临时中文路径，运行程序后卸载，检
 
 桌面 CI 在 Windows x64、macOS Intel、Apple Silicon 上构建，产物明确命名为 `unsigned`。Tag 工作流只创建草稿预发布，保留 Linux CLI；不会直接发布未经人工验收的稳定版本。
 
-macOS：将自己的 Developer ID Application 证书导入构建机器钥匙串，通过环境变量 `PLCN_CODESIGN_IDENTITY` 指定身份后重新构建。PyInstaller 会签署内部二进制，应用使用 `packaging/macos-entitlements.plist`；仍需检查 hardened runtime 和最终嵌套签名。构建后提交 DMG：
+macOS：将自己的 Developer ID Application 证书导入构建机器钥匙串，通过环境变量 `RETROARCH_ASSISTANT_CODESIGN_IDENTITY` 指定身份后重新构建。PyInstaller 会签署内部二进制，应用使用 `packaging/macos-entitlements.plist`；仍需检查 hardened runtime 和最终嵌套签名。构建后提交 DMG：
 
 ```bash
 codesign --verify --deep --strict --verbose=2 'dist/RetroArch Assistant.app'
 codesign -d --verbose=4 'dist/RetroArch Assistant.app'
-xcrun notarytool submit dist/RetroArchAssistant-macOS-arm64.dmg --keychain-profile PLCN-notary --wait
+xcrun notarytool submit dist/RetroArchAssistant-macOS-arm64.dmg --keychain-profile RetroArchAssistant-notary --wait
 xcrun stapler staple dist/RetroArchAssistant-macOS-arm64.dmg
 xcrun stapler validate dist/RetroArchAssistant-macOS-arm64.dmg
 spctl --assess --type execute --verbose=4 'dist/RetroArch Assistant.app'
 ```
 
-`PLCN-notary` 是发布者自己事先配置的钥匙串 profile，占位名称不代表已存在凭据；Intel 产物同样处理。公证后从下载的 DMG 安装并检查 Gatekeeper、启动、文件选择和写回。不要仅因 CI 上自检成功就认为下载隔离环境也通过。
+`RetroArchAssistant-notary` 是发布者自己事先配置的钥匙串 profile，占位名称不代表已存在凭据；Intel 产物同样处理。公证后从下载的 DMG 安装并检查 Gatekeeper、启动、文件选择和写回。不要仅因 CI 上自检成功就认为下载隔离环境也通过。
 
 Windows：使用自己的代码签名证书和 Windows SDK `signtool` 签署 `dist/RetroArchAssistant/RetroArchAssistant.exe`，再生成安装程序和便携 ZIP，随后签署 Setup.exe，并用 `signtool verify /pa` 验证。证书密码只经发布环境/密钥库注入，不提交仓库。当前没有导入或申请任何签名证书。
 
 正式发布前还需人工验收：安装/卸载与升级后配置保留、非 ASCII 路径、只读程序目录、双击重复启动、系统文件选择器、关闭/取消、恢复、真实 ADB 与外接卷断开。桌面 UI 的完整键盘/多语言检查继续保留为发布检查项。
 
-首页会自动检测 USB 设备及默认 RetroArch 目录，展示可用、未授权和离线状态；检测不会自动打开游戏库。点击设备旁的“打开游戏库”后进入列表。“最近使用”保留最近 5 个成功打开的游戏库，显示具体路径与可用状态；历史继续保存在兼容的 PLCN 用户数据目录。也可使用“打开本地目录”或“手动输入路径”。检测或打开失败的原因会持续显示，可点击“重新检测”重试。点击顶部设备名称，在设备详情中选择“切换设备”可返回首页。
+首页会自动检测 USB 设备及默认 RetroArch 目录，展示可用、未授权和离线状态；检测不会自动打开游戏库。点击设备旁的“打开游戏库”后进入列表。“最近使用”保留最近 5 个成功打开的游戏库，显示具体路径与可用状态；历史继续保存在RetroArchAssistant 用户数据目录。也可使用“打开本地目录”或“手动输入路径”。检测或打开失败的原因会持续显示，可点击“重新检测”重试。点击顶部设备名称，在设备详情中选择“切换设备”可返回首页。
 
 当多个 ROM 的列表名称映射到同一图片文件时，单项补图窗口会列出共用条目，并要求核对当前 ROM 的独立名称。确认后仅更新当前条目的名称、创建独立图片，并备份游戏列表；原共用图片和其他条目保持不变，其他类型图片复制到独立名称下。共用标签不再直接作为当前游戏英文名的识别依据。预览不写入设备，写入结果不确定时可使用原预览重试。
 
@@ -182,7 +182,7 @@ SS 预览会检查官方封面、截图和标题图目录。名称唯一时自�
 1. 选择游戏目录；首次指定主机。目录选择器直接浏览掌机存储，不要求映射为电脑磁盘。
 2. 在“当前扫描配置”核对主机、默认核心、游戏来源及列表保存位置。需要修改时展开“扫描设置与高级选项”，确认推荐核心或更换候选。已有单项核心设置会保留。SS 推荐仅作为待真机验证的候选，MAME 必须指定匹配 ROM 集的 XML DAT。
 3. 核对掌机中的实际游戏目录、已安装核心的完整路径；能从现有列表恢复时自动填入。选择目录后会查询已有列表，匹配到唯一主机及 Android 启动目录时自动填入；存在多个路径时才提供选择。MTP 地址不是 Android 启动路径，不能混用。私有核心目录无法通过 MTP 验证时显示“安装状态未知”；本地仅检查核心文件存在，不代表已验证加载运行。缺少路径或本地文件时会自动展开设置。
-4. 缺少核心时展开官方下载入口，指定 **RetroArch 应用** 架构。使用 Libretro 官方 Buildbot 和官方 core-info，下载后检查 ELF 架构并记录 SHA-256。可传到掌机 `Download/PLCN-cores`，再在 RetroArch 的“加载核心 → 安装或恢复核心”中安装，并更新核心信息文件；传输不等于安装。
+4. 缺少核心时展开官方下载入口，指定 **RetroArch 应用** 架构。使用 Libretro 官方 Buildbot 和官方 core-info，下载后检查 ELF 架构并记录 SHA-256。可传到掌机 `Download/RetroArchAssistant-cores`，再在 RetroArch 的“加载核心 → 安装或恢复核心”中安装，并更新核心信息文件；传输不等于安装。
 5. 点击“开始扫描”会等待当前目录识别完成，完成后预览新增与保留项，确认后备份并增量更新 `.lpl`，随后可直接进入名称与图片补全预览。配置在更新成功后按设备、目录、主机保存。
 
 扫描不会删除原条目或 ROM 文件，不覆盖已有单项中文名/核心信息。CUE/CHD/M3U 为光盘入口，M3U 已列出的分碟不重复新增，已有逐碟记录保留。ZIP/7z 首版按单个入口纳入，不检查包内内容或对大 ROM 全量计算 CRC。失效项删除、全库自动核心升级与 BIOS 下载不在本次功能中。
@@ -243,10 +243,10 @@ MTP 使用已保存扫描配置中的 Android 目录与传输目录映射；找�
 
 “设置 → 任务与恢复 → 目录整理／ZIP 回传与恢复”可继续中断操作、从已完成复制记录预览切换，或恢复原文件与引用。仍被新列表或 M3U 使用的输出会保留。空目录与原存档不清理。详见 [目录整理与恢复契约](ROM_RELOCATION_AND_RECOVERY.md)。
 
-## 更名兼容约定
+## 更名后的运行约定
 
-- 展示名：RetroArch 助手；英文名：RetroArch Assistant。桌面可执行文件使用 RetroArchAssistant，Linux 的 plcn 命令继续保留。
-- 配置、缓存、日志、备份、恢复记录和浏览器偏好继续使用原路径／键，不自动迁移数据。PLCN_HOME、PLCN_VERSION 等已有环境变量仍有效。
-- macOS bundle identifier 与 Windows AppId 不变，便于原安装识别。Windows 构建同时提供 PLCN.exe 兼容入口，已有快捷方式仍可启动新版。
-- 仓库地址、RetroArch 标准主机名称、列表字段和设备 ROM 路径不随品牌更名而变化。
-- 设置页按设备与游戏库、资料来源、偏好设置和任务与恢复组织；任务也可从右上角图标打开。
+- CLI 使用 `retroarch-assistant`，源码入口 `src/retroarch_assistant.py`。
+- 数据与缓存目录改为 `RetroArchAssistant`，环境变量使用 `RETROARCH_ASSISTANT_` 前缀；不提供旧名称回退或 CLI 别名。
+- 现有配置、人工规则、备份和恢复记录通过[一次性迁移](MIGRATION.md)保留。
+- macOS bundle identifier 为 `io.github.mightykartz.retroarchassistant`。Windows 使用新安装目录，保留中性的安装器 GUID 以识别安装登记。
+- 仓库为 `MightyKartz/retroarch-assistant`。RetroArch 标准主机标识、列表格式和设备 ROM 路径保持原格式。

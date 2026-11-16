@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 _test_home = tempfile.TemporaryDirectory(prefix="plcn-tests-")
-os.environ["PLCN_HOME"] = _test_home.name
+os.environ["RETROARCH_ASSISTANT_HOME"] = _test_home.name
 
 sys.path.insert(0, str(Path(__file__).parent / 'src'))
 
@@ -32,6 +32,6 @@ def isolated_runtime(monkeypatch, local_test_data):
     monkeypatch.setattr(mtp_runtime, 'devices', lambda: [])
     from database import DatabaseManager
     from libretro_db import LibretroDB
-    monkeypatch.setattr(DatabaseManager, 'DB_FILE', str(local_test_data / 'plcn.db'))
+    monkeypatch.setattr(DatabaseManager, 'DB_FILE', str(local_test_data / 'library.db'))
     monkeypatch.setattr(LibretroDB, 'get_dat_path', lambda self, name: str(local_test_data / (name + '.dat')))
     monkeypatch.setattr(LibretroDB, 'download_dat', lambda *args, **kwargs: False)

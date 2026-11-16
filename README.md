@@ -1,6 +1,6 @@
 # RetroArch 助手
 
-[English](README_EN.md) · [下载安装包](https://github.com/MightyKartz/PLCN/releases/latest)
+[English](README_EN.md) · [下载安装包](https://github.com/MightyKartz/retroarch-assistant/releases/latest)
 
 RetroArch 游戏库与掌机管理工具。扫描游戏、整理列表、补全资料，管理你的掌机游戏库。双击启动，在浏览器中管理本地、SD 卡或 USB Android 掌机上的游戏库，无需安装 Python、Node.js 或 Xcode。
 
@@ -16,7 +16,7 @@ RetroArch 游戏库与掌机管理工具。扫描游戏、整理列表、补全�
 
 ## 下载与启动
 
-以下为更名后构建的文件名。历史 Release 仍使用 PLCN 前缀，旧安装继续兼容；新的更名安装包尚未发布。
+以下为更名后构建的文件名。历史 Release 仍使用 PLCN 前缀，新的更名安装包尚未发布。
 
 请下载 **Release 附件中的安装包**，不要下载 Source code。公开下载无需 GitHub 账号。
 
@@ -26,7 +26,7 @@ RetroArch 游戏库与掌机管理工具。扫描游戏、整理列表、补全�
 | Windows 便携版 | `RetroArchAssistant-Windows-x64-Portable.zip` | 完整解压，双击 `RetroArchAssistant.exe` |
 | Mac M 系列 | `RetroArchAssistant-macOS-arm64.dmg` | 打开，拖入“应用程序”，启动 RetroArch 助手 |
 | Mac Intel | `RetroArchAssistant-macOS-x64.dmg` | 同上 |
-| Linux x64（命令行） | `RetroArchAssistant-Linux-x64.tar.gz` | 解压，运行 `./plcn --help` |
+| Linux x64（命令行） | `RetroArchAssistant-Linux-x64.tar.gz` | 解压，运行 `./retroarch-assistant --help` |
 
 **当前 GitHub 自动构建的 macOS / Windows 包未做发行证书签名，macOS 未公证。** 首次打开可能被系统拦截；请先核对下载来源，再按 [Apple 官方说明](https://support.apple.com/102445) 或 [Windows 安全说明](https://support.microsoft.com/en-us/windows/security/threat-malware-protection/smart-app-control-frequently-asked-questions)处理。企业策略或 Smart App Control 可能阻止运行，不建议关闭系统防护。
 
@@ -50,13 +50,13 @@ RetroArch 游戏库与掌机管理工具。扫描游戏、整理列表、补全�
 
 ## 更名与兼容
 
-产品展示名改为 RetroArch 助手。仓库地址、`plcn` 命令、`PLCN_HOME`、应用识别码及原有 PLCN 数据／缓存目录继续兼容，设置、备份、恢复记录和浏览器语言／主题偏好直接沿用，无需迁移。RetroArch 列表格式、主机标识和 ROM 路径不变。
+使用 `retroarch-assistant` 命令与 `RETROARCH_ASSISTANT_HOME` 环境变量，数据和缓存目录名为 `RetroArchAssistant`。升级前退出应用，然后执行一次迁移，保留配置、人工规则、备份和恢复记录。旧命令、旧环境变量和旧目录不再作为运行入口。详见 [迁移指南](DOC/MIGRATION.md)。
 
 ## 开发
 
 ```sh
 pip install -r requirements.txt
-python3 src/plcn.py
+python3 src/retroarch_assistant.py
 ```
 
 ```sh

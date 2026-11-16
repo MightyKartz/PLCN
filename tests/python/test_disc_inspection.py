@@ -10,7 +10,7 @@ SYSTEM = 'Sega - Saturn'
 
 @pytest.fixture
 def library(tmp_path, monkeypatch):
-    monkeypatch.setenv('PLCN_HOME',str(tmp_path/'home'))
+    monkeypatch.setenv('RETROARCH_ASSISTANT_HOME',str(tmp_path/'home'))
     lists=tmp_path/'RetroArch'/'playlists';lists.mkdir(parents=True)
     roms=tmp_path/'Roms'/'SS';roms.mkdir(parents=True)
     playlist=lists/'SS.lpl'
@@ -113,7 +113,7 @@ def test_cue_track_entry_order_does_not_create_an_extra_game(library):
 
 
 def test_unmapped_mtp_is_not_missing_and_does_not_open_usb(monkeypatch,tmp_path):
-    monkeypatch.setenv('PLCN_HOME',str(tmp_path))
+    monkeypatch.setenv('RETROARCH_ASSISTANT_HOME',str(tmp_path))
     playlist='mtp://device/00010001/RetroArch/playlists/SS.lpl'
     monkeypatch.setattr(discs,'folders',lambda _: [{'name':'SS.lpl','folder':False}])
     monkeypatch.setattr(discs,'read',lambda _:json.dumps({'items':[{'path':'/storage/CARD/Roms/Game (Disc 1).chd'}]}).encode())
@@ -124,7 +124,7 @@ def test_unmapped_mtp_is_not_missing_and_does_not_open_usb(monkeypatch,tmp_path)
 
 
 def test_mtp_saved_mapping_handles_other_storage_and_caches_directory_reads(monkeypatch,tmp_path):
-    monkeypatch.setenv('PLCN_HOME',str(tmp_path))
+    monkeypatch.setenv('RETROARCH_ASSISTANT_HOME',str(tmp_path))
     playlist='mtp://device/00010001/RetroArch/playlists/SS.lpl'
     root=playlist.rsplit('/',2)[0]
     monkeypatch.setattr(discs,'profiles',lambda:{root:[{'android_directory':'/storage/CARD/Roms/SS','directory':'mtp://device/00020001/Roms/SS'}]})
@@ -178,7 +178,7 @@ def test_large_metadata_is_reported_without_reading_it(library,monkeypatch):
 
 
 def test_same_device_mtp_uri_is_required_even_when_declared_in_playlist(monkeypatch,tmp_path):
-    monkeypatch.setenv('PLCN_HOME',str(tmp_path))
+    monkeypatch.setenv('RETROARCH_ASSISTANT_HOME',str(tmp_path))
     playlist='mtp://device/00010001/RetroArch/playlists/SS.lpl'
     monkeypatch.setattr(discs,'folders',lambda _: [{'name':'SS.lpl','folder':False}])
     monkeypatch.setattr(discs,'read',lambda _:json.dumps({'items':[{'path':'mtp://other/00020001/Game.chd'}]}).encode())
@@ -198,7 +198,7 @@ def test_archive_members_are_unknown_not_missing_and_images_are_not_unpacked(lib
 
 
 def test_mtp_path_aliases_keep_each_original_identity_binding(monkeypatch,tmp_path):
-    monkeypatch.setenv('PLCN_HOME',str(tmp_path))
+    monkeypatch.setenv('RETROARCH_ASSISTANT_HOME',str(tmp_path))
     playlist='mtp://device/00010001/RetroArch/playlists/SS.lpl';root=playlist.rsplit('/',2)[0]
     monkeypatch.setattr(discs,'profiles',lambda:{root:[{'android_directory':prefix,'directory':'mtp://device/00020001/Roms'}
         for prefix in ['/sdcard/Roms','/storage/emulated/0/Roms']]})

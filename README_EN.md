@@ -1,6 +1,6 @@
 # RetroArch Assistant
 
-[中文](README.md) · [Download](https://github.com/MightyKartz/PLCN/releases/latest)
+[中文](README.md) · [Download](https://github.com/MightyKartz/retroarch-assistant/releases/latest)
 
 A RetroArch game library and handheld management assistant. Scan games, organize playlists, and complete names and artwork in a local browser UI. Launch the desktop package with a double click; Python, Node.js and Xcode are not required.
 
@@ -17,7 +17,7 @@ The game library now includes a cover grid, a detailed list and a docked game in
 
 ## Install
 
-The table below uses the new build names. Historical releases still use the PLCN prefix; existing installations remain compatible. New branded packages have not yet been published.
+The table below uses the new build names. Historical releases still use the PLCN prefix. New branded packages have not yet been published.
 
 Download a **Release asset**, not the Source code archive. Public downloads do not require a GitHub account.
 
@@ -27,7 +27,7 @@ Download a **Release asset**, not the Source code archive. Public downloads do n
 | Windows portable | `RetroArchAssistant-Windows-x64-Portable.zip` | Extract everything, open `RetroArchAssistant.exe` |
 | Apple Silicon Mac | `RetroArchAssistant-macOS-arm64.dmg` | Drag RetroArch Assistant to Applications, then open |
 | Intel Mac | `RetroArchAssistant-macOS-x64.dmg` | Same as above |
-| Linux x64 CLI | `RetroArchAssistant-Linux-x64.tar.gz` | Extract, run `./plcn --help` |
+| Linux x64 CLI | `RetroArchAssistant-Linux-x64.tar.gz` | Extract, run `./retroarch-assistant --help` |
 
 GitHub-built Windows/macOS packages currently have no distribution certificate signature; macOS builds are not notarized. System security may block first launch. Consult [Apple](https://support.apple.com/102445) or [Microsoft](https://support.microsoft.com/en-us/windows/security/threat-malware-protection/smart-app-control-frequently-asked-questions). Corporate policies and Smart App Control can prevent execution; disabling protection is not recommended.
 
@@ -48,13 +48,13 @@ Settings and recovery data remain local. Artwork searches/downloads use the netw
 
 ## Compatibility
 
-The display name is now RetroArch Assistant. The repository URL, `plcn` CLI, `PLCN_HOME`, application IDs and existing PLCN data/cache directories remain compatible. Settings, backups, recovery receipts and browser language/theme preferences are reused without migration. Existing RetroArch playlists and ROM paths are unchanged.
+Use the `retroarch-assistant` CLI and `RETROARCH_ASSISTANT_HOME`. Data and cache directories are named `RetroArchAssistant`. Quit the application and perform the one-time [data migration](DOC/MIGRATION.md) to retain settings, manual rules, backups and recovery records. Previous CLI names, environment variables and runtime directories are no longer supported.
 
 ## Development
 
 ```sh
 pip install -r requirements.txt
-python3 src/plcn.py
+python3 src/retroarch_assistant.py
 python3 -m pytest -q
 python3 scripts/check_ui_js.py
 ```

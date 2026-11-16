@@ -40,7 +40,7 @@ def main():
     else:
         binary = (Path('dist') / BINARY_NAME / BINARY_NAME).resolve()
     with tempfile.TemporaryDirectory(prefix='plcn-bundle-check-') as temp:
-        env = dict(os.environ, PLCN_HOME=temp)
+        env = dict(os.environ, RETROARCH_ASSISTANT_HOME=temp)
         run([str(binary), '--self-check'], env=env, cwd=temp, timeout=60)
         assert json.loads((Path(temp) / 'self-check.json').read_text())['ok']
     if sys.platform == 'darwin':
@@ -53,8 +53,6 @@ def main():
         (staging / 'Applications').symlink_to('/Applications')
         run(['hdiutil', 'create', '-volname', ENGLISH_NAME, '-srcfolder', str(staging), '-ov', '-format', 'UDZO', f'dist/{BINARY_NAME}-macOS-{args.arch}.dmg'])
     elif sys.platform == 'win32':
-        # Keep old desktop shortcuts usable after upgrading the existing install.
-        shutil.copy2(binary, binary.with_name('PLCN.exe'))
         shutil.make_archive(f'dist/{BINARY_NAME}-Windows-{args.arch}-Portable', 'zip', 'dist', BINARY_NAME)
         if args.installer:
             compiler = shutil.which('ISCC') or r'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'

@@ -18,7 +18,7 @@ import app_paths
 from dos_artwork_names import game
 from safe_io import atomic_write_bytes, atomic_write_json
 
-HEADERS = {'User-Agent': 'PLCN/3.2 (RetroArch artwork manager; https://github.com/MightyKartz/PLCN)'}
+HEADERS = {'User-Agent': 'RetroArchAssistant/3.3.1 (RetroArch artwork manager; https://github.com/MightyKartz/retroarch-assistant)'}
 LIMIT = 12 * 1024 * 1024
 
 

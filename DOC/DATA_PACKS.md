@@ -10,25 +10,25 @@
 
 ```bash
 # 从仓库内数据构建可重复使用的离线快照
-python src/plcn.py data build --source data/rom-name-cn --output .plcn_runtime/packs/bundled
+python src/retroarch_assistant.py data build --source data/rom-name-cn --output .plcn_runtime/packs/bundled
 
 # 从 yingw/rom-name-cn 获取数据：先把 ref 解析为固定 commit，再构建
-python src/plcn.py data fetch --ref master --output .plcn_runtime/packs/upstream
+python src/retroarch_assistant.py data fetch --ref master --output .plcn_runtime/packs/upstream
 
 # 校验数据库、源文件指纹与 schema；查看各平台记录数和空译名数
-python src/plcn.py data inspect --pack .plcn_runtime/packs/upstream
+python src/retroarch_assistant.py data inspect --pack .plcn_runtime/packs/upstream
 
 # 对比同一 (system, english_name) 的记录变化
-python src/plcn.py data compare --before .plcn_runtime/packs/bundled --after .plcn_runtime/packs/upstream
+python src/retroarch_assistant.py data compare --before .plcn_runtime/packs/bundled --after .plcn_runtime/packs/upstream
 
 # 只有这一步切换配置中的数据源
-python src/plcn.py data activate --pack .plcn_runtime/packs/upstream
+python src/retroarch_assistant.py data activate --pack .plcn_runtime/packs/upstream
 
 # 恢复上一次数据源，可再次执行以切换回来
-python src/plcn.py data rollback
+python src/retroarch_assistant.py data rollback
 ```
 
-自定义配置路径放在子命令前：`python src/plcn.py data --config /path/config.json activate --pack /path/pack`。切换后刷新 Web UI，再重新生成预览；已打开的旧预览不会重新计算。CLI 显式传入的 `--rom-name-cn-path` 优先于配置。
+自定义配置路径放在子命令前：`python src/retroarch_assistant.py data --config /path/config.json activate --pack /path/pack`。切换后刷新 Web UI，再重新生成预览；已打开的旧预览不会重新计算。CLI 显式传入的 `--rom-name-cn-path` 优先于配置。
 
 包目录包含 `manifest.json`、只读打开的 `catalog.sqlite3` 和 `rom-name-cn/` 源文件副本。manifest 记录来源仓库、固定 commit（本地构建则为 `local-snapshot`）、构建时间、schema、SHA-256 和按平台统计。下载和构建不会自动激活，不会修改原始 CSV 或人工修正规则。
 
@@ -38,7 +38,7 @@ python src/plcn.py data rollback
 
 - 普通 CSV 目录按内容指纹缓存到用户缓存目录的 `catalogs/`。源数据变化生成新的缓存，正在运行的任务继续使用原快照。
 - 数据包直接只读查询自己的 catalog。旧 schema 数据库通过 `DatabaseManager` 打开时，先创建 `*.bak-schema1-*` 备份再迁移。
-- 仓库根目录的旧 `plcn.db` 不再是默认运行缓存；运行新版本不会覆盖它。旧缓存可以从 CSV 重建；其中自行追加且未保存到 CSV 的数据应另行导出。
+- 仓库根目录的旧 `library.db` 不再是默认运行缓存；运行新版本不会覆盖它。旧缓存可以从 CSV 重建；其中自行追加且未保存到 CSV 的数据应另行导出。
 - 人工规则保存在 `manual_overrides.json`，或配置的 `manual_overrides_path`。数据包更新、缓存刷新和回滚都不会清空它。
 - CRC 必须是八位十六进制（兼容 `0x` 和 `|crc` 表示）。两条有效 CRC 冲突时，不允许退回同文件名规则。
 

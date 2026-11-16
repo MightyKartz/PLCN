@@ -42,14 +42,14 @@ exe = EXE(
     pyz, a.scripts, [], exclude_binaries=True, name=BINARY_NAME, debug=False,
     icon='packaging/icons/app-icon.ico' if sys.platform == 'win32' else None,
     bootloader_ignore_signals=False, strip=False, upx=False, console=False,
-    target_arch=os.environ.get('PLCN_TARGET_ARCH') or None,
-    codesign_identity=os.environ.get('PLCN_CODESIGN_IDENTITY') or None,
+    target_arch=os.environ.get('RETROARCH_ASSISTANT_TARGET_ARCH') or None,
+    codesign_identity=os.environ.get('RETROARCH_ASSISTANT_CODESIGN_IDENTITY') or None,
     entitlements_file='packaging/macos-entitlements.plist' if sys.platform == 'darwin' else None,
 )
 bundle = COLLECT(exe, a.binaries, a.datas, strip=False, upx=False, name=BINARY_NAME)
 if sys.platform == 'darwin':
     app = BUNDLE(
-        bundle, name=BUNDLE_NAME, bundle_identifier='io.github.mightykartz.plcn',
+        bundle, name=BUNDLE_NAME, bundle_identifier='io.github.mightykartz.retroarchassistant',
         icon='packaging/icons/app-icon.icns',
         info_plist={
             'CFBundleName': NAME, 'CFBundleDisplayName': NAME,

@@ -8,12 +8,12 @@ import sys
 import pytest
 
 import app_paths
-import plcn
+import retroarch_assistant as plcn
 
 
 @pytest.mark.parametrize('batch', [False, True], ids=['single', 'batch'])
 def test_cli_arguments_override_config_and_preserve_manual_overrides(tmp_path, monkeypatch, batch):
-    monkeypatch.setenv('PLCN_HOME', str(tmp_path / 'home'))
+    monkeypatch.setenv('RETROARCH_ASSISTANT_HOME', str(tmp_path / 'home'))
     config = tmp_path / 'config.json'
     config.write_text(json.dumps({'playlist_path': 'old.lpl', 'system_name': 'old',
                                   'thumbnails_dir': 'old-images', 'rom_name_cn_path': 'old-source',
@@ -21,7 +21,7 @@ def test_cli_arguments_override_config_and_preserve_manual_overrides(tmp_path, m
     monkeypatch.setattr(plcn, 'CONFIG_FILE', str(config))
     calls = []
     monkeypatch.setattr(plcn, 'process_directory' if batch else 'process_playlist', lambda *args: calls.append(args))
-    args = ['plcn', '--thumbnails-dir', 'images', '--rom-name-cn-path', 'source']
+    args = ['retroarch-assistant', '--thumbnails-dir', 'images', '--rom-name-cn-path', 'source']
     args += ['--batch-dir', 'playlists'] if batch else ['--playlist', 'game.lpl', '--system', 'NES']
     monkeypatch.setattr(sys, 'argv', args)
     plcn.main()
@@ -32,9 +32,9 @@ def test_cli_arguments_override_config_and_preserve_manual_overrides(tmp_path, m
 
 @pytest.mark.parametrize('module', ['playlist_service', 'playlist_writeback', 'playlist_artwork'])
 def test_core_import_does_not_load_cli_or_http_server(tmp_path, module):
-    env = dict(os.environ, PYTHONPATH=str(Path(__file__).resolve().parents[2] / 'src'), PLCN_HOME=str(tmp_path))
+    env = dict(os.environ, PYTHONPATH=str(Path(__file__).resolve().parents[2] / 'src'), RETROARCH_ASSISTANT_HOME=str(tmp_path))
     result = subprocess.run([sys.executable, '-c',
-                             f"import {module}, sys; assert 'server' not in sys.modules; assert 'plcn' not in sys.modules"
+                             f"import {module}, sys; assert 'server' not in sys.modules; assert 'retroarch_assistant' not in sys.modules"
                              + ("; assert 'playlist_analysis' not in sys.modules; assert 'translator' not in sys.modules"
                                 if module != 'playlist_service' else '')],
                             env=env, capture_output=True, text=True, timeout=10)
@@ -44,7 +44,7 @@ def test_core_import_does_not_load_cli_or_http_server(tmp_path, module):
 def test_cli_directory_pipeline_analyzes_writes_and_skips_unknown_system(tmp_path, monkeypatch):
     import playlist_service
     from thumbnail_downloader import ThumbnailDownloader
-    monkeypatch.setenv('PLCN_HOME', str(tmp_path / 'home'))
+    monkeypatch.setenv('RETROARCH_ASSISTANT_HOME', str(tmp_path / 'home'))
     directory = tmp_path / 'playlists'
     directory.mkdir()
     source = tmp_path / 'source'

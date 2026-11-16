@@ -20,7 +20,7 @@ def picture(color='red', fmt='PNG'):
 
 @pytest.fixture
 def context(tmp_path, monkeypatch):
-    monkeypatch.setenv('PLCN_HOME', str(tmp_path / 'runtime'))
+    monkeypatch.setenv('RETROARCH_ASSISTANT_HOME', str(tmp_path / 'runtime'))
     playlist = tmp_path / 'GBA.lpl'
     playlist.write_text(json.dumps({'items': [{'label': '游戏一', 'path': '/roms/one.gba'}, {'label': '游戏二', 'path': '/roms/two.gba'}]}))
     return {'playlist_path': str(playlist), 'system': 'GBA', 'thumbnails': str(tmp_path / '图片'),

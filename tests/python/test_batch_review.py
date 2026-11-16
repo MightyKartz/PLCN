@@ -10,7 +10,7 @@ from thumbnail_downloader import ThumbnailDownloader
 
 @pytest.fixture
 def library(tmp_path, monkeypatch):
-    monkeypatch.setenv('PLCN_HOME', str(tmp_path / 'home'))
+    monkeypatch.setenv('RETROARCH_ASSISTANT_HOME', str(tmp_path / 'home'))
     root = tmp_path / 'library'
     lists = root / 'playlists'
     lists.mkdir(parents=True)
