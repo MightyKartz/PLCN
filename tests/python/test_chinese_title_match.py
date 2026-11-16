@@ -16,13 +16,13 @@ def test_chinese_filename_matches_regions_and_revisions_on_every_system(tmp_path
     source.mkdir()
     names = [('Frontier (Japan)', '边境任务'), ('Frontier (Japan) (Rev 1)', '边境任务'),
              ('Frontier (USA)', '边境任务'), ('Frontier II (Japan)', '边境任务2')]
-    with (source / (system + '.csv')).open('w', newline='') as f:
+    with (source / (system + '.csv')).open('w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow(['Name EN', 'Name CN'])
         writer.writerows(names)
     monkeypatch.setattr('single_artwork.catalog_names', lambda *args: [n[0] for n in names])
     playlist = tmp_path / 'games.lpl'
-    playlist.write_text(json.dumps({'items': [{'label': '边境任务', 'path': '/roms/边境任务.sfc'}]}))
+    playlist.write_text(json.dumps({'items': [{'label': '边境任务', 'path': '/roms/边境任务.sfc'}]}), encoding='utf-8')
     before = playlist.read_bytes()
     for _ in range(2):
         row = analyze_playlist(str(playlist), system, str(source), verify_artwork=True)[0]
@@ -43,17 +43,17 @@ def test_title_components_aliases_mixed_scripts_and_ambiguity(tmp_path, monkeypa
              ('Dai-4-ji Battle (Japan)', '第四次机器人大战'),
              ('Space A (Japan)', '宇宙旅人'), ('Space B (Japan)', '宇宙旅者'),
              ('Chronicle II (Japan)', '编年史2')]
-    with (source / (system + '.csv')).open('w', newline='') as f:
+    with (source / (system + '.csv')).open('w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow(['Name EN', 'Name CN'])
         writer.writerows(names)
     (source / 'name_alias(Chinese).json').write_text(json.dumps({
-        'series': {'default': '传说系列', 'alias': ['传说物语']}}))
+        'series': {'default': '传说系列', 'alias': ['传说物语']}}), encoding='utf-8')
     monkeypatch.setattr('single_artwork.catalog_names', lambda *args: [n[0] for n in names])
     queries = ['传说物语 三角力量', '钢铁战记Returns', '第4次机器人大战',
                '宇宙旅', '编年史3', '钢铁战记 (Unknown Hack)']
     playlist = tmp_path / 'games.lpl'
-    playlist.write_text(json.dumps({'items': [{'label': q, 'path': '/roms/' + q + '.sfc'} for q in queries]}))
+    playlist.write_text(json.dumps({'items': [{'label': q, 'path': '/roms/' + q + '.sfc'} for q in queries]}), encoding='utf-8')
     rows = analyze_playlist(str(playlist), system, str(source), verify_artwork=True)
     assert all(not r['identity']['requires_review'] for r in rows[:3])
     assert [r['new_label'] for r in rows[:3]] == queries[:3]
