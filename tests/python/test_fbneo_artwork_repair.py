@@ -24,7 +24,7 @@ game (
 name "Dogyuun (Japan)"
 rom ( name dogyuunj.zip crc 1234ABCD )
 )
-''')
+''', encoding='utf-8')
     assert db.load_system_dat('Example')
     assert db.get_standard_name('dogyuun') == 'Dogyuun (World)'
     assert db.get_standard_name('DOGYUUN.ZIP') == 'Dogyuun (World)'
@@ -36,7 +36,7 @@ def test_chinese_labels_do_not_override_arcade_zip_and_collisions_are_stable(tmp
     dat.write_text('\n'.join(f'game (\nname "{name}"\nrom ( name {stem}.zip )\n)' for stem, name in [
         ('dogyuun', 'Dogyuun'), ('gururin', 'Gururin'),
         ('altbeast', 'Altered Beast (set 8) (8751 317-0078)'),
-        ('altbeast2', 'Altered Beast (set 2) (MC-8123B 317-0066)')]))
+        ('altbeast2', 'Altered Beast (set 2) (MC-8123B 317-0066)')]), encoding='utf-8')
     monkeypatch.setattr(LibretroDB, 'get_dat_path', lambda *args: str(dat))
     monkeypatch.setattr('single_artwork.catalog_names', lambda *args: [
         'Dogyuun', 'Gururin', 'Altered Beast (set 8) (8751 317-0078)',
@@ -45,7 +45,7 @@ def test_chinese_labels_do_not_override_arcade_zip_and_collisions_are_stable(tmp
     items = [{'path': '/roms/' + stem + '.zip', 'label': label}
              for stem, label in [('dogyuun', '方块小人'), ('gururin', '方块小人'),
                                  ('altbeast', '兽王记'), ('altbeast2', '兽王记')]]
-    playlist.write_text(json.dumps({'items': items}))
+    playlist.write_text(json.dumps({'items': items}), encoding='utf-8')
     rows = analyze_playlist(str(playlist), 'FBNeo - Arcade Games', 'data/rom-name-cn', verify_artwork=True)
     assert title_key(rows[0]['thumbnail_source']) == 'dogyuun'
     assert title_key(rows[1]['thumbnail_source']) == 'gururin'
@@ -54,7 +54,7 @@ def test_chinese_labels_do_not_override_arcade_zip_and_collisions_are_stable(tmp
     assert all(r['artwork_gallery_status'] == 'matched' for r in rows)
     for item, row in zip(items, rows):
         item['label'] = row['new_label']
-    playlist.write_text(json.dumps({'items': items}))
+    playlist.write_text(json.dumps({'items': items}), encoding='utf-8')
     again = analyze_playlist(str(playlist), 'FBNeo - Arcade Games', 'data/rom-name-cn', verify_artwork=True)
     assert [r['new_label'] for r in again] == [r['new_label'] for r in rows]
 
@@ -84,7 +84,7 @@ def test_truncated_arcade_cover_uses_valid_same_game_snapshot(tmp_path, monkeypa
     results = downloader.download_thumbnail(*task)
     assert all(r['status'] == 'success' for r in results)
     assert results[0]['gallery_kind'] == 'Named_Snaps'
-    assert '/Named_Boxarts/' in results[0]['path']
+    assert Path(results[0]['path']).parent.name == 'Named_Boxarts'
     assert all(valid_png(Path(r['path']).read_bytes()) for r in results)
 
 

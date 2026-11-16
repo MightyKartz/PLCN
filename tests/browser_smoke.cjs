@@ -96,6 +96,12 @@ async function click(selector) {
     console.log('Click:', selector);
     await waitFor(visible, `visible ${selector}`, selector);
     await waitFor(selector => !document.querySelector(selector).disabled, `enabled ${selector}`, selector);
+    await waitFor(selector => {
+        const element=document.querySelector(selector);
+        element.scrollIntoView({block:'center'});
+        const rect=element.getBoundingClientRect();
+        return element.contains(document.elementFromPoint(rect.left+rect.width/2,rect.top+rect.height/2));
+    }, `unobscured ${selector}`, selector);
     const point = await evaluate(selector => {
         const element = document.querySelector(selector);
         element.scrollIntoView({block: 'center'});
@@ -171,6 +177,7 @@ async function main() {
     await screenshot('01-path-settings');
     await evaluate(() => { const input = document.querySelector('#retroarch_root'); input.focus(); input.select(); });
     await send('Input.insertText', {text: libraryPath});
+    await waitFor(()=>!workbenchOverview.loading,'preceding task refresh');
     holdOverview = true;
     await click('#scan-device-btn');
     for(let attempt=0;!heldOverview&&attempt<150;attempt++)await delay(100);

@@ -15,7 +15,7 @@ def test_multi_system_incremental_import_preserves_settings_and_skips_support_fi
     target=playlists/'NES.lpl'
     old={'path':str(games/'NES/old.nes'),'label':'手工名称','core_path':'custom.so','custom':'preserved','db_name':'Nintendo - Nintendo Entertainment System.lpl'}
     document={'items':[old],'default_core_path':'installed.so','default_core_name':'Custom core','sort_mode':1}
-    target.write_text(json.dumps(document));before=target.read_bytes()
+    target.write_text(json.dumps(document), encoding='utf-8');before=target.read_bytes()
     root_value,sources=auto.validate({'root':str(root),'sources':[str(tmp_path)]})
     plan=auto.preview(root_value,sources)
     public=auto.public_result(plan)
@@ -24,7 +24,7 @@ def test_multi_system_incremental_import_preserves_settings_and_skips_support_fi
     assert target.read_bytes()==before
     result=auto.apply(plan,list(plan['plans']))
     assert result['added']==3
-    updated=json.loads(target.read_text())
+    updated=json.loads(target.read_text(encoding='utf-8'))
     assert updated['items'][0]==old
     assert updated['default_core_path']=='installed.so' and updated['default_core_name']=='Custom core'
     assert updated['sort_mode']==1
@@ -37,12 +37,12 @@ def test_new_library_can_be_created_after_review_and_stale_lists_are_not_overwri
     plan=auto.preview(str(root),[str(tmp_path)])
     assert not (root/'playlists').exists()
     result=auto.apply(plan,list(plan['plans']))
-    target=Path(result['playlists'][0]['playlist_path']);doc=json.loads(target.read_text())
+    target=Path(result['playlists'][0]['playlist_path']);doc=json.loads(target.read_text(encoding='utf-8'))
     assert doc['default_core_path']=='DETECT' and doc['default_core_name']=='DETECT'
     (games/'second.gbc').touch();again=auto.preview(str(root),[str(tmp_path)])
-    target.write_text('{"items":[]}')
+    target.write_text('{"items":[]}', encoding='utf-8')
     with pytest.raises(RuntimeError,match='列表已变化'):auto.apply(again,list(again['plans']))
-    assert target.read_text()=='{"items":[]}'
+    assert target.read_text(encoding='utf-8')=='{"items":[]}'
 
 
 def test_cancel_before_import_keeps_playlists_and_roms_unchanged(tmp_path):
@@ -73,7 +73,7 @@ def test_overview_uses_actual_artwork_and_storage_counts_and_excludes_bios(tmp_p
     (root/'playlists/FBNeo.lpl').write_text(json.dumps({'items':[
         {'path':'/storage/CARD/Roms/FBNEO/game.zip','label':'游戏','db_name':system+'.lpl'},
         {'path':'/storage/emulated/0/Roms/FBNEO/another.zip','label':'另一个','db_name':system+'.lpl'},
-        {'path':'/storage/CARD/Roms/FBNEO/neogeo.zip','label':'系统','db_name':system+'.lpl'}]}))
+        {'path':'/storage/CARD/Roms/FBNEO/neogeo.zip','label':'系统','db_name':system+'.lpl'}]}), encoding='utf-8')
     result=workbench_library.overview(str(root))['playlists'][0]['locations']
     assert result['card']['count']==1 and result['internal']['count']==1
     assert result['card']['covers'][0]['label']=='游戏'
