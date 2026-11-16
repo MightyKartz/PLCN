@@ -9,7 +9,7 @@ function invalidateStoragePlan(){storageTask.revision++;storageTask.analysis=nul
 function updateStorageSelection(){
     const report=storageTask.report;if(!report)return;
     const selected=report.rows.filter(row=>storageTask.selected.has(row.id));
-    const required=2*selected.reduce((sum,row)=>sum+row.source_bytes,0)+3*Math.max(0,...selected.map(row=>row.source_bytes))+64*1024*1024;
+    const required=(report.remote?4:2)*selected.reduce((sum,row)=>sum+row.source_bytes,0)+3*Math.max(0,...selected.map(row=>row.source_bytes))+64*1024*1024;
     storageField('budget').textContent='已选 '+selected.length+' 张；电脑可用 '+storageBytes(report.free_bytes)+'；所选工作空间预算 '+storageBytes(required);
     const ready=report.can_convert&&selected.length&&report.free_bytes>=required;
     storageField('convert').disabled=!ready;
@@ -18,7 +18,7 @@ function updateStorageSelection(){
 function openStorageOptimization(){
     if(workbench.operation)return;
     invalidateStoragePlan();storageField('result').hidden=true;storageField('settings').open=true;
-    storageField('status').textContent='仅分析当前选中列表；首版转换本地 BINARY 2352 扇区 CUE，已有 CHD 自动跳过。';
+    storageField('status').textContent='分析当前列表；本地直接转换，MTP 确认后拉取源备份并转换，已有 CHD 自动跳过。';
     storageField('dialog').showModal();
 }
 function closeStorageOptimization(){if(storageTask.busy)return;invalidateStoragePlan();storageField('dialog').close();}
@@ -63,7 +63,7 @@ async function analyzeStorage(){
         const summary=storageField('summary');summary.replaceChildren();
         const facts=['关联文件已知体积：'+storageBytes(result.observed_bytes)+'；可转换源文件去重：'+storageBytes(result.input_bytes),
             '电脑可用：'+storageBytes(result.free_bytes)+'；保守工作空间预算：'+storageBytes(result.required_bytes),
-            '压缩后大小与节省比例：未知；原文件保留，掌机实际释放空间为 0',
+            '压缩比例未知；本步保留原文件，仅建立电脑副本。后续回传与清理须单独预览。',
             '输出目录：'+result.output_directory];
         for(const text of facts){const line=document.createElement('p');line.textContent=text;summary.appendChild(line);}
         const detail=document.createElement('details'),heading=document.createElement('summary');heading.textContent='工具信息与分析范围';detail.appendChild(heading);summary.appendChild(detail);
@@ -101,6 +101,7 @@ async function convertStorage(){
             '通过 CHD verify 与解压后的逐轨扇区比对；尚未验证核心加载、换盘或存档。列表和原文件未修改。']){
             const line=document.createElement('p');line.textContent=text;panel.appendChild(line);
         }
+        const deploy=document.createElement('button');deploy.type='button';deploy.className='btn btn-muted';deploy.textContent='预览回传／替换方案';deploy.onclick=()=>{closeStorageOptimization();openChdDeployment(result);};panel.appendChild(deploy);
         storageField('status').textContent='已完成。原文件保留；任务记录已保存，可在设置 → 任务与恢复查看。';
     }catch(error){storageField('status').textContent=error.message+'；已验证输出与错误记录见设置 → 任务与恢复。';}
 }

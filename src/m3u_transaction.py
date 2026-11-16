@@ -24,8 +24,9 @@ def receipt_path(ident):
 
 
 def receipts():
-    return [json.loads(path.read_text(encoding='utf-8')) for path in
-            sorted(operations_dir().glob('*/manifest.json'),key=lambda path:path.stat().st_mtime,reverse=True)[:100]]
+    records=[json.loads(path.read_text(encoding='utf-8')) for path in
+             sorted(operations_dir().glob('*/manifest.json'),key=lambda path:path.stat().st_mtime,reverse=True)]
+    return [record for record in records if record['mode']!='chd_references'][:100]
 
 
 def patch_value(document, keys):
@@ -103,11 +104,11 @@ def remove_created(path,expected):
         Path(path).unlink()
 
 
-def start(plan):
+def prepare(plan,ident=None):
     if not plan['can_apply']:
         raise ValueError('请先解决方案中的待处理问题')
     check_dependencies(plan['dependencies'])
-    ident=uuid.uuid4().hex
+    ident=ident or uuid.uuid4().hex
     directory=receipt_path(ident).parent
     directory.mkdir(parents=True)
     record={'id':ident,'created_at':datetime.now(timezone.utc).isoformat(),'status':'prepared',
@@ -132,7 +133,11 @@ def start(plan):
         if content is not None: atomic_write_bytes(before,content)
         record['metadata'].append({'path':path,'patches':patches,'backup':str(before) if content is not None else None,'backup_digest':mtp.digest(content),'state':'pending'})
     atomic_write_json(receipt_path(ident),record)
-    return run(ident)
+    return ident
+
+
+def start(plan):
+    return run(prepare(plan))
 
 
 def run(ident,restore=False):

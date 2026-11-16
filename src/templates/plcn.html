@@ -388,7 +388,7 @@
     <script src="/assets/ui.js"></script>
     <dialog id="storage-dialog" aria-labelledby="storage-title" oncancel="if(storageTask.busy)event.preventDefault();else invalidateStoragePlan()">
         <header class="disc-inspection-header"><div><h2 id="storage-title">存储优化</h2><p>分析空间 → 选择光盘 → 电脑转换与内容验证</p></div><button id="storage-close" class="btn btn-muted" type="button" onclick="closeStorageOptimization()">关闭</button></header>
-        <p class="storage-scope">仅在电脑生成 CHD 副本。保留原光盘，不更新列表、M3U 或存档。掌机回传与替换将在后续阶段提供。</p>
+        <p class="storage-scope">本步仅在电脑生成 CHD 副本，保留原文件和启动引用。完成后可另行预览回传与替换方案。</p>
         <details id="storage-settings" open><summary>工作目录与转换工具</summary><fieldset id="storage-fields" oninput="invalidateStoragePlan()"><legend>转换设置</legend>
             <label>电脑工作目录<div class="storage-input"><input id="storage-workspace" placeholder="留空使用应用数据目录"><button class="btn btn-muted" type="button" onclick="pickStoragePath('workspace','directory')">选择目录</button></div></label>
             <label>本机 chdman<div class="storage-input"><input id="storage-tool" placeholder="自动从 PATH 查找 chdman"><button class="btn btn-muted" type="button" onclick="pickStoragePath('tool','executable')">选择程序</button></div></label>
@@ -400,6 +400,22 @@
         <section id="storage-result" hidden></section>
         <footer><button id="storage-cancel" class="btn btn-muted" type="button" onclick="cancelStorageTask()" hidden>取消任务</button><button id="storage-analyze" class="btn btn-muted" type="button" onclick="analyzeStorage()">分析空间与工具</button><button id="storage-convert" class="btn" type="button" onclick="convertStorage()" disabled>确认仅在电脑转换</button></footer>
     </dialog>
+    <dialog id="deploy-dialog" aria-labelledby="deploy-title" oncancel="if(chdDeployment.busy)event.preventDefault();else invalidateDeployment()">
+        <header class="disc-inspection-header"><div><h2 id="deploy-title">CHD 回传与替换</h2><p>核对内容验证结果 → 预览目标与备份 → 确认执行</p></div><button id="deploy-close" class="btn btn-muted" type="button" onclick="closeChdDeployment()">关闭</button></header>
+        <p id="deploy-origin" class="storage-scope"></p>
+        <details id="deploy-settings" open><summary>选择光盘与执行方式</summary><fieldset id="deploy-fields" oninput="invalidateDeployment()"><legend>本次范围</legend>
+            <div id="deploy-discs"></div>
+            <label>执行方式<select id="deploy-mode"><option value="copy">仅回传 CHD，保留原文件与引用</option><option value="switch">回传并更新引用，保留原文件</option><option value="replace">回传、更新引用并清理可移除原文件（保留电脑备份）</option></select></label>
+            <details id="deploy-runtime"><summary>更新引用前的运行验证</summary><p>先采用“仅回传”，在掌机原核心中加载这些 CHD，验证游戏内存档与所需换盘。以下为用户运行报告，MTP 无法独立确认核心安装版本。确认执行前请退出 RetroArch。</p>
+                <label>实际使用的核心版本<input id="deploy-version" placeholder="在 RetroArch 核心信息中核对"></label>
+                <label class="deploy-check"><input id="deploy-tested" type="checkbox">已用这些 CHD 在原核心验证启动、游戏内存档与所需换盘</label>
+                <label class="deploy-check"><input id="deploy-scope" type="checkbox">清理前确认：预览中的目录包含全部相关列表与光盘描述引用</label>
+            </details>
+        </fieldset>
+        </details>
+        <p id="deploy-status" role="status" aria-live="polite"></p><section id="deploy-review" hidden><h3>本次方案</h3><ul id="deploy-details"></ul></section>
+        <footer><button id="deploy-cancel" class="btn btn-muted" type="button" onclick="cancelChdDeployment()" hidden>取消任务</button><button id="deploy-preview" class="btn btn-muted" type="button" onclick="previewChdDeployment()">预览回传方案</button><button id="deploy-apply" class="btn" type="button" onclick="applyChdDeployment()" disabled>确认执行方案</button></footer>
+    </dialog>
     <script src="/assets/config.js"></script>
     <script src="/assets/library-navigation.js"></script>
     <script src="/assets/repair-model.js"></script>
@@ -409,6 +425,7 @@
     <script src="/assets/discs.js"></script>
     <script src="/assets/m3u.js"></script>
     <script src="/assets/storage.js"></script>
+    <script src="/assets/chd-deployment.js"></script>
     <script src="/assets/artwork.js"></script>
     <script src="/assets/welcome.js"></script>
     <script src="/assets/content-scan.js"></script>

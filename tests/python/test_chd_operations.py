@@ -192,7 +192,7 @@ def test_mtp_analysis_reports_known_size_without_reading_or_converting_remote_ro
     monkeypatch.setattr(chd_cue,'fingerprint',lambda *args:pytest.fail('No remote image may be read'))
     plan=ops.analyze({**payload,'playlist_path':uri})
     assert not plan['can_convert'] and plan['observed_bytes']==128
-    assert not plan['rows'][0]['eligible'] and '阶段 3B' in plan['rows'][0]['issues'][0]
+    assert not plan['rows'][0]['eligible'] and '远程 CUE 或音轨未就绪' in plan['rows'][0]['issues'][0]
 
 
 def test_failed_integrity_check_never_publishes_output(optical,monkeypatch):

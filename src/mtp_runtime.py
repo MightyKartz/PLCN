@@ -361,3 +361,90 @@ def remove_verified(value, expected):
             raise RuntimeError('MTP 恢复时移除新建文件失败')
         if read(value) is not None:
             raise RuntimeError('MTP 移除后的核对失败')
+
+
+Progress = C.CFUNCTYPE(C.c_int, C.c_uint64, C.c_uint64, C.c_void_p)
+
+
+def stat_file(value):
+    with session(value) as (handle, storage, parts):
+        return resolve(handle,storage,parts)
+
+
+def free_bytes(value):
+    with session(value) as (handle, storage, _):
+        if library().LIBMTP_Get_Storage(handle,0): raise RuntimeError('无法刷新 MTP 可用空间')
+        node=handle.contents.storage
+        while node:
+            if node.contents.id==storage: return node.contents.free
+            node=node.contents.next
+        raise ValueError('MTP 存储已变化')
+
+
+def download_file(value,target,cancelled=lambda: None):
+    """libmtp writes directly to a private computer file, never a Python ROM buffer."""
+    cancelled();errors=[]
+    @Progress
+    def progress(sent,total,data):
+        try: cancelled();return 0
+        except Exception as error: errors.append(error);return 1
+    with session(value) as (handle, storage, parts):
+        entry=resolve(handle,storage,parts)
+        if entry is None or entry['folder']: raise ValueError('MTP 源文件不存在：'+value)
+        result=library().LIBMTP_Get_File_To_File(handle,entry['id'],str(target).encode(),C.cast(progress,C.c_void_p),None)
+        if errors: raise errors[0]
+        if result: raise RuntimeError('MTP 文件拉取失败：'+value)
+        cancelled()
+        if Path(target).stat().st_size!=entry['size']: raise ValueError('MTP 拉取大小不一致：'+value)
+
+
+def upload_file(value,source,expected,stage,cancelled=lambda: None):
+    """New files only: verified staging -> rename -> full readback. Unknown files stay untouched."""
+    import chd_io
+    cancelled()
+    with session(value) as (handle, storage, parts):
+        current=chd_io.digest(value,cancelled)
+        if current is not None:
+            if current!=expected: raise ValueError('MTP 目标已有不同内容：'+value)
+            return
+        old_stage=resolve(handle,storage,parse(stage)[2])
+        if old_stage:
+            if chd_io.digest(stage,cancelled)!=expected: raise ValueError('MTP 暂存文件需要人工核对：'+stage)
+            ident=old_stage['id']
+        else:
+            parent=resolve(handle,storage,parts[:-1])
+            if parent is None or not parent['folder']: raise ValueError('MTP 目标目录不存在')
+            errors=[]
+            @Progress
+            def progress(sent,total,data):
+                try: cancelled();return 0
+                except Exception as error: errors.append(error);return 1
+            metadata=library().LIBMTP_new_file_t()
+            metadata.contents.name=C.cast(_libc.strdup(parse(stage)[2][-1].encode()),C.c_char_p)
+            metadata.contents.parent,metadata.contents.storage=parent['id'],storage
+            metadata.contents.size,metadata.contents.type=Path(source).stat().st_size,44
+            try:
+                result=library().LIBMTP_Send_File_From_File(handle,str(source).encode(),metadata,C.cast(progress,C.c_void_p),None)
+                if errors: raise errors[0]
+                if result: raise RuntimeError('MTP 上传失败；暂存保留：'+stage)
+                ident=metadata.contents.id
+            finally: library().LIBMTP_destroy_file_t(metadata)
+            if chd_io.digest(stage,cancelled)!=expected: raise ValueError('MTP 暂存回读不一致')
+        cancelled()
+        if resolve(handle,storage,parts) is not None: raise ValueError('MTP 目标在上传期间出现')
+        metadata=library().LIBMTP_new_file_t();metadata.contents.id=ident
+        try:
+            if library().LIBMTP_Set_File_Name(handle,metadata,parts[-1].encode()): raise RuntimeError('MTP 暂存重命名失败')
+        finally: library().LIBMTP_destroy_file_t(metadata)
+        if chd_io.digest(value,cancelled)!=expected: raise ValueError('MTP 目标回读校验失败')
+
+
+def remove_file(value,expected,cancelled=lambda: None):
+    """Only a journaled source with a verified computer backup or owned output may call this."""
+    import chd_io
+    with session(value) as (handle, storage, parts):
+        if chd_io.digest(value,cancelled)!=expected: raise ValueError('MTP 待移除文件已变化：'+value)
+        cancelled();entry=resolve(handle,storage,parts)
+        if not entry or entry['folder']: raise ValueError('MTP 移除目标不是文件')
+        if library().LIBMTP_Delete_Object(handle,entry['id']): raise RuntimeError('MTP 移除失败')
+        if resolve(handle,storage,parts) is not None: raise RuntimeError('MTP 移除核对失败')

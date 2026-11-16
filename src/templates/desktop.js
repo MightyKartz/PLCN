@@ -70,7 +70,11 @@ async function openDesktop(view = 'library') {
     await refreshDesktop();
 }
 
-desktopDialog.addEventListener('close', () => { clearTimeout(desktopPoll); desktopRenderVersion++; });
+desktopDialog.addEventListener('close', () => {
+    // A queued close from the previous opening must not invalidate the reopened dialog.
+    if (desktopDialog.open) return;
+    clearTimeout(desktopPoll); desktopRenderVersion++;
+});
 
 async function refreshDesktop() {
     if (!desktopDialog.open) return;
@@ -169,6 +173,19 @@ async function refreshDesktop() {
                 desktopElement('p','已验证 '+record.results.length+' 张光盘；原文件保留，启动引用未更新，掌机运行未验收',entry);
                 for(const result of record.results)desktopElement('p',result.output+' · SHA-256 '+result.sha256,entry);
                 if(record.error)desktopElement('p',record.error,entry);
+                if(record.results.length)desktopButton(entry,'预览回传／替换方案',()=>{desktopDialog.close();openChdDeployment(record);});
+            }
+            desktopElement('h3','CHD 回传与恢复',body);
+            for(const record of state.chd_deployments || []){
+                const entry=desktopElement('div',undefined,body);entry.className='desktop-entry';entry.dataset.chdDeployment=record.id;
+                desktopElement('strong',({backing_up:'备份中／中断',prepared:'已备份',references_verified:'引用已核对',completed:'已完成',partial:'部分完成',restoring:'恢复中／中断',restore_pending:'恢复待处理',restored:'已恢复'}[record.status]||record.status)+' · '+record.created_at,entry);
+                desktopElement('p',record.playlist,entry);desktopElement('p','电脑备份：'+record.backup_directory,entry);
+                desktopElement('p','模式：'+record.mode+'；执行时核对的镜像净变化：'+storageBytes(record.actual_image_delta_bytes)+'（不含电脑备份与元数据备份）',entry);
+                if(record.error)desktopElement('p',record.error,entry);
+                desktopElement('p','引用范围：'+record.roots.join('、'),entry);
+                for(const output of record.restored_retained_outputs||[])desktopElement('p','恢复时保留仍有引用或未能完整检查的 CHD：'+output.path,entry);
+                if(record.status!=='restored')desktopButton(entry,'恢复原镜像与引用',async()=>recoverChdDeployment(record.id,'restore'));
+                if(!['completed','restored'].includes(record.status))desktopButton(entry,'核对后继续',async()=>recoverChdDeployment(record.id,record.status==='restore_pending'||record.status==='restoring'?'restore':'resume'));
             }
             desktopElement('h3',desktopText('多盘操作与恢复','Multi-disc operations and recovery'),body);
             for(const record of state.m3u_operations || []){
