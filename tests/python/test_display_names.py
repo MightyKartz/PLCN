@@ -48,7 +48,7 @@ def test_renaming_reuses_all_artwork_and_remains_identified_on_next_preview(tmp_
     (source / 'Sony - PlayStation.csv').write_text('Name EN,Name CN\nGame (Japan) (Rev 1),游戏v1.0\n', encoding='utf-8')
     playlist = tmp_path / 'PS1.lpl'
     item = {'label': '游戏v1.0', 'path': '/roms/Game (Japan) (Rev 1).cue'}
-    playlist.write_text(json.dumps({'items': [item]}))
+    playlist.write_text(json.dumps({'items': [item]}), encoding='utf-8')
     images = tmp_path / 'images'
     buffer = io.BytesIO(); Image.new('RGB', (2, 2)).save(buffer, format='PNG')
     for kind in ['Named_Boxarts', 'Named_Snaps', 'Named_Titles']:
@@ -67,7 +67,7 @@ def test_renaming_reuses_all_artwork_and_remains_identified_on_next_preview(tmp_
     again = analyze_playlist(str(playlist), 'Sony - PlayStation', str(source), str(images))
     assert again[0]['new_label'] == '游戏'
     assert again[0]['identity']['requires_review'] is False
-    assert json.loads(playlist.read_text())['items'][0]['path'] == item['path']
+    assert json.loads(playlist.read_text(encoding='utf-8'))['items'][0]['path'] == item['path']
 
 
 @pytest.mark.parametrize('transport', ['mtp', 'adb'])
@@ -79,7 +79,7 @@ def test_remote_rename_reuses_old_label_artwork_without_downloading(tmp_path, mo
     system = 'Sony - PlayStation'
     item = {'label': '游戏 (Disc 1)', 'path': '/roms/Game (Disc 1).cue'}
     playlist = tmp_path / 'PS1.lpl'
-    playlist.write_text(json.dumps({'items': [item]}))
+    playlist.write_text(json.dumps({'items': [item]}), encoding='utf-8')
     row = build_change_proposal(0, item, item['label'], '游戏（第1盘）', 'Game (Japan) (Disc 1)', system)
     row['display_metadata'] = {'original_label': item['label']}
     root = 'mtp://device/00010001/RetroArch/thumbnails' if transport == 'mtp' else 'adb://device/RetroArch/thumbnails'
