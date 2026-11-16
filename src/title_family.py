@@ -61,6 +61,7 @@ def resolve_artwork(proposals, verify_artwork):
             row.update(thumbnail_source=None, artwork_gallery_status='unavailable', match_reason=str(catalog))
             continue
         source = row['thumbnail_source']
+        row['artwork_query'] = source
         # A/B and translation tags are packaging, not a verified disc/region.
         constraints = {tag for tag in release_tags(source)
                        if tag not in {'a', 'b', 'chs', 'cht'}}

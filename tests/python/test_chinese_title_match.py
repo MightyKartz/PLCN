@@ -143,6 +143,7 @@ def test_full_title_alias_is_platform_scoped_and_keeps_regional_sequel_numbers(t
     if matched:
         assert rows[0]['thumbnail_source'] == 'Shadow III (USA)'
         assert rows[2]['thumbnail_source'] is None
+        assert rows[2]['artwork_query'] == 'New Homebrew'
         assert rows[2]['artwork_gallery_status'] == 'not_found'
         assert not rows[0]['identity']['release_verified']
 
