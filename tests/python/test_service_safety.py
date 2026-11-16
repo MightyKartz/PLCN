@@ -221,3 +221,22 @@ def test_batch_apply_requires_a_completed_review(service, monkeypatch):
         assert response.status_code == 400
         assert '汇总' in response.json()['error']
         assert not server.job_manager.jobs
+
+
+def test_workbench_status_reports_active_count_and_compact_job(monkeypatch):
+    from types import SimpleNamespace
+    import api_common
+    import api_tasks
+    jobs = [dict(id=str(i), status=status, progress=0, total=1, message='', error='', result={'large': 'receipt'})
+            for i, status in enumerate(['completed', 'running', 'pending'])]
+    response = {}
+    monkeypatch.setattr(api_common, 'reply', lambda handler, data: response.update(data))
+    context = SimpleNamespace(job_manager=SimpleNamespace(snapshot=lambda: jobs))
+    api_tasks.workbench_status(None, context, {})
+    assert response['active_count'] == 2
+    assert response['job']['id'] == '1'
+    assert 'result' not in response['job']
+    jobs[:] = [dict(jobs[0], status='failed')]
+    api_tasks.workbench_status(None, context, {})
+    assert response['active_count'] == 0
+    assert response['job']['status'] == 'failed'

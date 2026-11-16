@@ -81,4 +81,4 @@ def workbench_status(handler, context, query):
         result = job.get('result') or {}
         job = {key: job[key] for key in ('id', 'status', 'progress', 'total', 'message', 'error')}
         job['partial'] = bool(result.get('errors') or result.get('download_summary', {}).get('total', {}).get('failed'))
-    reply(handler, {'job': job})
+    reply(handler, {'job': job, 'active_count': sum(j['status'] in ('pending', 'running') for j in jobs)})

@@ -134,8 +134,13 @@ async function main() {
     assert.equal(await evaluate(() => document.querySelector('#home-devices [data-status="usb_only"]')?.textContent.includes('文件传输未就绪')), true);
     assert.equal(await evaluate(() => document.querySelector('#home-devices [data-status="usb_only"] button')?.textContent), '等待文件传输');
     await screenshot('01-home');
+    assert.equal(await evaluate(()=>document.querySelector('.workbench-nav, #settings-button, #workbench-task')),null);
+    await waitFor(()=>document.getElementById('task-center-badge').textContent==='1','task badge from active jobs');
+    await click('#task-center-button');
+    await waitFor(()=>document.querySelector('#desktop-content').textContent.includes('等待取消的测试任务'),'top task entry');
+    await click('#desktop-close');
     assert.equal(await evaluate(() => document.querySelector('#usb-debug-help, #home-local-open')), null);
-    await click('#settings-button');
+    await click('#workbench-device');
     assert.equal(await evaluate(() => document.querySelectorAll('dialog[open]').length), 1);
     assert.equal(await evaluate(() => document.querySelectorAll('[data-desktop-view]').length), 3);
     await click('[data-desktop-view="data"]');
@@ -159,7 +164,7 @@ async function main() {
     await screenshot('01-tasks-after-retry');
     await click('#desktop-close');
 
-    await click('#settings-button');
+    await click('#workbench-device');
     await waitFor(visible, 'library path dialog', '#path-settings');
     assert.equal(await evaluate(() => document.querySelectorAll('#path-settings input[type="text"]').length), 2);
     assert.equal(await evaluate(() => document.querySelector('.topbar .mode-switch')), null);
@@ -185,6 +190,13 @@ async function main() {
     await click('#library-read-retry');
     await waitFor(()=>!document.querySelector('#library-read-dialog').open,'read retry closes overlay');
     const cardCount=await evaluate(()=>document.querySelectorAll('.workbench-cards > button').length);
+    assert.equal(await evaluate(()=>document.querySelectorAll('.platform-locations').length),0);
+    assert.equal(await evaluate(()=>document.querySelector('.workbench-summary').textContent.includes('待分类')),false);
+    await click('.workbench-pending');
+    assert.equal(await evaluate(()=>document.querySelector('.workbench-pending').getAttribute('aria-pressed')),'true');
+    await click('#library-all-systems');
+    assert.equal(await evaluate(()=>document.querySelector('.workbench-pending').getAttribute('aria-pressed')),'false');
+
     holdOverview=true;
     await evaluate(()=>refreshWorkbenchOverview());
     for(let attempt=0;!heldOverview&&attempt<150;attempt++)await delay(100);
@@ -351,7 +363,7 @@ async function main() {
     assert.equal(await evaluate(visible, '#image-directory-notice'), false);
     await send('Page.reload');
     await waitFor(() => document.querySelector('#library-onboarding')?.getAttribute('aria-busy') === 'false', 'reloaded home');
-    await click('#settings-button');
+    await click('#workbench-device');
     await click('#scan-device-btn');
     await waitFor(() => document.querySelectorAll('.playlist-system-tab').length === 3
         && !document.querySelector('#library-all-systems').disabled, 'reopened library systems');
@@ -363,7 +375,7 @@ async function main() {
 
     const detected = path.join(libraryPath, 'thumbnails');
     fs.mkdirSync(detected);
-    await click('#settings-button');
+    await click('#workbench-device');
     await evaluate(() => { const input = document.querySelector('#thumbnails_override'); input.focus(); input.select(); });
     await send('Input.dispatchKeyEvent', {type: 'keyDown', key: 'Backspace', code: 'Backspace', windowsVirtualKeyCode: 8});
     await send('Input.dispatchKeyEvent', {type: 'keyUp', key: 'Backspace', code: 'Backspace', windowsVirtualKeyCode: 8});
@@ -463,7 +475,7 @@ async function main() {
     fs.writeFileSync(path.join(discRoot,'retroarch.cfg'),
         `savefile_directory = "${discSaves.replaceAll('\\','/')}"\nsavestate_directory = "${discStates.replaceAll('\\','/')}"\nauto_overrides_enable = "false"\ngame_specific_options = "false"\ncore_options_path = "${path.join(discRoot,'core-options.cfg').replaceAll('\\','/')}"\n`);
 
-    await click('#settings-button');
+    await click('#workbench-device');
     await evaluate(root=>{const input=document.querySelector('#retroarch_root');input.value=root;input.dispatchEvent(new Event('input',{bubbles:true}));},discRoot);
     await click('#scan-device-btn');
     await waitFor(()=>!document.querySelector('#desktop-dialog').open && document.querySelectorAll('.playlist-system-tab').length===2,'optical fixture loaded');
@@ -510,7 +522,7 @@ async function main() {
     await click('.playlist-system-tab[aria-label="Sega - Saturn"]');
     await waitFor(()=>gameLibrary.data?.items.length===2,'two launch entries after grouping');
     assert.equal(await evaluate(()=>gameLibrary.data.items[0].game_id),originalGameId);
-    await click('#settings-button');await click('[data-desktop-view="tasks"]');
+    await click('#workbench-device');await click('[data-desktop-view="tasks"]');
     await waitFor(()=>document.querySelector('[data-m3u-operation] button'),'durable M3U history');
     await click('[data-m3u-operation] button');
     await click('.desktop-confirm button:last-of-type');
@@ -563,11 +575,11 @@ async function main() {
     await click('#storage-entry');await click('#storage-analyze');
     await waitFor(()=>!storageTask.busy&&!document.querySelector('#storage-analysis').hidden,'dark CHD analysis');
     await screenshot('09-chd-analysis-dark');await click('#storage-close');
-    if(canConvert){await click('#settings-button');await click('[data-desktop-view="tasks"]');await waitFor(()=>document.querySelector('[data-chd-operation]'),'CHD durable task history');await screenshot('09-chd-tasks');await click('#desktop-close');}
+    if(canConvert){await click('#workbench-device');await click('[data-desktop-view="tasks"]');await waitFor(()=>document.querySelector('[data-chd-operation]'),'CHD durable task history');await screenshot('09-chd-tasks');await click('#desktop-close');}
 
     if(canConvert){
         const originalM3u=fs.readFileSync(path.join(discRoms,'Game.m3u'));
-        await click('#settings-button');await click('[data-desktop-view="tasks"]');
+        await click('#workbench-device');await click('[data-desktop-view="tasks"]');
         await click('[data-chd-operation] button');
         await waitFor(()=>document.querySelector('#deploy-dialog').open,'deployment dialog');
         assert.equal(await evaluate(()=>document.querySelector('#deploy-mode').value),'copy');
@@ -585,7 +597,7 @@ async function main() {
         assert.equal(fs.existsSync(path.join(discRoms,'Game (Disc 1).chd')),true);
         assert.equal(fs.readFileSync(path.join(discRoms,'Game.m3u'),'utf8').includes('Game (Disc 1).chd'),true);
         await screenshot('10-chd-deployed');await click('#deploy-close');
-        await click('#settings-button');await click('[data-desktop-view="tasks"]');await waitFor(()=>document.querySelector('[data-chd-deployment]'),'deployment receipt displayed');
+        await click('#workbench-device');await click('[data-desktop-view="tasks"]');await waitFor(()=>document.querySelector('[data-chd-deployment]'),'deployment receipt displayed');
         await click('[data-chd-deployment] button');await click('.desktop-confirm button:last-of-type');
         await waitFor(()=>document.querySelector('[data-chd-deployment] strong').textContent.includes('已恢复'),'deployment restored');
         assert.deepEqual(fs.readFileSync(rawCue),cueBefore);assert.deepEqual(fs.readFileSync(rawTrack),rawBefore);
@@ -605,7 +617,7 @@ async function main() {
     const cartPlaylist=path.join(cartLists,'Nintendo - Game Boy Advance.lpl');
     fs.writeFileSync(cartPlaylist,JSON.stringify({items:cartPaths.map(file=>({path:file,label:path.basename(file),core_path:'/cores/mgba_libretro.so'}))}));
     const cartBefore=fs.readFileSync(cartPlaylist),sourceBefore=cartPaths.map(file=>fs.readFileSync(file));
-    await click('#settings-button');
+    await click('#workbench-device');
     await evaluate(root=>{const input=document.querySelector('#retroarch_root');input.value=root;input.dispatchEvent(new Event('input',{bubbles:true}));},cartRoot);
     await click('#scan-device-btn');await waitFor(()=>!document.querySelector('#desktop-dialog').open&&document.querySelector('.playlist-system-tab[aria-label="Nintendo - Game Boy Advance"]'),'cartridge library loaded');
     await click('.playlist-system-tab[aria-label="Nintendo - Game Boy Advance"]');
@@ -635,7 +647,7 @@ async function main() {
     await waitFor(()=>document.querySelector('#rom-storage-source').value.length>0,'source reopened');
     await click('#rom-storage-analyze');await waitFor(()=>!romStorage.busy&&!document.querySelector('#rom-storage-analysis').hidden,'dark directory analysis');
     await evaluate(()=>document.querySelector('#rom-storage-dialog').scrollTop=0);await screenshot('11-rom-layout-dark');await click('#rom-storage-close');
-    await click('#settings-button');await click('[data-desktop-view="tasks"]');await waitFor(()=>document.querySelector('[data-rom-storage-operation]'),'ZIP durable history');
+    await click('#workbench-device');await click('[data-desktop-view="tasks"]');await waitFor(()=>document.querySelector('[data-rom-storage-operation]'),'ZIP durable history');
     await screenshot('11-rom-zip-tasks');await click('#desktop-close');
 
     // Stage 4B: move a synthetic CHD-only multi-disc set, then restore both operations.
@@ -653,7 +665,7 @@ async function main() {
         'savestate_directory = "'+path.join(layoutRoot,'states').replaceAll('\\','/')+'"\n'+
         'core_options_path = "'+path.join(layoutRoot,'core-options.cfg').replaceAll('\\','/')+'"\n');
     const layoutBefore=new Map([layoutPlaylist,layoutM3u,...layoutDiscs].map(file=>[file,fs.readFileSync(file)]));
-    await click('#settings-button');await evaluate(root=>{const input=document.querySelector('#retroarch_root');input.value=root;input.dispatchEvent(new Event('input',{bubbles:true}));},layoutRoot);
+    await click('#workbench-device');await evaluate(root=>{const input=document.querySelector('#retroarch_root');input.value=root;input.dispatchEvent(new Event('input',{bubbles:true}));},layoutRoot);
     await click('#scan-device-btn');await waitFor(()=>!document.querySelector('#desktop-dialog').open&&document.querySelector('.playlist-system-tab[aria-label="Sega - Saturn"]'),'layout library loaded');
     await click('.playlist-system-tab[aria-label="Sega - Saturn"]');
     if(Number(width)>1100&&await evaluate(()=>document.body.dataset.theme==='dark'))await click('#theme-toggle-btn');
@@ -682,7 +694,7 @@ async function main() {
     assert.equal(fs.readFileSync(path.join(layoutRoms,'多盘.m3u'),'utf8'),layoutDiscs.map(file=>path.basename(file)).join('\n')+'\n');
     assert.equal(JSON.parse(fs.readFileSync(layoutPlaylist,'utf8')).items[0].path.replaceAll('\\','/'),path.join(layoutRoms,'多盘.m3u').replaceAll('\\','/'));
     await screenshot('12-layout-moved');await click('#relocate-close');
-    await click('#settings-button');await click('[data-desktop-view="tasks"]');
+    await click('#workbench-device');await click('[data-desktop-view="tasks"]');
     await waitFor(id=>document.querySelector('[data-rom-relocation="'+id+'"]'),'layout move receipt',moveId);
     await click('[data-rom-relocation="'+moveId+'"] button');await click('.desktop-confirm button:last-of-type');
     await waitFor(id=>document.querySelector('[data-rom-relocation="'+id+'"] strong').textContent.includes('已恢复'),'move restored',moveId);

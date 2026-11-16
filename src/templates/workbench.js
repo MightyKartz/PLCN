@@ -1,5 +1,5 @@
 /* Real-data library workbench. Artwork and job state are read-only projections. */
-const workbenchOverview = {key: '', data: null, error: '', scope: 'all', query: '', view: 'grid', loading: false, job: null, receipt: ''};
+const workbenchOverview = {key: '', data: null, error: '', scope: 'all', query: '', view: 'grid', loading: false, job: null, receipt: '', onlyMissing: false, activeJobs: 0, taskError: false};
 const libraryRead = {owner:'', stage:'', root:'', readyRoot:'', blocking:false, error:'', retry:'', focus:null};
 function beginLibraryRead(owner, stage, root = '', blocking = libraryRead.readyRoot !== root) {
     Object.assign(libraryRead, {owner, stage, root, blocking, error:'', retry:owner});
@@ -113,6 +113,7 @@ function renderWorkbenchOverview(visible) {
     const key = JSON.stringify([root, currentDeviceScan.playlists.map(p => [p.path,p.item_count,p.modified_at])]);
     if (key !== workbenchOverview.key) {
         const rootChanged = workbenchOverview.key && JSON.parse(workbenchOverview.key)[0] !== root;
+        if(rootChanged)workbenchOverview.onlyMissing=false;
         workbenchOverview.key = key; if (rootChanged) workbenchOverview.data = null; workbenchOverview.error = '';
         loadWorkbenchOverview(key, root);
     }
@@ -122,11 +123,18 @@ function renderWorkbenchOverview(visible) {
     const summary = wbElement('div','workbench-summary');
     const total = actual ? groups.reduce((n,g)=>n+g.count,0) : currentDeviceScan.totals?.items || 0;
     const missing = actual ? groups.reduce((n,g)=>n+g.missing,0) : null;
-    for (const [value,label] of [[total,workbenchText('游戏','games')],[groups.length,workbenchText('主机','systems')],[missing === null ? '—' : missing,workbenchText('待补资料','need artwork')],[autoScanState.plan ? autoScanState.plan.unclassified.length : '—',workbenchText('待分类','unclassified')]]) {
-        const stat = wbElement('div','workbench-stat'); stat.append(wbElement('strong','',value),wbElement('span','',label)); summary.append(stat);
+    for (const [value,label] of [[total,workbenchText('游戏','games')],[groups.length,workbenchText('主机','systems')]]) {
+        const stat = wbElement('span','workbench-stat'); stat.append(wbElement('strong','',value),wbElement('span','',label)); summary.append(stat);
     }
+    if (missing !== null) {
+        const pending = wbElement('button','workbench-pending',workbenchText(`${missing} 项待补全`,`${missing} need artwork`));
+        pending.type='button'; pending.setAttribute('aria-pressed',String(workbenchOverview.onlyMissing));
+        pending.title=workbenchText('查看需要补全资料的主机，再选择主机处理','Show systems needing artwork, then select one to review');
+        pending.onclick=()=>{workbenchOverview.onlyMissing=!workbenchOverview.onlyMissing;renderWorkbenchOverview(true);};summary.append(pending);
+    }
+    if(autoScanState.plan?.unclassified.length)summary.append(wbElement('span','workbench-stat',workbenchText(`${autoScanState.plan.unclassified.length} 项待分类`,`${autoScanState.plan.unclassified.length} unclassified`)));
     panel.append(summary);
-    const toolbar = wbElement('div','overview-toolbar'); toolbar.append(wbElement('h2','',workbenchText('按主机浏览','Browse by system')));
+    const toolbar = wbElement('div','overview-toolbar'); toolbar.append(wbElement('h2','',workbenchOverview.onlyMissing ? workbenchText('待补全的主机','Systems needing artwork') : workbenchText('按主机浏览','Browse by system')));
     const search = wbElement('input','overview-search'); search.type = 'search'; search.placeholder = workbenchText('搜索主机','Search systems'); search.setAttribute('aria-label',search.placeholder); search.value = workbenchOverview.query;
     search.oninput = () => {workbenchOverview.query = search.value; filterOverviewCards();}; toolbar.append(search);
     for (const [view,icon,label] of [['grid','layout-grid','网格视图'],['list','list','列表视图']]) {
@@ -135,8 +143,10 @@ function renderWorkbenchOverview(visible) {
     }
     panel.append(toolbar);
     const grid = wbElement('div','overview-system-grid workbench-cards ' + (workbenchOverview.view === 'list' ? 'cards-list' : ''));
+    const showLocations=workbenchOverview.scope==='all'&&new Set(groups.flatMap(group=>[...group.locations])).size>1;
     for (const group of groups) {
         const card = wbElement('button','overview-system-card'); card.type = 'button';
+        card.dataset.needsArtwork=String(group.missing>0);
         card.dataset.search = (group.system + ' ' + wbSystemName(group.system) + ' ' + getSystemAbbreviation(group.system)).toLowerCase();
         card.setAttribute('aria-label',workbenchText('浏览 ','Browse ') + group.system);
         const art = wbElement('div','platform-art');
@@ -148,28 +158,31 @@ function renderWorkbenchOverview(visible) {
         details.append(heading,wbElement('span','',formatGameCount(group.count)));
         const locations=wbElement('div','platform-locations');
         for (const location of group.locations) locations.append(wbElement('span','',workbenchText(({internal:'内部存储',card:'存储卡',local:'本地目录'})[location],({internal:'Internal',card:'SD card',local:'Local'})[location])));
-        details.append(locations);card.append(art,details);
-        card.onclick=()=>{selectedLibrarySystem=group.system;renderDeviceScan(currentDeviceScan);selectFirstPlaylistForSystem(group.system);};grid.append(card);
+        if(showLocations)details.append(locations);card.append(art,details);
+        card.onclick=async()=>{const missingOnly=workbenchOverview.onlyMissing;selectedLibrarySystem=group.system;renderDeviceScan(currentDeviceScan);await selectFirstPlaylistForSystem(group.system);if(missingOnly)setGameLibraryFilter('missing');};grid.append(card);
     }
     panel.append(grid);
     const note=wbElement('p','overview-note');note.id='overview-note';
     note.textContent=workbenchOverview.error ? workbenchText('资料读取失败：','Could not read artwork: ')+workbenchOverview.error : !groups.length ? workbenchText('此范围没有游戏。可扫描新增游戏，或手动添加目录。','No games here. Scan or add a directory.') : workbenchOverview.loading ? workbenchText('正在核对真实游戏与封面…','Reading your games and artwork…') : workbenchText('数量来自现有游戏列表；扫描可发现尚未导入的游戏。','Counts reflect existing playlists. Scan to discover new games.');panel.append(note);
     if (workbenchOverview.error) {const retry=wbElement('button','btn btn-muted',workbenchText('重新读取','Retry'));retry.onclick=refreshWorkbenchOverview;panel.append(retry);}
     filterOverviewCards();
+    if(workbenchOverview.onlyMissing&&!groups.some(group=>group.missing>0))note.textContent=workbenchText('此范围没有待补全资料。点击 ALL 返回全部主机。','No artwork is missing here. Select ALL to return to all systems.');
 }
 function filterOverviewCards() {
     const query=workbenchOverview.query.trim().toLowerCase();
-    document.querySelectorAll('.workbench-cards > button').forEach(card=>{card.hidden=!card.dataset.search.includes(query);});
+    document.querySelectorAll('.workbench-cards > button').forEach(card=>{card.hidden=!card.dataset.search.includes(query)||(workbenchOverview.onlyMissing&&card.dataset.needsArtwork!=='true');});
 }
 function renderWorkbenchChrome(state) {
     for (const [selector,zh,en] of [
         ['#automatic-scan-button','扫描新增游戏','Scan new games'],['#manual-add-button','＋ 手动添加','＋ Add manually'],
-        ['.workbench-nav button:nth-child(1)','游戏库','Game library'],['.workbench-nav button:nth-child(2)','扫描与导入','Scan & import'],['.workbench-nav button:nth-child(3)','任务中心','Task center'],
-        ['.sidebar-settings','设置与游戏库','Settings & library'],['.tools-menu summary','工具','Tools'],['#settings-button','设备详情','Device details']]) {
+        ['.sidebar-settings','设置与游戏库','Settings & library'],['.tools-menu summary','工具','Tools'],['#device-switch-button','切换设备','Switch device']]) {
         const button=document.querySelector(selector);
         if(button?.lastChild?.nodeType===3)button.lastChild.textContent=workbenchText(zh,en);
     }
-    document.getElementById('workbench-device').textContent=currentDeviceScan?.transport==='local' ? workbenchText('本地游戏库','Local library') : workbenchText('当前掌机','Handheld');
+    document.getElementById('workbench-device').setAttribute('aria-label',workbenchText('设备详情','Device details'));
+    document.getElementById('workbench-device').title=workbenchText('查看设备详情与切换游戏库','Device details and switch library');
+    renderWorkbenchTaskBadge();
+    document.getElementById('workbench-device').textContent=!currentDeviceScan?.connected ? workbenchText('设备与游戏库','Device & library') : currentDeviceScan.transport==='local' ? workbenchText('本地游戏库','Local library') : workbenchText('当前掌机','Handheld');
     const connection=document.getElementById('workbench-connection');connection.textContent=currentDeviceScan?.connected ? workbenchText('已连接','Connected') : workbenchText('未连接','Disconnected');connection.classList.toggle('connected',Boolean(currentDeviceScan?.connected));
     const hasDevicePaths=workbenchOverview.data?.playlists.some(p=>p.locations.internal||p.locations.card);
     document.getElementById('storage-scope').hidden=!currentDeviceScan?.connected || (currentDeviceScan.transport==='local'&&!hasDevicePaths);
@@ -189,22 +202,27 @@ function renderWorkbenchChrome(state) {
         });
     }
 }
+function renderWorkbenchTaskBadge() {
+    const job=workbenchOverview.job;
+    const failed=job?.status==='failed'||job?.partial;
+    const count=workbenchOverview.activeJobs;
+    const button=document.getElementById('task-center-button'),badge=document.getElementById('task-center-badge');
+    badge.hidden=workbenchOverview.taskError||(!count&&!failed);badge.textContent=count?String(count):'';badge.classList.toggle('task-failed',!count&&Boolean(failed));
+    const label=workbenchOverview.taskError?workbenchText('任务状态暂不可用，点击查看详情','Task status unavailable; open details'):count?workbenchText(`任务中心：${count} 个任务进行中`,`Task center: ${count} active tasks`):failed?workbenchText('任务中心：最近任务需要处理','Task center: latest task needs attention'):workbenchText('任务中心','Task center');
+    button.title=label;button.setAttribute('aria-label',label);
+}
 async function pollWorkbenchTask() {
     try {
         const data=await desktopRequest('/api/jobs/status');const job=data.job;
-        workbenchOverview.job=job || null;
-        const title=document.getElementById('workbench-task-title'),message=document.getElementById('workbench-task-message'),bar=document.getElementById('workbench-task-progress'),percent=document.getElementById('workbench-task-percent'),cancel=document.getElementById('workbench-task-cancel');
-        if(job){const running=['pending','running'].includes(job.status);const failed=job.status==='failed'||job.partial;
-            title.textContent=running?workbenchText('任务进行中','Task in progress'):failed?workbenchText('任务需要处理','Task needs attention'):job.status==='cancelled'?workbenchText('任务已取消','Task cancelled'):workbenchText('最近任务已完成','Latest task completed');
-            message.textContent=job.error||job.message||'';bar.hidden=!running;cancel.hidden=!running;
-            if(job.total){bar.max=job.total;bar.value=job.progress;percent.textContent=running?Math.round(job.progress/job.total*100)+'%':'';}else{bar.removeAttribute('value');percent.textContent='';}
+        workbenchOverview.job=job||null;workbenchOverview.activeJobs=data.active_count;workbenchOverview.taskError=false;
+        if(job&&!['pending','running'].includes(job.status)){
             const receipt=job.id+job.status;
-            if(!running&&workbenchOverview.receipt!==receipt){workbenchOverview.receipt=receipt;refreshWorkbenchOverview();}
-        }else{title.textContent=workbenchText('任务中心','Task center');message.textContent=workbenchText('扫描、导入和补图任务将在这里显示','Scan, import and artwork tasks appear here');bar.hidden=true;cancel.hidden=true;percent.textContent='';}
-    }catch(error){document.getElementById('workbench-task-message').textContent=workbenchText('暂时无法读取任务状态，可打开详情重试','Task status unavailable; open details to retry');}
+            if(workbenchOverview.receipt!==receipt){workbenchOverview.receipt=receipt;refreshWorkbenchOverview();}
+        }
+    }catch(error){workbenchOverview.taskError=true;}
+    renderWorkbenchTaskBadge();
     setTimeout(pollWorkbenchTask,3000);
 }
-async function cancelWorkbenchTask(){if(workbenchOverview.job)await desktopRequest('/api/jobs/cancel',{job_id:workbenchOverview.job.id});}
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('[data-ui-icon]').forEach(el=>el.replaceWith(wbIcon(el.dataset.uiIcon)));pollWorkbenchTask();});
 
 const autoScanState={busy:false,job:null,previewId:null,plan:null,root:'',generation:0};
@@ -267,7 +285,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     document.getElementById('auto-scan-dialog').addEventListener('cancel',event=>{if(autoScanState.busy)event.preventDefault();else ++autoScanState.generation;});
     document.getElementById('library-read-dialog').addEventListener('cancel',event=>{event.preventDefault();if(!libraryRead.owner)leaveLibraryRead();});
 });
-if (typeof module !== 'undefined') module.exports = {workbenchGroups,wbStorageKind,workbenchOverview,loadWorkbenchOverview,libraryRead,beginLibraryRead,finishLibraryRead};
+if (typeof module !== 'undefined') module.exports = {workbenchGroups,wbStorageKind,workbenchOverview,loadWorkbenchOverview,libraryRead,beginLibraryRead,finishLibraryRead,renderWorkbenchTaskBadge};
 
 async function cancelAutoScan(){
     if(!autoScanState.job)return;
