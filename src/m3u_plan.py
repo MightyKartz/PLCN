@@ -229,10 +229,10 @@ def prepare(payload):
         stored=library_model.disc_groups()
         old_key=json.dumps([source_path,system,first['path']],ensure_ascii=False,separators=(',',':'))
         previous=stored['groups'].get(old_key,{})
-        original_items=copy.deepcopy(previous.get('original_items',{}))
+        original_items={path.replace('\\','/'):copy.deepcopy(item) for path,item in previous.get('original_items',{}).items()}
         for entry in removed:
             if entry['node_id']!=first['id'] or group['kind']!='m3u':
-                original_items.setdefault(entry['launch_path'],copy.deepcopy(document['items'][entry['index']]))
+                original_items.setdefault(entry['launch_path'].replace('\\','/'),copy.deepcopy(document['items'][entry['index']]))
         retained_discs=[]
         if group['kind']=='m3u':
             listed={entry['node_id'] for entry in graph['entries']}
