@@ -1,5 +1,49 @@
 /* Real-data library workbench. Artwork and job state are read-only projections. */
 const workbenchOverview = {key: '', data: null, error: '', scope: 'all', query: '', view: 'grid', loading: false, job: null, receipt: ''};
+const libraryRead = {owner:'', stage:'', root:'', readyRoot:'', blocking:false, error:'', retry:'', focus:null};
+function beginLibraryRead(owner, stage, root = '', blocking = libraryRead.readyRoot !== root) {
+    Object.assign(libraryRead, {owner, stage, root, blocking, error:'', retry:owner});
+    renderLibraryRead();
+}
+function finishLibraryRead(owner, error = '') {
+    if (libraryRead.owner !== owner) return;
+    libraryRead.owner = ''; libraryRead.error = error;
+    if (!error && owner === 'overview') libraryRead.readyRoot = libraryRead.root;
+    renderLibraryRead();
+}
+function renderLibraryRead() {
+    const dialog = document.getElementById('library-read-dialog');
+    const active = Boolean(libraryRead.owner || libraryRead.error);
+    const failed = Boolean(libraryRead.error);
+    const title = workbenchText(failed ? '游戏库读取失败' : '正在读取游戏库', failed ? 'Could not load library' : 'Loading your library');
+    const message = failed ? libraryRead.error : libraryRead.stage;
+    document.getElementById('library-read-title').textContent = title;
+    document.getElementById('library-read-message').textContent = message;
+    document.getElementById('library-read-spinner').hidden = failed;
+    document.getElementById('library-read-actions').hidden = !failed;
+    document.getElementById('library-read-note').textContent = workbenchText(failed ? '检查掌机连接后重试，或选择其他游戏库。' : '首次读取掌机可能需要一些时间，请保持连接。', failed ? 'Check the connection and retry, or choose another library.' : 'The first read may take a moment. Keep your device connected.');
+    for (const [id,zh,en] of [['library-read-retry','重新读取','Retry'],['library-read-switch','切换设备','Switch device'],['library-read-banner-retry','重试','Retry']]) document.getElementById(id).textContent = workbenchText(zh,en);
+    if (active && libraryRead.blocking) {
+        if (!dialog.open) {libraryRead.focus = document.activeElement; dialog.showModal();}
+        if (failed) document.getElementById('library-read-retry').focus();
+    } else if (dialog.open) {
+        dialog.close();
+        if (libraryRead.focus?.isConnected) libraryRead.focus.focus();
+    }
+    document.getElementById('library-read-banner').hidden = !active || libraryRead.blocking;
+    document.querySelector('#library-read-banner .library-read-spinner').hidden = failed;
+    document.getElementById('library-read-banner-message').textContent = message;
+    document.getElementById('library-read-banner-retry').hidden = !failed;
+    document.querySelector('.app-shell').setAttribute('aria-busy', String(Boolean(libraryRead.owner)));
+}
+function retryLibraryRead() {
+    if (libraryRead.retry === 'startup') return startDesktop();
+    if (libraryRead.retry === 'overview') return refreshWorkbenchOverview();
+    return scanDevice(false);
+}
+function leaveLibraryRead() {
+    libraryRead.owner = ''; libraryRead.error = ''; renderLibraryRead(); showLibraryHome();
+}
 function wbIcon(name) {
     const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     icon.classList.add('icon'); icon.setAttribute('aria-hidden', 'true');
@@ -39,6 +83,7 @@ function workbenchGroups(data, scope) {
 }
 async function loadWorkbenchOverview(key, root) {
     workbenchOverview.loading = true;
+    beginLibraryRead('overview', workbenchText('正在统计游戏并获取封面信息…','Reading game counts and artwork information…'), root);
     try {
         const data = await desktopRequest('/api/library/overview?root=' + encodeURIComponent(root));
         if (workbenchOverview.key !== key) return;
@@ -48,13 +93,14 @@ async function loadWorkbenchOverview(key, root) {
     } finally {
         if (workbenchOverview.key === key) {
             workbenchOverview.loading = false;
+            finishLibraryRead('overview', workbenchOverview.error);
             renderWorkbenchOverview(!document.getElementById('library-overview').hidden);
             renderWorkbenchChrome(workbenchSnapshot());
         }
     }
 }
 function refreshWorkbenchOverview() {
-    workbenchOverview.key = ''; workbenchOverview.data = null;
+    workbenchOverview.key = '';
     renderWorkbench();
 }
 function renderWorkbenchOverview(visible) {
@@ -63,7 +109,8 @@ function renderWorkbenchOverview(visible) {
     const root = currentDeviceScan.root_path || currentDeviceScan.target_path;
     const key = JSON.stringify([root, currentDeviceScan.playlists.map(p => [p.path,p.item_count,p.modified_at])]);
     if (key !== workbenchOverview.key) {
-        workbenchOverview.key = key; workbenchOverview.data = null; workbenchOverview.error = '';
+        const rootChanged = workbenchOverview.key && JSON.parse(workbenchOverview.key)[0] !== root;
+        workbenchOverview.key = key; if (rootChanged) workbenchOverview.data = null; workbenchOverview.error = '';
         loadWorkbenchOverview(key, root);
     }
     panel.replaceChildren();
@@ -220,8 +267,11 @@ async function applyAutoScan(){
         if(complete){closeAutoScan();await runAllSystemsCompletion();}
     }catch(error){autoScanState.previewId=null;document.getElementById('auto-scan-apply').hidden=true;document.getElementById('auto-scan-status').textContent=error.message+'；已完成的导入会保留，请重新扫描核对。';}
 }
-document.addEventListener('DOMContentLoaded',()=>document.getElementById('auto-scan-dialog').addEventListener('cancel',event=>{if(autoScanState.busy)event.preventDefault();else ++autoScanState.generation;}));
-if (typeof module !== 'undefined') module.exports = {workbenchGroups,wbStorageKind,workbenchOverview,loadWorkbenchOverview};
+document.addEventListener('DOMContentLoaded',()=>{
+    document.getElementById('auto-scan-dialog').addEventListener('cancel',event=>{if(autoScanState.busy)event.preventDefault();else ++autoScanState.generation;});
+    document.getElementById('library-read-dialog').addEventListener('cancel',event=>{event.preventDefault();if(!libraryRead.owner)leaveLibraryRead();});
+});
+if (typeof module !== 'undefined') module.exports = {workbenchGroups,wbStorageKind,workbenchOverview,loadWorkbenchOverview,libraryRead,beginLibraryRead,finishLibraryRead};
 
 async function cancelAutoScan(){
     if(!autoScanState.job)return;

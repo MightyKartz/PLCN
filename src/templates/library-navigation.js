@@ -15,9 +15,10 @@ async function scanDevice(useDefault = false) {
 
     setLibraryRoot(targetPath);
     if (!beginWorkbenchOperation('scan')) return;
+    if (typeof beginLibraryRead === 'function') beginLibraryRead('scan', workbenchText('正在读取主机与游戏列表…', 'Reading systems and game lists…'), targetPath);
     libraryHome.openError = '';
     invalidateWorkbenchPreview();
-    currentDeviceScan = null;
+    if (currentDeviceScan?.root_path !== targetPath) currentDeviceScan = null;
     for (const id of ['playlist_path', 'system_name']) document.getElementById(id).value = '';
     desktopDialog.close();
     scanBtn.disabled = true;
@@ -61,6 +62,7 @@ async function scanDevice(useDefault = false) {
         scanBtn.disabled = false;
         defaultBtn.disabled = false;
         endWorkbenchOperation();
+        if (typeof finishLibraryRead === 'function') finishLibraryRead('scan', libraryHome.openError);
         if (currentDeviceScan?.connected && selectedLibrarySystem) {
             await selectFirstPlaylistForSystem(selectedLibrarySystem);
         }

@@ -76,6 +76,7 @@
             </aside>
 
             <section class="main-panel filters-compact">
+                <div id="library-read-banner" class="library-read-banner" role="status" hidden><span class="library-read-spinner" aria-hidden="true"></span><span id="library-read-banner-message"></span><button class="btn btn-small btn-muted" id="library-read-banner-retry" type="button" onclick="retryLibraryRead()" hidden>重试</button></div>
                 <section class="desktop-welcome" id="library-onboarding">
                     <header class="home-intro"><h1 id="home-title">打开游戏库</h1><p id="home-description"></p></header>
                     <p id="home-message" role="alert" hidden></p>
@@ -452,6 +453,13 @@
     </dialog>
     <section id="workbench-task" class="workbench-task" aria-label="任务状态"><span class="icon" data-ui-icon="circle-check"></span><div class="task-copy"><strong id="workbench-task-title">任务中心</strong><span id="workbench-task-message">扫描、导入和补图任务将在这里显示</span></div><progress id="workbench-task-progress" hidden></progress><span id="workbench-task-percent"></span><button id="workbench-task-cancel" class="btn btn-muted" type="button" onclick="cancelWorkbenchTask()" hidden>取消任务</button><button class="btn btn-text" type="button" onclick="openDesktop('tasks')">查看详情 →</button></section>
     <dialog id="auto-scan-dialog" class="auto-scan-dialog" aria-labelledby="auto-scan-title"><header><div><h2 id="auto-scan-title">扫描新增游戏</h2><p>自动发现 Roms / Games 等目录中的主机文件夹；其他目录可手动添加。</p></div><button class="btn btn-muted" type="button" onclick="closeAutoScan()">关闭</button></header><p id="auto-scan-status" role="status">选择扫描范围后开始分析。</p><div id="auto-scan-roots"></div><div id="auto-scan-results"></div><footer><label><input id="auto-scan-complete" type="checkbox" checked>导入后补全名称与封面</label><button class="btn btn-muted" type="button" onclick="openContentScan()">手动指定目录</button><button id="auto-scan-cancel" class="btn btn-muted" type="button" onclick="cancelAutoScan()" hidden>取消任务</button><button id="auto-scan-start" class="btn" type="button" onclick="previewAutoScan()">开始扫描</button><button id="auto-scan-apply" class="btn" type="button" onclick="applyAutoScan()" hidden>确认导入</button></footer></dialog>
+    <dialog id="library-read-dialog" class="library-read-dialog" aria-labelledby="library-read-title" aria-describedby="library-read-message">
+        <div class="library-read-spinner" id="library-read-spinner" aria-hidden="true"></div>
+        <h2 id="library-read-title">正在读取游戏库</h2>
+        <p id="library-read-message" role="status" aria-live="polite">正在读取配置…</p>
+        <p id="library-read-note" class="library-read-note">首次读取掌机可能需要一些时间，请保持连接。</p>
+        <div id="library-read-actions" hidden><button class="btn" id="library-read-retry" type="button" onclick="retryLibraryRead()">重新读取</button><button class="btn btn-muted" id="library-read-switch" type="button" onclick="leaveLibraryRead()">切换设备</button></div>
+    </dialog>
     <script src="/assets/workbench.js"></script>
     <script src="/assets/config.js"></script>
     <script src="/assets/library-navigation.js"></script>

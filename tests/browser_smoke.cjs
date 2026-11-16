@@ -9,6 +9,9 @@ const errors = [];
 const pending = new Map();
 const socket = new WebSocket(websocketUrl);
 let sequence = 0;
+let holdOverview = false;
+let heldOverview = null;
+let expectedOverviewFailure = false;
 
 function send(method, params = {}) {
     return new Promise((resolve, reject) => {
@@ -38,8 +41,13 @@ socket.addEventListener('message', event => {
         errors.push(message.params.args.map(arg => arg.value || arg.description).join(' '));
     } else if (message.method === 'Network.responseReceived') {
         const {url, status} = message.params.response;
-        if (url.startsWith(baseUrl + '/') && status >= 400) errors.push(`HTTP ${status}: ${url}`);
+        if (url.startsWith(baseUrl + '/') && status >= 400 && !(expectedOverviewFailure && url.includes('/api/library/overview') && status === 503)) errors.push(`HTTP ${status}: ${url}`);
     } else if (message.method === 'Fetch.requestPaused') {
+        if (message.params.request.url.includes('/api/library/overview')) {
+            if (holdOverview) heldOverview = message.params.requestId;
+            else send('Fetch.continueRequest', {requestId:message.params.requestId}).catch(error=>errors.push(error.message));
+            return;
+        }
         // Thumbnail availability is outside this smoke test; local APIs remain real.
         send('Fetch.fulfillRequest', {
             requestId: message.params.requestId,
@@ -115,7 +123,7 @@ async function main() {
     await send('Runtime.enable');
     await send('Page.enable');
     await send('Network.enable');
-    await send('Fetch.enable', {patterns: [{urlPattern: 'https://thumbnails.libretro.com/*'}]});
+    await send('Fetch.enable', {patterns: [{urlPattern: 'https://thumbnails.libretro.com/*'}, {urlPattern: '*api/library/overview*'}]});
     await send('Emulation.setDeviceMetricsOverride', {width: Number(width), height: Number(height), deviceScaleFactor: 1, mobile: false});
     await send('Page.navigate', {url: baseUrl});
     await waitFor(() => document.readyState === 'complete'
@@ -158,7 +166,35 @@ async function main() {
     await screenshot('01-path-settings');
     await evaluate(() => { const input = document.querySelector('#retroarch_root'); input.focus(); input.select(); });
     await send('Input.insertText', {text: libraryPath});
+    holdOverview = true;
     await click('#scan-device-btn');
+    for(let attempt=0;!heldOverview&&attempt<150;attempt++)await delay(100);
+    assert.ok(heldOverview,'overview request held for loading verification');
+    assert.equal(await evaluate(()=>document.querySelector('#library-read-dialog').open),true);
+    assert.equal(await evaluate(()=>document.querySelector('.app-shell').getAttribute('aria-busy')),'true');
+    await screenshot('01-library-loading');
+    await evaluate(()=>toggleTheme());
+    await screenshot('01-library-loading-dark');
+    await evaluate(()=>toggleTheme());
+    expectedOverviewFailure=true;
+    await send('Fetch.fulfillRequest',{requestId:heldOverview,responseCode:503,responseHeaders:[{name:'Content-Type',value:'application/json'}],body:Buffer.from(JSON.stringify({error:'验收模拟：设备暂时离线'})).toString('base64')});
+    heldOverview=null;holdOverview=false;
+    await waitFor(()=>document.querySelector('#library-read-actions').hidden===false,'read failure actions');
+    assert.equal(await evaluate(()=>document.activeElement.id),'library-read-retry');
+    await screenshot('01-library-read-failure');
+    await click('#library-read-retry');
+    await waitFor(()=>!document.querySelector('#library-read-dialog').open,'read retry closes overlay');
+    const cardCount=await evaluate(()=>document.querySelectorAll('.workbench-cards > button').length);
+    holdOverview=true;
+    await evaluate(()=>refreshWorkbenchOverview());
+    for(let attempt=0;!heldOverview&&attempt<150;attempt++)await delay(100);
+    assert.ok(heldOverview,'refresh request held');
+    assert.equal(await evaluate(()=>document.querySelector('#library-read-dialog').open),false);
+    assert.equal(await evaluate(visible,'#library-read-banner'),true);
+    assert.equal(await evaluate(()=>document.querySelectorAll('.workbench-cards > button').length),cardCount);
+    await screenshot('01-library-refresh');
+    holdOverview=false;await send('Fetch.continueRequest',{requestId:heldOverview});heldOverview=null;
+    await waitFor(()=>document.querySelector('#library-read-banner').hidden,'refresh done');
     await waitFor(() => document.querySelectorAll('.playlist-system-tab').length === 3
         && !document.querySelector('#library-all-systems').disabled
         && !document.querySelector('#preview-button').disabled, 'all-systems row and scan completion');
