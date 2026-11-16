@@ -335,6 +335,12 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
         return None
 
     def resolve_thumbnail_source_for_chinese_label(chinese_label, path, display_label, original_label):
+        # Arcade ZIP identifiers remain useful after the label has been translated.
+        # A shared Chinese label must not override the ROM's DAT title.
+        if any(term in translator.system_name for term in ('Arcade', 'FBNeo', 'MAME')):
+            source = find_exact_rom_source(path)
+            if source:
+                return source, "rom_filename"
         exact_chinese_source = translator.db.search_by_chinese(chinese_label, system=translator.system_name)
         if exact_chinese_source:
             return exact_chinese_source, "exact_alias"
@@ -356,9 +362,21 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
         return chinese_label, "fallback"
 
     def find_exact_rom_source(path):
+        arcade = any(term in translator.system_name for term in ('Arcade', 'FBNeo', 'MAME'))
         for candidate, _ in get_rom_path_candidates(path):
-            source = resolve_exact_english_source(candidate)
+            if arcade:
+                names = translator.libretro_db.rom_names.get(candidate.casefold(), []) if translator.libretro_db else []
+                source = names[0] if len(names) == 1 else None
+            else:
+                source = resolve_exact_english_source(candidate)
             if source:
+                return source
+        if arcade:
+            # Older FBNeo DATs omit some short identifiers that the MAME
+            # catalog still maps exactly. Never fuzzy-match a ZIP identifier.
+            chinese, source = translator.db.search_by_normalized_alias(
+                translator.normalize_name(rom_title(path)), system='MAME')
+            if chinese and source:
                 return source
         return None
 
@@ -602,6 +620,10 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
                     }
                 ]
             }
+            if is_arcade and chinese_label_source == 'rom_filename':
+                # The label is preserved as display text, not competing ROM
+                # identity evidence after a ZIP identifier has resolved.
+                diagnostics['evidence_chain'].clear()
             if chinese_label_source == "rom_filename":
                 diagnostics["evidence_chain"].insert(0, {
                     "source": "rom_filename",
@@ -829,6 +851,18 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
     resolve_artwork(proposed_changes, verify_artwork)
     from display_names import normalize_proposals
     normalize_proposals(proposed_changes)
+    # Different arcade sets need different RetroArch thumbnail filenames even
+    # when their Chinese display titles are identical.
+    arcade_targets = {}
+    for proposal in proposed_changes:
+        if any(term in proposal['system'] for term in ('Arcade', 'FBNeo', 'MAME')):
+            key = (proposal['system'], sanitize_filename(proposal['new_label']).casefold())
+            arcade_targets.setdefault(key, []).append(proposal)
+    for group in arcade_targets.values():
+        if (len({row.get('thumbnail_source') for row in group}) > 1
+                and all(row.get('match_source') != 'manual_override' for row in group)):
+            for row in group:
+                row['new_label'] += '（' + rom_title(row['path']) + '）'
     if verify_artwork and thumbnails_dir:
         from playlist_browser import open_artwork_reader, artwork_statuses
         from playlist_artwork import cover_preview_url
