@@ -818,6 +818,8 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
         from saturn_artwork import resolve_proposals
         resolve_proposals(proposed_changes, translators, source_playlist_path or str(playlist_path), verify_artwork, thumbnails_dir)
     from automatic_name_match import resolve as resolve_automatic_names
+    from chinese_title_match import resolve_chinese_titles
+    resolve_chinese_titles(proposed_changes, translators)
     from disc_title_inheritance import inherit_confirmed_titles
     inherit_confirmed_titles(proposed_changes)
     resolve_automatic_names(proposed_changes, translators)
