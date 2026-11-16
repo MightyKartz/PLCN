@@ -96,3 +96,21 @@ def test_unknown_release_uses_available_same_title_artwork_without_claiming_regi
     row.update(thumbnail_source='Frontier (Japan)', chinese_title_constraints=['japan'])
     resolve_artwork([row], True)
     assert row['thumbnail_source'] is None
+
+
+def test_catalog_chinese_alias_preserves_user_name_and_resolves_artwork():
+    from pathlib import Path
+    from types import SimpleNamespace
+    from chinese_title_match import resolve_chinese_titles
+
+    records = [{'english_name': 'Hagane (Japan)', 'chinese_name': '修罗战士 - 钢'}]
+    connection = SimpleNamespace(execute=lambda *args: SimpleNamespace(fetchall=lambda: records))
+    db = SimpleNamespace(expand_system_mapping=lambda system: [system], get_connection=lambda: connection)
+    source = Path(__file__).resolve().parents[2] / 'data' / 'rom-name-cn'
+    translators = {'SNES': SimpleNamespace(rom_name_cn_path=str(source), db=db)}
+    row = {'system': 'SNES', 'path': '/roms/钢忍.smc', 'match_source': 'playlist',
+           'original_item_label': '钢忍', 'original_label': '钢忍', 'new_label': '钢忍'}
+    resolve_chinese_titles([row], translators)
+    assert row['new_label'] == '钢忍'
+    assert row['thumbnail_source'] == 'Hagane (Japan)'
+    assert row['translation_match_source'] == 'title_family'
