@@ -383,7 +383,7 @@ def test_ps1_bin_cue_fixture_prefers_cue_entry_and_rom_translation():
     assert len(changes) == 1
     assert Path(changes[0]["path"]).suffix == ".cue"
     for change in changes:
-        assert change["new_label"] == "最终幻想7 初版"
+        assert change["new_label"] == "最终幻想7 初版 (Disc 1)"
         assert change["thumbnail_source"] == "Final Fantasy VII (USA) (Disc 1)"
         assert change["match_source"] == "rom-name-cn"
         assert change["needs_review"] is False

@@ -170,6 +170,9 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
     manual_overrides = load_overrides(manual_overrides_path) if manual_overrides_path else []
 
     def add_proposal(index, item, display_label, new_label, thumbnail_source, match_source, match_reason, match_diagnostics=None):
+        if match_source != 'manual_override':
+            from title_family import keep_disc_marker
+            new_label = keep_disc_marker(new_label, rom_title(item.get('path')))
         if system_name == 'Sega - Saturn':
             from saturn_artwork import distinct_disc_label
             new_label = distinct_disc_label(new_label, item.get('path'), items)
@@ -324,6 +327,10 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
             standard_name = translator.libretro_db.get_standard_name(candidate)
             if standard_name:
                 return standard_name
+
+        if translator.resolve_title_family(candidate):
+            translator.last_match_source = 'title_family'
+            return candidate
 
         return None
 
@@ -573,6 +580,8 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
             label_identity = thumbnail_source if chinese_label_source == "exact_alias" else new_label
             if thumbnail_source and chinese_label_source == "rom_filename":
                 known_chinese = translator.db.search_by_english(thumbnail_source, system=translator.system_name)
+                if getattr(translator, 'last_match_source', '') == 'title_family':
+                    known_chinese, _ = translator.translate(thumbnail_source)
                 # Compare a known translation in one language. A disc suffix is
                 # display metadata, but disagreeing disc numbers remain a conflict.
                 disc_numbers = {marker[1] or marker[2] for value in (original_label, rom_title(path), thumbnail_source)
@@ -805,6 +814,8 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
     if 'Sega - Saturn' in translators:
         from saturn_artwork import resolve_proposals
         resolve_proposals(proposed_changes, translators, source_playlist_path or str(playlist_path), verify_artwork, thumbnails_dir)
+    from title_family import resolve_artwork
+    resolve_artwork(proposed_changes, verify_artwork)
     targets = {}
     for proposal in proposed_changes:
         key = (proposal['system'], sanitize_filename(proposal['new_label']).casefold())
@@ -826,4 +837,11 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
         for key in ('game_id', 'disc_id', 'content_id'):
             proposal[key] = binding[key]
         proposal['identity'] = identity_state(proposal)
+        if (not proposal['identity']['requires_review'] and not proposal.get('thumbnail_source')
+                and proposal.get('artwork_identity_status') == 'resolved'
+                and proposal.get('artwork_gallery_status') == 'ambiguous' and proposal.get('artwork_candidates')):
+            from title_family import recommend_source
+            proposal['thumbnail_source'] = recommend_source(proposal['artwork_candidates'])
+            proposal['artwork_recommended'] = True
+            proposal['match_reason'] = '游戏名称已识别，已推荐匹配封面，可单独更换'
     return proposed_changes

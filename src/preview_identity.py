@@ -16,6 +16,8 @@ def identity_state(change):
         state = 'candidate'
     elif any(item.get('source') in {'playlist_crc32', 'local_zip_crc'} and item.get('resolved_name') for item in evidence):
         state = 'checksum_match'
+    elif translation == 'title_family':
+        state = 'title_family'
     elif source == 'libretro_dat':
         state = 'database_title'
     elif translation in {'exact', 'exact_alias', 'curated_alias'} or source == 'exact_alias':
