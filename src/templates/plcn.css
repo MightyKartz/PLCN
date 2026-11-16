@@ -3274,3 +3274,18 @@ body[data-ui-screenshot] *:focus {
 @media(max-width:600px) { #deploy-dialog { padding:16px; } #deploy-dialog footer { bottom:-16px; } }
 
 #deploy-settings > summary { font-size:14px; font-weight:600; cursor:pointer; padding:14px 0; }
+
+/* Stage 4A follows the existing storage dialogs and theme. */
+#rom-storage-dialog { width:min(1000px,calc(100vw - 32px)); max-height:calc(100vh - 32px); overflow:auto; padding:24px; border:1px solid var(--border); border-radius:var(--radius); color:var(--text); background:var(--surface); }
+#rom-storage-dialog::backdrop { background:rgba(0,0,0,.45); }
+#rom-storage-dialog p { font-size:13px; line-height:1.7; overflow-wrap:anywhere; }
+#rom-storage-fields { min-width:0; border:1px solid var(--border); border-radius:var(--radius); padding:16px; display:grid; gap:14px; }
+#rom-storage-fields label { display:grid; justify-content:stretch; grid-template-columns:minmax(0,1fr); color:var(--text); gap:8px; font-size:13px; }
+#rom-storage-picker { border-top:1px solid var(--border); padding-top:14px; }
+#rom-storage-directories { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:8px; margin-top:12px; }
+#rom-storage-directories button { overflow-wrap:anywhere; white-space:normal; }
+#rom-storage-rows [data-layout=conflict] { border-color:var(--warning,#b7791f); }
+#rom-storage-dialog footer { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:10px; position:sticky; bottom:-24px; background:var(--surface); padding:14px 0; border-top:1px solid var(--border); }
+@media(max-width:600px) { #rom-storage-dialog { padding:16px; } #rom-storage-dialog footer { bottom:-16px; } }
+
+#rom-storage-settings > summary { cursor:pointer; font-size:14px; font-weight:600; padding:12px 0; }

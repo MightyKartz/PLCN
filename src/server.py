@@ -48,7 +48,7 @@ TEMPLATE_DIR = os.path.join(get_base_path(), "src", "templates")
 UI_ASSETS = (
     'plcn.css', 'workflow.js', 'ui.js', 'config.js', 'library-navigation.js',
     'repair-model.js', 'preview.js', 'tasks.js',
-    'library.js', 'discs.js', 'm3u.js', 'storage.js', 'chd-deployment.js', 'artwork.js', 'welcome.js', 'content-scan.js', 'desktop.js',
+    'library.js', 'discs.js', 'm3u.js', 'storage.js', 'rom-storage.js', 'chd-deployment.js', 'artwork.js', 'welcome.js', 'content-scan.js', 'desktop.js',
 )
 
 # Retired single-game workbench keys; migrated to the plain library keys on load.

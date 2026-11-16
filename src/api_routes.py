@@ -5,6 +5,7 @@ Authentication and JSON transport validation stay in server.ConfigHandler.
 """
 import api_m3u
 import api_chd
+import api_rom_storage
 import api_content
 import api_library
 import api_playlists
@@ -38,6 +39,8 @@ GET_ROUTES = {
 }
 
 POST_ROUTES = {
+    '/api/rom-storage/analyze': api_rom_storage.analyze,
+    '/api/rom-storage/convert': api_rom_storage.convert,
     '/api/chd/deployment/preview': api_chd.deployment_preview,
     '/api/chd/deployment/apply': api_chd.deployment_apply,
     '/api/chd/deployment/recover': api_chd.deployment_recover,
