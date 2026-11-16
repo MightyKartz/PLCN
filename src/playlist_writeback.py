@@ -304,6 +304,13 @@ def _apply_changes_locked(playlist_path, changes, thumbnails_dir, backup=True, p
         for record in writeback["applied"]
         if record.get("system") and record.get("thumbnail_source") and record.get("new_label")
     ]
+    for record in writeback['applied']:
+        change = next(c for c in changes if c.get('proposal_id') == record.get('proposal_id')
+                      and c.get('path') == record.get('path'))
+        if (change.get('chinese_title_sources') and not change.get('artwork_source_confirmed')
+                and not any(e.get('resolved_name') and e.get('source') in {'playlist_crc32', 'local_zip_crc'}
+                            for e in change.get('match_diagnostics', {}).get('evidence_chain', []))):
+            downloader.artwork_constraints[(record['system'], record['thumbnail_source'], record['new_label'])] = change['chinese_title_constraints']
 
     verification = [
         {
