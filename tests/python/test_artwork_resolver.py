@@ -65,6 +65,35 @@ def test_not_found_has_distinct_reason(tmp_path, monkeypatch):
     assert all(row['reason'] == 'not_found' for row in downloader.download_thumbnail('NES', 'Game', '中文'))
 
 
+def test_each_artwork_kind_can_resolve_its_own_disc_filename(tmp_path, monkeypatch):
+    downloader = ThumbnailDownloader(str(tmp_path))
+    monkeypatch.setattr('single_artwork.catalog_names', lambda system, kind: [
+        'Game (Japan) (Disc 2)', 'Game (Japan) (Disc 1)', 'Game (USA)'])
+    calls = []
+    def get(url, **kwargs):
+        from urllib.parse import unquote
+        url = unquote(url); calls.append(url)
+        missing_generic = '/Named_Titles/Game (Japan).png' in url
+        return SimpleNamespace(status_code=404 if missing_generic else 200, content=png())
+    downloader.session.get = get
+    rows = downloader.download_thumbnail('Sony - PlayStation', 'Game (Japan)', '游戏')
+    assert all(r['status'] == 'success' for r in rows)
+    assert rows[2]['gallery_source'] == 'Game (Japan) (Disc 1)'
+    assert rows[0]['gallery_source'] == rows[1]['gallery_source'] == 'Game (Japan)'
+    assert len(calls) == 4
+
+
+@pytest.mark.parametrize('source,catalog', [
+    ('Game (Japan) (Disc 2)', ['Game (Japan) (Disc 1)']),
+    ('Game (Japan)', ['Game (USA) (Disc 1)']),
+    ('Game (Japan) (Rev 1)', ['Game (Japan) (Disc 1) (Rev 2)']),
+    ('Game (Japan)', ['Game II (Japan) (Disc 1)']),
+])
+def test_disc_image_fallback_keeps_known_identity_constraints(source, catalog):
+    from gallery_names import matching_artwork_name
+    assert matching_artwork_name('Sony - PlayStation', source, catalog) is None
+
+
 def test_dos_download_uses_unique_gallery_year_and_preserves_chinese_filename(tmp_path, monkeypatch):
     from urllib.parse import unquote
     official = 'Uncharted Waters 2 - New Horizons (1995)'

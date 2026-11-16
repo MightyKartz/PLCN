@@ -250,7 +250,7 @@ function getCoverStatusInfo(change) {
     const state = previewArtworkState(change, getRepairMode());
     const labels = {
         not_requested: ['本次不处理', 'Not requested'], exists: ['已有图片', 'Artwork exists'],
-        downloaded: ['已下载', 'Downloaded'], available: ['可补全', 'Ready to download'],
+        downloaded: ['已下载', 'Downloaded'], available: ['可补全', 'Ready to download'], partial: ['图片待补全', 'Artwork incomplete'],
         choose_version: ['待选择版本', 'Choose version'], no_source: ['未匹配图片源', 'No artwork match'],
         query_failed: ['图库查询失败', 'Gallery query failed'], unidentified: ['名称未识别', 'Title not identified'],
         failed: ['下载失败', 'Download failed']
@@ -258,6 +258,7 @@ function getCoverStatusInfo(change) {
     const titles = {
         not_requested: ['此次图片保持不变', 'Artwork is unchanged in this plan'],
         exists: ['本地图片可用，图片源状态不影响已有文件', 'Local artwork is available regardless of source lookup'],
+        partial: ['封面已就绪，其他类型图片尚未全部完成，可继续补全', 'Boxart is ready; other image types are incomplete and can be retried'],
         available: ['确认应用后下载；图片推荐不证明 ROM 地区或修订', 'Download after confirmation; a recommendation does not verify the ROM release'],
         no_source: ['当前查询未匹配图片源；不代表官方图库缺少这个游戏', 'This query found no artwork source; this does not establish that the gallery lacks the game'],
         unidentified: ['先核对游戏名称，或导入本地图片', 'Identify the title first, or import local artwork'],

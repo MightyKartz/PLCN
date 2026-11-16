@@ -21,6 +21,8 @@ function repairActionStatus(change, mode = 'both') {
 function previewArtworkState(change, mode = 'both') {
     if (mode === 'names' || change.cover_download_status === 'skipped-download') return 'not_requested';
     if (change.cover_download_status === 'failed') return change.cover_download_reason === 'not_found' ? 'no_source' : 'failed';
+    if ((change.cover_download_status === 'success' || change.thumbnail_exists || change.local_thumbnail_exists || change.cover_exists)
+            && Object.values(change.artwork || {}).some(image => image.status !== 'exists')) return 'partial';
     if (change.cover_download_status === 'success') return 'downloaded';
     if (change.thumbnail_exists || change.local_thumbnail_exists || change.cover_exists) return 'exists';
     if (change.artwork_gallery_status === 'unavailable') return 'query_failed';
@@ -53,7 +55,7 @@ function buildRepairPreviewSummary(changes, mode) {
         if (['review','duplicate'].includes(info.kind)) counts.review++;
         if (['duplicate','ready','completed'].includes(info.kind)) counts[info.kind]++;
         const artwork = previewArtworkState(change, mode);
-        if (['choose_version','no_source','unidentified','query_failed','failed'].includes(artwork)) counts['missing-cover']++;
+        if (['partial','choose_version','no_source','unidentified','query_failed','failed'].includes(artwork)) counts['missing-cover']++;
         if (artwork === 'query_failed') counts.queryFailed++;
         if (change.identity?.requires_review && !change.identity_name_edited) counts.candidates++;
         if (isEditedChange(change)) counts.edited++;

@@ -376,6 +376,24 @@ test('missing gallery source and filename conflicts remain reviewable instead of
     }
 });
 
+test('a missing secondary image remains retryable and agrees with refreshed file states', () => {
+    const row={proposal_id:'p',new_label:'游戏',original_item_label:'游戏',thumbnail_source:'Game (Japan)',system:'PS1'};
+    const context={currentChanges:[row],lastAppliedChangeKeys:new Set(['p']),lastAppliedWriteNames:false,lastAppliedDownloadEnabled:true,
+        normalizeDownloadKey:v=>String(v||'').toLowerCase(),uiText:v=>v,updateSummary:()=>{},renderPreviewTable:()=>{}};
+    vm.createContext(context);
+    for(const name of ['getChangeIdentity','writebackMatchesChange','findWritebackRecord','findBoxartDownloadResult','applyCompletedJobToPreview'])vm.runInContext(source(name),context);
+    context.applyCompletedJobToPreview({download_summary:{writeback:{applied:[{proposal_id:'p'}]},details:
+        ['Named_Boxarts','Named_Snaps','Named_Titles'].map(type=>({type,game:'游戏',system:'PS1',source:'Game (Japan)',
+            status:type==='Named_Titles'?'failed':'success',reason:type==='Named_Titles'?'not_found':undefined,path:'/images/'+type+'.png'}))}});
+    assert.equal(row.applied,false);assert.equal(row.artwork_blocked,false);assert.equal(row.enabled,true);
+    assert.equal(repairActionStatus(row),'download');
+    const refreshed={...row,applied:false,artwork:{Named_Boxarts:{status:'exists'},Named_Snaps:{status:'exists'},Named_Titles:{status:'missing'}}};
+    assert.equal(repairActionStatus(row),repairActionStatus(refreshed));
+    const {previewArtworkState}=require('../src/templates/workflow.js');
+    assert.equal(previewArtworkState(row),'partial');
+    assert.equal(previewArtworkState({...refreshed,cover_exists:true}),'partial');
+});
+
 test('unselected artwork versions show an actual candidate without marking it downloaded or selected', () => {
     const context={hasExistingCover:c=>Boolean(c.cover_exists),getRemoteCoverUrl:()=>'',encodeURIComponent};
     vm.createContext(context);vm.runInContext(source('getCoverPreviewUrl'),context);

@@ -134,8 +134,8 @@ class ThumbnailDownloader:
                 response = self.session.get(url, timeout=10)
                 if response.status_code == 404 and not (self.cancel_check and self.cancel_check()):
                     from single_artwork import catalog_names
-                    from gallery_names import matching_gallery_name
-                    matched = matching_gallery_name(system, game_english_name, catalog_names(system, type_name))
+                    from gallery_names import matching_artwork_name
+                    matched = matching_artwork_name(system, game_english_name, catalog_names(system, type_name))
                     if matched and matched != game_english_name and not (self.cancel_check and self.cancel_check()):
                         url = f"{self.BASE_URL}/{urllib.parse.quote(system, safe='')}/{type_name}/{urllib.parse.quote(self.sanitize_filename(matched) + '.png', safe='')}"
                         response = self.session.get(url, timeout=10)
@@ -165,7 +165,7 @@ class ThumbnailDownloader:
                         "system": system,
                         "status": "failed",
                         "reason": 'not_found' if response.status_code == 404 else 'http_error',
-                        "message": "官方图库未找到匹配图片，请核对完整名称或导入本地图片" if response.status_code == 404 else f"图库请求失败：HTTP {response.status_code}",
+                        "message": "官方图库未收录该类型图片，已保留其他完成结果" if response.status_code == 404 else f"图库请求失败：HTTP {response.status_code}",
                         "path": target_path,
                         "url": url
                     })

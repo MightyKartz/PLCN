@@ -75,3 +75,18 @@ def matching_gallery_name(system, source, names):
         # name, but never to a different explicitly annotated language variant.
         candidates = [name for name in candidates if tags(name) == tags(name, languages=False)]
     return candidates[0] if len(candidates) == 1 else None
+
+
+def matching_artwork_name(system, source, names):
+    """An unnumbered game may use a numbered image, never another known disc."""
+    exact = matching_gallery_name(system, source, names)
+    if exact or DISC_MARKER.search(source):
+        return exact
+    matches = []
+    for name in names:
+        disc = DISC_MARKER.search(name)
+        if disc and gallery_title_key(system, name) == gallery_title_key(system, source):
+            unnumbered = DISC_MARKER.sub('', name).strip()
+            if matching_gallery_name(system, source, [unnumbered]):
+                matches.append((int(disc[1] or disc[2]), name))
+    return min(matches)[1] if matches else None
