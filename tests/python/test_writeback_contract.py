@@ -95,3 +95,23 @@ def test_rename_removes_raw_disc_entry_not_other_disc_or_revision(tmp_path):
     assert [x['path'] for x in saved] == [x['path'] for x in items[1:]]
     assert saved[0]['label'] == '妖精战士2'
     assert len(result['apply']['applied']) == 1
+
+
+@pytest.mark.parametrize('confirmed,checksum,allowed', [(False, False, True), (True, False, False), (False, True, False)])
+def test_title_only_artwork_constraints_reach_downloader_without_overriding_verified_release(tmp_path, monkeypatch, confirmed, checksum, allowed):
+    from thumbnail_downloader import ThumbnailDownloader
+    path, items = playlist(tmp_path)
+    change = {'index': 0, 'path': items[0]['path'], 'original_item_label': 'Same', 'new_label': 'Same',
+              'system': 'System', 'thumbnail_source': 'Game (Japan)',
+              'chinese_title_sources': ['Game (Japan)'], 'chinese_title_constraints': [],
+              'artwork_source_confirmed': confirmed,
+              'match_diagnostics': {'evidence_chain': [{'source': 'playlist_crc32', 'resolved_name': 'Game (Japan)'}] if checksum else []}}
+    captured = {}
+    def download(downloader, tasks, **kwargs):
+        captured.update(downloader.artwork_constraints)
+        return downloader.skipped_summary(tasks, 'test')
+    monkeypatch.setattr(ThumbnailDownloader, 'download_batch', download)
+    before = path.read_bytes()
+    plcn.apply_changes(str(path), [change], str(tmp_path / 'images'), write_names=False)
+    assert (('System', 'Game (Japan)', 'Same') in captured) is allowed
+    assert path.read_bytes() == before

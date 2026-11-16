@@ -16,6 +16,7 @@ class ThumbnailDownloader:
         self.thumbnails_dir = thumbnails_dir
         self.max_workers = max_workers
         self.cancel_check = None
+        self.artwork_constraints = {}
         
         # Setup session with retry
         from requests.adapters import HTTPAdapter
@@ -135,7 +136,8 @@ class ThumbnailDownloader:
                 if response.status_code == 404 and not (self.cancel_check and self.cancel_check()):
                     from single_artwork import catalog_names
                     from gallery_names import matching_artwork_name
-                    matched = matching_artwork_name(system, game_english_name, catalog_names(system, type_name))
+                    matched = matching_artwork_name(system, game_english_name, catalog_names(system, type_name),
+                        constraints=self.artwork_constraints.get((system, game_english_name, game_chinese_name)))
                     if matched and matched != game_english_name and not (self.cancel_check and self.cancel_check()):
                         url = f"{self.BASE_URL}/{urllib.parse.quote(system, safe='')}/{type_name}/{urllib.parse.quote(self.sanitize_filename(matched) + '.png', safe='')}"
                         response = self.session.get(url, timeout=10)

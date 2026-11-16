@@ -41,3 +41,19 @@ def test_dos_missing_year_matches_only_a_unique_release_and_preserves_editions()
     assert matching_gallery_name('DOS', title, [title + ' (1995) (Japan)']) is None
     assert matching_gallery_name('DOS', title, ['Uncharted Waters (1990)']) is None
     assert matching_gallery_name('NES', title, [title + ' (1995)']) is None
+
+
+def test_title_only_artwork_can_use_region_and_revision_per_image_type():
+    from gallery_names import matching_artwork_name
+    source = 'Battle Saga (China) (Unl)'
+    target = 'Battle Saga (Taiwan) (Unl)'
+    assert matching_artwork_name('System', source, [target]) is None
+    assert matching_artwork_name('System', source, [target], constraints=[]) == target
+    assert matching_artwork_name('System', source, [target], constraints=['china']) is None
+    source = 'Solar (World) (En,Es,Pt) (Rev C) (Unl)'
+    target = 'Solar (World) (En,Es,Pt) (Reprint B) (Unl)'
+    assert matching_artwork_name('System', source, [target], constraints=[]) == target
+    assert matching_artwork_name('System', source, [target], constraints=['rev c']) is None
+    assert matching_artwork_name('System', source, ['Solar (World) (Beta) (Unl)'], constraints=[]) is None
+    assert matching_artwork_name('System', source, ['Solar II (World) (Unl)'], constraints=[]) is None
+    assert matching_artwork_name('System', 'Solar (Disc 1)', ['Solar (Disc 2)'], constraints=['disc 1']) is None

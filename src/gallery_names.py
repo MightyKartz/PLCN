@@ -77,11 +77,27 @@ def matching_gallery_name(system, source, names):
     return candidates[0] if len(candidates) == 1 else None
 
 
-def matching_artwork_name(system, source, names):
+def matching_artwork_name(system, source, names, constraints=None):
     """An unnumbered game may use a numbered image, never another known disc."""
     exact = matching_gallery_name(system, source, names)
-    if exact or DISC_MARKER.search(source):
+    if exact:
         return exact
+    if constraints is not None:
+        # The caller knows only the game title. Region/revision on its recommended
+        # box art is not evidence about the ROM or the other image types.
+        presentation = re.compile(
+            r'Japan|USA|Europe|Asia|World|China|Taiwan|Korea|France|Germany|Italy|Spain|Australia|'
+            r'(?:En|Ja|Fr|De|Es|It|Zh|Ko|Pt|Nl|Sv|Ru)(?:,\s*(?:En|Ja|Fr|De|Es|It|Zh|Ko|Pt|Nl|Sv|Ru))*|'
+            r'Rev(?:ision)?\s+[\w.]+|Reprint(?:\s+[A-Z])?|Unl|Aftermarket', re.I)
+        def edition(name):
+            return {tag for tag in tags(name) if not presentation.fullmatch(tag)}
+        variants = [name for name in names if title_key(name) == title_key(source)
+                    and set(constraints) <= release_tags(name) and edition(name) == edition(source)]
+        if variants:
+            from title_family import recommend_source
+            return recommend_source(variants)
+    if DISC_MARKER.search(source):
+        return None
     matches = []
     for name in names:
         disc = DISC_MARKER.search(name)
