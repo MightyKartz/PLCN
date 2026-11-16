@@ -37,6 +37,7 @@ def logical_directory(reader, target):
 
 
 def save_check(playlist, cores):
+    playlist=io.key(playlist)
     reader=Reader(playlist);dependencies=[]
     result={'status':'pending','issues':[],'directories':[],'note':'文件与 ZIP 成员主文件名保持不变；只支持已确认的固定全局存档目录，存档和即时存档均不移动。'}
     try:

@@ -68,6 +68,7 @@ def analyze(payload, cancelled=lambda: None, progress=lambda message: None):
     if re.match(r'^\w+://',workspace): raise ValueError('ZIP 工作目录必须位于电脑')
     workspace = Path(workspace).expanduser().resolve()
     if not workspace.is_dir(): raise ValueError('电脑工作目录不存在')
+    playlist = io.key(playlist)
     reader = Reader(playlist)
     # Both browser-selected directories must belong to this library transport/device.
     source, target = reader.locate(source), reader.locate(target)
