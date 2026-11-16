@@ -48,3 +48,5 @@
 本轮本地验证：完整回归 285 项通过（包含浏览器流程），JavaScript 语法、Python 编译与 diff 空白检查通过。真机多盘操作不属于本 PR 范围。
 
 阶段 1C 衔接：名称／图片修复预览的每个提案也返回相同的 `game_id`、`disc_id` 和 `content_id`；UUID 以选中列表的主机范围绑定，不受行内 `db_name` 的显示／翻译系统影响。额外的 `identity` 描述匹配依据，与这些管理标识相互独立，见 [预览契约](PREVIEW_STATE_CONTRACT.md)。
+
+阶段 2A 衔接：只读分组和文件引用图见 [多盘与引用检查契约](DISC_GROUP_INSPECTION.md)。组 ID／图节点 ID 属于本次检查投影，不替换持久 Game／Disc／Content UUID。文件通过已确认路径映射汇合时，原始入口的 UUID 和启动路径全部保留；存在多种原始绑定时显示路径别名提醒，不静默迁移标识。

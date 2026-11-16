@@ -153,3 +153,8 @@ def batch_discard(handler, context, payload):
     stored = context.job_manager.contexts.get(payload.get('preview_job_id'), {})
     stored.pop('batch_review', None)
     reply(handler, {'discarded': True})
+
+
+def discs(handler, context, query):
+    from disc_inspection import inspect_discs
+    reply(handler, inspect_discs(query.get('path', [''])[0], query.get('system', [''])[0]))

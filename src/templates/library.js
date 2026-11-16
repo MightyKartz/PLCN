@@ -46,6 +46,9 @@ function syncGameLibrary(state) {
         document.getElementById('game-library-search').value = '';
         loadGameLibrary(input, key);
     }
+    const discs = document.getElementById('game-library-discs');
+    discs.hidden = !['Sega - Saturn','Sony - PlayStation','SS','PS1'].includes(input[1]);
+    discs.disabled = state.busy || gameLibrary.loading;
     const data = gameLibrary.data;
     const name = input[1] ? getSystemAbbreviation(input[1]) : input[0].replaceAll('\\', '/').split('/').pop();
     document.getElementById('workspace-title').textContent = data

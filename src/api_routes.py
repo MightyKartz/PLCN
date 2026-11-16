@@ -27,6 +27,7 @@ GET_ROUTES = {
     '/api/overrides/list': api_config.list_overrides,
     '/api/playlist/detect': api_playlists.detect_system,
     '/api/playlist/items': api_playlists.items,
+    '/api/playlist/discs': api_playlists.discs,
     '/api/progress': api_tasks.stream_progress,
     '/api/stats': api_data.get_stats,
     '/api/systems': api_data.list_systems,

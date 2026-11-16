@@ -103,6 +103,7 @@
                             <button id="game-library-filter-missing" type="button" onclick="setGameLibraryFilter('missing')"></button>
                             <button id="game-library-filter-problem" type="button" onclick="setGameLibraryFilter('problem')"></button>
                         </div>
+                        <button id="game-library-discs" class="btn btn-muted" type="button" onclick="openDiscInspection()" hidden>多盘与引用检查</button>
                         <p id="game-library-status" role="status"></p>
                         <p id="game-library-note" class="sr-only"></p>
                     </div>
@@ -368,6 +369,12 @@
         </div>
         <footer><button id="content-scan-cancel" class="btn btn-muted" type="button" onclick="cancelContentScan()" hidden>取消任务</button><button id="content-scan-start" class="btn btn-muted" type="button" onclick="previewContentScan()">开始扫描</button><button id="content-scan-apply" class="btn" type="button" onclick="applyContentScan()" hidden>确认更新列表</button><button id="content-scan-complete" class="btn" type="button" onclick="completeImportedContent()" hidden>预览名称与图片补全</button></footer>
     </dialog>
+    <dialog id="disc-inspection-dialog" aria-labelledby="disc-inspection-title">
+        <header class="disc-inspection-header"><div><h2 id="disc-inspection-title">多盘与引用检查</h2><p>只读检查，不改写列表、核心或游戏文件。候选组仍需核对。</p></div><button type="button" class="btn btn-muted" onclick="closeDiscInspection()">关闭</button></header>
+        <p id="disc-inspection-summary" role="status" aria-live="polite"></p><div id="disc-inspection-coverage" class="disc-coverage"></div>
+        <div class="disc-inspection-tools"><input id="disc-inspection-search" type="search" placeholder="搜索游戏或文件路径" aria-label="搜索游戏组" oninput="discInspection.limit=100;renderDiscInspection()"><select id="disc-inspection-filter" aria-label="筛选游戏组" onchange="discInspection.limit=100;renderDiscInspection()"><option value="all">全部分组</option><option value="attention">需检查</option><option value="m3u">已有 M3U</option><option value="candidate">候选分组</option></select></div>
+        <div id="disc-inspection-groups"></div><button id="disc-inspection-more" type="button" class="btn btn-muted" onclick="discInspection.limit+=100;renderDiscInspection()" hidden>显示更多</button>
+    </dialog>
     <script src="/assets/workflow.js"></script>
     <script src="/assets/ui.js"></script>
     <script src="/assets/config.js"></script>
@@ -376,6 +383,7 @@
     <script src="/assets/preview.js"></script>
     <script src="/assets/tasks.js"></script>
     <script src="/assets/library.js"></script>
+    <script src="/assets/discs.js"></script>
     <script src="/assets/artwork.js"></script>
     <script src="/assets/welcome.js"></script>
     <script src="/assets/content-scan.js"></script>

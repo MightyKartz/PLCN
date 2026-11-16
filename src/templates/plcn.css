@@ -3190,3 +3190,28 @@ body[data-ui-screenshot] *:focus {
 .preview-plan-scope { margin: 8px 0 0; color: var(--muted); font-size: .85rem; line-height: 1.6; }
 .preview-identity { display: block; color: var(--muted); font-size: .75rem; line-height: 1.5; overflow-wrap: anywhere; }
 .preview-identity[data-state="candidate"], .preview-identity[data-state="conflict"], .preview-identity[data-state="unresolved"] { color: var(--amber); }
+
+/* Read-only optical group inspection. */
+#disc-inspection-dialog { width:min(1000px,calc(100vw - 32px)); max-height:calc(100vh - 32px); padding:24px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); color:var(--text); overflow:auto; }
+#disc-inspection-dialog::backdrop { background:rgba(0,0,0,.45); }
+.disc-inspection-header { display:flex; gap:16px; align-items:flex-start; justify-content:space-between; }
+.disc-inspection-header h2 { margin:0 0 8px; }
+.disc-inspection-header p, .disc-coverage { color:var(--muted); font-size:13px; line-height:1.6; overflow-wrap:anywhere; }
+.disc-inspection-tools { display:flex; gap:12px; margin:18px 0; }
+.disc-inspection-tools input { flex:1; min-width:0; background:var(--surface-soft); color:var(--text); border:1px solid var(--border); border-radius:var(--radius); min-height:36px; padding:0 10px; }
+.disc-inspection-tools select { width:auto; }
+.disc-group { margin:10px 0; border:1px solid var(--border); border-radius:var(--radius); }
+.disc-group > summary { display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; padding:16px; cursor:pointer; }
+.disc-group > summary::before { content:'▸'; }
+.disc-group[open] > summary::before { content:'▾'; }
+.disc-group > summary strong { flex:1; overflow-wrap:anywhere; }
+.disc-group > summary span { color:var(--muted); font-size:12px; }
+.disc-group-state[data-state='attention'], .disc-issue, .disc-issues { color:var(--amber); }
+.disc-group-body { padding:0 16px 16px; font-size:13px; line-height:1.6; }
+.disc-issues { padding-left:20px; overflow-wrap:anywhere; }
+.disc-members, .disc-files { padding-left:24px; }
+.disc-members > li, .disc-files > li { border-top:1px solid var(--border); padding:12px 0; }
+.disc-members p, .disc-files p { margin:4px 0; overflow-wrap:anywhere; }
+.disc-file-path { color:var(--muted); overflow-wrap:anywhere; }
+.disc-artwork { width:80px; height:70px; object-fit:contain; }
+@media(max-width:600px) { #disc-inspection-dialog { padding:16px; } .disc-inspection-tools { flex-direction:column; } .disc-group > summary strong { flex-basis:80%; } }
