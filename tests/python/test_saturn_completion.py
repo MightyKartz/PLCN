@@ -71,7 +71,9 @@ def test_saturn_preview_uses_canonical_sources_without_guessing_versions(saturn_
     assert len(changes[0]['artwork_candidates']) == 2
     assert changes[1]['thumbnail_source'] == 'Daikoukai Jidai Gaiden (Japan)'
     assert changes[2]['new_label'] == '大航海时代2'
-    assert changes[2]['thumbnail_source'] is None, 'Parent-folder identity must be confirmed'
+    assert changes[2]['thumbnail_source'] == 'Daikoukai Jidai II (Japan)'
+    assert changes[2]['identity']['state'] == 'recommended'
+    assert changes[2]['identity']['release_verified'] is False
     assert changes[2]['artwork_candidates'] == ['Daikoukai Jidai II (Japan)']
     assert changes[3]['new_label'] == '格兰蒂亚（第1盘）'
     assert changes[4]['new_label'] == '格兰蒂亚（第2盘）'

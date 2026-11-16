@@ -37,7 +37,7 @@ function previewIdentityLabel(change) {
     const labels = {
         confirmed_rule: ['人工规则匹配', 'Confirmed rule'], checksum_match: ['校验值匹配', 'Checksum match'],
         database_title: ['数据库名称匹配', 'Database title match'], exact_title: ['精确名称匹配', 'Exact title match'],
-        title_family: ['游戏名称已识别', 'Title family identified'], candidate: ['模糊候选 · 待核对', 'Candidate · Review needed'],
+        title_family: ['游戏名称已识别', 'Title family identified'], recommended: ['默认推荐', 'Default recommendation'], candidate: ['默认推荐', 'Default recommendation'],
         conflict: ['身份证据冲突', 'Conflicting identity evidence'], unresolved: ['身份未识别', 'Identity not identified']
     };
     if (change.identity_name_edited) return workbenchText('手动指定名称', 'Manually specified title');

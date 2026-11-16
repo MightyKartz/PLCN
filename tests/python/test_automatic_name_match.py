@@ -46,14 +46,18 @@ def test_short_alias_needs_folder_and_matching_sequel_number(tmp_path, monkeypat
                    [('King2', '王国2 - 完整版'), ('King3', '王国2 - 完整版')])
     assert rows[0]['new_label'] == '王国2'
     assert rows[0]['identity']['requires_review'] is False
-    assert rows[1]['identity']['requires_review'] is True
+    assert rows[1]['identity']['state'] == 'recommended'
+    assert rows[1]['identity']['release_verified'] is False
 
 
-def test_close_runners_up_and_unknown_hacks_still_require_review(tmp_path, monkeypatch):
+def test_close_runners_up_and_unknown_hacks_use_default_without_claiming_verified_identity(tmp_path, monkeypatch):
     rows = preview(tmp_path, monkeypatch, [('Star Voyager (Japan)', '星际旅行'), ('Star Voyagers (Japan)', '星际旅人')],
                    [('Star Voyagr', '合集'), ('Star Voyager (Unknown Hack)', '星际旅行')])
     assert all(not r.get('automatic_name_match') for r in rows)
-    assert all(r['identity']['requires_review'] for r in rows)
+    assert not rows[0]['identity']['requires_review']
+    assert rows[0]['identity']['state'] == 'recommended'
+    assert rows[1]['identity']['state'] in {'conflict', 'unresolved'}
+    assert all(not r['identity']['release_verified'] for r in rows)
 
 
 def test_catalog_embedded_english_aliases_are_reused_without_game_overrides(tmp_path, monkeypatch):
