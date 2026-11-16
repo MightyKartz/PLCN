@@ -301,3 +301,43 @@ def test_cancellation_after_upload_preserves_old_references_and_can_restore(prep
     result=deploy.start(deploy.prepare(payload),cancelled);assert result['status']=='partial'
     assert playlist.read_bytes()==before and cue.exists() and track.exists() and result['actual_image_delta_bytes'] is None
     result=deploy.run(result['id'],restore=True);assert result['status']=='restored' and result['actual_image_delta_bytes']==0
+
+
+def test_confirmed_m3u_group_keeps_disc_ids_and_split_snapshots_across_conversion(prepared,monkeypatch):
+    import m3u_plan
+    from disc_inspection import inspect_discs
+    playlist,cue,track,_=prepared
+    first=cue.with_name('游戏 (Disc 1).cue');second=cue.with_name('游戏 (Disc 2).cue');cue.rename(first);second.write_bytes(first.read_bytes())
+    doc=json.loads(playlist.read_text(encoding='utf-8'));item=doc['items'][0]
+    doc['items']=[{**item,'path':str(path)} for path in [first,second]];playlist.write_text(json.dumps(doc),encoding='utf-8')
+    root=playlist.parent.parent;saves=root/'saves';states=root/'states';saves.mkdir();states.mkdir()
+    (root/'retroarch.cfg').write_text(f'savefile_directory = "{saves.as_posix()}"\nsavestate_directory = "{states.as_posix()}"\ncore_options_path = "{(root/"options.cfg").as_posix()}"\nauto_overrides_enable = "false"\ngame_specific_options = "false"\n',encoding='utf-8')
+    monkeypatch.setattr(m3u_plan,'core_support',lambda path:{'id':'mednafen_saturn','extensions':['cue','chd','m3u'],'message':'fixture'})
+    graph=inspect_discs(str(playlist),SYSTEM);group=next(group for group in graph['groups'] if group['kind']=='disc_set')
+    merge=m3u_plan.prepare({'playlist_path':str(playlist),'system':SYSTEM,'group_id':group['id'],'disc_ids':group['discs'],'mode':'switch','label':'两盘游戏','filename':'两盘.m3u'})
+    assert merge['can_apply'],merge['issues'];assert tx.start(merge)['status']=='applied'
+    before=read_playlist(str(playlist),SYSTEM);ids={disc['id'] for disc in before['library_model']['discs']}
+    plan=ops.analyze({'playlist_path':str(playlist),'system':SYSTEM,'workspace':str(root)})
+    converted=ops.convert(plan,[row['id'] for row in plan['rows'] if row['eligible']])
+    deployment=deploy.prepare({'conversion_id':converted['id'],'disc_ids':[row['id'] for row in converted['results']],'mode':'replace',
+                               'scope_confirmed':True,'runtime':{'version':'fixture','confirmed':True}})
+    assert deployment['can_apply'],deployment['issues'];result=deploy.start(deployment);assert result['status']=='completed',result['error']
+    after=read_playlist(str(playlist),SYSTEM);assert {disc['id'] for disc in after['library_model']['discs']}==ids
+    assert after['items'][0]['game_id']==before['items'][0]['game_id']
+    groups=json.loads((app_paths.user_data_dir()/'library-disc-groups.json').read_text(encoding='utf-8'))['groups']
+    assert all(item['path'].endswith('.chd') for group in groups.values() for item in group['original_items'].values())
+    restored=deploy.run(result['id'],restore=True);assert restored['status']=='restored',restored['error']
+    assert first.exists() and second.exists() and track.exists()
+
+
+def test_interrupted_metadata_snapshot_preparation_can_be_rebuilt_before_upload(prepared,monkeypatch):
+    payload=prepared[3];prepare=tx.prepare;failed=[False]
+    def interrupt(plan,ident=None):
+        result=prepare(plan,ident)
+        if not failed[0]:
+            failed[0]=True;tx.receipt_path(result).unlink();raise RuntimeError('metadata snapshot interrupted')
+        return result
+    monkeypatch.setattr(tx,'prepare',interrupt)
+    result=deploy.start(deploy.prepare(payload));assert result['status']=='partial'
+    result=deploy.run(result['id']);assert result['status']=='completed',result['error']
+    assert deploy.run(result['id'],restore=True)['status']=='restored'

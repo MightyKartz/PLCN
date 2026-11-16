@@ -108,9 +108,10 @@ def prepare(plan,ident=None):
     if not plan['can_apply']:
         raise ValueError('请先解决方案中的待处理问题')
     check_dependencies(plan['dependencies'])
+    resuming_preparation=ident is not None
     ident=ident or uuid.uuid4().hex
     directory=receipt_path(ident).parent
-    directory.mkdir(parents=True)
+    directory.mkdir(parents=True,exist_ok=resuming_preparation)
     record={'id':ident,'created_at':datetime.now(timezone.utc).isoformat(),'status':'prepared',
             'playlist':plan['playlist'],'label':plan['label'],'mode':plan['mode'],
             'dependencies':plan['dependencies'],'files':[],'metadata':[],'error':None}
