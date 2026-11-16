@@ -102,14 +102,17 @@ async function click(selector) {
         const rect=element.getBoundingClientRect();
         return element.contains(document.elementFromPoint(rect.left+rect.width/2,rect.top+rect.height/2));
     }, `unobscured ${selector}`, selector);
-    const point = await evaluate(selector => {
+    const point = await evaluate(async selector => {
         const element = document.querySelector(selector);
-        element.scrollIntoView({block: 'center'});
+        element.scrollIntoView({block: 'center', behavior: 'instant'});
+        // Match a real pointer: let the scrolled layout paint before hit testing.
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
         const rect = element.getBoundingClientRect();
         const x = rect.left + rect.width / 2, y = rect.top + rect.height / 2;
         if (!element.contains(document.elementFromPoint(x, y))) throw new Error(`Obscured control: ${selector}`);
         return {x, y};
     }, selector);
+    await send('Input.dispatchMouseEvent', {type: 'mouseMoved', ...point});
     await send('Input.dispatchMouseEvent', {type: 'mousePressed', button: 'left', clickCount: 1, ...point});
     await send('Input.dispatchMouseEvent', {type: 'mouseReleased', button: 'left', clickCount: 1, ...point});
 }
@@ -825,6 +828,12 @@ main().catch(async error => {
         try {
             await screenshot('failure');
             fs.writeFileSync(path.join(output, 'failure.html'), await evaluate(() => document.documentElement.outerHTML));
+            fs.writeFileSync(path.join(output, 'failure-state.json'), JSON.stringify(await evaluate(() => ({
+                operation:workbench.operation, previewScope:workbench.previewScope,
+                playlist:document.getElementById('playlist_path').value,
+                directories:currentDeviceScan?.directories, batchJob:batchRunJobId,
+                workspaceOpen:gameManagement.open
+            })), null, 2));
         } catch (diagnosticError) {
             console.error('Could not capture browser diagnostics:', diagnosticError.message);
         }
