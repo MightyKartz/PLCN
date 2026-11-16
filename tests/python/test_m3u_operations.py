@@ -298,3 +298,15 @@ def test_renaming_existing_m3u_checks_its_current_save_and_copies_to_new_basenam
     assert (roms/'Game.m3u').exists()
     result=tx.run(result['operation_id'],restore=True);assert result['status']=='restored'
     assert not (saves/'Renamed.bkr').exists() and (saves/'Game.bkr').exists()
+
+
+def test_original_artwork_context_survives_playlist_path_alias_normalization(library):
+    import artwork_identity
+    playlist,_,_,_,payload=library
+    alias=str(playlist.parent)+'/./'+playlist.name
+    context={'system':SYSTEM,'playlist_path':alias,'rom_path':json.loads(playlist.read_text(encoding='utf-8'))['items'][0]['path'],'label':'游戏'}
+    artwork_identity.remember(context,'Manual choice','Named_Boxarts')
+    payload['playlist_path']=alias
+    plan=plans.prepare(payload);assert plan['can_apply'],plan['issues']
+    result=tx.start(plan);assert result['status']=='applied'
+    assert artwork_identity.remembered({**context,'rom_path':plan['target']})['sources']['Named_Boxarts']=='Manual choice'
