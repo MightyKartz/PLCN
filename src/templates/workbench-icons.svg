@@ -1,0 +1,35 @@
+<svg xmlns:ns0="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg"><symbol stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" id="device-gamepad" viewBox="0 0 24 24" fill="none" stroke="currentColor"><ns0:path d="M2 8a2 2 0 0 1 2 -2h16a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-16a2 2 0 0 1 -2 -2l0 -8" />
+  <ns0:path d="M6 12h4m-2 -2v4" />
+  <ns0:path d="M15 11l0 .01" />
+  <ns0:path d="M18 13l0 .01" />
+</symbol><symbol stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" id="scan" viewBox="0 0 24 24" fill="none" stroke="currentColor"><ns0:path d="M5 12h14" />
+  <ns0:path d="M3 7v-2a2 2 0 0 1 2 -2h2" />
+  <ns0:path d="M3 17v2a2 2 0 0 0 2 2h2" />
+  <ns0:path d="M17 3h2a2 2 0 0 1 2 2v2" />
+  <ns0:path d="M17 21h2a2 2 0 0 0 2 -2v-2" />
+</symbol><symbol stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" id="circle-check" viewBox="0 0 24 24" fill="none" stroke="currentColor"><ns0:path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />
+  <ns0:path d="M9 12l2 2l4 -4" />
+</symbol><symbol stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" id="tool" viewBox="0 0 24 24" fill="none" stroke="currentColor"><ns0:path d="M7 10h3v-3l-3.5 -3.5a6 6 0 0 1 8 8l6 6a2 2 0 0 1 -3 3l-6 -6a6 6 0 0 1 -8 -8l3.5 3.5" />
+</symbol><symbol stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" id="settings" viewBox="0 0 24 24" fill="none" stroke="currentColor"><ns0:path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065" />
+  <ns0:path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
+</symbol><symbol stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" id="layout-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor"><ns0:path d="M4 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4" />
+  <ns0:path d="M14 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4" />
+  <ns0:path d="M4 15a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4" />
+  <ns0:path d="M14 15a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4" />
+</symbol><symbol stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" id="list" viewBox="0 0 24 24" fill="none" stroke="currentColor"><ns0:path d="M9 6l11 0" />
+  <ns0:path d="M9 12l11 0" />
+  <ns0:path d="M9 18l11 0" />
+  <ns0:path d="M5 6l0 .01" />
+  <ns0:path d="M5 12l0 .01" />
+  <ns0:path d="M5 18l0 .01" />
+</symbol><symbol stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" id="search" viewBox="0 0 24 24" fill="none" stroke="currentColor"><ns0:path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" />
+  <ns0:path d="M21 21l-6 -6" />
+</symbol><symbol stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" id="photo" viewBox="0 0 24 24" fill="none" stroke="currentColor"><ns0:path d="M15 8h.01" />
+  <ns0:path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12" />
+  <ns0:path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5" />
+  <ns0:path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3" />
+</symbol><symbol stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" id="device-sd-card" viewBox="0 0 24 24" fill="none" stroke="currentColor"><ns0:path d="M7 21h10a2 2 0 0 0 2 -2v-14a2 2 0 0 0 -2 -2h-6.172a2 2 0 0 0 -1.414 .586l-3.828 3.828a2 2 0 0 0 -.586 1.414v10.172a2 2 0 0 0 2 2" />
+  <ns0:path d="M13 6v2" />
+  <ns0:path d="M16 6v2" />
+  <ns0:path d="M10 7v1" />
+</symbol><symbol id="console-nes" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="26" height="19" rx="2"/><path d="M3 17h26M7 11h13v4H7zM23 8v7M7 21h4m3 0h3m5 1h3"/></symbol><symbol id="console-snes" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9h20l3 6v10H3V15zM3 16h26M10 9v7m12-7v7M10 20h12M7 24h3m12 0h3"/><path d="M13 11h6v3h-6z"/></symbol><symbol id="console-gameboy" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h16v22a4 4 0 0 1-4 4H8z"/><rect x="11" y="6" width="10" height="9" rx="1"/><path d="M10 21h6m-3-3v6m7-4 .01 0m3-2 .01 0M17 26h4"/></symbol><symbol id="console-gba" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h18l5 6-2 12H4L2 13z"/><rect x="10" y="10" width="12" height="11" rx="1"/><path d="M4 15h4m-2-2v4m19-2 .01 0m3-2 .01 0M13 24h6"/></symbol><symbol id="console-saturn" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7h20l3 7v12H3V14zM3 16h26"/><ellipse cx="16" cy="12" rx="7" ry="4"/><path d="M7 21h4m10 0h4m-12 3h6"/></symbol><symbol id="console-megadrive" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h18l4 9v9H3v-9zM10 7V4h12v3"/><ellipse cx="16" cy="15" rx="7" ry="5"/><path d="M11 14h10M6 21h4m12 0h4M12 24h8"/></symbol><symbol id="console-playstation" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="26" height="19" rx="2"/><circle cx="16" cy="15" r="6"/><path d="M5 21h22M6 11h2m16 0h2M8 24h4m8 0h4"/></symbol><symbol id="console-arcade" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h16l2 13 3 5v8H3v-8l3-5zM8 7h16M6 16h20M3 21h26M9 24h14"/><path d="M10 10h12v4H10zM11 21v-3m9 1h2"/></symbol></svg>

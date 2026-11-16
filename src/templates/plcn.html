@@ -7,12 +7,31 @@
     <title>PLCN</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231769e8'/%3E%3Cpath d='M9 22V10h8.5a4.5 4.5 0 0 1 0 9H13v3z' fill='white'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="/assets/plcn.css">
+    <link rel="stylesheet" href="/assets/workbench.css">
 </head>
 
 <body>
     <div class="app-shell">
         <header class="topbar">
-            <div class="brand">
+            <div class="device-identity"><span class="icon" data-ui-icon="device-gamepad"></span><button id="workbench-device" type="button" onclick="openDesktop('library')" aria-label="设备详情">当前掌机</button><span id="workbench-connection" class="connection-state">未连接</span></div>
+            <div id="storage-scope" class="storage-segments" role="group" aria-label="游戏存储范围"><button type="button" data-scope="all" onclick="setStorageScope('all')" aria-pressed="true">全部存储</button><button type="button" data-scope="internal" onclick="setStorageScope('internal')" aria-pressed="false">内部存储</button><button type="button" data-scope="card" onclick="setStorageScope('card')" aria-pressed="false">存储卡</button></div>
+            <div class="top-spacer"></div>
+
+            <div class="utility-group" aria-label="工具">
+                <button id="task-center-button" class="btn btn-muted top-toggle task-center-button" type="button" onclick="openDesktop('tasks')" title="任务中心" aria-label="任务中心"><span class="icon" data-ui-icon="circle-check"></span><span id="task-center-badge" class="task-center-badge" hidden></span></button>
+                <button class="btn btn-muted top-toggle" id="language-display-btn" type="button" onclick="toggleUILanguage()" title="切换界面语言" aria-label="切换界面语言">
+                    <svg class="ui-language-icon" data-icon="ui-to-en" width="20" height="20" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 1 0 20"></path><path d="M12 2a14.5 14.5 0 0 0 0 20"></path><path d="M2 12h20"></path></svg>
+                </button>
+                <button class="btn btn-muted top-toggle" id="theme-toggle-btn" type="button" onclick="toggleTheme()" title="切换浅色/深色主题" aria-label="切换浅色/深色主题" aria-pressed="false">
+                    <svg class="theme-toggle-icon" data-icon="theme-to-dark" width="20" height="20" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path d="M20.4 14.4A7.8 7.8 0 0 1 9.6 3.6a8.2 8.2 0 1 0 10.8 10.8Z"></path></svg>
+                </button>
+            </div>
+        </header>
+
+        <p id="workbench-busy" class="workbench-busy legacy-busy" role="status" aria-live="polite"><span id="workbench-busy-label"></span><button id="task-status-button" class="btn btn-small btn-muted" type="button" onclick="openDesktop('tasks')" hidden data-i18n="查看任务">查看任务</button></p>
+        <main class="workspace">
+            <aside class="sidebar">
+                <div class="sidebar-scroll">            <div class="brand">
                 <div class="brand-mark" aria-hidden="true">
                     <svg viewBox="0 0 48 48" role="img">
                         <path d="M24 4h10c5 0 8 3 8 8v8c0 5-3 8-8 8H20c-4 0-6 2-6 6v2H8c-3 0-5-2-5-5v-3c0-5 4-9 9-9h12c2 0 4-2 4-4v-3h-8V4h4z" fill="#1769e8"></path>
@@ -29,24 +48,7 @@
                 </div>
             </div>
 
-            <div class="top-spacer"></div>
-
-            <div class="utility-group" aria-label="工具">
-                <button id="settings-button" class="btn btn-muted" type="button" onclick="openDesktop('library')" data-i18n="设置">设置</button>
-                <button class="btn btn-muted top-toggle" id="language-display-btn" type="button" onclick="toggleUILanguage()" title="切换界面语言" aria-label="切换界面语言">
-                    <svg class="ui-language-icon" data-icon="ui-to-en" width="20" height="20" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 1 0 20"></path><path d="M12 2a14.5 14.5 0 0 0 0 20"></path><path d="M2 12h20"></path></svg>
-                </button>
-                <button class="btn btn-muted top-toggle" id="theme-toggle-btn" type="button" onclick="toggleTheme()" title="切换浅色/深色主题" aria-label="切换浅色/深色主题" aria-pressed="false">
-                    <svg class="theme-toggle-icon" data-icon="theme-to-dark" width="20" height="20" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path d="M20.4 14.4A7.8 7.8 0 0 1 9.6 3.6a8.2 8.2 0 1 0 10.8 10.8Z"></path></svg>
-                </button>
-            </div>
-        </header>
-
-        <p id="workbench-busy" class="workbench-busy" role="status" aria-live="polite"><span id="workbench-busy-label"></span><button id="task-status-button" class="btn btn-small btn-muted" type="button" onclick="openDesktop('tasks')" hidden data-i18n="查看任务">查看任务</button></p>
-        <main class="workspace">
-            <aside class="sidebar">
-                <div class="sidebar-scroll">
-                    <section class="library-heading">
+                    <section class="library-heading sr-only" inert>
                         <div class="library-heading-row"><h2 data-i18n="当前游戏库">当前游戏库</h2></div>
                         <p id="library-location"></p>
                         <label id="device-storage-field" class="device-storage-field" hidden>存储空间<select id="device-storage-select" onchange="selectDeviceStorage()"></select></label>
@@ -55,13 +57,13 @@
                 <section class="library-browser" id="library-browser">
                     <div class="library-browser-header">
                         <div>
-                            <h2 data-i18n="主机">主机</h2>
+                            <h2>主机分类</h2>
                             <p class="library-browser-summary" id="library-browser-summary" data-i18n="扫描后按主机名称显示 .lpl 游戏列表">扫描后按主机名称显示 .lpl 游戏列表</p>
                         </div>
                     </div>
-                    <button class="btn btn-muted content-scan-entry" type="button" data-input-control onclick="openContentScan()">更新游戏库</button>
-                    <button id="storage-entry" class="btn btn-muted content-scan-entry" type="button" data-input-control onclick="openStorageOptimization()">光盘 CHD 转换</button>
-                    <button id="rom-storage-entry" class="btn btn-muted content-scan-entry" type="button" data-input-control onclick="openRomStorage()">目录整理与 ROM 压缩</button>
+
+
+
                     <input id="library-system-search" class="library-system-search" type="search" aria-label="搜索主机" placeholder="搜索主机" oninput="filterLibrarySystems()">
                     <p id="library-system-empty" class="artwork-help" hidden></p>
                     <div class="playlist-list playlist-system-list" id="scanned-playlists">
@@ -69,9 +71,11 @@
                     </div>
                 </section>
                 </div>
+                <div class="sidebar-footer"><details class="tools-menu"><summary><span class="icon" data-ui-icon="tool"></span>工具</summary><div><button id="storage-entry" type="button" onclick="this.closest('details').open=false; openStorageOptimization()">光盘 CHD 转换</button><button id="rom-storage-entry" type="button" onclick="this.closest('details').open=false; openRomStorage()">目录整理与 ROM 压缩</button></div></details><button class="sidebar-settings" type="button" onclick="openDesktop('library')"><span class="icon" data-ui-icon="settings"></span>设置与游戏库</button></div>
             </aside>
 
             <section class="main-panel filters-compact">
+                <div id="library-read-banner" class="library-read-banner" role="status" hidden><span class="library-read-spinner" aria-hidden="true"></span><span id="library-read-banner-message"></span><button class="btn btn-small btn-muted" id="library-read-banner-retry" type="button" onclick="retryLibraryRead()" hidden>重试</button></div>
                 <section class="desktop-welcome" id="library-onboarding">
                     <header class="home-intro"><h1 id="home-title">打开游戏库</h1><p id="home-description"></p></header>
                     <p id="home-message" role="alert" hidden></p>
@@ -87,12 +91,13 @@
                     <h1 class="panel-title" id="workspace-title">选择游戏列表</h1>
 
                     <div class="panel-actions">
+                        <button id="automatic-scan-button" class="btn" type="button" data-input-control onclick="openAutoScan()"><span class="icon" data-ui-icon="scan"></span>扫描新增游戏</button>
                         <button id="browse-games-button" class="btn btn-muted" type="button" onclick="invalidateWorkbenchPreview()" hidden>返回游戏列表</button>
                         <div class="completion-entry">
                             <span id="completion-entry-note">自动匹配中文名与图片，预览后确认应用。</span>
-                            <button id="preview-button" class="btn" onclick="startCompletion()" disabled type="button" aria-describedby="completion-entry-note" data-i18n="一键补全">一键补全</button>
+                            <button id="preview-button" class="btn btn-muted" onclick="startCompletion()" disabled type="button" aria-describedby="completion-entry-note" data-i18n="一键补全">一键补全</button>
                         </div>
-                        <button id="apply-button" class="btn btn-success" onclick="applyChanges()" disabled type="button">确认应用</button>
+                        <button id="manual-add-button" class="btn btn-text" type="button" data-input-control onclick="openContentScan()">＋ 手动添加</button><button id="apply-button" class="btn btn-success" onclick="applyChanges()" disabled type="button">确认应用</button>
                     </div>
                 </div>
                 <p id="workspace-empty" class="workspace-note" data-i18n="选择左侧列表，然后预览名称与图片变更。">选择左侧列表，然后预览名称与图片变更。</p>
@@ -231,7 +236,7 @@
                                 <button class="btn btn-small btn-muted" onclick="openFilePicker('retroarch_root', true)" title="选择 RetroArch 目录" data-input-control type="button" data-i18n="浏览">浏览</button>
                             </div>
                         </div>
-                        <div class="device-actions">
+                        <div class="device-actions"><button class="btn btn-muted" id="device-switch-button" type="button" onclick="desktopDialog.close(); showLibraryHome()">切换设备</button>
 
                             <button class="btn" id="scan-device-btn" onclick="scanDevice(false)" data-i18n="扫描目录" type="button">扫描目录</button>
                         </div>
@@ -338,7 +343,7 @@
         <footer class="batch-review-footer"><button id="batch-run-tasks" class="btn btn-muted" type="button" onclick="showBatchRunTasks()" data-i18n="查看任务明细" hidden>查看任务明细</button><button id="batch-run-cancel" class="btn btn-muted" type="button" onclick="cancelBatchRun()" data-i18n="取消">取消</button><button id="batch-run-done" class="btn" type="button" onclick="closeBatchRun()" data-i18n="完成" hidden>完成</button></footer>
     </dialog>
     <dialog id="content-scan-dialog" aria-labelledby="content-scan-title">
-        <header><div><h2 id="content-scan-title">更新游戏库</h2><p>选择目录 → 确认主机与核心 → 开始扫描 → 预览并确认更新</p></div><button id="content-scan-close" class="btn btn-muted" type="button" onclick="closeContentScan()">关闭</button></header>
+        <header><div><h2 id="content-scan-title">手动添加游戏</h2><p>指定目录、主机与核心，预览后增量加入游戏列表。</p></div><button id="content-scan-close" class="btn btn-muted" type="button" onclick="closeContentScan()">关闭</button></header>
         <div class="content-scan-body">
         <fieldset id="content-scan-fields">
             <label>扫描配置<select id="content-scan-profile" onchange="loadContentProfile()"></select></label>
@@ -445,6 +450,15 @@
         <p id="deploy-status" role="status" aria-live="polite"></p><section id="deploy-review" hidden><h3>本次方案</h3><ul id="deploy-details"></ul></section>
         <footer><button id="deploy-cancel" class="btn btn-muted" type="button" onclick="cancelChdDeployment()" hidden>取消任务</button><button id="deploy-preview" class="btn btn-muted" type="button" onclick="previewChdDeployment()">预览回传方案</button><button id="deploy-apply" class="btn" type="button" onclick="applyChdDeployment()" disabled>确认执行方案</button></footer>
     </dialog>
+    <dialog id="auto-scan-dialog" class="auto-scan-dialog" aria-labelledby="auto-scan-title"><header><div><h2 id="auto-scan-title">扫描新增游戏</h2><p>自动发现 Roms / Games 等目录中的主机文件夹；其他目录可手动添加。</p></div><button class="btn btn-muted" type="button" onclick="closeAutoScan()">关闭</button></header><p id="auto-scan-status" role="status">选择扫描范围后开始分析。</p><div id="auto-scan-roots"></div><div id="auto-scan-results"></div><footer><label><input id="auto-scan-complete" type="checkbox" checked>导入后补全名称与封面</label><button class="btn btn-muted" type="button" onclick="openContentScan()">手动指定目录</button><button id="auto-scan-cancel" class="btn btn-muted" type="button" onclick="cancelAutoScan()" hidden>取消任务</button><button id="auto-scan-start" class="btn" type="button" onclick="previewAutoScan()">开始扫描</button><button id="auto-scan-apply" class="btn" type="button" onclick="applyAutoScan()" hidden>确认导入</button></footer></dialog>
+    <dialog id="library-read-dialog" class="library-read-dialog" aria-labelledby="library-read-title" aria-describedby="library-read-message">
+        <div class="library-read-spinner" id="library-read-spinner" aria-hidden="true"></div>
+        <h2 id="library-read-title">正在读取游戏库</h2>
+        <p id="library-read-message" role="status" aria-live="polite">正在读取配置…</p>
+        <p id="library-read-note" class="library-read-note">首次读取掌机可能需要一些时间，请保持连接。</p>
+        <div id="library-read-actions" hidden><button class="btn" id="library-read-retry" type="button" onclick="retryLibraryRead()">重新读取</button><button class="btn btn-muted" id="library-read-switch" type="button" onclick="leaveLibraryRead()">切换设备</button></div>
+    </dialog>
+    <script src="/assets/workbench.js"></script>
     <script src="/assets/config.js"></script>
     <script src="/assets/library-navigation.js"></script>
     <script src="/assets/repair-model.js"></script>

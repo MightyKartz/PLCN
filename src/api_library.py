@@ -12,6 +12,11 @@ def sources(handler, context, payload):
     reply(handler, discover(config_path))
 
 
+def overview(handler, context, query):
+    from workbench_library import overview as read_overview
+    reply(handler, read_overview(query.get('root', [''])[0]))
+
+
 def recent(handler, context, payload):
     config_path = context.CONFIG_FILE
     from library_sources import remember

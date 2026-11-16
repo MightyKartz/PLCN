@@ -16,6 +16,8 @@ import api_desktop
 import api_config
 
 GET_ROUTES = {
+    '/api/jobs/status': api_tasks.workbench_status,
+    '/api/library/overview': api_library.overview,
     '/api/m3u/history': api_m3u.history,
     '/api/cores/info': api_content.core_info,
     '/api/content/setup': api_content.setup,
@@ -39,6 +41,8 @@ GET_ROUTES = {
 }
 
 POST_ROUTES = {
+    '/api/content/auto-preview': api_content.auto_preview,
+    '/api/content/auto-apply': api_content.auto_apply,
     '/api/rom-storage/relocation/preview': api_rom_storage.relocation_preview,
     '/api/rom-storage/relocation/apply': api_rom_storage.relocation_apply,
     '/api/rom-storage/relocation/recover': api_rom_storage.relocation_recover,

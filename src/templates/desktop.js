@@ -341,7 +341,13 @@ async function initializeDesktop() {
     await refreshLibrarySources();
 }
 initializeDisplayPreferences();
-loadConfig().then(initializeDesktop);
+async function startDesktop() {
+    beginLibraryRead('startup', desktopText('正在读取配置与检测设备…', 'Reading settings and discovering devices…'), '', true);
+    await loadConfig();
+    await initializeDesktop();
+    finishLibraryRead('startup', libraryHome.error);
+}
+startDesktop().catch(error => finishLibraryRead('startup', error.message));
 
 function renderTaskDetails(parent, job, expanded) {
     const result = job.result || {};

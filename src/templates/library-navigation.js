@@ -15,9 +15,10 @@ async function scanDevice(useDefault = false) {
 
     setLibraryRoot(targetPath);
     if (!beginWorkbenchOperation('scan')) return;
+    if (typeof beginLibraryRead === 'function') beginLibraryRead('scan', workbenchText('正在读取主机与游戏列表…', 'Reading systems and game lists…'), targetPath);
     libraryHome.openError = '';
     invalidateWorkbenchPreview();
-    currentDeviceScan = null;
+    if (currentDeviceScan?.root_path !== targetPath) currentDeviceScan = null;
     for (const id of ['playlist_path', 'system_name']) document.getElementById(id).value = '';
     desktopDialog.close();
     scanBtn.disabled = true;
@@ -61,6 +62,7 @@ async function scanDevice(useDefault = false) {
         scanBtn.disabled = false;
         defaultBtn.disabled = false;
         endWorkbenchOperation();
+        if (typeof finishLibraryRead === 'function') finishLibraryRead('scan', libraryHome.openError);
         if (currentDeviceScan?.connected && selectedLibrarySystem) {
             await selectFirstPlaylistForSystem(selectedLibrarySystem);
         }
@@ -185,6 +187,7 @@ function findPreferredLibrarySystem(groups) {
 
 function selectAllLibrarySystems() {
     if (workbench.operation) return;
+    if (typeof workbenchOverview !== 'undefined') workbenchOverview.onlyMissing = false;
     selectedLibrarySystem = '';
     invalidateWorkbenchPreview();
     for (const id of ['playlist_path', 'system_name']) document.getElementById(id).value = '';
@@ -200,15 +203,14 @@ function renderLibrarySystemTabs(container, groups) {
     allButton.type = 'button';
     allButton.id = 'library-all-systems';
     allButton.className = `playlist-system-tab${selectedLibrarySystem === '' ? ' active' : ''}`;
-    const allAbbreviation = document.createElement('strong');
-    allAbbreviation.textContent = workbenchText('全部', 'All');
+    const allIcon = wbIcon('layout-grid');
     const allName = document.createElement('span'); allName.className = 'system-display-name';
-    allName.textContent = workbenchText('全部主机', 'All systems');
+    allName.textContent = 'ALL';
     const allCount = document.createElement('span'); allCount.className = 'system-game-count';
     allCount.textContent = currentDeviceScan?.totals?.items
         ?? [...groups.values()].reduce((total, items) => total
             + items.reduce((sum, item) => sum + (Number(item.playlist.item_count) || 0), 0), 0);
-    allButton.append(allAbbreviation, allName, allCount);
+    allButton.append(allIcon, allName, allCount);
     allButton.title = workbenchText('全部主机', 'All systems');
     allButton.setAttribute('aria-label', workbenchText('全部主机', 'All systems'));
     allButton.setAttribute('aria-pressed', String(selectedLibrarySystem === ''));
@@ -222,13 +224,12 @@ function renderLibrarySystemTabs(container, groups) {
         const group = document.createElement('div');
         group.className = 'library-system-group';
         group.dataset.search = (groupName + ' ' + getSystemAbbreviation(groupName)).toLowerCase();
-        const abbreviation = document.createElement('strong');
-        abbreviation.textContent = getSystemAbbreviation(groupName);
+        const icon = wbIcon(wbSystemIcon(groupName));
         const name = document.createElement('span'); name.className = 'system-display-name';
-        name.textContent = groupName.replace(/^[^-]+ - /, '');
+        name.textContent = getSystemAbbreviation(groupName);
         const count = document.createElement('span'); count.className = 'system-game-count';
         count.textContent = items.reduce((total, item) => total + (Number(item.playlist.item_count) || 0), 0);
-        tabButton.append(abbreviation, name, count);
+        tabButton.append(icon, name, count);
         tabButton.title = groupName;
         tabButton.setAttribute('aria-label', groupName);
         tabButton.setAttribute('aria-pressed', String(groupName === selectedLibrarySystem));
@@ -353,6 +354,7 @@ async function selectScannedPlaylist(index) {
 
 
 function renderLibraryOverview(visible) {
+    if (typeof renderWorkbenchOverview === 'function') return renderWorkbenchOverview(visible);
     const panel = document.getElementById('library-overview');
     panel.hidden = !visible;
     panel.replaceChildren();

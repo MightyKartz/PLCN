@@ -1,7 +1,31 @@
 """Content scan plans remain on the server until explicitly confirmed."""
 import content_scan as scan
 import core_catalog
+import automatic_scan
 from api_common import reply, background
+
+
+def auto_preview(handler, context, payload):
+    root, sources = automatic_scan.validate(payload)
+    def work(jid):
+        result = automatic_scan.preview(root, sources, lambda a, b, text: context.job_manager.update_job(jid, a, b, text), lambda: context.job_manager.cancelled(jid))
+        context.job_manager.contexts[jid] = {'automatic_plan': result}
+        return automatic_scan.public_result(result)
+    reply(handler, {'job_id': background(context.job_manager, '扫描新增游戏', work)})
+
+
+def auto_apply(handler, context, payload):
+    ident, systems = payload.get('preview_job_id'), payload.get('systems')
+    job = context.job_manager.get_job(ident)
+    if not job or job['status'] != 'completed' or not isinstance(systems, list) or not systems or any(not isinstance(s, str) for s in systems):
+        raise ValueError('请先完成扫描并选择要导入的主机')
+    with context.job_manager.lock:
+        result = context.job_manager.contexts.get(ident, {}).get('automatic_plan')
+        if not result or any(s not in result['plans'] for s in systems) or len(set(systems)) != len(systems):
+            raise ValueError('扫描结果无效，请重新分析')
+        context.job_manager.contexts[ident].pop('automatic_plan')
+    reply(handler, {'job_id': background(context.job_manager, '导入新增游戏', lambda jid: automatic_scan.apply(result, systems,
+        lambda a, b, text: context.job_manager.update_job(jid, a, b, text), lambda: context.job_manager.cancelled(jid)))})
 
 
 def setup(handler, context, query):
