@@ -13,6 +13,7 @@ METADATA = re.compile(
 
 def family_key(name):
     """Retain unknown edition/hack tags and all sequel/subtitle text."""
+    name = DISC_MARKER.sub('', name).replace('（', '(').replace('）', ')')
     title = re.sub(r'\(([^()]*)\)|\[([^\[\]]*)\]',
                    lambda m: '' if METADATA.fullmatch(m[1] or m[2]) else m[0], name)
     title = DISC_MARKER.sub('', title)
@@ -24,8 +25,8 @@ def keep_disc_marker(label, filename):
     disc = DISC_MARKER.search(filename)
     if disc and not DISC_MARKER.search(label):
         label += ' (Disc ' + (disc[1] or disc[2]) + ')'
-    side = re.search(r'\(([AB])\)', filename, re.I)
-    if side and not re.search(r'\([AB]\)', label, re.I):
+    side = re.search(r'[（(]([AB])[）)]', filename, re.I)
+    if side and not re.search(r'[（(][AB][）)]', label, re.I):
         label += ' (' + side[1].upper() + ')'
     return label
 

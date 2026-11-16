@@ -20,6 +20,9 @@ def apply_playlist(path, changes, thumbnails, *, options, progress, cancel_check
     remote = is_adb_uri(path) or mtp.is_mtp(path)
     remote_images = is_adb_uri(thumbnails) or mtp.is_mtp(thumbnails)
     download = options.get('download_thumbnails', True)
+    relabel_changes = [c for c in changes if options.get('write_names', True)
+                       and c.get('display_metadata', {}).get('original_label') != c.get('new_label')
+                       and c.get('display_metadata') and c.get('original_item_label') != c.get('new_label')]
     with ExitStack() as resources:
         local_path, local_images = path, thumbnails
         if remote:
@@ -35,12 +38,26 @@ def apply_playlist(path, changes, thumbnails, *, options, progress, cancel_check
         mtp_digests = {}
         if remote_images:
             local_images = resources.enter_context(tempfile.TemporaryDirectory(prefix='plcn-remote-thumbnails-'))
-        if mtp.is_mtp(thumbnails) and download:
+        if is_adb_uri(thumbnails) and relabel_changes:
+            from artwork_resolver import THUMBNAIL_TYPES, sanitize_filename, valid_png
+            from single_artwork import read_target
+            for change in relabel_changes:
+                old = change.get('original_item_label')
+                if not change.get('display_metadata') or not old or old == change.get('new_label'):
+                    continue
+                for kind in THUMBNAIL_TYPES:
+                    relative = Path(change['system']) / kind / (sanitize_filename(old) + '.png')
+                    content = read_target(thumbnails.rstrip('/') + '/' + relative.as_posix())
+                    if content is not None and valid_png(content):
+                        cached = Path(local_images) / relative
+                        cached.parent.mkdir(parents=True, exist_ok=True)
+                        cached.write_bytes(content)
+        if mtp.is_mtp(thumbnails) and (download or relabel_changes):
             from artwork_resolver import THUMBNAIL_TYPES, sanitize_filename, valid_png, validate_system
             from single_artwork import read_target
             from rom_paths import rom_title
             from task_control import checkpoint
-            for change in changes:
+            for change in changes if download else relabel_changes:
                 label = change.get('new_label') if options.get('write_names', True) else change.get('original_item_label') or change.get('original_label')
                 system = change.get('system')
                 if not label or not system:
@@ -55,7 +72,7 @@ def apply_playlist(path, changes, thumbnails, *, options, progress, cancel_check
                     if content is not None and valid_png(content):
                         existing_mtp.add(str(relative))
                     else:
-                        for alias in dict.fromkeys([change.get('thumbnail_source'), rom_title(change.get('path'))]):
+                        for alias in dict.fromkeys([change.get('original_item_label'), change.get('thumbnail_source'), rom_title(change.get('path'))]):
                             if not alias or alias == label:
                                 continue
                             candidate = read_target(mtp.join(thumbnails, system, kind, sanitize_filename(alias) + '.png'))
@@ -80,11 +97,16 @@ def apply_playlist(path, changes, thumbnails, *, options, progress, cancel_check
                 remote_backup = mtp.write(path, Path(local_path).read_bytes(), original_digest)
             else:
                 remote_backup = verified_push_adb_playlist(local_path, path, expected_remote)
-        if remote_images and download:
+        if remote_images and (download or relabel_changes):
             progress(len(changes), len(changes), '正在推送缩略图到实机...')
             if mtp.is_mtp(thumbnails):
                 reviewed_files = {str(Path(detail['path']).relative_to(local_images))
                     for detail in summary.get('details', []) if detail.get('path') and detail.get('status') in {'success', 'skipped'}}
+                if not download:
+                    reviewed_files = {str(relative) for record in summary.get('writeback', {}).get('applied', [])
+                                      for kind in THUMBNAIL_TYPES
+                                      for relative in [Path(record['system']) / kind / (sanitize_filename(record['new_label']) + '.png')]
+                                      if (Path(local_images) / relative).is_file()}
                 mtp.push_directory(local_images, thumbnails, expected_hashes=mtp_digests, include_files=reviewed_files - existing_mtp)
             else:
                 push_adb_directory(local_images, thumbnails)

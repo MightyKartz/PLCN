@@ -137,7 +137,8 @@ function renderPreviewTable(changes) {
         const nameLayout = document.createElement('div'); nameLayout.className = 'library-name-cell';
         nameLayout.appendChild(tableThumb); nameLayout.appendChild(originalText);
         tdOriginal.appendChild(nameLayout);
-        tdOriginal.title = [originalLabel, getCurrentItemMeta(change)].filter(Boolean).join('\n');
+        tdOriginal.title = [originalLabel, getCurrentItemMeta(change),
+            change.display_metadata?.version ? workbenchText('版本信息：', 'Version: ') + change.display_metadata.version : ''].filter(Boolean).join('\n');
         tr.appendChild(tdOriginal);
         tr.appendChild(buildStatusCell(info, index));
 

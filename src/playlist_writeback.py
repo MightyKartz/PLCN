@@ -339,11 +339,21 @@ def _apply_changes_locked(playlist_path, changes, thumbnails_dir, backup=True, p
         attach_writeback_summary(download_summary, writeback)
         return wrap_apply_result(download_summary, apply_summary)
 
+    # Publish existing artwork under the new playlist label after verified writes.
+    # Old files are retained so a playlist backup remains usable.
+    from artwork_resolver import artwork_path, valid_image_file, THUMBNAIL_TYPES
+    from safe_io import atomic_write_bytes
+    for record in writeback['applied']:
+        if not thumbnails_dir or not record.get('system') or not record.get('old_label') or record['old_label'] == record['new_label']:
+            continue
+        for kind in THUMBNAIL_TYPES:
+            old = artwork_path(thumbnails_dir, record['system'], record['old_label'], kind)
+            target = artwork_path(thumbnails_dir, record['system'], record['new_label'], kind)
+            if not valid_image_file(target) and valid_image_file(old):
+                atomic_write_bytes(target, old.read_bytes())
     if not download_tasks:
         return finalize(downloader.empty_summary(0))
-
     if not download_thumbnails:
         return finalize(downloader.skipped_summary(download_tasks, "已按用户选项跳过下载"))
-
     download_summary = downloader.download_batch(download_tasks, progress_callback=progress_callback)
     return finalize(download_summary)
