@@ -26,6 +26,8 @@ def resolve(proposals, translators):
     catalogs = {}
     for row in proposals:
         system = row['system']
+        if row.get('translation_match_source') in {'exact', 'exact_alias', 'curated_alias', 'title_family'}:
+            continue
         if (row.get('translation_match_source') != 'fuzzy_candidate' and row.get('match_source') != 'playlist') or row.get('match_diagnostics', {}).get('conflicts'):
             continue
         if any(term in system for term in ('Arcade', 'FBNeo', 'MAME', 'DOS')):

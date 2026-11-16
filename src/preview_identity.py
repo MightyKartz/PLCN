@@ -13,6 +13,7 @@ def identity_state(change):
     titles = [change.get('original_item_label') or '', rom_title(change.get('path')), change.get('thumbnail_source') or '']
     discs = {int(m[1] or m[2]) for title in titles if (m := DISC_MARKER.search(title))}
     sides = {m[1].upper() for title in titles if (m := re.search(r'[（(]([AB])[）)]', title, re.I))}
+    discs.update(ord(side) - ord('A') + 1 for side in sides)
     if source != 'manual_override' and (len(discs) > 1 or len(sides) > 1):
         conflicts.append({'reason': '列表与文件的盘号或 A/B 标记不一致'})
     if conflicts:

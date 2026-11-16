@@ -26,7 +26,8 @@ def normalize_proposals(proposals):
         source_version = VERSION.search(SIDE.sub('', DISC_MARKER.sub('', source)).rstrip())
         marker = ''
         if not rom_filename(row['path']).lower().endswith('.m3u'):
-            marker = '（第' + str(int(disc[1] or disc[2])) + '盘）' if disc else '（' + side[1].upper() + '）' if side else ''
+            number = int(disc[1] or disc[2]) if disc else ord(side[1].upper()) - ord('A') + 1 if side else None
+            marker = '（第' + str(number) + '盘）' if number is not None else ''
         row['display_metadata'] = {'original_label': label,
                                    'version': (version or source_version)[1] if version or source_version else '',
                                    'disc': disc[1] or disc[2] if disc else '', 'side': side[1].upper() if side else ''}

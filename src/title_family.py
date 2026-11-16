@@ -65,6 +65,11 @@ def resolve_artwork(proposals, verify_artwork):
                        if tag not in {'a', 'b', 'chs', 'cht'}}
         names = sorted(name for name in catalog if family_key(name) == family_key(source)
                        and constraints <= release_tags(name))
+        side = re.search(r'[（(]([AB])[）)]', source, re.I)
+        if side:
+            number = ord(side[1].upper()) - ord('A') + 1
+            numbered = [name for name in names if (disc := DISC_MARKER.search(name)) and int(disc[1] or disc[2]) == number]
+            names = numbered or [name for name in names if not DISC_MARKER.search(name)]
         row['artwork_candidates'] = names
         row['artwork_gallery_status'] = 'matched' if names else 'not_found'
         row['thumbnail_source'] = recommend_source(names) if names else None
