@@ -56,7 +56,7 @@ class InstanceLock:
                     return state['url']
             except (OSError, ValueError, KeyError, requests.RequestException):
                 time.sleep(.1)
-        raise RuntimeError('PLCN 已在运行或正在启动，请稍后重试。日志位于用户数据目录。')
+        raise RuntimeError('RetroArch 助手已在运行或正在启动，请稍后重试。日志位于用户数据目录。')
 
     def close(self):
         if self.handle:

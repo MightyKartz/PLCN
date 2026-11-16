@@ -15,7 +15,7 @@ def helper_pick(kind, initial=''):
     root.withdraw()
     root.attributes('-topmost', True)
     try:
-        options = {'title': {'file':'PLCN — 选择游戏列表','directory':'PLCN — 选择目录','executable':'PLCN — 选择 chdman 程序'}[kind]}
+        options = {'title': {'file':'RetroArch 助手 — 选择游戏列表','directory':'RetroArch 助手 — 选择目录','executable':'RetroArch 助手 — 选择 chdman 程序'}[kind]}
         # On macOS, a parent makes the native panel a sheet attached to that
         # window. Our hidden helper window has no usable on-screen position;
         # let macOS place a standalone panel instead of an off-screen sheet.

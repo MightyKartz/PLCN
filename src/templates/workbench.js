@@ -137,7 +137,7 @@ function renderWorkbenchOverview(visible) {
     const toolbar = wbElement('div','overview-toolbar'); toolbar.append(wbElement('h2','',workbenchOverview.onlyMissing ? workbenchText('待补全的主机','Systems needing artwork') : workbenchText('按主机浏览','Browse by system')));
     const search = wbElement('input','overview-search'); search.type = 'search'; search.placeholder = workbenchText('搜索主机','Search systems'); search.setAttribute('aria-label',search.placeholder); search.value = workbenchOverview.query;
     search.oninput = () => {workbenchOverview.query = search.value; filterOverviewCards();}; toolbar.append(search);
-    for (const [view,icon,label] of [['grid','layout-grid','网格视图'],['list','list','列表视图']]) {
+    for (const [view,icon,label] of [['grid','layout-grid',uiText('网格视图')],['list','list',uiText('列表视图')]]) {
         const button = wbElement('button','view-switch'); button.type = 'button'; button.append(wbIcon(icon)); button.setAttribute('aria-label',label); button.setAttribute('aria-pressed', String(workbenchOverview.view === view));
         button.onclick = () => {workbenchOverview.view=view;renderWorkbenchOverview(true);}; toolbar.append(button);
     }
@@ -175,7 +175,7 @@ function filterOverviewCards() {
 function renderWorkbenchChrome(state) {
     for (const [selector,zh,en] of [
         ['#automatic-scan-button','扫描新增游戏','Scan new games'],['#manual-add-button','＋ 手动添加','＋ Add manually'],
-        ['.sidebar-settings','设置与游戏库','Settings & library'],['.tools-menu summary','工具','Tools'],['#device-switch-button','切换设备','Switch device']]) {
+        ['.sidebar-settings','设置','Settings'],['.tools-menu summary','工具','Tools'],['#device-switch-button','切换设备','Switch device']]) {
         const button=document.querySelector(selector);
         if(button?.lastChild?.nodeType===3)button.lastChild.textContent=workbenchText(zh,en);
     }
@@ -229,32 +229,32 @@ const autoScanState={busy:false,job:null,previewId:null,plan:null,root:'',genera
 async function openAutoScan(){
     if(workbench.operation)return;
     const root=document.getElementById('retroarch_root').value;
-    if(!root){showStatus('请先打开一个游戏库','error');return;}
+    if(!root){showStatus(uiText('请先打开一个游戏库'),'error');return;}
     const generation=++autoScanState.generation;autoScanState.root=root;autoScanState.previewId=null;autoScanState.plan=null;
     document.getElementById('auto-scan-results').replaceChildren();document.getElementById('auto-scan-apply').hidden=true;
-    document.getElementById('auto-scan-status').textContent='选择需要扫描的存储。扫描只读取目录，确认后才生成游戏列表。';
+    document.getElementById('auto-scan-status').textContent=uiText('选择需要扫描的存储。扫描只读取目录，确认后才生成游戏列表。');
     const roots=document.getElementById('auto-scan-roots');roots.replaceChildren();document.getElementById('auto-scan-start').disabled=true;
     document.getElementById('auto-scan-dialog').showModal();
     try{
         const data=await desktopRequest('/api/library/sources');if(generation!==autoScanState.generation)return;
         const serial=root.startsWith('mtp://')?root.split('/')[2]:null;
-        const sources=serial?data.sources.filter(s=>s.transport==='mtp'&&s.path.split('/')[2]===serial):[{path:root.replace(/[\\/][^\\/]+[\\/]?$/,''),label:'本地游戏目录（游戏库同级）'}];
+        const sources=serial?data.sources.filter(s=>s.transport==='mtp'&&s.path.split('/')[2]===serial):[{path:root.replace(/[\\/][^\\/]+[\\/]?$/,''),label:uiText('本地游戏目录（游戏库同级）')}];
         const unique=new Set();
         for(const source of sources){const path=serial?source.path.split('/').slice(0,4).join('/')+'/':source.path;if(unique.has(path))continue;unique.add(path);
-            const label=wbElement('label','auto-scan-root');const input=document.createElement('input');input.type='checkbox';input.value=path;input.checked=true;input.onchange=()=>{autoScanState.previewId=null;document.getElementById('auto-scan-apply').hidden=true;};label.append(input,wbElement('span','',source.label||'设备存储'));roots.append(label);
+            const label=wbElement('label','auto-scan-root');const input=document.createElement('input');input.type='checkbox';input.value=path;input.checked=true;input.onchange=()=>{autoScanState.previewId=null;document.getElementById('auto-scan-apply').hidden=true;};label.append(input,wbElement('span','',source.label||uiText('设备存储')));roots.append(label);
         }
-        if(!sources.length)throw new Error('没有可扫描的存储，请确认掌机已选择文件传输。');
+        if(!sources.length)throw new Error(uiText('没有可扫描的存储，请确认掌机已选择文件传输。'));
         document.getElementById('auto-scan-start').disabled=false;
     }catch(error){document.getElementById('auto-scan-status').textContent=error.message;}
 }
 function closeAutoScan(){if(autoScanState.busy)return;++autoScanState.generation;document.getElementById('auto-scan-dialog').close();}
 async function autoScanJob(route,payload){
-    if(!beginWorkbenchOperation('auto-scan'))throw new Error('请等待当前任务完成');autoScanState.busy=true;
+    if(!beginWorkbenchOperation('auto-scan'))throw new Error(uiText('请等待当前任务完成'));autoScanState.busy=true;
     document.getElementById('auto-scan-start').disabled=true;document.getElementById('auto-scan-apply').disabled=true;
     document.querySelectorAll('#auto-scan-roots input, #auto-scan-results input').forEach(input=>input.disabled=true);
     try{
         const started=await desktopRequest(route,payload);autoScanState.job=started.job_id;document.getElementById('auto-scan-cancel').hidden=false;
-        const result=await new Promise((resolve,reject)=>{const events=new EventSource('/api/progress?job_id='+started.job_id);events.onmessage=e=>{const job=JSON.parse(e.data);document.getElementById('auto-scan-status').textContent=job.message||'正在分析…';if(job.status==='completed'){events.close();resolve(job.result);}else if(job.error||['failed','cancelled'].includes(job.status)){events.close();reject(new Error(job.error||'任务已取消'));}};events.onerror=()=>{document.getElementById('auto-scan-status').textContent='进度连接中断，正在重连；任务不会重复提交。';};});
+        const result=await new Promise((resolve,reject)=>{const events=new EventSource('/api/progress?job_id='+started.job_id);events.onmessage=e=>{const job=JSON.parse(e.data);document.getElementById('auto-scan-status').textContent=currentUILanguage==='en'?`Analyzing… ${job.total?job.progress+' / '+job.total:''}`:job.message||uiText('正在分析…');if(job.status==='completed'){events.close();resolve(job.result);}else if(job.error||['failed','cancelled'].includes(job.status)){events.close();reject(new Error(job.error||uiText('任务已取消')));}};events.onerror=()=>{document.getElementById('auto-scan-status').textContent=uiText('进度连接中断，正在重连；任务不会重复提交。');};});
         return {id:started.job_id,result};
     }finally{document.getElementById('auto-scan-cancel').hidden=true;autoScanState.busy=false;autoScanState.job=null;document.getElementById('auto-scan-start').disabled=false;document.getElementById('auto-scan-apply').disabled=false;document.querySelectorAll('#auto-scan-roots input, #auto-scan-results input').forEach(input=>input.disabled=false);endWorkbenchOperation();}
 }
@@ -265,21 +265,21 @@ async function previewAutoScan(){
         const {id,result}=await autoScanJob('/api/content/auto-preview',{root:autoScanState.root,sources});autoScanState.previewId=id;autoScanState.plan=result;
         const rows=document.getElementById('auto-scan-results');
         for(const row of result.rows){const article=wbElement('label','auto-scan-result');const input=document.createElement('input');input.type='checkbox';input.dataset.system=row.system;input.checked=row.added>0;input.disabled=!row.added;
-            const details=wbElement('div','');details.append(wbElement('strong','',wbSystemName(row.system)),wbElement('small','',`新增 ${row.added} · 已有 ${row.retained} · 跳过 ${row.skipped}`));article.append(input,details);rows.append(article);}
-        for(const row of result.unclassified){const article=wbElement('div','auto-scan-result');const details=wbElement('div','');details.append(wbElement('strong','','待配置'),wbElement('small','',row.directory),wbElement('small','',row.reason));article.append(details);rows.append(article);}
-        const count=result.rows.reduce((n,r)=>n+r.added,0);document.getElementById('auto-scan-status').textContent=`扫描完成：${count} 个新游戏，${result.unclassified.length} 个目录待配置。未配置核心的列表由 RetroArch 选择核心；已有核心设置保留。`;
+            const details=wbElement('div','');details.append(wbElement('strong','',wbSystemName(row.system)),wbElement('small','',workbenchText(`新增 ${row.added} · 已有 ${row.retained} · 跳过 ${row.skipped}`,`New ${row.added} · Existing ${row.retained} · Skipped ${row.skipped}`)));article.append(input,details);rows.append(article);}
+        for(const row of result.unclassified){const article=wbElement('div','auto-scan-result');const details=wbElement('div','');details.append(wbElement('strong','',uiText('待配置')),wbElement('small','',row.directory),wbElement('small','',uiText(row.reason)));article.append(details);rows.append(article);}
+        const count=result.rows.reduce((n,r)=>n+r.added,0);document.getElementById('auto-scan-status').textContent=workbenchText(`扫描完成：${count} 个新游戏，${result.unclassified.length} 个目录待配置。未配置核心的列表由 RetroArch 选择核心；已有核心设置保留。`,`Scan complete: ${count} new games; ${result.unclassified.length} folders need setup. RetroArch selects unassigned cores; existing core settings are preserved.`);
         document.getElementById('auto-scan-apply').hidden=!count;
     }catch(error){document.getElementById('auto-scan-status').textContent=error.message;}
 }
 async function applyAutoScan(){
     const systems=[...document.querySelectorAll('#auto-scan-results input:checked')].map(input=>input.dataset.system);
-    if(!systems.length){document.getElementById('auto-scan-status').textContent='请选择至少一个有新增游戏的主机。';return;}
+    if(!systems.length){document.getElementById('auto-scan-status').textContent=uiText('请选择至少一个有新增游戏的主机。');return;}
     const complete=document.getElementById('auto-scan-complete').checked;
     try{const {result}=await autoScanJob('/api/content/auto-apply',{preview_job_id:autoScanState.previewId,systems});autoScanState.previewId=null;document.getElementById('auto-scan-apply').hidden=true;
-        document.getElementById('auto-scan-status').textContent=`已导入 ${result.added} 个游戏。原始游戏文件保持不变。`;
+        document.getElementById('auto-scan-status').textContent=workbenchText(`已导入 ${result.added} 个游戏。原始游戏文件保持不变。`,`Imported ${result.added} games. Original game files are unchanged.`);
         await scanDevice();refreshWorkbenchOverview();
         if(complete){closeAutoScan();await runAllSystemsCompletion();}
-    }catch(error){autoScanState.previewId=null;document.getElementById('auto-scan-apply').hidden=true;document.getElementById('auto-scan-status').textContent=error.message+'；已完成的导入会保留，请重新扫描核对。';}
+    }catch(error){autoScanState.previewId=null;document.getElementById('auto-scan-apply').hidden=true;document.getElementById('auto-scan-status').textContent=error.message+workbenchText('；已完成的导入会保留，请重新扫描核对。','; completed imports are kept. Scan again to review.');}
 }
 document.addEventListener('DOMContentLoaded',()=>{
     document.getElementById('auto-scan-dialog').addEventListener('cancel',event=>{if(autoScanState.busy)event.preventDefault();else ++autoScanState.generation;});
@@ -289,6 +289,6 @@ if (typeof module !== 'undefined') module.exports = {workbenchGroups,wbStorageKi
 
 async function cancelAutoScan(){
     if(!autoScanState.job)return;
-    try{await desktopRequest('/api/jobs/cancel',{job_id:autoScanState.job});document.getElementById('auto-scan-status').textContent='正在取消，已完成的结果会保留。';}
-    catch(error){document.getElementById('auto-scan-status').textContent='取消请求未送达：'+error.message;}
+    try{await desktopRequest('/api/jobs/cancel',{job_id:autoScanState.job});document.getElementById('auto-scan-status').textContent=uiText('正在取消，已完成的结果会保留。');}
+    catch(error){document.getElementById('auto-scan-status').textContent=uiText('取消请求未送达：')+error.message;}
 }

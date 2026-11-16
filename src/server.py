@@ -46,7 +46,7 @@ def get_base_path():
 
 TEMPLATE_DIR = os.path.join(get_base_path(), "src", "templates")
 UI_ASSETS = (
-    'plcn.css', 'workbench.css', 'workbench.js', 'workbench-icons.svg', 'workflow.js', 'ui.js', 'config.js', 'library-navigation.js',
+    'brand.svg', 'plcn.css', 'workbench.css', 'workbench.js', 'workbench-icons.svg', 'workflow.js', 'ui.js', 'config.js', 'library-navigation.js',
     'repair-model.js', 'preview.js', 'tasks.js',
     'library.js', 'discs.js', 'm3u.js', 'storage.js', 'rom-storage.js', 'rom-relocation.js', 'chd-deployment.js', 'artwork.js', 'welcome.js', 'content-scan.js', 'desktop.js',
 )
@@ -114,7 +114,7 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
         except Exception:
             token = ''
         if not hmac.compare_digest(token, SESSION_TOKEN):
-            self.send_error(403, 'Open the PLCN page to start a local session')
+            self.send_error(403, 'Open the RetroArch Assistant page to start a local session')
             return False
         return True
 

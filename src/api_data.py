@@ -18,7 +18,7 @@ def managed_pack(value):
     path = Path(value).resolve()
     root = (app_paths.user_data_dir() / 'packs').resolve()
     if path.parent != root:
-        raise ValueError('请选择 PLCN 数据目录中已校验的数据包')
+        raise ValueError('请选择 RetroArch 助手数据目录中已校验的数据包')
     return path
 
 

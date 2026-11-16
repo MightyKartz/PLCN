@@ -3,31 +3,32 @@
 #endif
 [Setup]
 AppId={{5E9907D4-B062-4E6A-AEB0-223E3249D942}
-AppName=PLCN
+AppName=RetroArch Assistant
 AppVersion={#AppVersion}
 AppPublisher=MightyKartz
 AppPublisherURL=https://github.com/MightyKartz/PLCN
 DefaultDirName={localappdata}\Programs\PLCN
-DefaultGroupName=PLCN
+DefaultGroupName=RetroArch Assistant
 AllowNoIcons=yes
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir=..\dist
-OutputBaseFilename=PLCN-Windows-x64-Setup
+OutputBaseFilename=RetroArchAssistant-Windows-x64-Setup
 Compression=lzma2
 SolidCompression=yes
-UninstallDisplayIcon={app}\PLCN.exe
+SetupIconFile=icons\app-icon.ico
+UninstallDisplayIcon={app}\RetroArchAssistant.exe
 
 [Files]
-Source: "..\dist\PLCN\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\dist\RetroArchAssistant\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\PLCN"; Filename: "{app}\PLCN.exe"
-Name: "{autodesktop}\PLCN"; Filename: "{app}\PLCN.exe"; Tasks: desktopicon
+Name: "{group}\RetroArch Assistant"; Filename: "{app}\RetroArchAssistant.exe"
+Name: "{autodesktop}\RetroArch Assistant"; Filename: "{app}\RetroArchAssistant.exe"; Tasks: desktopicon
 
 [Tasks]
 Name: desktopicon; Description: "Create a desktop shortcut"; Flags: unchecked
 
 [Run]
-Filename: "{app}\PLCN.exe"; Description: "Open PLCN"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\RetroArchAssistant.exe"; Description: "Open RetroArch Assistant"; Flags: nowait postinstall skipifsilent

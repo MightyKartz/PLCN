@@ -14,7 +14,7 @@ def adb_executable():
     if bundled.is_file():
         return str(bundled)
     if getattr(sys, 'frozen', False) and sys.platform in ('darwin', 'win32'):
-        raise FileNotFoundError('安装包缺少 ADB，请重新下载完整的 PLCN 安装包')
+        raise FileNotFoundError('安装包缺少 ADB，请重新下载完整的 RetroArch 助手安装包')
     return shutil.which('adb') or 'adb'
 
 

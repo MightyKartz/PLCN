@@ -209,7 +209,7 @@ def fetch_pack(output, ref='master'):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description='PLCN translation data packs')
+    parser = argparse.ArgumentParser(description='RetroArch Assistant translation data packs')
     parser.add_argument('--config', default=str(app_paths.config_path()))
     commands = parser.add_subparsers(dest='command', required=True)
     build = commands.add_parser('build')

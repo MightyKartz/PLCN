@@ -6,6 +6,7 @@ from pathlib import Path
 
 sys.path.insert(0, 'src')
 from app_version import VERSION as _APP_VERSION
+from app_brand import NAME, BINARY_NAME, BUNDLE_NAME
 
 adb_root = Path("build/platform-tools")
 if not (adb_root / ("adb.exe" if sys.platform == "win32" else "adb")).is_file():
@@ -38,18 +39,20 @@ a = Analysis(
 )
 pyz = PYZ(a.pure)
 exe = EXE(
-    pyz, a.scripts, [], exclude_binaries=True, name='PLCN', debug=False,
+    pyz, a.scripts, [], exclude_binaries=True, name=BINARY_NAME, debug=False,
+    icon='packaging/icons/app-icon.ico' if sys.platform == 'win32' else None,
     bootloader_ignore_signals=False, strip=False, upx=False, console=False,
     target_arch=os.environ.get('PLCN_TARGET_ARCH') or None,
     codesign_identity=os.environ.get('PLCN_CODESIGN_IDENTITY') or None,
     entitlements_file='packaging/macos-entitlements.plist' if sys.platform == 'darwin' else None,
 )
-bundle = COLLECT(exe, a.binaries, a.datas, strip=False, upx=False, name='PLCN')
+bundle = COLLECT(exe, a.binaries, a.datas, strip=False, upx=False, name=BINARY_NAME)
 if sys.platform == 'darwin':
     app = BUNDLE(
-        bundle, name='PLCN.app', bundle_identifier='io.github.mightykartz.plcn',
+        bundle, name=BUNDLE_NAME, bundle_identifier='io.github.mightykartz.plcn',
+        icon='packaging/icons/app-icon.icns',
         info_plist={
-            'CFBundleName': 'PLCN', 'CFBundleDisplayName': 'PLCN',
+            'CFBundleName': NAME, 'CFBundleDisplayName': NAME,
             'CFBundleShortVersionString': _APP_VERSION,
             'CFBundleVersion': _APP_VERSION,
             'NSHighResolutionCapable': True,

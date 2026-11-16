@@ -1,14 +1,16 @@
-# PLCN 桌面预览版使用与发布
+# RetroArch 助手：使用与发布
+
+本次开发分支已更名为 RetroArch 助手，以下安装包名称对应更名后的构建；历史 Release 仍使用 PLCN 前缀，尚未发布新的更名安装包。
 
 本轮是 v3.3 桌面体验版；当前发行版为 v3.3.1，历史发行版从 v3.2.5 起提供内置 ADB 的 Windows / macOS 安装包。桌面基础 PR：[MightyKartz/PLCN#5](https://github.com/MightyKartz/PLCN/pull/5)，UI 精简 PR：[MightyKartz/PLCN#6](https://github.com/MightyKartz/PLCN/pull/6)。
 
 ## 普通用户
 
-Windows：安装 `PLCN-Windows-x64-Setup.exe` 后，从开始菜单启动；也可以解压便携 ZIP 后双击 `PLCN/PLCN.exe`。便携包默认仍使用用户数据目录，程序升级不会覆盖配置。
+Windows：安装 `RetroArchAssistant-Windows-x64-Setup.exe` 后，从开始菜单启动；也可以解压便携 ZIP 后双击 `RetroArchAssistant/RetroArchAssistant.exe`。便携包默认仍使用用户数据目录，程序升级不会覆盖配置。
 
-macOS：选择对应架构的 `PLCN-macOS-arm64.dmg`（Apple Silicon）或 `PLCN-macOS-x64.dmg`（Intel），将 PLCN.app 拖到 Applications。当前 CI 产物为未签名/未公证预览，不能作为正式分发就绪的声明；发布者应完成下方签名验收。
+macOS：选择对应架构的 `RetroArchAssistant-macOS-arm64.dmg`（Apple Silicon）或 `RetroArchAssistant-macOS-x64.dmg`（Intel），将 `RetroArch Assistant.app` 拖到 Applications。当前 CI 产物为未签名/未公证预览，不能作为正式分发就绪的声明；发布者应完成下方签名验收。
 
-打开后出现浏览器工作台，关闭标签不停止服务。再次启动会打开已有服务，不创建第二个实例。需要停止时用“设置 → 退出 PLCN”，有运行任务时会提示先等待或取消。
+打开后出现浏览器工作台，关闭标签不停止服务。再次启动会打开已有服务，不创建第二个实例。需要停止时用“设置 → 退出 RetroArch 助手”，有运行任务时会提示先等待或取消。
 
 1. 在首页选择已连接掌机的游戏库，或“手动指定设备目录”后扫描。首页不探测电脑本地目录或本地最近记录。macOS 连接 Android 掌机时选择 USB“文件传输”并保持解锁即可，无须 USB 调试；请关闭其它正在占用设备的文件传输程序。“设置 → 游戏库”只保留“游戏库目录”和“图片目录（可选覆盖）”，列表和系统名称由左侧选择决定。图片目录留空时自动检测；库中没有图片目录时按 `<游戏库>/thumbnails` 处理，设置中会标注“尚不存在，首次补图时自动创建”；手动覆盖适用于当前库的所有主机，切换主机、刷新并重开当前库后保留，打开其他库时清除。扫描完成后默认选中左侧列表顶部的“全部主机”；在左侧选择主机或具体列表，右侧立即显示当前名称、ROM 文件名和已有图片；浏览不执行名称匹配或写回。
 2. 选中主机后点击标题栏“一键补全”直接预览名称与图片，入口旁提示：“自动匹配中文名与图片，预览后确认应用。”预览顶部的“修改名称”“补全图片”默认都勾选；取消其一即仅改名或仅补图，至少保留一项。选项变化会重新分析，旧的行内编辑和勾选清除。仅补图按原 label 保存图片，本地、ADB 与 macOS MTP 都不改写 `.lpl`。
@@ -98,13 +100,13 @@ macOS 在对应架构机器上执行 `python3 scripts/package_desktop.py --arch 
 构建后可验证实际分发包（CI 对 Windows、macOS 两种架构均执行）：
 
 ```bash
-python scripts/smoke_desktop_package.py --installer dist/PLCN-Windows-x64-Setup.exe
-python scripts/smoke_desktop_package.py --dmg dist/PLCN-macOS-arm64.dmg
+python scripts/smoke_desktop_package.py --installer dist/RetroArchAssistant-Windows-x64-Setup.exe
+python scripts/smoke_desktop_package.py --dmg dist/RetroArchAssistant-macOS-arm64.dmg
 ```
 
 Windows 验收会静默安装到临时中文路径，运行程序后卸载，检查注册项清理和用户数据保留；若系统已有 PLCN 安装器注册项则拒绝运行，请使用干净测试机。macOS 会只读挂载 DMG，复制应用后卸载镜像，再启动复制出的程序。两者都验证资源、同配置重复启动、不同配置端口隔离和正常退出。所有用户数据使用临时 `PLCN_HOME`，不会修改日常配置。失败时日志目录保留并打印到终端。
 
-便携版本可以使用 `--binary <可执行文件路径>` 做同样的程序验收。`PLCN --no-browser` 可启动服务而不打开浏览器，供自动验收使用。这些检查不覆盖系统文件选择器、Gatekeeper、SmartScreen 或签名验收。
+便携版本可以使用 `--binary <可执行文件路径>` 做同样的程序验收。`RetroArchAssistant --no-browser` 可启动服务而不打开浏览器，供自动验收使用。这些检查不覆盖系统文件选择器、Gatekeeper、SmartScreen 或签名验收。
 
 ## 签名与正式发布
 
@@ -115,21 +117,21 @@ Windows 验收会静默安装到临时中文路径，运行程序后卸载，检
 macOS：将自己的 Developer ID Application 证书导入构建机器钥匙串，通过环境变量 `PLCN_CODESIGN_IDENTITY` 指定身份后重新构建。PyInstaller 会签署内部二进制，应用使用 `packaging/macos-entitlements.plist`；仍需检查 hardened runtime 和最终嵌套签名。构建后提交 DMG：
 
 ```bash
-codesign --verify --deep --strict --verbose=2 dist/PLCN.app
-codesign -d --verbose=4 dist/PLCN.app
-xcrun notarytool submit dist/PLCN-macOS-arm64.dmg --keychain-profile PLCN-notary --wait
-xcrun stapler staple dist/PLCN-macOS-arm64.dmg
-xcrun stapler validate dist/PLCN-macOS-arm64.dmg
-spctl --assess --type execute --verbose=4 dist/PLCN.app
+codesign --verify --deep --strict --verbose=2 'dist/RetroArch Assistant.app'
+codesign -d --verbose=4 'dist/RetroArch Assistant.app'
+xcrun notarytool submit dist/RetroArchAssistant-macOS-arm64.dmg --keychain-profile PLCN-notary --wait
+xcrun stapler staple dist/RetroArchAssistant-macOS-arm64.dmg
+xcrun stapler validate dist/RetroArchAssistant-macOS-arm64.dmg
+spctl --assess --type execute --verbose=4 'dist/RetroArch Assistant.app'
 ```
 
 `PLCN-notary` 是发布者自己事先配置的钥匙串 profile，占位名称不代表已存在凭据；Intel 产物同样处理。公证后从下载的 DMG 安装并检查 Gatekeeper、启动、文件选择和写回。不要仅因 CI 上自检成功就认为下载隔离环境也通过。
 
-Windows：使用自己的代码签名证书和 Windows SDK `signtool` 签署 `dist/PLCN/PLCN.exe`，再生成安装程序和便携 ZIP，随后签署 Setup.exe，并用 `signtool verify /pa` 验证。证书密码只经发布环境/密钥库注入，不提交仓库。当前没有导入或申请任何签名证书。
+Windows：使用自己的代码签名证书和 Windows SDK `signtool` 签署 `dist/RetroArchAssistant/RetroArchAssistant.exe`，再生成安装程序和便携 ZIP，随后签署 Setup.exe，并用 `signtool verify /pa` 验证。证书密码只经发布环境/密钥库注入，不提交仓库。当前没有导入或申请任何签名证书。
 
 正式发布前还需人工验收：安装/卸载与升级后配置保留、非 ASCII 路径、只读程序目录、双击重复启动、系统文件选择器、关闭/取消、恢复、真实 ADB 与外接卷断开。桌面 UI 的完整键盘/多语言检查继续保留为发布检查项。
 
-首页会自动检测 USB 设备及默认 RetroArch 目录，展示可用、未授权和离线状态；检测不会自动打开游戏库。点击设备旁的“打开游戏库”后进入列表。“最近使用”保留最近 5 个成功打开的游戏库，显示具体路径与可用状态；历史保存在 PLCN 用户数据目录。也可使用“打开本地目录”或“手动输入路径”。检测或打开失败的原因会持续显示，可点击“重新检测”重试。在游戏库的“管理”菜单中选择“打开其他游戏库”可返回首页。
+首页会自动检测 USB 设备及默认 RetroArch 目录，展示可用、未授权和离线状态；检测不会自动打开游戏库。点击设备旁的“打开游戏库”后进入列表。“最近使用”保留最近 5 个成功打开的游戏库，显示具体路径与可用状态；历史继续保存在兼容的 PLCN 用户数据目录。也可使用“打开本地目录”或“手动输入路径”。检测或打开失败的原因会持续显示，可点击“重新检测”重试。点击顶部设备名称，在设备详情中选择“切换设备”可返回首页。
 
 当多个 ROM 的列表名称映射到同一图片文件时，单项补图窗口会列出共用条目，并要求核对当前 ROM 的独立名称。确认后仅更新当前条目的名称、创建独立图片，并备份游戏列表；原共用图片和其他条目保持不变，其他类型图片复制到独立名称下。共用标签不再直接作为当前游戏英文名的识别依据。预览不写入设备，写入结果不确定时可使用原预览重试。
 
@@ -187,7 +189,7 @@ SS 预览会检查官方封面、截图和标题图目录。名称唯一时自�
 
 目录选择器中的“游戏所在存储”可在同一掌机的本机和存储卡间切换。它只选择 ROM 的来源位置：例如游戏位于 Games 存储卡，目标列表仍可保存在本机 RetroArch。首次跨存储扫描请核对“掌机中的实际游戏目录”，程序不会把另一存储的同名文件夹误当成挂载点。
 
-若更新程序后 MTP 会话无法恢复，可先退出 PLCN，拔下 USB 等待约 5 秒，再连接、选择文件传输并保持解锁，最后启动 PLCN。应先让旧程序完全退出，再重连，避免旧会话仍在握手时重新占用设备。
+若更新程序后 MTP 会话无法恢复，可先退出 RetroArch 助手，拔下 USB 等待约 5 秒，再连接、选择文件传输并保持解锁，最后启动 RetroArch 助手。应先让旧程序完全退出，再重连，避免旧会话仍在握手时重新占用设备。
 
 
 ### 预览中的身份与图片状态
@@ -240,3 +242,11 @@ MTP 使用已保存扫描配置中的 Android 目录与传输目录映射；找�
 先仅复制到目标目录，在 RetroArch 中验证目标文件、存档与多盘换盘，再重新预览更新引用或移动。目标冲突不会被覆盖；未转换的 CUE＋BIN 等多文件游戏保持目录关系。当前自动切换仅支持明确的固定全局存档目录，未知设置可仅复制。
 
 “设置 → 任务与恢复 → 目录整理／ZIP 回传与恢复”可继续中断操作、从已完成复制记录预览切换，或恢复原文件与引用。仍被新列表或 M3U 使用的输出会保留。空目录与原存档不清理。详见 [目录整理与恢复契约](ROM_RELOCATION_AND_RECOVERY.md)。
+
+## 更名兼容约定
+
+- 展示名：RetroArch 助手；英文名：RetroArch Assistant。桌面可执行文件使用 RetroArchAssistant，Linux 的 plcn 命令继续保留。
+- 配置、缓存、日志、备份、恢复记录和浏览器偏好继续使用原路径／键，不自动迁移数据。PLCN_HOME、PLCN_VERSION 等已有环境变量仍有效。
+- macOS bundle identifier 与 Windows AppId 不变，便于原安装识别。Windows 构建同时提供 PLCN.exe 兼容入口，已有快捷方式仍可启动新版。
+- 仓库地址、RetroArch 标准主机名称、列表字段和设备 ROM 路径不随品牌更名而变化。
+- 设置页按设备与游戏库、资料来源、偏好设置和任务与恢复组织；任务也可从右上角图标打开。

@@ -248,7 +248,7 @@ def preview(config, progress=lambda *args: None, cancel_check=None):
             'added': additions, 'retained': len(items), 'skipped': skipped,
             'can_apply': metadata_changed, 'core_status': '安装状态未知（MTP 无法验证私有目录）' if mtp.is_mtp(target) else '核心文件已存在',
             'note': '保留所有现有条目；不删除失效项。压缩包作为单个游戏入口，不读取包内内容。'
-                    + ('DAT 路径仅保存在 PLCN 配置中，RetroArch 端刷新前需重新指定 DAT。' if config['dat_path'] and not scan_dat else '')}
+                    + ('DAT 路径仅保存在 RetroArch 助手配置中，RetroArch 端刷新前需重新指定 DAT。' if config['dat_path'] and not scan_dat else '')}
 
 
 def apply(plan):
