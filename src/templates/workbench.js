@@ -217,7 +217,7 @@ async function pollWorkbenchTask() {
         workbenchOverview.job=job||null;workbenchOverview.activeJobs=data.active_count;workbenchOverview.taskError=false;
         if(job&&!['pending','running'].includes(job.status)){
             const receipt=job.id+job.status;
-            if(workbenchOverview.receipt!==receipt){workbenchOverview.receipt=receipt;refreshWorkbenchOverview();}
+            if(workbenchOverview.receipt!==receipt){const previous=workbenchOverview.receipt;workbenchOverview.receipt=receipt;if(previous&&!libraryRead.owner&&!libraryRead.error)refreshWorkbenchOverview();}
         }
     }catch(error){workbenchOverview.taskError=true;}
     renderWorkbenchTaskBadge();
