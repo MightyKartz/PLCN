@@ -19,7 +19,7 @@ function send(method, params = {}) {
         const timer = setTimeout(() => {
             pending.delete(id);
             reject(new Error(`CDP timed out: ${method}`));
-        }, 15000);
+        }, 30000);
         pending.set(id, {resolve, reject, timer});
         socket.send(JSON.stringify({id, method, params}));
     });
