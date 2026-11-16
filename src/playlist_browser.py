@@ -72,6 +72,8 @@ def read_playlist(path, system='', thumbnails=''):
     system = system or name.removesuffix('.lpl')
     resolver, remote_lookups, image_error = open_artwork_reader(thumbnails, system)
 
+    from library_model import build_library_model
+    model = build_library_model(path, system, playlist.items)
     preferred = preferred_disc_entry(playlist.items)
     entries = []
     read_version = uuid.uuid4().hex
@@ -96,8 +98,9 @@ def read_playlist(path, system='', thumbnails=''):
             image_status = 'invalid'
         else:
             image_status = 'missing'
-        entries.append({'index': index, 'label': label, 'rom_name': rom_name, 'rom_path': rom_path,
+        entries.append({**{key: model['entries'][index][key] for key in ('game_id', 'content_id', 'disc_id')},
+                        'index': index, 'label': label, 'rom_name': rom_name, 'rom_path': rom_path,
                         'image_status': image_status, 'image_message': image_error, 'image_path': image,
                         'artwork_status': {kind: statuses[kind]['status'] for kind in THUMBNAIL_TYPES},
                         'image_url': '/api/thumbnail/preview?path=' + quote(image, safe='') + '&v=read-' + read_version if image else None})
-    return {'playlist_path': path, 'name': name, 'system': system, 'items': entries}
+    return {'playlist_path': path, 'name': name, 'system': system, 'items': entries, 'library_model': model}
