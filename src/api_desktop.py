@@ -3,6 +3,7 @@ import threading
 import app_paths
 import repair_history
 import m3u_transaction
+import chd_operations
 from api_common import reply
 
 
@@ -15,7 +16,7 @@ def desktop(handler, context, payload):
     config_path = context.CONFIG_FILE
     reply(handler, {'data_dir': str(app_paths.user_data_dir()), 'cache_dir': str(app_paths.cache_dir()),
                     'config_path': str(config_path), 'resource_dir': str(app_paths.resource_root()),
-                    'active_jobs': jobs.active(), 'history': repair_history.list_history(), 'm3u_operations': m3u_transaction.receipts(), 'jobs': jobs.snapshot()})
+                    'active_jobs': jobs.active(), 'history': repair_history.list_history(), 'm3u_operations': m3u_transaction.receipts(), 'chd_operations': chd_operations.history(), 'jobs': jobs.snapshot()})
 
 
 def pick(handler, context, payload):

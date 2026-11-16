@@ -3237,3 +3237,26 @@ body[data-ui-screenshot] *:focus {
 #m3u-fields .m3u-check input { flex:none; }
 #m3u-dialog footer { position:sticky; bottom:-24px; background:var(--surface); border-top:1px solid var(--border); padding:12px 0; z-index:1; }
 @media(max-width:600px) { #m3u-fields { grid-template-columns:minmax(0,1fr); } #m3u-dialog footer { bottom:-16px; } }
+
+/* Local-copy CHD workflow, using the existing panel and theme primitives. */
+#storage-dialog { width:min(1000px,calc(100vw - 32px)); max-height:calc(100vh - 32px); padding:24px; overflow:auto; border:1px solid var(--border); border-radius:var(--radius); color:var(--text); background:var(--surface); }
+#storage-dialog::backdrop { background:rgba(0,0,0,.45); }
+#storage-dialog p { font-size:13px; line-height:1.7; overflow-wrap:anywhere; }
+.storage-scope, .storage-summary { background:var(--surface-soft); padding:12px 16px; border:1px solid var(--border); border-radius:var(--radius); }
+#storage-fields { min-width:0; margin:18px 0; padding:16px; border:1px solid var(--border); border-radius:var(--radius); display:grid; gap:14px; }
+#storage-fields legend { font-size:14px; padding:0 6px; }
+#storage-fields label { display:grid; grid-template-columns:minmax(0,1fr); justify-content:stretch; color:var(--text); gap:8px; font-size:13px; }
+.storage-input { display:flex; gap:10px; }
+.storage-input input { flex:1; min-width:0; background:var(--surface-soft); color:var(--text); border:1px solid var(--border); border-radius:var(--radius); padding:10px; }
+.storage-row { border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin:12px 0; }
+.storage-row label { display:flex; align-items:flex-start; justify-content:flex-start; gap:12px; color:var(--text); overflow-wrap:anywhere; }
+.storage-row strong { min-width:0; }
+.storage-row p { margin:8px 0 0 28px; color:var(--muted); }
+#storage-dialog footer { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:10px; position:sticky; bottom:-24px; padding:14px 0; border-top:1px solid var(--border); background:var(--surface); }
+@media(max-width:600px) { #storage-dialog { padding:16px; } .storage-input { flex-direction:column; } #storage-dialog footer { bottom:-16px; } }
+#storage-settings { margin-top:18px; }
+#storage-settings > summary { cursor:pointer; font-size:14px; font-weight:600; padding:10px 0; }
+
+.storage-summary > p { margin:6px 0; }
+.storage-summary > details { font-size:13px; margin:12px 0 0; }
+.storage-summary > details > summary { cursor:pointer; color:var(--muted); }
