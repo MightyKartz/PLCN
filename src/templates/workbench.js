@@ -181,7 +181,6 @@ function renderWorkbenchChrome(state) {
     document.getElementById('preview-button').title=workbenchText('补全当前列表；未选择主机时补全全部存储中的列表','Complete the selected playlist, or all storage locations when no system is selected');
     if (!document.getElementById('playlist_path').value && currentDeviceScan?.connected) document.getElementById('workspace-title').textContent=workbenchText('游戏库','Game library');
     for (const id of ['automatic-scan-button','manual-add-button']) document.getElementById(id).hidden=state.previewValid;
-    document.getElementById('workbench-task').hidden=!state.hasLibrary;
     if(workbenchOverview.data){
         const groups=workbenchGroups(workbenchOverview.data,workbenchOverview.scope);
         document.querySelectorAll('.playlist-system-tab').forEach(button=>{
