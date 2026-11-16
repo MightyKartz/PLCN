@@ -17,6 +17,9 @@ import time
 
 import requests
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
+from app_brand import NAME, ENGLISH_NAME, BINARY_NAME, BUNDLE_NAME
+
 
 def run(command, **kwargs):
     return subprocess.run(command, check=True, timeout=180, **kwargs)
@@ -54,6 +57,7 @@ def service(binary, profile):
                 time.sleep(.2)
         if url is None:
             raise TimeoutError('Desktop did not become ready within 45 seconds')
+        assert ('<title>' + NAME + '</title>').encode('utf-8') in page.content
         assets = set(re.findall(r'(?:src|href)="/assets/([^"/]+)"', page.text))
         assert assets, 'Packaged page has no UI assets'
         for asset in sorted(assets):
@@ -88,7 +92,8 @@ def check_binary(binary, workspace):
     marker.write_text('Keep settings when uninstalling', encoding='utf-8')
     env = dict(os.environ, PLCN_HOME=str(profile))
     run([str(binary), '--self-check'], cwd=profile, env=env, **process_options())
-    assert json.loads((profile / 'self-check.json').read_text())['ok']
+    check = json.loads((profile / 'self-check.json').read_text(encoding='utf-8'))
+    assert check['ok'] and check['product'] == NAME
     with ExitStack() as stack:
         first_url = stack.enter_context(service(binary, profile))
         # Launching the same profile must reuse it and exit, leaving it running.
@@ -125,7 +130,9 @@ def windows_shell_folder(folder_id):
 def preserve_windows_shortcuts():
     # A portable install can have shortcuts without an installer registration.
     # Resolve actual shell folders (including redirected Desktop locations).
-    paths = [windows_shell_folder(2) / 'PLCN/PLCN.lnk', windows_shell_folder(16) / 'PLCN.lnk']
+    paths = [windows_shell_folder(2) / 'PLCN/PLCN.lnk', windows_shell_folder(16) / 'PLCN.lnk',
+             windows_shell_folder(2) / ENGLISH_NAME / (ENGLISH_NAME + '.lnk'),
+             windows_shell_folder(16) / (ENGLISH_NAME + '.lnk')]
     snapshots = {path: path.read_bytes() if path.exists() else None for path in paths}
     try:
         yield
@@ -147,9 +154,9 @@ def preserve_windows_shortcuts():
 
 def check_installer(package, workspace):
     if installer_registration_exists():
-        raise RuntimeError('PLCN already has an installer registration; use a clean Windows runner for this test')
+        raise RuntimeError('RetroArch Assistant / PLCN already has an installer registration; use a clean Windows runner for this test')
     destination = workspace / 'installed app 中文'
-    group = 'PLCN smoke ' + workspace.name
+    group = 'RetroArch Assistant smoke ' + workspace.name
     uninstaller = destination / 'unins000.exe'
     flags = ['/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-']
     try:
@@ -157,12 +164,12 @@ def check_installer(package, workspace):
              '/NOICONS', '/TASKS=', '/GROUP=' + group,
              '/DIR=' + str(destination), '/LOG=' + str(workspace / 'install.log')])
         assert installer_registration_exists(), 'Installer did not register the app'
-        assert not (windows_shell_folder(2) / group / 'PLCN.lnk').exists(), 'Installer ignored /NOICONS'
-        marker = check_binary(destination / 'PLCN.exe', workspace)
+        assert not (windows_shell_folder(2) / group / (ENGLISH_NAME + '.lnk')).exists(), 'Installer ignored /NOICONS'
+        marker = check_binary(destination / (BINARY_NAME + '.exe'), workspace)
     finally:
         if uninstaller.exists():
             run([str(uninstaller), *flags, '/LOG=' + str(workspace / 'uninstall.log')], cwd=workspace)
-    assert not (destination / 'PLCN.exe').exists(), 'Uninstaller left the executable behind'
+    assert not (destination / (BINARY_NAME + '.exe')).exists(), 'Uninstaller left the executable behind'
     assert not installer_registration_exists(), 'Uninstaller left its registry entry behind'
     assert marker.read_text(encoding='utf-8') == 'Keep settings when uninstalling', 'Uninstall removed user data'
 
@@ -172,13 +179,13 @@ def check_dmg(package, workspace):
     mount.mkdir()
     run(['hdiutil', 'attach', str(package), '-readonly', '-nobrowse', '-mountpoint', str(mount)])
     try:
-        bundle = workspace / 'installed app 中文' / 'PLCN.app'
+        bundle = workspace / 'installed app 中文' / BUNDLE_NAME
         bundle.parent.mkdir()
-        run(['ditto', str(mount / 'PLCN.app'), str(bundle)])
+        run(['ditto', str(mount / BUNDLE_NAME), str(bundle)])
     finally:
         run(['hdiutil', 'detach', str(mount)])
     run(['codesign', '--verify', '--deep', '--strict', str(bundle)])
-    check_binary(bundle / 'Contents/MacOS/PLCN', workspace)
+    check_binary(bundle / 'Contents/MacOS' / BINARY_NAME, workspace)
 
 
 def main():

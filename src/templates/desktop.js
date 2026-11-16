@@ -63,7 +63,8 @@ async function openDesktop(view = 'library') {
     });
     document.getElementById('data-source-settings').hidden = view !== 'data';
     document.getElementById('path-settings').hidden = view !== 'library';
-    document.getElementById('desktop-content').hidden = view === 'library';
+    document.getElementById('preference-settings').hidden = view !== 'preferences';
+    document.getElementById('desktop-content').hidden = ['library','preferences'].includes(view);
     document.getElementById('desktop-close').textContent = desktopText(view === 'library' ? '完成' : '关闭', view === 'library' ? 'Done' : 'Close');
     if (!desktopDialog.open) desktopDialog.showModal();
     clearTimeout(desktopPoll);
@@ -81,6 +82,11 @@ async function refreshDesktop() {
     const version = ++desktopRenderVersion;
     const body = document.getElementById('desktop-content');
     try {
+        if (desktopView === 'preferences') {
+            document.getElementById('preference-language').value = currentUILanguage;
+            document.getElementById('preference-theme').value = currentTheme;
+            return;
+        }
         if (desktopView === 'library') {
             body.replaceChildren();
             renderWorkbench();
@@ -129,7 +135,7 @@ async function refreshDesktop() {
             const expanded = new Set(Array.from(body.querySelectorAll('details[data-task-id][open]'), element => element.dataset.taskId));
             body.replaceChildren();
             desktopElement('h3', desktopText('本次运行的任务', 'Tasks in this session'), body);
-            desktopElement('p', desktopText('关闭浏览器不会停止服务。取消在安全步骤边界生效，已完成的结果会保留。', 'Closing the browser does not stop PLCN. Cancellation takes effect at safe boundaries and keeps completed work.'), body);
+            desktopElement('p', desktopText('关闭浏览器不会停止服务。取消在安全步骤边界生效，已完成的结果会保留。', 'Closing the browser does not stop RetroArch Assistant. Cancellation takes effect at safe boundaries and keeps completed work.'), body);
             for (const job of state.jobs) {
                 const entry = desktopElement('div', undefined, body); entry.className = 'desktop-entry';
                 entry.dataset.jobId = job.id;
@@ -300,10 +306,10 @@ async function desktopReloadSource() {
 }
 
 async function quitDesktop() {
-    if (!await desktopConfirm(desktopText('退出 PLCN 本地服务？正在运行的任务会阻止退出。', 'Stop the PLCN service? Active tasks will prevent shutdown.'))) return;
+    if (!await desktopConfirm(desktopText('退出 RetroArch 助手本地服务？正在运行的任务会阻止退出。', 'Stop the RetroArch Assistant service? Active tasks will prevent shutdown.'))) return;
     try {
         await desktopRequest('/api/desktop/shutdown', {});
-        document.body.replaceChildren(desktopElement('p', desktopText('PLCN 已退出，可以关闭此页面。', 'PLCN has stopped. You may close this page.')));
+        document.body.replaceChildren(desktopElement('p', desktopText('RetroArch 助手已退出，可以关闭此页面。', 'RetroArch Assistant has stopped. You may close this page.')));
     } catch (error) { showStatus(error.message, 'error'); }
 }
 

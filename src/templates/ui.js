@@ -15,8 +15,21 @@ const UI_EN = {
     '关闭': 'Close',
 
     "设置": "Settings",
+    "设备与游戏库": "Device & library",
+    "资料来源": "Data sources",
+    "偏好设置": "Preferences",
+    "界面语言": "Interface language",
+    "外观": "Appearance",
+    "浅色": "Light",
+    "深色": "Dark",
+    "语言与外观偏好会自动保存。": "Language and appearance preferences are saved automatically.",
     "游戏库": "Library",
-    "退出 PLCN": "Quit PLCN",
+    "退出 RetroArch 助手": "Quit RetroArch Assistant",
+    "助手": "Assistant",
+    "主机分类": "Systems",
+    "全部存储": "All storage",
+    "内部存储": "Internal",
+    "存储卡": "SD card",
     "更换图片": "Change artwork",
     "Android 掌机连接帮助": "Connect an Android handheld",
     "在掌机的设置中找到关于设备，连续点击版本号 7 次，开启开发者选项。": "In device settings, open About device and tap Build number seven times to enable Developer options.",
@@ -71,7 +84,7 @@ const UI_EN = {
     "高级配置与手动路径": "Advanced configuration",
     "名称数据库": "Name database",
     "恢复历史": "Restore history",
-    "PLCN 管理": "PLCN management",
+    "RetroArch 助手管理": "RetroArch Assistant management",
     "匹配依据": "Match evidence",
 
     '当前列表': 'Current list',
@@ -158,7 +171,7 @@ const UI_EN = {
     '筛选': 'Filter',
     '搜索游戏名 / rom 名称': 'Search game / ROM name',
     '选择游戏列表后开始预览': 'Choose a game list to preview',
-    'PLCN 会先展示写入名称、封面源和匹配状态，低置信结果可在右侧手动校对。': 'PLCN shows the name to write, cover source, and match status. Low-confidence results can be reviewed on the right.',
+    'RetroArch 助手会先展示写入名称、封面源和匹配状态，低置信结果可在右侧手动校对。': 'RetroArch Assistant shows the name to write, cover source, and match status. Low-confidence results can be reviewed on the right.',
     '游戏名称': 'Game Name',
     '修复状态': 'Status',
     '封面源英文名': 'Cover Source Name',
@@ -303,6 +316,7 @@ function renderThemeButton() {
 
 function applyUILanguage(language) {
     currentUILanguage = language === 'en' ? 'en' : 'zh';
+    document.title=currentUILanguage==='en'?'RetroArch Assistant':'RetroArch 助手';
     document.documentElement.lang = currentUILanguage === 'en' ? 'en' : 'zh-CN';
     document.body.dataset.uiLanguage = currentUILanguage;
 

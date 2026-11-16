@@ -31,7 +31,7 @@ def main():
 
     config = load_config()
 
-    parser = argparse.ArgumentParser(description="RetroArch Playlist Translator and Thumbnail Downloader")
+    parser = argparse.ArgumentParser(description="RetroArch Assistant — game library and handheld management (legacy plcn CLI)")
     parser.add_argument("command", nargs="?", help="Subcommand: 'ui' to open Web UI")
     parser.add_argument("--playlist", help="Path to the RetroArch playlist file (.lpl)")
     parser.add_argument("--system", help="System name (e.g., 'Sega - Saturn')")

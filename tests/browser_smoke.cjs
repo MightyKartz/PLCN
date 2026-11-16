@@ -139,6 +139,7 @@ async function main() {
     assert.equal(await evaluate(visible, '#preview-area'), false);
     assert.equal(await evaluate(() => document.querySelector('#home-devices [data-status="usb_only"]')?.textContent.includes('文件传输未就绪')), true);
     assert.equal(await evaluate(() => document.querySelector('#home-devices [data-status="usb_only"] button')?.textContent), '等待文件传输');
+    assert.equal(await evaluate(()=>document.title),'RetroArch 助手');
     await screenshot('01-home');
     assert.equal(await evaluate(()=>document.querySelector('.workbench-nav, #settings-button, #workbench-task')),null);
     await waitFor(()=>document.getElementById('task-center-badge').textContent==='1','task badge from active jobs');
@@ -148,7 +149,15 @@ async function main() {
     assert.equal(await evaluate(() => document.querySelector('#usb-debug-help, #home-local-open')), null);
     await click('#workbench-device');
     assert.equal(await evaluate(() => document.querySelectorAll('dialog[open]').length), 1);
-    assert.equal(await evaluate(() => document.querySelectorAll('[data-desktop-view]').length), 3);
+    assert.equal(await evaluate(() => document.querySelectorAll('[data-desktop-view]').length), 4);
+    await click('[data-desktop-view="preferences"]');
+    await waitFor(visible,'preferences settings','#preference-settings');
+    await evaluate(()=>{const select=document.getElementById('preference-language');select.value='en';select.dispatchEvent(new Event('change',{bubbles:true}));});
+    assert.equal(await evaluate(()=>document.title),'RetroArch Assistant');
+    assert.equal(await evaluate(()=>document.getElementById('desktop-close').textContent),'Close');
+    assert.equal(await evaluate(()=>localStorage.getItem('plcn-ui-language')),'en');
+    await evaluate(()=>{const select=document.getElementById('preference-language');select.value='zh';select.dispatchEvent(new Event('change',{bubbles:true}));});
+    await screenshot('01-preferences');
     await click('[data-desktop-view="data"]');
     await waitFor(() => document.querySelector('#desktop-content h3')?.textContent === '名称数据库', 'name database settings');
     await screenshot('01-name-settings');

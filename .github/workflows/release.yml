@@ -21,34 +21,28 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: PLCN-*-unsigned
+          pattern: RetroArchAssistant-*-unsigned
           merge-multiple: true
           path: release-artifacts
       - uses: softprops/action-gh-release@v2
         with:
           draft: true
           prerelease: true
-          name: 'PLCN ${{ github.ref_name }}'
+          name: 'RetroArch Assistant ${{ github.ref_name }}'
           body: |
-            Download a matching installer below; no Python, Node.js or Xcode needed.
-            Windows/macOS packages include ADB. Android USB debugging authorization
-            and, for some Windows devices, vendor USB drivers are still required.
+            RetroArch Assistant — scan games, organize playlists and complete names/artwork.
+            RetroArch 助手：扫描游戏、整理列表、补全资料，管理你的掌机游戏库。
 
-            These CI packages are not distribution-signed; macOS is not notarized.
-            First-launch security restrictions may apply. See README installation notes.
+            Open your handheld, SD card or local library. Scan new games to preview incremental
+            playlist additions, complete names and artwork for existing lists, or add directories
+            manually. Tools include disc lists, CHD conversion, ROM organization and recovery.
+            Task details, retry and cancellation are available from the top-right task icon.
 
-            Chinese game titles can be searched against the official artwork gallery;
-            candidates are graded by match quality and are only written after an
-            explicit click. The playlist image column reports cover, snap and title
-            screen status separately. Backups stay outside the playlists folder.
+            Existing PLCN settings, backups and recovery records remain compatible. The plcn CLI,
+            PLCN_HOME and application IDs are preserved. No ROM files are moved by rebranding.
 
-            Disc-based games are listed per disc when there is no .m3u, and as the
-            single .m3u entry when there is one. Names can be edited inline, and the
-            repair preview no longer carries a separate write-name column.
-
-            中文游戏名可直接搜索官方图库，候选按匹配可靠度分级，必须手动点选后才会写入；
-            游戏列表的图片列分别显示封面、游戏截图、标题图的状态。
-
-            光盘游戏没有 .m3u 时按碟逐行显示，有 .m3u 时只显示 m3u；
-            名称可在行内编辑，补图预览不再单独占用“写入名称”列。
+            Download a matching installer below; no Python, Node.js or Xcode is needed.
+            Packages include ADB. Android authorization and vendor drivers may still be required.
+            Windows/macOS packages are not distribution-signed; macOS is not notarized.
+            See README installation notes for system security and device connection details.
           files: release-artifacts/*

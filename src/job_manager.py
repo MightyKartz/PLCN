@@ -15,7 +15,7 @@ class JobManager:
         job_id = str(uuid.uuid4())
         with self.lock:
             if self.stopping:
-                raise RuntimeError('PLCN 正在退出')
+                raise RuntimeError('RetroArch 助手正在退出')
             self.cancel_events[job_id] = threading.Event()
             self.jobs[job_id] = {
                 'status': 'pending',

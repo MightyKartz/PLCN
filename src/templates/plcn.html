@@ -4,7 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PLCN</title>
+    <title>RetroArch 助手</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/brand.svg">
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231769e8'/%3E%3Cpath d='M9 22V10h8.5a4.5 4.5 0 0 1 0 9H13v3z' fill='white'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="/assets/plcn.css">
     <link rel="stylesheet" href="/assets/workbench.css">
@@ -14,7 +15,7 @@
     <div class="app-shell">
         <header class="topbar">
             <div class="device-identity"><span class="icon" data-ui-icon="device-gamepad"></span><button id="workbench-device" type="button" onclick="openDesktop('library')" aria-label="设备详情">当前掌机</button><span id="workbench-connection" class="connection-state">未连接</span></div>
-            <div id="storage-scope" class="storage-segments" role="group" aria-label="游戏存储范围"><button type="button" data-scope="all" onclick="setStorageScope('all')" aria-pressed="true">全部存储</button><button type="button" data-scope="internal" onclick="setStorageScope('internal')" aria-pressed="false">内部存储</button><button type="button" data-scope="card" onclick="setStorageScope('card')" aria-pressed="false">存储卡</button></div>
+            <div id="storage-scope" class="storage-segments" role="group" aria-label="游戏存储范围"><button type="button" data-scope="all" onclick="setStorageScope('all')" aria-pressed="true" data-i18n="全部存储">全部存储</button><button type="button" data-scope="internal" onclick="setStorageScope('internal')" aria-pressed="false" data-i18n="内部存储">内部存储</button><button type="button" data-scope="card" onclick="setStorageScope('card')" aria-pressed="false" data-i18n="存储卡">存储卡</button></div>
             <div class="top-spacer"></div>
 
             <div class="utility-group" aria-label="工具">
@@ -32,17 +33,10 @@
         <main class="workspace">
             <aside class="sidebar">
                 <div class="sidebar-scroll">            <div class="brand">
-                <div class="brand-mark" aria-hidden="true">
-                    <svg viewBox="0 0 48 48" role="img">
-                        <path d="M24 4h10c5 0 8 3 8 8v8c0 5-3 8-8 8H20c-4 0-6 2-6 6v2H8c-3 0-5-2-5-5v-3c0-5 4-9 9-9h12c2 0 4-2 4-4v-3h-8V4h4z" fill="#1769e8"></path>
-                        <path d="M24 44H14c-5 0-8-3-8-8v-8c0-5 3-8 8-8h14c4 0 6-2 6-6v-2h6c3 0 5 2 5 5v3c0 5-4 9-9 9H24c-2 0-4 2-4 4v3h8v8h-4z" fill="#0fb16b"></path>
-                        <circle cx="16" cy="12" r="2.2" fill="#fff"></circle>
-                        <circle cx="32" cy="36" r="2.2" fill="#fff"></circle>
-                    </svg>
-                </div>
+                <div class="brand-mark" aria-hidden="true"><img src="/assets/brand.svg" alt="" width="36" height="36"></div>
                 <div>
                     <div class="brand-line">
-                        <div class="brand-name">PLCN</div>
+                        <div class="brand-name"><span class="brand-wordmark">RetroArch</span><span class="brand-suffix" data-i18n="助手">助手</span></div>
                         <div class="brand-version">{{PLCN_VERSION}}</div>
                     </div>
                 </div>
@@ -57,7 +51,7 @@
                 <section class="library-browser" id="library-browser">
                     <div class="library-browser-header">
                         <div>
-                            <h2>主机分类</h2>
+                            <h2 data-i18n="主机分类">主机分类</h2>
                             <p class="library-browser-summary" id="library-browser-summary" data-i18n="扫描后按主机名称显示 .lpl 游戏列表">扫描后按主机名称显示 .lpl 游戏列表</p>
                         </div>
                     </div>
@@ -71,7 +65,7 @@
                     </div>
                 </section>
                 </div>
-                <div class="sidebar-footer"><details class="tools-menu"><summary><span class="icon" data-ui-icon="tool"></span>工具</summary><div><button id="storage-entry" type="button" onclick="this.closest('details').open=false; openStorageOptimization()">光盘 CHD 转换</button><button id="rom-storage-entry" type="button" onclick="this.closest('details').open=false; openRomStorage()">目录整理与 ROM 压缩</button></div></details><button class="sidebar-settings" type="button" onclick="openDesktop('library')"><span class="icon" data-ui-icon="settings"></span>设置与游戏库</button></div>
+                <div class="sidebar-footer"><details class="tools-menu"><summary><span class="icon" data-ui-icon="tool"></span>工具</summary><div><button id="storage-entry" type="button" onclick="this.closest('details').open=false; openStorageOptimization()">光盘 CHD 转换</button><button id="rom-storage-entry" type="button" onclick="this.closest('details').open=false; openRomStorage()">目录整理与 ROM 压缩</button></div></details><button class="sidebar-settings" type="button" onclick="openDesktop('library')"><span class="icon" data-ui-icon="settings"></span>设置</button></div>
             </aside>
 
             <section class="main-panel filters-compact">
@@ -165,7 +159,7 @@
                     <div class="empty-state" id="preview-empty">
                         <div>
                             <h2 data-i18n="选择游戏列表后开始预览">选择游戏列表后开始预览</h2>
-                            <p data-i18n="PLCN 会先展示写入名称、封面源和匹配状态，低置信结果可在右侧手动校对。">PLCN 会先展示写入名称、封面源和匹配状态，低置信结果可在右侧手动校对。</p>
+                            <p data-i18n="RetroArch 助手会先展示写入名称、封面源和匹配状态，低置信结果可在右侧手动校对。">RetroArch 助手会先展示写入名称、封面源和匹配状态，低置信结果可在右侧手动校对。</p>
                         </div>
                     </div>
 
@@ -222,8 +216,9 @@
     <dialog id="desktop-dialog" aria-labelledby="desktop-title">
         <header><h2 id="desktop-title" data-i18n="设置">设置</h2><button id="desktop-close" class="btn btn-muted" onclick="closeDesktopSettings()" type="button">关闭</button></header>
         <nav class="desktop-toolbar" aria-label="设置页面">
-            <button id="settings-library-tab" data-desktop-view="library" class="btn" onclick="openDesktop('library')" data-i18n="游戏库">游戏库</button>
-            <button data-desktop-view="data" class="btn" onclick="openDesktop('data')" data-i18n="名称数据库">名称数据库</button>
+            <button id="settings-library-tab" data-desktop-view="library" class="btn" onclick="openDesktop('library')" data-i18n="设备与游戏库">设备与游戏库</button>
+            <button data-desktop-view="data" class="btn" onclick="openDesktop('data')" data-i18n="资料来源">资料来源</button>
+            <button id="settings-preferences-tab" data-desktop-view="preferences" class="btn" onclick="openDesktop('preferences')" data-i18n="偏好设置">偏好设置</button>
             <button data-desktop-view="tasks" class="btn" onclick="openDesktop('tasks')" data-i18n="任务与恢复">任务与恢复</button>
         </nav>
         <section id="path-settings" aria-labelledby="settings-library-tab" hidden>
@@ -281,6 +276,11 @@
                         <p id="effective-image-directory" class="artwork-help"></p>
                     </div>
     </section>
+        <section id="preference-settings" aria-labelledby="settings-preferences-tab" hidden>
+            <div class="form-group"><label for="preference-language" data-i18n="界面语言">界面语言</label><select id="preference-language" onchange="applyUILanguage(this.value);localStorage.setItem('plcn-ui-language',currentUILanguage);openDesktop('preferences')"><option value="zh">简体中文</option><option value="en">English</option></select></div>
+            <div class="form-group"><label for="preference-theme" data-i18n="外观">外观</label><select id="preference-theme" onchange="applyTheme(this.value);localStorage.setItem('plcn-theme',currentTheme)"><option value="light" data-i18n="浅色">浅色</option><option value="dark" data-i18n="深色">深色</option></select></div>
+            <p class="artwork-help" data-i18n="语言与外观偏好会自动保存。">语言与外观偏好会自动保存。</p>
+        </section>
         <p id="desktop-message" role="status"></p><div id="desktop-content"></div><details id="data-source-settings"><summary data-i18n="自定义数据路径">自定义数据路径</summary>
 
                             <div class="form-group">
@@ -292,7 +292,7 @@
                             </div>
 
 </details>
-        <footer class="desktop-footer"><button class="btn btn-muted" type="button" onclick="quitDesktop()" data-i18n="退出 PLCN">退出 PLCN</button></footer>
+        <footer class="desktop-footer"><button class="btn btn-muted" type="button" onclick="quitDesktop()" data-i18n="退出 RetroArch 助手">退出 RetroArch 助手</button></footer>
     </dialog>
     <dialog id="artwork-dialog" aria-labelledby="artwork-title">
         <header><h2 id="artwork-title"></h2><button id="artwork-close" class="btn btn-muted" type="button" onclick="closeArtworkDialog()"></button></header>

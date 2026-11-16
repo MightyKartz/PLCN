@@ -175,7 +175,7 @@ function filterOverviewCards() {
 function renderWorkbenchChrome(state) {
     for (const [selector,zh,en] of [
         ['#automatic-scan-button','扫描新增游戏','Scan new games'],['#manual-add-button','＋ 手动添加','＋ Add manually'],
-        ['.sidebar-settings','设置与游戏库','Settings & library'],['.tools-menu summary','工具','Tools'],['#device-switch-button','切换设备','Switch device']]) {
+        ['.sidebar-settings','设置','Settings'],['.tools-menu summary','工具','Tools'],['#device-switch-button','切换设备','Switch device']]) {
         const button=document.querySelector(selector);
         if(button?.lastChild?.nodeType===3)button.lastChild.textContent=workbenchText(zh,en);
     }

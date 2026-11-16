@@ -6,6 +6,7 @@ import sys
 import traceback
 
 import app_paths
+from app_brand import NAME
 
 
 def main():
@@ -46,7 +47,7 @@ def main():
                 import mtp_runtime
                 mtp_runtime.library()
         app_paths.initialize()
-        Path(app_paths.user_data_dir() / 'self-check.json').write_text(json.dumps({'ok': True, 'platform': sys.platform, 'adb_version': adb_version}), encoding='utf-8')
+        Path(app_paths.user_data_dir() / 'self-check.json').write_text(json.dumps({'ok': True, 'product': NAME, 'platform': sys.platform, 'adb_version': adb_version}), encoding='utf-8')
         return
     log_dir = app_paths.user_data_dir() / 'logs'
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -65,7 +66,7 @@ def main():
                 from tkinter import Tk, messagebox
                 root = Tk()
                 root.withdraw()
-                messagebox.showerror('PLCN 启动失败', f'请查看日志：{log_path}')
+                messagebox.showerror('RetroArch 助手启动失败', f'请查看日志：{log_path}')
                 root.destroy()
             except Exception:
                 pass

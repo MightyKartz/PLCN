@@ -20,7 +20,7 @@ def file_lock(path):
     try:
         fd = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
     except FileExistsError as exc:
-        raise RuntimeError(f'文件正在被 PLCN 使用：{path}。若程序曾异常退出，请确认没有运行任务后移除 {lock}') from exc
+        raise RuntimeError(f'文件正在被 RetroArch 助手使用：{path}。若程序曾异常退出，请确认没有运行任务后移除 {lock}') from exc
     try:
         with os.fdopen(fd, 'w') as handle:
             handle.write(str(os.getpid()))
