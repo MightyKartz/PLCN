@@ -144,6 +144,7 @@ def inspect_discs(playlist, system):
         raise ValueError('请选择 Saturn 或 PlayStation 游戏列表')
     if playlist.startswith('adb://'):
         raise ValueError('当前多盘文件检查支持本地与 MTP 游戏库，请使用文件传输连接')
+    requested_playlist = playlist
     reader = Reader(playlist)
     directory = playlist.rsplit('/', 1)[0]
     if not reader.remote:
@@ -209,7 +210,12 @@ def inspect_discs(playlist, system):
                       'core_path':item.get('core_path') or document.get('default_core_path') or 'DETECT',
                       'node_id':content['id'],'launch_path':item['path']}
             if path == playlist:
-                selection = remembered({'system':system,'playlist_path':path,'rom_path':item['path'],'label':item.get('label') or ''})
+                artwork_playlist = requested_playlist
+                selection = remembered({'system':system,'playlist_path':artwork_playlist,'rom_path':item['path'],'label':item.get('label') or ''})
+                if not selection and artwork_playlist != path:
+                    artwork_playlist = path
+                    selection = remembered({'system':system,'playlist_path':path,'rom_path':item['path'],'label':item.get('label') or ''})
+                record['artwork_playlist_path'] = artwork_playlist
                 record['artwork_sources'] = selection.get('sources') or ({'Named_Boxarts':selection['name']} if selection.get('name') else {})
             content['playlist_references'].append(record)
             if path == playlist:

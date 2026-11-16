@@ -302,9 +302,10 @@ def prepare(payload):
         memory_path=app_paths.user_data_dir()/'artwork-sources.json'
         chosen=anchor.get('artwork_sources') or {}
         if chosen:
-            key=memory_key({'system':system,'playlist_path':playlist,'rom_path':target,'label':label.strip()})
+            artwork_playlist=anchor.get('artwork_playlist_path',playlist)
+            key=memory_key({'system':system,'playlist_path':artwork_playlist,'rom_path':target,'label':label.strip()})
             existing=read(str(memory_path));memory=json.loads(existing.decode('utf-8')) if existing is not None else {}
-            old_memory_key=memory_key({'system':system,'playlist_path':playlist,'rom_path':anchor['launch_path'],'label':anchor['label']})
+            old_memory_key=memory_key({'system':system,'playlist_path':artwork_playlist,'rom_path':anchor['launch_path'],'label':anchor['label']})
             dependencies.append({'path':str(memory_path),'default':{},'json_guard':[{'keys':[old_memory_key],'state':patch_value(memory,[old_memory_key])}]})
             choice={'name':next(iter(chosen.values())),'sources':chosen}
             if key in memory and memory[key]!=choice: issues.append('M3U 已保存不同图片选择，请先核对，不覆盖人工记录')
