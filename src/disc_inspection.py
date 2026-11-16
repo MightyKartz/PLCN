@@ -13,7 +13,7 @@ from urllib.parse import unquote, urlsplit
 
 import mtp_runtime as mtp
 from content_scan import profiles, folders, read, join
-from library_model import OPTICAL_SYSTEMS, DISC_FORMATS, build_library_model
+from library_model import OPTICAL_SYSTEMS, DISC_FORMATS, build_library_model, disc_groups, _source_path
 from rom_paths import rom_title
 from artwork_identity import rom_search_alias, remembered
 
@@ -325,6 +325,19 @@ def inspect_discs(playlist, system):
                        'files':sorted(reached),'cycles':sorted(cycles),'evidence':'playlist_entry'})
         owned.update(reached)
 
+    associations=disc_groups()['groups']
+    for group in groups:
+        launch=files[group['members'][0]]['path']
+        key=json.dumps([_source_path(playlist),system,launch],ensure_ascii=False,separators=(',',':'))
+        saved=associations.get(key,{}) if group['kind']=='m3u' else {}
+        group['disc_records']={}
+        for disc in saved.get('discs',[]):
+            ident=next((value for value in group['discs'] if files[value]['path']==disc['path']),None)
+            if ident:
+                group['disc_records'][ident]=disc['entry']
+                content_id=disc['entry']['content_id']
+                if content_id not in files[ident]['content_ids']: files[ident]['content_ids'].append(content_id)
+                files[ident]['content_id']=files[ident]['content_ids'][0] if len(files[ident]['content_ids'])==1 else None
     families, family_paths = defaultdict(set), defaultdict(set)
     for value in files.values():
         if value['format'] in DISC_FORMATS:

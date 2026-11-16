@@ -50,3 +50,8 @@
 阶段 1C 衔接：名称／图片修复预览的每个提案也返回相同的 `game_id`、`disc_id` 和 `content_id`；UUID 以选中列表的主机范围绑定，不受行内 `db_name` 的显示／翻译系统影响。额外的 `identity` 描述匹配依据，与这些管理标识相互独立，见 [预览契约](PREVIEW_STATE_CONTRACT.md)。
 
 阶段 2A 衔接：只读分组和文件引用图见 [多盘与引用检查契约](DISC_GROUP_INSPECTION.md)。组 ID／图节点 ID 属于本次检查投影，不替换持久 Game／Disc／Content UUID。文件通过已确认路径映射汇合时，原始入口的 UUID 和启动路径全部保留；存在多种原始绑定时显示路径别名提醒，不静默迁移标识。
+
+
+## 阶段 2B 的明确组关联
+
+经预览确认的 M3U 使用原主入口 Game UUID，并生成独立启动 Content UUID。`library-disc-groups.json` 保存原各盘 UUID、条目字段及图片来源，旧入口绑定保留；读取确认组时把这些原盘关联投影到模型。不会凭同名候选自动合并，任意移动／转换仍未覆盖。恢复只撤销本操作涉及的关联键，保留无关后续记录。详见 [M3U 操作契约](M3U_OPERATIONS.md)。
