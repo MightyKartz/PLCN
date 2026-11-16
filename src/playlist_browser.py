@@ -7,6 +7,7 @@ import uuid
 
 from artwork_resolver import ArtworkResolver, THUMBNAIL_TYPES, validate_system
 from playlist_manager import PlaylistManager
+from system_resources import is_system_resource
 from rom_paths import disc_group, preferred_disc_entry, rom_filename, rom_title
 from retroarch_scanner import is_adb_uri, materialize_adb_file
 
@@ -78,6 +79,8 @@ def read_playlist(path, system='', thumbnails=''):
     entries = []
     read_version = uuid.uuid4().hex
     for index, item in enumerate(playlist.items):
+        if is_system_resource(item, system):
+            continue
         disc_key = disc_group(item.get('path'), item.get('label'), [entry.get('path') for entry in playlist.items])
         if disc_key and disc_key in preferred and preferred[disc_key] != index:
             continue

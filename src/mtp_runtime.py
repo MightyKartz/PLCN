@@ -327,6 +327,8 @@ def scan(value):
                     raise ValueError('游戏列表 items 必须为对象数组')
                 items = data['items']
                 system = next((str(item['db_name']).removesuffix('.lpl') for item in items if item.get('db_name')), entry['name'][:-4])
+                from system_resources import is_system_resource
+                items = [item for item in items if not is_system_resource(item, system)]
                 playlists.append({'name': entry['name'], 'path': path, 'system': system, 'valid': True, 'item_count': len(items), 'transport': 'mtp'})
             except (ValueError, UnicodeError) as error:
                 playlists.append({'name': entry['name'], 'path': path, 'system': entry['name'][:-4], 'valid': False, 'item_count': 0, 'error': str(error), 'transport': 'mtp'})

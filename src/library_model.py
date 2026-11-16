@@ -14,6 +14,7 @@ from typing import Optional
 import app_paths
 from rom_paths import DISC_MARKER, rom_filename, rom_title
 from safe_io import atomic_write_json, file_lock
+from system_resources import is_system_resource
 
 
 _index_lock = threading.RLock()
@@ -111,7 +112,7 @@ def build_library_model(playlist_path, system, items):
             path = str(item.get('path') or '')
             # Empty/DETECT rows cannot identify a file. Keep them in the existing
             # browser response, without assigning an invented game identity.
-            if not path or path == 'DETECT':
+            if not path or path == 'DETECT' or is_system_resource(item, system):
                 entries.append({'index': row_index, 'game_id': None, 'content_id': None, 'disc_id': None})
                 continue
             locator = path.replace('\\', '/')

@@ -6,6 +6,7 @@ import shlex
 import subprocess
 import time
 from pathlib import Path
+from system_resources import is_system_resource
 
 
 PLAYLIST_DIR_NAMES = {"playlists", "playlist"}
@@ -236,6 +237,8 @@ def _read_playlist_summary(path):
                 db_name = item.get("db_name")
                 break
 
+        system = _system_from_db_name(db_name) or base['system']
+        items = [item for item in items if not is_system_resource(item, system)]
         sample_labels = [
             item.get("label") or os.path.basename(item.get("path", ""))
             for item in items[:3]
@@ -243,7 +246,7 @@ def _read_playlist_summary(path):
         ]
 
         base.update({
-            "system": _system_from_db_name(db_name) or base["system"],
+            "system": system,
             "db_name": db_name,
             "item_count": len(items),
             "valid": True,
@@ -372,8 +375,10 @@ def _read_adb_playlist_summary(serial, remote_path, adb_runner=None):
                 db_name = item.get("db_name")
                 break
 
+        system = _system_from_db_name(db_name) or base['system']
+        items = [item for item in items if not is_system_resource(item, system)]
         base.update({
-            "system": _system_from_db_name(db_name) or base["system"],
+            "system": system,
             "db_name": db_name,
             "item_count": len(items),
             "valid": True,

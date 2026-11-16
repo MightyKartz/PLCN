@@ -6,6 +6,7 @@ from translator import Translator
 from rom_fingerprint import build_rom_match_candidates
 from rom_paths import disc_group, preferred_disc_entry, rom_filename, rom_title, DISC_MARKER
 from manual_overrides import find_override, load_overrides
+from system_resources import is_system_resource
 from artwork_resolver import ArtworkResolver, sanitize_filename, validate_system
 from playlist_proposals import (
     has_chinese,
@@ -422,6 +423,8 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
 
     dos_gallery = {}
     for i, item in enumerate(items):
+        if is_system_resource(item, playlist_system):
+            continue
         disc_key = disc_group(path := item.get('path'), item.get('label'), [entry.get('path') for entry in items])
         if disc_key and disc_key in preferred_disc and preferred_disc[disc_key] != i:
             continue
