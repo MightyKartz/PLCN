@@ -375,6 +375,14 @@
         <div class="disc-inspection-tools"><input id="disc-inspection-search" type="search" placeholder="搜索游戏或文件路径" aria-label="搜索游戏组" oninput="discInspection.limit=100;renderDiscInspection()"><select id="disc-inspection-filter" aria-label="筛选游戏组" onchange="discInspection.limit=100;renderDiscInspection()"><option value="all">全部分组</option><option value="attention">需检查</option><option value="m3u">已有 M3U</option><option value="candidate">候选分组</option></select></div>
         <div id="disc-inspection-groups"></div><button id="disc-inspection-more" type="button" class="btn btn-muted" onclick="discInspection.limit+=100;renderDiscInspection()" hidden>显示更多</button>
     </dialog>
+    <dialog id="m3u-dialog" aria-labelledby="m3u-title">
+        <header class="disc-inspection-header"><div><h2 id="m3u-title">多盘 M3U 方案</h2><p>选择与排序 → 预览文件、列表和存档变化 → 确认应用</p></div><button id="m3u-close" class="btn btn-muted" type="button" onclick="closeM3uEditor()">关闭</button></header>
+        <fieldset id="m3u-fields"><label>显示名称<input id="m3u-label"></label><label>M3U 文件名<input id="m3u-filename"></label>
+        <label>操作范围<select id="m3u-mode"><option value="switch">保存 M3U 并更新当前列表</option><option value="file">仅保存 M3U，保留当前列表</option></select></label>
+        <ol id="m3u-discs"></ol><details><summary>存档衔接选项</summary><label>延续哪张盘的游戏内存档<select id="m3u-save-source"></select></label><label class="m3u-check"><input id="m3u-preserve-states" type="checkbox">保留原即时存档，不迁移；切换后从游戏内存档继续</label><p>无法确认实际存档目录、覆盖设置或核心规则时，不自动切换列表，可选择仅保存 M3U。</p></details></fieldset>
+        <p id="m3u-status" role="status" aria-live="polite"></p><section id="m3u-review" hidden><h3>本次方案</h3><p id="m3u-scope"></p><pre id="m3u-content"></pre><ul id="m3u-details"></ul></section>
+        <footer><button id="m3u-preview" class="btn btn-muted" type="button" onclick="previewM3u()">预览方案</button><button id="m3u-apply" class="btn" type="button" onclick="applyM3u()" disabled>确认应用方案</button></footer>
+    </dialog>
     <script src="/assets/workflow.js"></script>
     <script src="/assets/ui.js"></script>
     <script src="/assets/config.js"></script>
@@ -384,6 +392,7 @@
     <script src="/assets/tasks.js"></script>
     <script src="/assets/library.js"></script>
     <script src="/assets/discs.js"></script>
+    <script src="/assets/m3u.js"></script>
     <script src="/assets/artwork.js"></script>
     <script src="/assets/welcome.js"></script>
     <script src="/assets/content-scan.js"></script>

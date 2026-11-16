@@ -59,6 +59,8 @@ def test_home_to_library_to_preview(tmp_path, monkeypatch, chrome_binary, viewpo
     Image.new('RGB', (12, 16), (30, 100, 200)).save(png, format='PNG')
     monkeypatch.setattr(single_artwork, 'catalog_image', lambda *args, **kwargs: png.getvalue())
     monkeypatch.setattr(single_artwork, 'download', lambda *args, **kwargs: png.getvalue())
+    import core_catalog
+    monkeypatch.setattr(core_catalog, 'info', lambda core: {'extensions':['cue','chd','m3u'], 'source':'https://fixture.invalid/core-info'})
     import library_sources
     monkeypatch.setattr(library_sources, 'usb_android_devices', lambda: [{'serial':'test-handheld','label':'Android handheld USB'}])
     monkeypatch.setattr(server, 'job_manager', server.JobManager())
@@ -119,7 +121,7 @@ def test_home_to_library_to_preview(tmp_path, monkeypatch, chrome_binary, viewpo
                     '--disable-background-networking', 'about:blank',
                 ], stdout=log, stderr=log)
                 try:
-                    deadline = time.monotonic() + 15
+                    deadline = time.monotonic() + 45
                     active_port = profile / 'DevToolsActivePort'
                     while True:
                         assert chrome.poll() is None, f'Chrome exited; see {artifacts / "chrome.log"}'

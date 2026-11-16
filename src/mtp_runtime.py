@@ -347,3 +347,17 @@ def push_directory(local, target, expected_hashes=None, include_files=None):
             if old != content:
                 expected = expected_hashes[destination] if expected_hashes is not None and destination in expected_hashes else digest(old)
                 write(destination, content, expected)
+
+
+def remove_verified(value, expected):
+    """Remove only an unchanged file created by a recorded, explicitly restored operation."""
+    with session(value) as (handle, storage, parts):
+        if digest(read(value)) != expected:
+            raise ValueError('MTP 新建文件已变化，拒绝移除')
+        entry = resolve(handle, storage, parts)
+        if entry is None or entry['folder']:
+            raise ValueError('MTP 恢复目标不是文件')
+        if library().LIBMTP_Delete_Object(handle, entry['id']):
+            raise RuntimeError('MTP 恢复时移除新建文件失败')
+        if read(value) is not None:
+            raise RuntimeError('MTP 移除后的核对失败')

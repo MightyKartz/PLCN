@@ -161,6 +161,16 @@ async function refreshDesktop() {
             if (!state.jobs.length) desktopElement('p', desktopText('暂无任务。', 'No tasks yet.'), body);
             clearTimeout(desktopPoll);
             if (state.active_jobs) desktopPoll = setTimeout(refreshDesktop, 2000);
+            desktopElement('h3',desktopText('多盘操作与恢复','Multi-disc operations and recovery'),body);
+            for(const record of state.m3u_operations || []){
+                const entry=desktopElement('div',undefined,body);entry.className='desktop-entry';entry.dataset.m3uOperation=record.id;
+                desktopElement('strong',record.label+' · '+({prepared:'等待写入',applying:'应用中／中断',applied:'已完成',partial:'部分完成',restoring:'恢复中／中断',restore_pending:'恢复待处理',restored:'已恢复'}[record.status] || record.status),entry);
+                desktopElement('p',record.playlist,entry);
+                desktopElement('p',record.created_at+' · '+record.id,entry);
+                if(record.error)desktopElement('p',record.error,entry);
+                if(record.status!=='restored')desktopButton(entry,'恢复此次多盘修改',async()=>{await recoverM3u(record.id,'restore');});
+                if(['partial','applying','prepared'].includes(record.status))desktopButton(entry,'核对后继续操作',async()=>{await recoverM3u(record.id,'resume');});
+            }
             desktopElement('h3', desktopText('本地列表恢复', 'Restore local playlists'), body);
             desktopElement('p', desktopText('恢复会先检查文件是否变化，并保留恢复前备份。ADB 备份位于设备上，请手动恢复。', 'Restore checks for external changes and backs up the current file. ADB backups remain on the device for manual recovery.'), body);
             if (!state.history.length) desktopElement('p', desktopText('完成一次名称写回后，这里会显示备份记录。', 'Backup history appears after writing playlist names.'), body);

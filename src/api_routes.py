@@ -3,6 +3,7 @@
 Handlers take (request, live service context, parsed query or JSON object).
 Authentication and JSON transport validation stay in server.ConfigHandler.
 """
+import api_m3u
 import api_content
 import api_library
 import api_playlists
@@ -13,6 +14,7 @@ import api_desktop
 import api_config
 
 GET_ROUTES = {
+    '/api/m3u/history': api_m3u.history,
     '/api/cores/info': api_content.core_info,
     '/api/content/setup': api_content.setup,
     '/api/content/directories': api_content.directories,
@@ -35,6 +37,9 @@ GET_ROUTES = {
 }
 
 POST_ROUTES = {
+    '/api/m3u/preview': api_m3u.preview,
+    '/api/m3u/apply': api_m3u.apply,
+    '/api/m3u/recover': api_m3u.recover,
     '/api/content/core-status': api_content.core_status,
     '/api/content/hints': api_content.hints,
     '/api/content/preview': api_content.preview,

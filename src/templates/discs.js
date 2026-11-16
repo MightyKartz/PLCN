@@ -98,6 +98,10 @@ function buildDiscGroupDetails(group, files, data) {
         : group.kind === 'disc_set' ? workbenchText('依据同目录的明确盘号、游戏文件名和版本标记提出分组；尚未创建 M3U，原列表入口保持不变。', 'Suggested from explicit disc numbers, filenames and matching version tags in the same directory; no M3U has been created and existing entries are unchanged.')
         : workbenchText('保留现有独立入口。', 'The existing launch entry is retained.');
     body.appendChild(note);
+    if (group.discs.length >= 2) {
+        const action=document.createElement('button');action.type='button';action.className='btn btn-muted';action.textContent='预览 M3U 方案';
+        action.onclick=()=>openM3uEditor(group,files);body.appendChild(action);
+    }
     if (!group.total_known && group.discs.length) {
         const unknown = document.createElement('p'); unknown.className = 'disc-coverage';
         unknown.textContent = workbenchText('未声明总盘数；只能检查已知盘号的缺口，不能证明末尾无缺盘。', 'Total disc count is unknown; only gaps in known numbers can be checked.'); body.appendChild(unknown);
@@ -114,14 +118,15 @@ function buildDiscGroupDetails(group, files, data) {
         heading.textContent = workbenchText(`盘号 ${file.disc.number ?? '未知'} · `, `Disc ${file.disc.number ?? 'unknown'} · `) + file.format.toUpperCase() + ' · ' + discFileStatus(file);
         li.appendChild(heading);
         const path = document.createElement('p');path.className='disc-file-path';path.textContent=file.path;li.appendChild(path);
-        const current = file.playlist_references.find(entry=>entry.playlist===data.playlist_path);
+        const active = file.playlist_references.find(entry=>entry.playlist===data.playlist_path);
+        const current = active || group.disc_records?.[id];
         if (current) {
             const label = document.createElement('p'); label.textContent=workbenchText('原入口：','Original entry: ')+current.label;li.appendChild(label);
             const core = document.createElement('p');core.className='disc-coverage';core.textContent=workbenchText('保留核心：','Keep core: ')+current.core_path;li.appendChild(core);
             for (const [kind,source] of Object.entries(current.artwork_sources || {})) {
                 const saved = document.createElement('p');saved.textContent=artworkKindLabel(kind)+workbenchText('已保存图片源：',' saved artwork source: ')+source;li.appendChild(saved);
             }
-            const image = gameLibrary.data?.items.find(item=>item.index===current.index);
+            const image = active ? gameLibrary.data?.items.find(item=>item.index===current.index) : null;
             if (image?.image_url) { const img=document.createElement('img');img.src=image.image_url;img.alt=current.label;img.className='disc-artwork';li.appendChild(img); }
         }
         list.appendChild(li);

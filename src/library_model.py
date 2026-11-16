@@ -76,6 +76,15 @@ def _read_index(path):
     return data
 
 
+def disc_groups():
+    path = app_paths.user_data_dir() / 'library-disc-groups.json'
+    if not path.exists(): return {'version':1,'groups':{}}
+    data = json.loads(path.read_text(encoding='utf-8'))
+    if not isinstance(data,dict) or data.get('version') != 1 or not isinstance(data.get('groups'),dict):
+        raise ValueError('多盘关联索引无效，请保留文件并检查')
+    return data
+
+
 def build_library_model(playlist_path, system, items):
     """Assign identities to validated playlist rows and return an additive read model.
 
@@ -121,6 +130,16 @@ def build_library_model(playlist_path, system, items):
                             'core': {'path': item.get('core_path', ''), 'name': item.get('core_name', '')}})
         if changed:
             atomic_write_json(index_path, index)
+    for group in disc_groups()['groups'].values():
+        if group['playlist'] != source or group['game_id'] not in games:
+            continue
+        if games[group['game_id']].launch_content_id != group['launch_content_id']:
+            continue
+        for member in group['discs']:
+            entry = member['entry']
+            contents[entry['content_id']] = ContentFile(entry['content_id'], member['path'], member['format'])
+            if entry['disc_id']:
+                discs[entry['disc_id']] = Disc(entry['disc_id'], group['game_id'], entry['content_id'], member['number'], 'confirmed_group')
     return {'version': 1, 'scope': scope,
             'games': [asdict(value) for value in games.values()],
             'discs': [asdict(value) for value in discs.values()],

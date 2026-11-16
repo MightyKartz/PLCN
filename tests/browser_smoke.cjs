@@ -418,8 +418,12 @@ async function main() {
     fs.writeFileSync(path.join(discRoms,'Game (Disc 1).cue'),'FILE "Game (Disc 1).bin" BINARY\n');
     fs.writeFileSync(path.join(discRoms,'Game.m3u'),'Game (Disc 2).chd\nGame (Disc 1).cue\n');
     const discPath = path.join(discLists,'Sega - Saturn.lpl');
-    fs.writeFileSync(discPath,JSON.stringify({items:['GulliverBoy Disc1.chd','GulliverBoy Disc2.chd','Game.m3u'].map(name=>({path:path.join(discRoms,name),label:name,core_path:'keep-custom-core.so'}))}));
+    fs.writeFileSync(discPath,JSON.stringify({items:['GulliverBoy Disc1.chd','GulliverBoy Disc2.chd','Game.m3u'].map(name=>({path:path.join(discRoms,name),label:name,core_path:'/cores/mednafen_saturn_libretro.so'}))}));
     const discBefore = fs.readFileSync(discPath);
+    const discSaves=path.join(discRoot,'saves'),discStates=path.join(discRoot,'states');fs.mkdirSync(discSaves);fs.mkdirSync(discStates);
+    fs.writeFileSync(path.join(discRoot,'retroarch.cfg'),
+        `savefile_directory = "${discSaves.replaceAll('\\','/')}"\nsavestate_directory = "${discStates.replaceAll('\\','/')}"\nauto_overrides_enable = "false"\ngame_specific_options = "false"\ncore_options_path = "${path.join(discRoot,'core-options.cfg').replaceAll('\\','/')}"\n`);
+
     await click('#settings-button');
     await evaluate(root=>{const input=document.querySelector('#retroarch_root');input.value=root;input.dispatchEvent(new Event('input',{bubbles:true}));},discRoot);
     await click('#scan-device-btn');
@@ -445,7 +449,49 @@ async function main() {
     await waitFor(()=>document.querySelectorAll('#disc-inspection-groups .disc-members li').length===2,'candidate details expanded');
     assert.equal(await evaluate(()=>document.querySelector('#disc-inspection-groups').textContent.includes('候选组')),true);
     await screenshot('07-disc-inspection-dark');
+    const originalGameId=await evaluate(()=>discInspection.data.entries[0].game_id);
+    await click('#disc-inspection-groups .disc-group-body > button');
+    await waitFor(visible,'M3U editor','#m3u-dialog');
+    await click('#m3u-discs li:first-child button:last-child');
+    await evaluate(()=>{const field=document.querySelector('#m3u-label');field.focus();field.select();});
+    await send('Input.insertText',{text:'空想科学世界'});
+    const m3uName=await evaluate(()=>document.querySelector('#m3u-filename').value);
+    await click('#m3u-preview');
+    await waitFor(()=>!document.querySelector('#m3u-apply').disabled,'ready M3U plan');
+    assert.equal(await evaluate(()=>document.querySelector('#m3u-content').textContent),'GulliverBoy Disc2.chd\nGulliverBoy Disc1.chd\n');
+    assert.deepEqual(fs.readFileSync(discPath),discBefore,'preview does not write');
+    await screenshot('08-m3u-plan');
+    await click('#m3u-apply');
+    await waitFor(()=>!document.querySelector('#m3u-close').disabled && document.querySelector('#m3u-status').textContent.includes('已完成'),'M3U applied');
+    assert.equal(JSON.parse(fs.readFileSync(discPath,'utf8')).items.length,2);
+    assert.equal(fs.readFileSync(path.join(discRoms,m3uName),'utf8'),'GulliverBoy Disc2.chd\nGulliverBoy Disc1.chd\n');
+    await screenshot('08-m3u-applied');
+    await click('#m3u-close');
+    await waitFor(()=>!document.querySelector('#m3u-dialog').open && !document.querySelector('#disc-inspection-dialog').open && !document.querySelector('#library-all-systems').disabled,'library refreshed after M3U');
+    await click('.playlist-system-tab[aria-label="Sega - Saturn"]');
+    await waitFor(()=>gameLibrary.data?.items.length===2,'two launch entries after grouping');
+    assert.equal(await evaluate(()=>gameLibrary.data.items[0].game_id),originalGameId);
+    await click('#settings-button');await click('[data-desktop-view="tasks"]');
+    await waitFor(()=>document.querySelector('[data-m3u-operation] button'),'durable M3U history');
+    await click('[data-m3u-operation] button');
+    await click('.desktop-confirm button:last-of-type');
+    await waitFor(()=>document.querySelector('[data-m3u-operation] strong')?.textContent.includes('已恢复'),'M3U restored');
+    assert.deepEqual(fs.readFileSync(discPath),discBefore);
+    assert.equal(fs.existsSync(path.join(discRoms,m3uName)),false);
+    await waitFor(()=>gameLibrary.data?.items.length===3,'restored library cache refreshed');
+    await screenshot('08-m3u-restored');
+    await click('#desktop-close');
+    await click('#theme-toggle-btn');
+    await click('#game-library-discs');
+    await waitFor(()=>document.querySelectorAll('#disc-inspection-groups > details').length===2,'restored groups inspected');
+    await click('#disc-inspection-groups > details:last-child summary');
+    await waitFor(()=>document.querySelector('#disc-inspection-groups > details:last-child .disc-group-body > button'),'restored candidate action');
+    await click('#disc-inspection-groups > details:last-child .disc-group-body > button');
+    await screenshot('08-m3u-editor-light');
+    await click('#m3u-close');
     await click('#disc-inspection-dialog .disc-inspection-header button');
+
+
     assert.deepEqual(fs.readFileSync(discPath),discBefore);
 
     assert.deepEqual(errors, [], 'Page errors');

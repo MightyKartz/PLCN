@@ -3215,3 +3215,25 @@ body[data-ui-screenshot] *:focus {
 .disc-file-path { color:var(--muted); overflow-wrap:anywhere; }
 .disc-artwork { width:80px; height:70px; object-fit:contain; }
 @media(max-width:600px) { #disc-inspection-dialog { padding:16px; } .disc-inspection-tools { flex-direction:column; } .disc-group > summary strong { flex-basis:80%; } }
+
+#m3u-dialog { width:min(940px,calc(100vw - 32px)); max-height:calc(100vh - 32px); overflow:auto; padding:24px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); color:var(--text); }
+#m3u-dialog::backdrop { background:rgba(0,0,0,.45); }
+#m3u-fields { border:0; padding:0; display:grid; gap:14px; }
+#m3u-fields label { display:grid; gap:6px; font-size:13px; }
+#m3u-fields input:not([type=checkbox]) { width:100%; background:var(--surface-soft); color:var(--text); border:1px solid var(--border); border-radius:var(--radius); padding:8px 10px; }
+#m3u-discs { padding:0; list-style:none; }
+#m3u-discs li { display:flex; align-items:center; gap:10px; margin:8px 0; padding:12px; border:1px solid var(--border); border-radius:var(--radius); }
+#m3u-discs span { flex:1; min-width:0; overflow-wrap:anywhere; font-size:13px; }
+#m3u-status, #m3u-scope, #m3u-details { font-size:13px; line-height:1.7; overflow-wrap:anywhere; }
+#m3u-content { white-space:pre-wrap; overflow-wrap:anywhere; background:var(--surface-soft); padding:14px; }
+#m3u-dialog footer { display:flex; justify-content:flex-end; gap:12px; margin-top:16px; }
+@media(max-width:600px) { #m3u-dialog { padding:16px; } #m3u-discs li { flex-wrap:wrap; } #m3u-discs span { flex-basis:80%; } }
+
+#m3u-fields { min-width:0; width:100%; grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+#m3u-fields > label:nth-child(3), #m3u-discs, #m3u-fields > details { grid-column:1 / -1; }
+#m3u-fields label { grid-template-columns:minmax(0,1fr); justify-content:stretch; align-items:stretch; color:var(--text); }
+#m3u-fields input:not([type=checkbox]) { min-width:0; height:40px; box-sizing:border-box; }
+#m3u-fields .m3u-check { display:flex; flex-direction:row; justify-content:flex-start; align-items:center; margin:12px 0; font-weight:500; }
+#m3u-fields .m3u-check input { flex:none; }
+#m3u-dialog footer { position:sticky; bottom:-24px; background:var(--surface); border-top:1px solid var(--border); padding:12px 0; z-index:1; }
+@media(max-width:600px) { #m3u-fields { grid-template-columns:minmax(0,1fr); } #m3u-dialog footer { bottom:-16px; } }

@@ -13,7 +13,7 @@ from urllib.parse import unquote, urlsplit
 
 import mtp_runtime as mtp
 from content_scan import profiles, folders, read, join
-from library_model import OPTICAL_SYSTEMS, DISC_FORMATS, build_library_model
+from library_model import OPTICAL_SYSTEMS, DISC_FORMATS, build_library_model, disc_groups, _source_path
 from rom_paths import rom_title
 from artwork_identity import rom_search_alias, remembered
 
@@ -144,6 +144,7 @@ def inspect_discs(playlist, system):
         raise ValueError('请选择 Saturn 或 PlayStation 游戏列表')
     if playlist.startswith('adb://'):
         raise ValueError('当前多盘文件检查支持本地与 MTP 游戏库，请使用文件传输连接')
+    requested_playlist = playlist
     reader = Reader(playlist)
     directory = playlist.rsplit('/', 1)[0]
     if not reader.remote:
@@ -209,7 +210,12 @@ def inspect_discs(playlist, system):
                       'core_path':item.get('core_path') or document.get('default_core_path') or 'DETECT',
                       'node_id':content['id'],'launch_path':item['path']}
             if path == playlist:
-                selection = remembered({'system':system,'playlist_path':path,'rom_path':item['path'],'label':item.get('label') or ''})
+                artwork_playlist = requested_playlist
+                selection = remembered({'system':system,'playlist_path':artwork_playlist,'rom_path':item['path'],'label':item.get('label') or ''})
+                if not selection and artwork_playlist != path:
+                    artwork_playlist = path
+                    selection = remembered({'system':system,'playlist_path':path,'rom_path':item['path'],'label':item.get('label') or ''})
+                record['artwork_playlist_path'] = artwork_playlist
                 record['artwork_sources'] = selection.get('sources') or ({'Named_Boxarts':selection['name']} if selection.get('name') else {})
             content['playlist_references'].append(record)
             if path == playlist:
@@ -325,6 +331,19 @@ def inspect_discs(playlist, system):
                        'files':sorted(reached),'cycles':sorted(cycles),'evidence':'playlist_entry'})
         owned.update(reached)
 
+    associations=disc_groups()['groups']
+    for group in groups:
+        launch=files[group['members'][0]]['path']
+        key=json.dumps([_source_path(playlist),system,launch],ensure_ascii=False,separators=(',',':'))
+        saved=associations.get(key,{}) if group['kind']=='m3u' else {}
+        group['disc_records']={}
+        for disc in saved.get('discs',[]):
+            ident=next((value for value in group['discs'] if files[value]['path']==disc['path']),None)
+            if ident:
+                group['disc_records'][ident]=disc['entry']
+                content_id=disc['entry']['content_id']
+                if content_id not in files[ident]['content_ids']: files[ident]['content_ids'].append(content_id)
+                files[ident]['content_id']=files[ident]['content_ids'][0] if len(files[ident]['content_ids'])==1 else None
     families, family_paths = defaultdict(set), defaultdict(set)
     for value in files.values():
         if value['format'] in DISC_FORMATS:
