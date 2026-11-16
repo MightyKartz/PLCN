@@ -66,6 +66,16 @@ def test_compact_multidisc_markers_keep_disc_identity(marker):
     assert release_candidates(source, ['Game (Japan) (Disc 1)', 'Game (Japan) (Disc 2)']) == ['Game (Japan) (Disc 1)']
 
 
+@pytest.mark.parametrize('label,filename', [('Biohazard 2 (Disc 2)', 'Biohazard 2 (Disc 1)'),
+                                            ('Biohazard 2 (A) (CHS)', 'Biohazard 2 (B) (CHS)')])
+def test_exact_family_does_not_override_conflicting_disc_markers(tmp_path, ps1_names, label, filename):
+    playlist = tmp_path / 'PS1.lpl'
+    playlist.write_text(json.dumps({'items': [{'label': label, 'path': '/roms/' + filename + '.cue'}]}))
+    row = analyze_playlist(str(playlist), 'Sony - PlayStation', str(ps1_names))[0]
+    assert row['identity']['state'] == 'conflict'
+    assert row['identity']['requires_review'] is True
+
+
 def test_disc_constraints_and_failed_gallery_do_not_become_verified_releases(tmp_path, ps1_names, monkeypatch):
     playlist = tmp_path / 'PS1.lpl'
     playlist.write_text(json.dumps({'items': [{'label': 'Biohazard 2 (Disc 2)', 'path': '/roms/Biohazard 2 (Disc 2).cue'}]}))
