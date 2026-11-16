@@ -38,7 +38,7 @@ async function previewTask() {
         document.getElementById('preview-container').style.display = currentChanges.length ? 'block' : 'none';
         updateSummary(currentChanges);
         renderPreviewTable(currentChanges);
-        showStatus('分析完成，请校对', 'success');
+        showStatus(workbenchText('分析完成，已自动选择明确匹配项；待核对项已跳过', 'Analysis complete. Clear matches selected; uncertain entries skipped'), 'success');
     } catch (error) {
         showStatus('预览失败: ' + error.message, 'error');
     } finally {

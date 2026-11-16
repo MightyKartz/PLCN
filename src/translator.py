@@ -50,6 +50,7 @@ class Translator:
         If no translation found, returns (text, text).
         """
         self.last_match_source = 'fallback'
+        self.last_translation_candidates = []
         if not text:
             return text, text
             
@@ -83,6 +84,13 @@ class Translator:
         if chinese and english:
             self.last_match_source = 'exact_alias'
             return chinese, english
+
+        # An exact title shared by releases can identify a game without knowing
+        # its region/revision. Require one Chinese translation in this system.
+        family = self.resolve_title_family(text)
+        if family:
+            self.last_match_source = 'title_family'
+            return family
 
         # Arcade ports can suggest a translation, but must never silently become
         # a confirmed identity or replace the arcade DAT thumbnail title.
@@ -156,6 +164,24 @@ class Translator:
                 return cleaned, cleaned
 
         return text, text
+
+    def resolve_title_family(self, text):
+        if not self.system_name or any(s in self.system_name for s in ('Arcade', 'FBNeo', 'MAME', 'DOS')):
+            return None
+        from title_family import family_key, keep_disc_marker
+        if not hasattr(self, '_title_families'):
+            systems = self.db.expand_system_mapping(self.system_name)
+            placeholders = ','.join('?' for _ in systems)
+            rows = self.db.get_connection().execute(
+                f'SELECT english_name, chinese_name FROM translations WHERE system_base(system) IN ({placeholders})', systems)
+            self._title_families = {}
+            for row in rows:
+                if row['chinese_name']:
+                    self._title_families.setdefault(family_key(row['english_name']), set()).add(row['chinese_name'])
+        names = self._title_families.get(family_key(text), set())
+        if len(names) == 1:
+            return keep_disc_marker(next(iter(names)), text), text
+        return None
 
     def _clean_arcade_rom_name(self, name):
         """

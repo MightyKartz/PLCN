@@ -65,7 +65,9 @@ def test_saturn_preview_uses_canonical_sources_without_guessing_versions(saturn_
              ('露娜/Lunar - Silver Star Story (Japan) (Rev A)', '露娜')]
     path = playlist(entries); before = path.read_bytes()
     changes = analyze_playlist(path, 'Sega - Saturn', str(source), verify_artwork=True)
-    assert changes[0]['thumbnail_source'] is None
+    assert changes[0]['thumbnail_source'] == 'Dragon Force (Japan) (4M)'
+    assert changes[0]['artwork_recommended'] is True
+    assert changes[0]['identity']['release_verified'] is False
     assert len(changes[0]['artwork_candidates']) == 2
     assert changes[1]['thumbnail_source'] == 'Daikoukai Jidai Gaiden (Japan)'
     assert changes[2]['new_label'] == '大航海时代2'

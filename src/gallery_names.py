@@ -39,7 +39,7 @@ def release_tags(name):
         if tag == 'cn' or re.match(r'^t[+-]', tag):
             continue
         tag = {'j': 'japan', 'u': 'usa', 'e': 'europe'}.get(tag, tag)
-        tag = re.sub(r'^(disc|disk|cd)\s*(\d+)$', r'disc \2', tag)
+        tag = re.sub(r'^(disc|disk|cd)\s*(\d+)(?:\s*of\s*\d+)?$', r'disc \2', tag)
         result.add(tag)
     return result
 
