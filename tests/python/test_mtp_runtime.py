@@ -297,3 +297,37 @@ def test_download_progress_callback_propagates_cancellation(device_files,tmp_pat
         if calls[0]>1:raise TaskCancelled('cancel native transfer')
     with pytest.raises(TaskCancelled,match='cancel native'):mtp.download_file(value,tmp_path/'partial',cancelled)
     assert files[value]==b'image'
+
+
+def test_mtp_replaces_only_reviewed_old_artwork_hashes_and_keeps_playlist(tmp_path, monkeypatch):
+    import hashlib
+    import io
+    from PIL import Image
+    import playlist_transport
+    from artwork_resolver import THUMBNAIL_TYPES
+    import app_paths
+    def picture(color):
+        data = io.BytesIO();Image.new('RGB', (2, 2), color).save(data, format='PNG');return data.getvalue()
+    old, new = picture('red'), picture('green')
+    digest = hashlib.sha256(old).hexdigest()
+    root = mtp.uri('device', 65537, 'RetroArch');path = mtp.join(root, 'playlists', 'MAME.lpl');images = mtp.join(root, 'thumbnails')
+    item = {'path': '/roms/游戏.zip', 'label': '游戏'}
+    playlist = json.dumps({'items': [item]}).encode()
+    files = {path: playlist, **{mtp.join(images, 'MAME', kind, '游戏.png'): old for kind in THUMBNAIL_TYPES}}
+    monkeypatch.setattr(mtp, 'read', lambda value: files.get(value))
+    writes = []
+    def write(value, content, expected):
+        assert expected == mtp.digest(files.get(value))
+        files[value] = content;writes.append(value)
+    monkeypatch.setattr(mtp, 'write', write)
+    monkeypatch.setattr(__import__('requests').Session, 'get', lambda *a, **kw: SimpleNamespace(status_code=200, content=new))
+    monkeypatch.setenv('PLCN_HOME', str(tmp_path / 'runtime'))
+    row = {'index': 0, 'path': item['path'], 'original_item_label': '游戏', 'original_item_snapshot': item,
+           'original_label': '游戏', 'new_label': '游戏', 'system': 'MAME', 'thumbnail_source': 'Correct Game',
+           'replace_artwork_hashes': {kind: digest for kind in THUMBNAIL_TYPES}}
+    result = playlist_transport.apply_playlist(path, [row], images, options={'write_names': False}, progress=lambda *a: None, cancel_check=lambda: False)
+    assert len(writes) == 3 and path not in writes
+    assert files[path] == playlist
+    assert all(files[mtp.join(images, 'MAME', kind, '游戏.png')] == new for kind in THUMBNAIL_TYPES)
+    assert result['download_summary']['total']['success'] == 3
+    assert (app_paths.user_data_dir() / 'artwork-backups' / (digest + '.png')).read_bytes() == old

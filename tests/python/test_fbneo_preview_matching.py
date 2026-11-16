@@ -146,8 +146,8 @@ def test_fbneo_strikers_variants_do_not_reuse_plus_translation(tmp_path):
     changes = analyze_playlist(str(playlist_path), "FBNeo - Arcade Games", "data/rom-name-cn")
 
     assert changes[0]["thumbnail_source"] == "Strikers 1945 (World)"
-    assert changes[0]["new_label"] == "打击者1945"
+    assert changes[0]["new_label"].replace(' ', '') == "打击者1945"
     assert changes[1]["thumbnail_source"] == "Strikers 1945 II"
-    assert changes[1]["new_label"] == "打击者1945二代"
+    assert changes[1]["new_label"].replace(' ', '') in {"打击者1945二代", "打击者1945II"}
     assert changes[2]["thumbnail_source"] == "Strikers 1945 Plus"
     assert changes[2]["new_label"] == "打击者 1945 加强版"

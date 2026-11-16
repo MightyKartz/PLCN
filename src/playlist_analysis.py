@@ -480,7 +480,7 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
 
         # Special handling for FBNeo/Arcade games
         # These games have region codes like "(World 900227)" that need to be removed
-        is_arcade = 'Arcade' in normalized_system or 'FBNeo' in normalized_system
+        is_arcade = 'Arcade' in normalized_system or 'FBNeo' in normalized_system or normalized_system == 'MAME'
 
         if is_arcade and original_label and not any('\u4e00' <= char <= '\u9fff' for char in original_label):
             # Clean the arcade name (remove region codes and dates)
@@ -843,6 +843,8 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
             proposal['cover_exists'] = proposal['thumbnail_exists'] = proposal['local_thumbnail_exists'] = boxart['status'] == 'exists'
             proposal['cover_path'] = boxart['path']
             proposal['cover_preview_url'] = cover_preview_url(boxart['path'])
+            from artwork_provenance import mark_stale
+            mark_stale(proposal)
             if image_error:
                 proposal['artwork_message'] = image_error
     targets = {}

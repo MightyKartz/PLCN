@@ -388,7 +388,7 @@ function getCoverPreviewUrl(change) {
         const source = change.thumbnail_source || change.artwork_candidates[0];
         if (change.artwork_candidates.includes(source)) {
             return '/api/artwork/thumbnail?system=' + encodeURIComponent(change.system)
-                + '&kind=Named_Boxarts&name=' + encodeURIComponent(source);
+                + '&kind=' + encodeURIComponent(change.artwork_source_confirmed ? 'Named_Boxarts' : change.artwork_cover_fallback || 'Named_Boxarts') + '&name=' + encodeURIComponent(source);
         }
     }
     return getRemoteCoverUrl(change);
@@ -406,12 +406,12 @@ function getRemoteCoverUrl(change) {
     const source = change?.thumbnail_source;
     if (!source) return '';
     const system = document.getElementById('system_name').value || change.system || '';
-    return buildThumbnailUrl(system, source);
+    return buildThumbnailUrl(system, source, change.artwork_source_confirmed ? 'Named_Boxarts' : change.artwork_cover_fallback || 'Named_Boxarts');
 }
 
-function buildThumbnailUrl(system, source) {
+function buildThumbnailUrl(system, source, kind = 'Named_Boxarts') {
     const filename = sanitizeFilename(source) + '.png';
-    return `https://thumbnails.libretro.com/${encodeURIComponent(system)}/Named_Boxarts/${encodeURIComponent(filename)}`;
+    return `https://thumbnails.libretro.com/${encodeURIComponent(system)}/${encodeURIComponent(kind)}/${encodeURIComponent(filename)}`;
 }
 
 function sanitizeFilename(name) {

@@ -307,6 +307,10 @@ def _apply_changes_locked(playlist_path, changes, thumbnails_dir, backup=True, p
     for record in writeback['applied']:
         change = next(c for c in changes if c.get('proposal_id') == record.get('proposal_id')
                       and c.get('path') == record.get('path'))
+        if change.get('replace_artwork_hashes'):
+            downloader.replace_hashes[(record['system'], record['thumbnail_source'], record['new_label'])] = change['replace_artwork_hashes']
+        if change.get('artwork_cover_fallback') == 'Named_Snaps' and not change.get('artwork_source_confirmed'):
+            downloader.cover_fallbacks[(record['system'], record['thumbnail_source'], record['new_label'])] = 'Named_Snaps'
         if (change.get('chinese_title_sources') and not change.get('artwork_source_confirmed')
                 and not any(e.get('resolved_name') and e.get('source') in {'playlist_crc32', 'local_zip_crc'}
                             for e in change.get('match_diagnostics', {}).get('evidence_chain', []))):

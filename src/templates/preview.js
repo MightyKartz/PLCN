@@ -92,8 +92,8 @@ function renderPreviewTable(changes) {
         const candidateCover = !hasExistingCover(change) && change.artwork_recommended;
         if (coverUrl) {
             const img = document.createElement('img');
-            img.alt = candidateCover ? workbenchText('推荐封面', 'Recommended cover') : '';
-            if (candidateCover) tableThumb.title = workbenchText('推荐封面，可更换：', 'Recommended cover; change if needed: ') + change.thumbnail_source;
+            img.alt = candidateCover ? (change.artwork_cover_fallback ? workbenchText('同游戏截图展示图', 'Same-game screenshot') : workbenchText('推荐封面', 'Recommended cover')) : '';
+            if (candidateCover) tableThumb.title = (change.artwork_cover_fallback ? workbenchText('使用同一游戏截图，可更换：', 'Using a same-game screenshot; change if needed: ') : workbenchText('推荐封面，可更换：', 'Recommended cover; change if needed: ')) + change.thumbnail_source;
             img.loading = 'lazy';
             img.src = coverUrl;
             img.onerror = () => {
@@ -110,7 +110,7 @@ function renderPreviewTable(changes) {
             tableThumb.appendChild(img);
             if (candidateCover) {
                 const caption = document.createElement('span'); caption.className = 'candidate-cover-label';
-                caption.textContent = workbenchText('推荐', 'Recommended'); tableThumb.appendChild(caption);
+                caption.textContent = change.artwork_cover_fallback ? workbenchText('截图', 'Snapshot') : workbenchText('推荐', 'Recommended'); tableThumb.appendChild(caption);
             }
         } else {
             tableThumb.textContent = 'IMG';
