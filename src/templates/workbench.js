@@ -111,7 +111,7 @@ function renderWorkbenchOverview(visible) {
     if (!visible) return;
     const root = currentDeviceScan.root_path || currentDeviceScan.target_path;
     const key = JSON.stringify([root, currentDeviceScan.playlists.map(p => [p.path,p.item_count,p.modified_at])]);
-    if (key !== workbenchOverview.key) {
+    if (key !== workbenchOverview.key && !workbench.operation) {
         const rootChanged = workbenchOverview.key && JSON.parse(workbenchOverview.key)[0] !== root;
         workbenchOverview.key = key; if (rootChanged) workbenchOverview.data = null; workbenchOverview.error = '';
         loadWorkbenchOverview(key, root);

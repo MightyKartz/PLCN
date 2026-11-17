@@ -247,6 +247,15 @@ async function main() {
     await screenshot('01-library-refresh');
     holdOverview=false;await send('Fetch.continueRequest',{requestId:heldOverview});heldOverview=null;
     await waitFor(()=>document.querySelector('#library-read-banner').hidden,'refresh done');
+    holdOverview=true;
+    await evaluate(()=>{beginWorkbenchOperation('scan');refreshWorkbenchOverview();});
+    await delay(1000);
+    assert.equal(heldOverview,null,'overview must not be read while an operation is writing');
+    await evaluate(()=>endWorkbenchOperation());
+    for(let attempt=0;!heldOverview&&attempt<150;attempt++)await delay(100);
+    assert.ok(heldOverview,'deferred overview read starts once the operation ends');
+    holdOverview=false;await send('Fetch.continueRequest',{requestId:heldOverview});heldOverview=null;
+    await waitFor(()=>!workbenchOverview.loading&&document.querySelector('#library-read-banner').hidden,'deferred refresh done');
     await waitFor(() => document.querySelectorAll('.playlist-system-tab').length === 3
         && !document.querySelector('#library-all-systems').disabled
         && document.querySelector('#overview-complete-button')?.disabled === false, 'all-systems row and scan completion');
