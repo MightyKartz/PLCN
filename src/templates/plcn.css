@@ -2913,26 +2913,10 @@ body[data-ui-screenshot] *:focus {
 .preview-options { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 12px 20px; border-bottom: 1px solid var(--border); }
 .preview-options label { color: var(--text); display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
 .preview-options > span { color: var(--muted); font-size: 12px; }
-#batch-review-dialog { width: min(680px, calc(100vw - 32px)); max-height: calc(100vh - 32px); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; background: var(--surface); color: var(--text); }
-#batch-review-dialog[open] { display: flex; flex-direction: column; overflow: hidden; }
-#batch-review-dialog[open] > * { flex: 0 0 auto; }
-#batch-review-dialog[open] > .batch-review-table-wrap { flex: 1 1 auto; }
-#batch-review-dialog::backdrop { background: rgba(0,0,0,.35); }
-#batch-review-dialog > p { font-size: 13px; color: var(--muted); }
-#batch-run-progress { width: 100%; height: 8px; margin: 12px 0; }
-#batch-review-dialog > #batch-review-status { font-size: 13px; color: var(--text); margin: 12px 0 0; }
-#batch-review-dialog > #batch-review-status[data-state="blocked"] { color: var(--amber); font-weight: 600; }
-#batch-review-dialog > #batch-review-status:empty { display: none; }
-.batch-review-table-wrap { overflow: auto; min-height: 120px; margin: 12px 0; }
-#batch-review-dialog table { min-width: 420px; width: 100%; }
-#batch-review-dialog th, #batch-review-dialog td { padding: 10px 8px; border-bottom: 1px solid var(--border); text-align: left; }
-#batch-review-dialog th { color: var(--muted); font-size: 12px; }
-.batch-review-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 .save-row-override { border: 0; padding: 0; text-align: left; color: var(--primary); background: transparent; cursor: pointer; font: inherit; font-size: 11px; }
 .save-row-override:disabled { color: var(--muted); cursor: default; }
 
-.batch-review-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.batch-review-header h2 { margin: 0; font-size: 20px; }
+
 
 /* Task results live with cancellation, retry and restore in Settings. */
 #workbench-busy { display: flex; align-items: center; justify-content: center; gap: 12px; }

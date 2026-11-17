@@ -373,7 +373,9 @@ async function main() {
     await waitFor(()=>!document.querySelector('#game-selection-toolbar').hidden,'selection toolbar shown after select');
     await screenshot('02-games-selection');
     await click('#game-selection-complete');
-    await waitFor(()=>Boolean(workbench.previewKey)&&!workbench.operation,'selected metadata preview');
+    await waitFor(()=>!document.querySelector('#action-toast').hidden&&!workbench.operation,'selected metadata completion finished');
+    await click('#action-toast-details');
+    await waitFor(()=>Boolean(workbench.previewKey)&&!workbench.operation,'selected review preview');
     assert.equal(await evaluate(()=>currentChanges.length),1);
     assert.equal(await evaluate(()=>currentChanges[0].index),1);
     await click('#option-write-names');
@@ -434,46 +436,49 @@ async function main() {
         .map(name => [name, fs.readFileSync(libraryPath + '/playlists/' + name)]));
     const beforeRun = playlistFiles();
     await click('#overview-complete-button');
-    await waitFor(() => document.querySelector('#batch-review-dialog').open && batchRunJobId, 'all-systems run started');
-    assert.equal(await evaluate(visible, '#batch-run-cancel'), true);
-    await click('#batch-run-cancel');
-    await waitFor(() => document.querySelector('#batch-review-title').textContent === '补全已取消'
-        && !document.querySelector('#batch-run-done').hidden, 'cancelled all-systems run');
-    assert.equal(await evaluate(() => document.querySelector('#batch-review-status').dataset.state), 'blocked');
+    await waitFor(() => batchRunJobId, 'all-systems run started');
+    assert.equal(await evaluate(visible, '#completion-cancel'), true);
+    await click('#completion-cancel');
+    await waitFor(() => document.querySelector('#action-toast-text').textContent.includes('已取消'), 'cancelled completion toast');
     assert.deepEqual(playlistFiles(), beforeRun);
     await screenshot('02-all-systems-cancelled');
-    await click('#batch-run-done');
-    await waitFor(() => !document.querySelector('#batch-review-dialog').open, 'closed cancelled run');
+    await click('#action-toast-close');
     assert.equal(await evaluate(visible, '#game-library'), false);
     assert.equal(await evaluate(() => document.querySelector('#library-all-systems').getAttribute('aria-pressed')), 'true');
-    await evaluate(() => { runAllSystemsCompletion({write_names: false, download_thumbnails: true}); });
-    await waitFor(() => document.querySelector('#batch-review-title').textContent === '补全完成'
-        && !document.querySelector('#batch-run-done').hidden, 'completed all-systems run');
-    assert.equal(await evaluate(() => document.querySelector('#batch-review-rows').children.length), 2);
-    assert.equal(await evaluate(() => Array.from(document.querySelectorAll('#batch-review-rows tr'))
-        .every(row => row.children[4].textContent.length > 0)), true);
-    assert.equal(await evaluate(() => document.querySelector('#batch-review-status').textContent.length > 0), true);
-    assert.equal(await evaluate(visible, '#batch-run-done'), true);
-    assert.equal(await evaluate(() => document.getElementById('batch-review-apply')), null);
+    await evaluate(() => { runAllSystemsCompletion(); });
+    await waitFor(() => document.querySelector('#action-toast-text').textContent.startsWith('已补全'), 'completed all-systems toast');
+    assert.equal(await evaluate(visible, '#action-toast-undo'), true);
+    assert.equal(await evaluate(visible, '#action-toast-details'), true);
     await screenshot('02-all-systems-done');
-    await click('#batch-run-done');
-    await waitFor(() => !document.querySelector('#batch-review-dialog').open, 'closed completed run');
-    assert.equal(await evaluate(() => document.querySelector('#library-all-systems').getAttribute('aria-pressed')), 'true');
+    await waitFor(() => !workbench.operation, 'run finished before undo');
+    await click('#action-toast-undo');
+    await waitFor(() => document.querySelector('#action-toast-text').textContent.startsWith('已撤销'), 'all-systems undo applied');
+    await waitFor(() => !workbench.operation, 'undo finished');
     assert.deepEqual(playlistFiles(), beforeRun);
+    await click('#action-toast-details');
+    await waitFor(() => document.querySelector('#desktop-dialog').open
+        && document.querySelector('#desktop-content').textContent.includes('最近补全'), 'details opens task center with recent completions');
+    await evaluate(() => [...document.querySelectorAll('#desktop-content h3')]
+        .find(h => h.textContent === '最近补全')?.scrollIntoView({block: 'center'}));
+    await screenshot('02-tasks-recent-completions');
+    await click('#desktop-close');
     await evaluate(()=>toggleTheme());
     await evaluate(()=>toggleUILanguage());
-    await evaluate(() => { runAllSystemsCompletion({write_names: false, download_thumbnails: true}); });
-    await waitFor(() => document.querySelector('#batch-review-title').textContent === 'Completed'
-        && !document.querySelector('#batch-run-done').hidden, 'English all-systems run');
+    await evaluate(() => { runAllSystemsCompletion(); });
+    await waitFor(() => document.querySelector('#action-toast-text').textContent.startsWith('Completed'), 'English all-systems toast');
     await screenshot('02-dark-en-all-systems-done');
-    await click('#batch-run-done');
+    await waitFor(() => !workbench.operation, 'English run finished');
+    await click('#action-toast-undo');
+    await waitFor(() => document.querySelector('#action-toast-text').textContent === 'Undone', 'English undo restores');
+    await waitFor(() => !workbench.operation, 'English undo finished');
+    assert.deepEqual(playlistFiles(), beforeRun);
     await evaluate(()=>toggleUILanguage());
     await evaluate(()=>toggleTheme());
     await click(system);
     await waitFor(() => document.querySelector('#workspace-title')?.textContent.includes('SNES')
         && document.querySelector('#game-library')?.getAttribute('aria-busy') === 'false'
         && document.querySelector('.game-library-table tbody tr'), 'SNES reselected for preview');
-    await click('#games-complete-button');
+    await evaluate(() => previewTask());
     await waitFor(() => !document.querySelector('#option-download-artwork').disabled
         && document.querySelector('#preview-table-body .new-label-text')?.textContent === '暗影狂奔', 'default preview');
     assert.equal(await evaluate(() => document.querySelector('#option-write-names').checked && document.querySelector('#option-download-artwork').checked), true);
@@ -589,7 +594,18 @@ async function main() {
     await waitFor(() => document.querySelectorAll('#game-library-rows .artwork-chip-invalid').length === 1, 'damaged artwork keeps individual markers');
     assert.equal(await evaluate(() => document.querySelector('#game-library-filter-problem').textContent.endsWith('1')), true);
     await screenshot('04-damaged-artwork');
+    const snesPlaylistPath = libraryPath + '/playlists/Nintendo - Super Nintendo Entertainment System.lpl';
+    const snesBefore = fs.readFileSync(snesPlaylistPath);
     await click('#games-complete-button');
+    await waitFor(() => document.querySelector('#action-toast-text').textContent.startsWith('已补全'), 'direct single-system toast');
+    assert.equal(await evaluate(visible, '#action-toast-undo'), true);
+    await waitFor(() => !workbench.operation, 'direct run finished');
+    assert.notDeepEqual(fs.readFileSync(snesPlaylistPath), snesBefore);
+    await click('#action-toast-undo');
+    await waitFor(() => document.querySelector('#action-toast-text').textContent.startsWith('已撤销'), 'single-system undo toast');
+    await waitFor(() => !workbench.operation, 'single-system undo finished');
+    assert.deepEqual(fs.readFileSync(snesPlaylistPath), snesBefore);
+    await evaluate(() => previewTask());
     await waitFor(() => document.querySelector('#preview-table-body .new-label-text')?.textContent === '暗影狂奔', 'fresh preview');
     if (!await evaluate(() => document.querySelector('#option-download-artwork').checked)) {
         await click('#option-download-artwork');

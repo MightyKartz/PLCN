@@ -18,14 +18,30 @@ def test_primary_labels_are_clear():
 
     assert 'data-i18n="一键补全"' in html
     assert 'id="batch-review-button"' not in html
-    assert 'onclick="startCompletion()"' in html
+    assert "startCompletion()" in html
+    assert 'onclick="previewTask()"' in html
     assert 'library-all-systems' in html
     assert 'selectAllLibrarySystems' in html
     assert 'runAllSystemsCompletion' in html
-    assert 'id="batch-run-cancel"' in html
+    assert 'id="batch-review-dialog"' not in html
+    assert 'id="batch-run-cancel"' not in html
+    assert 'id="batch-run-done"' not in html
     assert 'id="batch-review-apply"' not in html
     assert 'batch-write-names' not in html
-    assert html.index('id="batch-review-status"') < html.index('id="batch-review-rows"')
+    assert 'batch-review-status' not in html
+    assert 'id="action-toast"' in html
+    assert 'id="action-toast-undo"' in html
+    assert 'id="action-toast-details"' in html
+    assert 'id="action-toast-close"' in html
+    assert 'id="completion-cancel"' in html
+    assert 'runDirectCompletion' in html
+    assert 'undoCompletion' in html
+    assert 'showActionToast' in html
+    assert 'watchCompletionJob' in html
+    assert 'cancelCompletion' in html
+    assert '最近补全' in html
+    assert '/api/completion/receipts' in html
+    assert '/api/completion/undo' in html
     assert "全部游戏列表" not in html
     assert "应用已选修复" in html
     assert "修复状态" in html
@@ -189,7 +205,7 @@ def test_legacy_overlays_removed_and_task_details_live_in_settings():
     assert 'id="organize-menu"' not in html
     assert 'id="option-write-names"' in html
     assert 'id="option-download-artwork"' in html
-    assert 'id="batch-review-dialog"' in html
+    assert 'batch-review' not in html
     assert '/api/batch/preview' in html
     assert 'preview_job_id: started.job_id' in html
     assert 'saveChangeOverride(index)' in html

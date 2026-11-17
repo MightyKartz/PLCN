@@ -327,7 +327,7 @@ function renderGameSelection(visible) {
     all.append(checkbox, wbElement('span', '', workbenchText('选择当前页', 'Select visible'))); toolbar.append(all);
     toolbar.classList.add('has-selection');
     toolbar.append(wbElement('span', '', workbenchText(`已选 ${gameLibrary.selection.size} 项`, `${gameLibrary.selection.size} selected`)));
-    const complete = gmButton('补全资料', 'Complete metadata', () => previewTask({entries:gameLibrary.data.items.filter(item => gameLibrary.selection.has(item.index)).map(item => [item.index, item.rom_path])})); complete.id = 'game-selection-complete'; complete.disabled = Boolean(workbench.operation); toolbar.append(complete);
+    const complete = gmButton('补全资料', 'Complete metadata', () => runDirectCompletion({entries:gameLibrary.data.items.filter(item => gameLibrary.selection.has(item.index)).map(item => [item.index, item.rom_path])})); complete.id = 'game-selection-complete'; complete.disabled = Boolean(workbench.operation); toolbar.append(complete);
     const remove = gmButton('移出列表…', 'Remove from playlist…', () => openGameRemoval([...gameLibrary.selection])); remove.id = 'game-selection-remove'; remove.disabled = Boolean(workbench.operation); toolbar.append(remove);
     toolbar.append(gmButton('取消选择', 'Clear selection', () => {gameLibrary.selection.clear(); renderGameLibrary();}));
 }

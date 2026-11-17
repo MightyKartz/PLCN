@@ -200,6 +200,8 @@ const UI_EN = {
     '准备应用修复': 'Ready to apply repairs',
     '确认应用': 'Confirm Apply',
     '取消': 'Cancel',
+    '撤销': 'Undo',
+    '查看': 'View',
     '已取消应用': 'Apply cancelled',
     '将写回游戏列表': 'Will write to game list',
     '将下载封面': 'Will download covers',
