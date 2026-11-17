@@ -122,12 +122,14 @@ function beginWorkbenchOperation(operation) {
     workbench.taskMessage = '';
     workbench.operation = operation;
     renderWorkbench();
+    if (typeof syncIdleButtons === 'function') syncIdleButtons();
     return true;
 }
 function endWorkbenchOperation() {
     workbench.operation = null;
     workbench.taskMessage = '';
     renderWorkbench();
+    if (typeof syncIdleButtons === 'function') syncIdleButtons();
 }
 function invalidateWorkbenchPreview() {
     workbench.previewKey = null;

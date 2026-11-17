@@ -248,3 +248,14 @@ def test_dark_theme_active_states_are_restrained():
     assert ".preview-table tr.selected" not in html
     assert "body[data-theme=\"dark\"] .badge.warning" in html
     assert "inset 5px 0 0 var(--primary), inset 0 0 0 2px #4f86d5" not in html
+
+
+def test_desktop_recover_buttons_are_idle_gated():
+    html = read_template()
+
+    assert "function syncIdleButtons()" in html
+    assert "dataset.requiresIdle" in html
+    assert "if (typeof syncIdleButtons === 'function') syncIdleButtons();" in html
+    assert html.count("syncIdleButtons();") >= 3
+    assert "finally { syncIdleButtons(); }" in html
+    assert "function assertWorkbenchIdle()" in html
