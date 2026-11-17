@@ -28,57 +28,7 @@ python3 -m py_compile src/*.py
 git diff --check
 ```
 
-如果改动涉及 `src/templates/plcn.html`，还要对内联 `<script>` 代码做 JavaScript 语法检查。可使用下面的临时检查命令：
-
-```bash
-python3 - <<'PY'
-from html.parser import HTMLParser
-from pathlib import Path
-import os
-import subprocess
-import tempfile
-
-
-class ScriptCollector(HTMLParser):
-    def __init__(self):
-        super().__init__()
-        self.in_script = False
-        self.parts = []
-
-    def handle_starttag(self, tag, attrs):
-        if tag.lower() != "script":
-            return
-        attrs = dict(attrs)
-        script_type = attrs.get("type", "")
-        self.in_script = not attrs.get("src") and script_type in {
-            "",
-            "text/javascript",
-            "application/javascript",
-            "module",
-        }
-
-    def handle_data(self, data):
-        if self.in_script:
-            self.parts.append(data)
-
-    def handle_endtag(self, tag):
-        if tag.lower() == "script":
-            self.in_script = False
-
-
-collector = ScriptCollector()
-collector.feed(Path("src/templates/plcn.html").read_text(encoding="utf-8"))
-
-with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False, encoding="utf-8") as tmp:
-    tmp.write("\n;\n".join(collector.parts))
-    tmp_path = tmp.name
-
-try:
-    subprocess.run(["node", "--check", tmp_path], check=True)
-finally:
-    os.unlink(tmp_path)
-PY
-```
+如果改动涉及前端模板，还要运行 `python3 scripts/check_ui_js.py`。
 
 ## 创建发布 tag
 
