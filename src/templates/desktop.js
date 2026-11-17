@@ -147,7 +147,7 @@ async function refreshDesktop() {
                 }, {requiresIdle: true});
             }
         } else {
-            const state = await desktopRequest('/api/desktop');
+            const [state, receiptData] = await Promise.all([desktopRequest('/api/desktop'), desktopRequest('/api/completion/receipts')]);
             if (version !== desktopRenderVersion || !desktopDialog.open) return;
             const expanded = new Set(Array.from(body.querySelectorAll('details[data-task-id][open]'), element => element.dataset.taskId));
             body.replaceChildren();
@@ -188,7 +188,7 @@ async function refreshDesktop() {
             if (!state.jobs.length) desktopElement('p', desktopText('暂无任务。', 'No tasks yet.'), body);
             clearTimeout(desktopPoll);
             if (state.active_jobs) desktopPoll = setTimeout(refreshDesktop, 2000);
-            const receipts = (await desktopRequest('/api/completion/receipts')).receipts || [];
+            const receipts = receiptData.receipts || [];
             if (receipts.length) {
                 desktopElement('h3', desktopText('最近补全', 'Recent completions'), body);
                 for (const receipt of receipts) {
