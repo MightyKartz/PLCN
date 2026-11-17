@@ -163,6 +163,7 @@ def test_mtp_import_keeps_android_paths_and_uses_verified_upload(library, monkey
     root, source, target, playlist, old, config = library
     (source / 'demo.gba').write_bytes(b'game')
     config.update(root='mtp://serial/00010001/RetroArch', destination='mtp://serial/00020001/Roms/GBA', android_directory='/storage/CARD/Roms/GBA', playlist='mtp://serial/00010001/RetroArch/playlists/GBA.lpl')
+    monkeypatch.setattr(games.scan, 'profiles', lambda: {config['root']:[{'directory':config['destination'], 'android_directory':config['android_directory'], 'system':config['system']}]})
     config = games.validate_import({**config, 'playlist_name':'GBA.lpl'})
     calls = []
     real_read, real_digest = games.scan.read, games.chd_io.digest
@@ -294,3 +295,27 @@ def test_import_rejects_storage_and_folder_mapping_mismatch(tmp_path, monkeypatc
         games.validate_import(payload)
     payload['destination']='mtp://device/00020001/Roms/GBA'
     assert games.validate_import(payload)['destination']==payload['destination']
+
+
+def test_unknown_mapping_blocks_preview_and_apply_without_device_io(tmp_path, monkeypatch):
+    source=tmp_path/'Game.gba';source.write_bytes(b'rom')
+    monkeypatch.setattr(games.scan,'profiles',lambda:{})
+    config=games.validate_import({'root':'mtp://device/00010001/RetroArch',
+        'destination':'mtp://device/00010001/RetroArch/roms/GBA','android_directory':'/storage/CARD/Roms/GBA',
+        'system':SYSTEM,'sources':[str(source)]})
+    monkeypatch.setattr(games.scan,'read',lambda path:pytest.fail('Unverified mapping must not access the device'))
+    plan=games.import_preview(config)
+    assert games.public_preview(plan)['mapping_state']=='unverified'
+    assert not plan['can_apply']
+    with pytest.raises(ValueError,match='待核对'):games.apply(plan)
+
+
+def test_missing_file_repair_reports_copy_without_new_playlist_entry(library):
+    root,source,target,playlist,old,config=library
+    game=source/'demo.gba';game.write_bytes(b'rom')
+    doc=json.loads(playlist.read_text());doc['items'].append({'path':str(target/'demo.gba'),'label':'Keep name'})
+    playlist.write_text(json.dumps(doc))
+    plan=games.import_preview(config);preview=games.public_preview(plan)
+    assert preview['can_apply'] and preview['copy_count']==1 and not preview['added']
+    result=games.apply(plan)
+    assert result['added']==0 and result['copied']==1 and result['failed']==0

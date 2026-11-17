@@ -139,6 +139,7 @@ def validate_import(payload):
     if not isinstance(android, str):
         raise ValueError('掌机启动目录无效')
     remote = mtp.is_mtp(root)
+    mapping_state = 'local' if not remote else 'unverified'
     if remote:
         if not mtp.is_mtp(destination) or mtp.parse(root)[0] != mtp.parse(destination)[0]:
             raise ValueError('目标目录必须属于当前掌机')
@@ -160,7 +161,8 @@ def validate_import(payload):
             if android == mount or android.startswith(mount + '/'):
                 expected = mtp.uri(mtp.parse(source)[0], mtp.parse(source)[1], android[len(mount):].lstrip('/'))
                 if mtp.parse(destination) != mtp.parse(expected):
-                    raise ValueError('复制目录与掌机启动目录不一致，请重新选择目标存储和目录')
+                    raise ValueError('路径冲突：复制目录与掌机启动目录不一致，请重新选择目标存储和目录')
+                mapping_state = 'matched'
     else:
         if '://' in root or '://' in destination:
             raise ValueError('导入请使用本地目录或 MTP 连接')
@@ -179,11 +181,14 @@ def validate_import(payload):
             raise ValueError('目标目录不能位于来源目录内部')
     filename = scan.playlist_name(system, payload.get('playlist_name'))
     return {'root': root, 'destination': destination, 'system': system, 'sources': list(dict.fromkeys(selected)),
-            'android_directory': android.rstrip('/'), 'playlist_name': filename, 'playlist': scan.join(root, 'playlists', filename)}
+            'android_directory': android.rstrip('/'), 'mapping_state': mapping_state, 'playlist_name': filename, 'playlist': scan.join(root, 'playlists', filename)}
 
 
 def import_preview(config, progress=lambda *args: None, cancelled=lambda: None):
     from disc_inspection import parse_references
+    if config['mapping_state'] == 'unverified':
+        return {'config':config, 'copies':[], 'added':[], 'duplicates':0, 'resources':0, 'skipped':0,
+                'conflicts':[], 'required_bytes':0, 'free_bytes':0, 'can_apply':False}
     raw, data = document(config['playlist'])
     extensions = set(scan.SYSTEMS[config['system']][2].split())
     optical = config['system'] in {'Sony - PlayStation', 'Sega - Saturn'}
@@ -289,10 +294,13 @@ def public_preview(plan):
         return {key: plan[key] for key in ('removed', 'count', 'can_apply')}
     return {**{key: plan[key] for key in ('added', 'duplicates', 'resources', 'skipped', 'conflicts', 'required_bytes', 'free_bytes', 'can_apply')},
             'files': [{'name': f['relative'], 'size': f['size'], 'state': f['state']} for f in plan['copies']],
-            'playlist': plan['config']['playlist']}
+            'playlist': plan['config']['playlist'], 'mapping_state':plan['config']['mapping_state'],
+            'copy_count':sum(f['state']=='new' for f in plan['copies'])}
 
 
 def apply(plan, progress=lambda *args: None, cancelled=lambda: None):
+    if 'config' in plan and plan['config']['mapping_state'] == 'unverified':
+        raise ValueError('目标与启动路径的对应关系待核对，不能导入')
     change = next(change for change in plan['transaction']['writes'] if change['kind'] == 'playlist')
     if mtp.digest(scan.read(change['path'])) != change['expected']:
         raise ValueError('列表已变化，请重新预览')
@@ -319,4 +327,5 @@ def apply(plan, progress=lambda *args: None, cancelled=lambda: None):
     if not mtp.is_mtp(change['path']): Path(change['path']).parent.mkdir(parents=True, exist_ok=True)
     result = tx.start(plan['transaction'])
     return {**result, 'added': len(plan.get('added', [])), 'removed': plan.get('count', 0), 'edited': plan.get('edited', 0),
-            'copied': sum(f['state'] == 'new' for f in plan.get('copies', []))}
+            'copied': sum(f['state'] == 'new' for f in plan.get('copies', [])),
+            'reused':plan.get('duplicates',0), 'skipped':plan.get('skipped',0), 'failed':0}

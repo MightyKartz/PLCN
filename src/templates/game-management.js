@@ -21,6 +21,7 @@ function gmStatus(text, problem = false) {
 }
 function gmInvalidate() {
     gameManagement.preview = null; gameManagement.analysisFiles = null; gameManagement.analysisToken++;
+    const mapping = gmField('mapping-status'); if (mapping) mapping.textContent = workbenchText('路径待分析', 'Path analysis pending');
     const apply = gmField('apply'); if (apply) {apply.hidden = gameManagement.mode !== 'import'; apply.disabled = true;}
 }
 let gmAnalyzeTimer = 0;
@@ -31,13 +32,14 @@ function gmScheduleAnalyze() {
 }
 function gmAutoAnalyze() {
     if (gameManagement.mode !== 'import' || !gameManagement.sources.length) return;
-    if (gameManagement.busy) { gameManagement.reanalyze = true; return; }
+    if (gameManagement.busy || !gameManagement.setup) return;
     previewGameImport();
 }
 function gmRenderFiles() {
     const pane = gmField('files'); if (!pane) return;
     pane.replaceChildren();
     const sources = gameManagement.sources;
+    gmField('retry').disabled = gameManagement.busy || !sources.length;
     if (!sources.length) {
         pane.append(wbElement('h3', '', workbenchText('选择要导入的游戏', 'Choose games to import')));
         const buttons = wbElement('div', 'gm-source-buttons');
@@ -74,6 +76,13 @@ function gmRenderDestinationSummary() {
     let destination = gmField('destination').value.trim().replaceAll('\\', '/');
     if (destination.startsWith(root)) destination = destination.slice(root.length) || '/';
     if (!destination) {summary.textContent = workbenchText('请选择游戏复制到的目录', 'Choose where to copy the games'); return;}
+    if (destination.startsWith('mtp://')) {
+        const storageRoot = destination.split('/').slice(0,4).join('/');
+        const storages = libraryHome.device?.storages || libraryHome.data?.sources || [];
+        const storage = storages.find(item => item.path?.split('/').slice(0,4).join('/') === storageRoot);
+        const folder = decodeURIComponent(destination.split('/').slice(4).join('/'));
+        destination = (storage?.label || workbenchText('掌机存储', 'Handheld storage')) + ' → ' + folder;
+    }
     summary.textContent = getSystemAbbreviation(gmField('system').value) + ' · ' + destination;
 }
 function gmWorkspace(mode) {
@@ -97,7 +106,9 @@ function gmWorkspace(mode) {
     }); cancel.id = 'gm-cancel'; cancel.hidden = true;
     const apply = gmButton(mode === 'import' ? '确认导入' : '确认移出列表', mode === 'import' ? 'Import games' : 'Remove entries', applyGameManagement, false);
     apply.id = 'gm-apply'; apply.hidden = mode !== 'import'; apply.disabled = true;
-    footer.append(status, cancel, apply); section.append(header, body, footer); workspace.append(section);
+    const retry = gmButton('重新分析', 'Analyze again', gmAutoAnalyze); retry.id = 'gm-retry'; retry.disabled = true; retry.hidden = mode !== 'import';
+    const reconnect = gmButton('重新连接', 'Reconnect', reconnectGameImport); reconnect.id = 'gm-reconnect'; reconnect.hidden = mode !== 'import';
+    footer.append(status, retry, reconnect, cancel, apply); section.append(header, body, footer); workspace.append(section);
     title.tabIndex = -1; title.focus(); return form;
 }
 function closeGameManagement() {
@@ -147,6 +158,7 @@ async function openGameImport() {
         change.onclick = () => {fields.hidden = !fields.hidden; change.setAttribute('aria-expanded', String(!fields.hidden));};
         destHead.append(change); targetPane.append(destHead);
         const summary = wbElement('p', 'gm-destination-summary'); summary.id = 'gm-destination-summary'; targetPane.append(summary);
+        const mapping = wbElement('p','gm-mapping-status'); mapping.id = 'gm-mapping-status'; mapping.setAttribute('role','status'); targetPane.append(mapping);
         const label = wbElement('label', 'gm-field', workbenchText('主机', 'System'));
         const select = wbElement('select', ''); select.id = 'gm-system';
         select.append(...setup.systems.map(system => new Option(getSystemAbbreviation(system.name) + ' · ' + wbSystemName(system.name), system.name)));
@@ -154,6 +166,7 @@ async function openGameImport() {
         if (setup.systems.some(system => system.name === selected)) select.value = selected;
         select.onchange = gmChangeSystem; label.append(select); fields.append(label);
         const destination = gmInput(fields, 'destination', '复制到目录', 'Copy to folder');
+        if (setup.android) destination.type = 'hidden';
         const browse = gmButton('选择目标目录', 'Choose destination', gmBrowseDestination); browse.id = 'gm-pick-destination'; destination.parentElement.append(browse);
         const android = gmInput(fields, 'android', '掌机实际启动目录', 'Android launch folder'); android.parentElement.hidden = !setup.android;
         const advanced = wbElement('details', 'gm-advanced'); advanced.append(wbElement('summary', '', workbenchText('高级设置', 'Advanced settings')));
@@ -222,20 +235,28 @@ async function runGameJob(route, payload, onProgress) {
                 if (job.status === 'completed') {events.close(); resolve(job.result);}
                 else if (job.error || ['failed', 'cancelled'].includes(job.status)) {events.close(); reject(new Error(job.error || workbenchText('任务已取消', 'Task cancelled')));}
             };
-            events.onerror = () => {onProgress({connectionError:true, message:workbenchText('进度连接中断，正在重连；任务不会重复提交。', 'Progress disconnected; reconnecting without resubmitting the task.')});};
+            events.onerror = async () => {
+                onProgress({connectionError:true, message:workbenchText('进度连接中断，正在重连；任务不会重复提交。', 'Progress disconnected; reconnecting without resubmitting the task.')});
+                try {
+                    const state = await desktopRequest('/api/desktop');
+                    if (!state.jobs.some(job => job.id === started.job_id)) {
+                        events.close(); reject(new Error(workbenchText('服务已重启，原任务结果未知。请检查任务与目标文件，再重新分析。', 'The service restarted; the task result is unknown. Check Tasks and destination files, then analyze again.')));
+                    }
+                } catch (error) {onProgress({connectionError:true, message:error.message});}
+            };
         });
         return {id:started.job_id, result};
 }
 async function gmJob(route, payload) {
     if (!beginWorkbenchOperation('game-management')) throw new Error(workbenchText('请等待当前任务完成。', 'Wait for the current task to finish.'));
-    gameManagement.busy = true; gmField('fields').disabled = true; gmField('apply').disabled = true;
+    gameManagement.busy = true; gmField('retry').disabled = true; gmField('reconnect').disabled = true; gmField('fields').disabled = true; gmField('apply').disabled = true;
     gmField('results').querySelectorAll('button').forEach(button => {button.disabled = true;});
     gmField('dialog').querySelector('header button').disabled = true;
     try {
         gmField('cancel').hidden = false;
         return await runGameJob(route, payload, job => {gmField('status').textContent = job.connectionError ? job.message : currentUILanguage === 'en' ? (job.total ? `Processing… ${job.progress || 0} / ${job.total}` : 'Processing…') : job.message;});
     } finally {
-        gameManagement.busy = false; gameManagement.job = null; gmField('cancel').hidden = true;
+        gameManagement.busy = false; gmField('retry').disabled = false; gmField('reconnect').disabled = false; gameManagement.job = null; gmField('cancel').hidden = true;
         gmField('results').querySelectorAll('button').forEach(button => {button.disabled = false;});
         gmField('fields').disabled = false; gmField('apply').disabled = !gameManagement.preview;
         gmField('dialog').querySelector('header button').disabled = false; endWorkbenchOperation();
@@ -275,15 +296,18 @@ async function previewGameImport() {
         const {id, result} = await gmJob('/api/games/preview', {mode:'import', root:gameManagement.root, sources:gameManagement.sources,
             destination:gmField('destination').value.trim(), system:gmField('system').value, android_directory:gmField('android').value.trim(), playlist_name:gmField('playlist').value.trim()});
         if (generation !== gameManagement.generation || token !== gameManagement.analysisToken) return;
-        gameManagement.preview = id; gameManagement.analysisFiles = result.files;
+        gameManagement.preview = id; gameManagement.analysisFiles = result.mapping_state === 'unverified' ? null : result.files;
+        const mapping = gmField('mapping-status');
+        if (mapping) mapping.textContent = result.mapping_state === 'unverified' ? workbenchText('待核对：没有已知的存储路径映射，已阻止导入。请先通过“扫描游戏目录”核对并保存对应目录配置。', 'Needs review: no known storage mapping. Import is blocked. Check and save the folder configuration in Scan game folders first.')
+            : result.mapping_state === 'matched' ? workbenchText('与已保存映射一致；实际游戏启动仍需在掌机验证。', 'Matches saved mapping; game startup still requires handheld testing.') : workbenchText('本地文件路径；实际游戏启动尚未验证。', 'Local file paths; game startup is not verified.');
         gmRenderFiles();
         const playlistPath = gmField('playlist-path'); if (playlistPath) playlistPath.textContent = result.playlist;
         if (result.can_apply) {
-            gmStatus(workbenchText(`需要 ${gameSize(result.required_bytes)} · 可用 ${gameSize(result.free_bytes)}`, `Needs ${gameSize(result.required_bytes)} · ${gameSize(result.free_bytes)} free`));
+            gmStatus(workbenchText(`复制 ${result.copy_count} 个文件 · 复用 ${result.duplicates} 个 · 跳过 ${result.skipped} 个 · 需要 ${gameSize(result.required_bytes)} · 可用 ${gameSize(result.free_bytes)}`, `Copy ${result.copy_count} files · Reuse ${result.duplicates} · Skip ${result.skipped} · Needs ${gameSize(result.required_bytes)} · ${gameSize(result.free_bytes)} free`));
             const apply = gmField('apply'); apply.hidden = false; apply.disabled = false;
-            apply.textContent = workbenchText(`导入 ${result.added.length} 个游戏`, `Import ${result.added.length} ${result.added.length === 1 ? 'game' : 'games'}`);
+            apply.textContent = workbenchText(`确认导入：${result.added.length} 个条目 / ${result.copy_count ?? 0} 个文件`, `Confirm: ${result.added.length} ${result.added.length === 1 ? 'entry' : 'entries'} / ${result.copy_count ?? 0} ${result.copy_count === 1 ? 'file' : 'files'}`);
         } else {
-            gmStatus(result.conflicts.length ? workbenchText('同名文件内容不同，请更换目标目录或调整来源。', 'Same-name files contain different data. Choose another destination or change the source.')
+            gmStatus(result.mapping_state === 'unverified' ? workbenchText('路径映射待核对，不能导入。', 'Storage mapping needs review; import is blocked.') : result.conflicts.length ? workbenchText('同名文件内容不同，请更换目标目录或调整来源。', 'Same-name files contain different data. Choose another destination or change the source.')
                 : result.required_bytes > result.free_bytes ? workbenchText('目标空间不足。', 'Not enough destination space.')
                 : workbenchText('没有需要导入的新内容。', 'There is nothing new to import.'), true);
             gmField('apply').disabled = true;
@@ -306,13 +330,14 @@ async function openGameRemoval(indices) {
 async function applyGameManagement() {
     const preview = gameManagement.preview;
     const previousPlaylist = gameLibraryInput()[0];
-    gameManagement.preview = null; gmField('apply').hidden = true;
+    if (!preview || gameManagement.busy) return;
+    gameManagement.preview = null; gmField('apply').disabled = true;
     try {
         const {result} = await gmJob('/api/games/apply', {preview_job_id:preview});
         if (result.status !== 'applied') throw new Error(result.error || result.status);
         const results = gmField('results');
         if (gameManagement.mode === 'import') {
-            gmStatus(workbenchText(`已导入 ${result.added} 个游戏`, `Imported ${result.added} ${result.added === 1 ? 'game' : 'games'}`));
+            gmStatus(workbenchText(`新增 ${result.added} 个条目 · 复制 ${result.copied} 个文件 · 复用 ${result.reused} 个 · 跳过 ${result.skipped} 个 · 失败 ${result.failed} 个`, `Added ${result.added} entries · Copied ${result.copied} files · Reused ${result.reused} · Skipped ${result.skipped} · Failed ${result.failed}`));
             const backup = wbElement('details', 'gm-backup'); backup.append(wbElement('summary', '', workbenchText('备份位置', 'Backup location')), wbElement('p', 'gm-path', result.backup_directory));
             results.replaceChildren(backup); results.hidden = false;
         } else {
@@ -325,7 +350,7 @@ async function applyGameManagement() {
         refreshWorkbenchOverview();
         const done = gmButton('完成', 'Done', closeGameManagement, false); gmField('dialog').querySelector('footer').append(done);
     } catch (error) {
-        gmStatus(gmError(error) + workbenchText('；已复制文件会保留。请重新预览核对后继续，或在设置中查看列表恢复记录。', '; copied files are kept. Preview again to continue, or check playlist recovery history in Settings.'), true);
+        gmStatus(gmError(error) + workbenchText('；已复制文件会保留。请点击“重新分析”核对后继续；无法取得结果时先查看任务，避免重复写入。', '; copied files are kept. Use Analyze again to continue; if the result is unknown, check Tasks before writing again.'), true);
     }
 }
 function appendGameSelection(cell, item) {

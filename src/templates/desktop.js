@@ -27,12 +27,37 @@ function desktopConfirm(message) {
 }
 
 async function desktopRequest(path, payload) {
-    const response = await fetch(path, payload === undefined ? {} : {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-    });
+    const options = payload === undefined ? {} : {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
+    };
+    let response = await fetch(path, options);
+    // A 403 is rejected before the handler runs. Renew the local session once;
+    // never resubmit a request after a network error or an ambiguous write result.
+    if (response.status === 403) {
+        const bootstrap = await fetch('/');
+        if (bootstrap.ok) response = await fetch(path, options);
+    }
+    if (!response.headers.get('Content-Type')?.includes('application/json')) {
+        throw new Error(desktopText('连接已失效，请重新连接后重试。', 'The connection expired. Reconnect and retry.'));
+    }
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || String(response.status));
     return data;
+}
+
+async function reconnectGameImport() {
+    gmField('reconnect').disabled = true;
+    try {
+        const response = await fetch('/');
+        if (!response.ok) throw new Error(desktopText('无法恢复本地连接。', 'Could not restore the local connection.'));
+        await desktopRequest('/api/library/sources');
+        if (!gameManagement.setup) {
+            await openGameImport();
+        } else {
+            gmInvalidate(); await previewGameImport();
+        }
+    } catch (error) {gmStatus(gmError(error), true);}
+    finally {gmField('reconnect').disabled = false;}
 }
 
 function desktopElement(tag, text, parent) {

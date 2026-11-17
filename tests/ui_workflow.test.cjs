@@ -611,3 +611,52 @@ test('new handheld system requires an explicit copy directory instead of using t
     assert.equal(fields.destination.value,'');
     assert.equal(fields.android.value,'');
 });
+
+test('an expired local session is renewed once before repeating a rejected request', async () => {
+    const calls=[];
+    const json={ok:true,status:200,headers:{get:()=> 'application/json'},json:async()=>({job_id:'one-job'})};
+    const context={fetch:async(url,options)=>{calls.push({url,options});return calls.length===1?{status:403}:calls.length===2?{ok:true}:json;},desktopText:zh=>zh};
+    vm.createContext(context);vm.runInContext(source('desktopRequest'),context);
+    const result=await context.desktopRequest('/api/games/apply',{preview_job_id:'preview'});
+    assert.equal(result.job_id,'one-job');
+    assert.deepEqual(calls.map(c=>c.url),['/api/games/apply','/','/api/games/apply']);
+    assert.equal(calls[0].options.body,calls[2].options.body);
+});
+
+test('a network failure never automatically repeats a possible write', async () => {
+    let calls=0;
+    const context={fetch:async()=>{calls++;throw Error('offline');},desktopText:zh=>zh};
+    vm.createContext(context);vm.runInContext(source('desktopRequest'),context);
+    await assert.rejects(context.desktopRequest('/api/games/apply',{}),/offline/);
+    assert.equal(calls,1);
+});
+
+test('an HTML error response produces a readable connection error instead of parsing HTML as JSON', async () => {
+    const context={fetch:async()=>({status:500,headers:{get:()=> 'text/html'},json:()=>{throw Error('must not parse HTML');}}),desktopText:zh=>zh};
+    vm.createContext(context);vm.runInContext(source('desktopRequest'),context);
+    await assert.rejects(context.desktopRequest('/api/content/setup'),/连接已失效/);
+});
+
+test('reconnecting keeps the selected source and destination while preparing a fresh analysis', async () => {
+    const fields={reconnect:{disabled:false}};
+    const context={gameManagement:{setup:{android:true},sources:['selected.md']},gmField:id=>fields[id],
+        fetch:async()=>({ok:true}),desktopRequest:async()=>({}),gmInvalidate:()=>{},
+        previewGameImport:async()=>{context.analyzed=true;},gmStatus:()=>{},gmError:error=>error.message};
+    vm.createContext(context);vm.runInContext(source('reconnectGameImport'),context);
+    await context.reconnectGameImport();
+    assert.deepEqual(context.gameManagement.sources,['selected.md']);
+    assert.equal(context.analyzed,true);assert.equal(fields.reconnect.disabled,false);
+});
+
+test('an unverified import mapping keeps selected sources visible and blocks confirmation', async () => {
+    const fields={apply:{},android:{value:'/storage/CARD/Roms/MD'},destination:{value:'mtp://device/00010001/Roms/MD'},system:{value:'MD'},playlist:{value:'MD.lpl'},'playlist-path':{},'mapping-status':{}};
+    const context={gameManagement:{sources:['Selected.md'],generation:1,analysisToken:0,setup:{android:true}},
+        gmField:id=>fields[id],workbenchText:zh=>zh,gmStatus:()=>{},gmRenderFiles:()=>{},
+        gmJob:async()=>({id:'preview',result:{mapping_state:'unverified',files:[],playlist:'MD.lpl',can_apply:false}})};
+    vm.createContext(context);vm.runInContext(source('previewGameImport'),context);
+    await context.previewGameImport();
+    assert.equal(context.gameManagement.analysisFiles,null);
+    assert.deepEqual(context.gameManagement.sources,['Selected.md']);
+    assert.equal(fields.apply.hidden,false);assert.equal(fields.apply.disabled,true);
+    assert.match(fields['mapping-status'].textContent,/待核对/);
+});
