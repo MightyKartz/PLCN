@@ -84,8 +84,6 @@ body[data-theme="light"] .library-read-dialog::backdrop {background:rgb(230 235 
 .auto-scan-dialog label,#content-scan-fields label{color:var(--text);}
 
 /* Game management shares library controls and keeps destructive actions contextual. */
-.game-management-dialog{width:min(760px,94vw);box-sizing:border-box;}
-.game-management-dialog::backdrop{background:rgb(10 15 22 / 55%);backdrop-filter:blur(3px);}
 .gm-fields{border:0;padding:0;margin:0;min-width:0;display:grid;gap:14px;}
 .gm-fields p{margin:0;}.gm-source-buttons{display:flex;gap:10px;flex-wrap:wrap;}
 .gm-field{display:grid;grid-template-columns:1fr auto;gap:8px;font-weight:500;}
@@ -99,8 +97,8 @@ body[data-theme="light"] .library-read-dialog::backdrop {background:rgb(230 235 
 .game-selection-toolbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:10px 0;color:var(--muted);font-size:12px;}.game-selection-toolbar[hidden]{display:none;}
 .game-select-label{display:flex;align-items:center;gap:10px;cursor:pointer;}.game-select-label input{width:16px;height:16px;flex:none;accent-color:var(--primary);}
 .game-row-menu{display:inline-block;position:relative;float:right;margin-left:8px;}.game-row-menu summary{list-style:none;border:1px solid var(--border);border-radius:5px;cursor:pointer;padding:0 9px;font-size:22px;line-height:28px;}.game-row-menu summary::-webkit-details-marker{display:none;}.game-row-menu>button{position:absolute;right:0;top:34px;z-index:5;white-space:nowrap;background:var(--surface);box-shadow:0 8px 24px #0003;}
-@media(max-width:560px){.gm-field{grid-template-columns:1fr;}.gm-field input,.gm-field select,.gm-field button{grid-column:1;}.gm-field button{grid-row:auto;}.gm-result-row{gap:10px;}.game-management-dialog footer{position:sticky;bottom:-16px;background:var(--surface);padding:12px 0;}}
-.gm-fields[hidden]{display:none;}.gm-advanced{color:var(--muted);font-size:12px;}.gm-advanced summary{cursor:pointer;}.gm-advanced label{margin-top:12px;}.game-management-dialog .gm-results{max-height:45vh;}
+@media(max-width:560px){.gm-field{grid-template-columns:1fr;}.gm-field input,.gm-field select,.gm-field button{grid-column:1;}.gm-field button{grid-row:auto;}.gm-result-row{gap:10px;}}
+.gm-fields[hidden]{display:none;}.gm-advanced{color:var(--muted);font-size:12px;}.gm-advanced summary{cursor:pointer;}.gm-advanced label{margin-top:12px;}
 
 /* Graphical library: one workspace, with a docked inspector rather than a modal. */
 .workbench-content>.game-library{display:grid;grid-template-columns:minmax(0,1fr);overflow:visible;align-items:start;}

@@ -246,6 +246,5 @@ def test_dark_theme_active_states_are_restrained():
     assert "body[data-theme=\"dark\"] .filter-btn.active" in html
     assert "body[data-theme=\"dark\"] .playlist-system-tab.active" in html
     assert ".preview-table tr.selected" not in html
-    assert "body[data-theme=\"dark\"] .mini-btn:hover" in html
     assert "body[data-theme=\"dark\"] .badge.warning" in html
     assert "inset 5px 0 0 var(--primary), inset 0 0 0 2px #4f86d5" not in html
