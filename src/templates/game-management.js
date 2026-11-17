@@ -317,14 +317,14 @@ function appendGameManagementActions(actions, item) {
     remove.disabled = Boolean(workbench.operation); menu.append(summary, remove); actions.append(menu);
 }
 function renderGameSelection(visible) {
-    const toolbar = document.getElementById('game-selection-toolbar'); toolbar.classList.remove('has-selection'); toolbar.replaceChildren(); toolbar.hidden = !gameLibrary.data?.items.length;
+    const toolbar = document.getElementById('game-selection-toolbar'); toolbar.classList.remove('has-selection'); toolbar.replaceChildren();
+    toolbar.hidden = !gameLibrary.selection.size || !gameLibrary.data?.items.length;
     if (toolbar.hidden) return;
     const all = wbElement('label', 'game-select-label');
     const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.checked = Boolean(visible.length) && visible.every(item => gameLibrary.selection.has(item.index));
     checkbox.indeterminate = !checkbox.checked && visible.some(item => gameLibrary.selection.has(item.index)); checkbox.disabled = Boolean(workbench.operation);
     checkbox.onchange = () => {for (const item of visible) {if (checkbox.checked) gameLibrary.selection.add(item.index); else gameLibrary.selection.delete(item.index);} renderGameLibrary();};
     all.append(checkbox, wbElement('span', '', workbenchText('选择当前页', 'Select visible'))); toolbar.append(all);
-    if (!gameLibrary.selection.size) return;
     toolbar.classList.add('has-selection');
     toolbar.append(wbElement('span', '', workbenchText(`已选 ${gameLibrary.selection.size} 项`, `${gameLibrary.selection.size} selected`)));
     const complete = gmButton('补全资料', 'Complete metadata', () => previewTask({entries:gameLibrary.data.items.filter(item => gameLibrary.selection.has(item.index)).map(item => [item.index, item.rom_path])})); complete.id = 'game-selection-complete'; complete.disabled = Boolean(workbench.operation); toolbar.append(complete);

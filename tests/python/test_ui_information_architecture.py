@@ -277,7 +277,7 @@ def test_home_overview_uses_minimal_concept():
     assert 'id="automatic-scan-button"' not in html
     assert 'automatic-scan-button' not in html
     assert 'id="manual-add-button" class="btn"' in html
-    assert "completion-entry').hidden = allSystems" in html
+    assert "completion-entry').hidden = !state.previewValid" in html
     assert "'overview-status'" in html
     assert "'overview-complete-button'" in html
     assert "startCompletion()" in html
@@ -327,3 +327,35 @@ def test_add_games_workspace_is_single_column_with_auto_analysis():
     assert 'Backup location' in html
     assert 'gm-status-problem' in html
     assert 'previewGameImport' in html
+
+
+def test_system_page_uses_minimal_concept():
+    html = read_template()
+
+    assert 'id="game-library-note"' not in html
+    assert 'id="games-status"' in html
+    assert 'games-complete-button' in html
+    assert 'overview-status-text' in html
+    assert '缺封面' in html
+    assert 'Missing artwork' in html
+    assert 'workspace-count' in html
+    assert 'game-card-badge' not in html
+    assert 'wbIcon(\'photo\')' in html
+    assert "grid.classList.toggle('has-selection'" in html
+    assert '!gameLibrary.selection.size' in html
+    assert 'outline:2px solid var(--primary)' in html
+    assert 'aspect-ratio:3/4' in html
+    assert 'minmax(150px,1fr)' in html
+    assert "more.id = 'inspector-more'" in html
+    assert 'inspector-more' in html
+    assert 'inspector-close' in html
+    assert "wbIcon('x')" in html
+    assert 'inspector-preview-name' not in html
+    assert 'previewGameName' not in html
+    assert 'inspector-edit-review' not in html
+    assert 'inspector-actions' in html
+    assert 'inspector-artwork-folder' in html
+    assert 'inspector-footer' in html
+    assert '保留游戏文件、封面和存档' in html
+    assert 'preview_job_id:preview.id' in html
+    assert 'sr-only' in html

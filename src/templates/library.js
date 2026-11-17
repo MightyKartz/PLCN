@@ -53,9 +53,12 @@ function syncGameLibrary(state) {
     discs.disabled = state.busy || gameLibrary.loading;
     const data = gameLibrary.data;
     const name = input[1] ? getSystemAbbreviation(input[1]) : input[0].replaceAll('\\', '/').split('/').pop();
-    document.getElementById('workspace-title').textContent = data
-        ? `${name} · ${formatGameCount(data.items.length)}` : name;
-    document.getElementById('workspace-title').title = input[0];
+    const title = document.getElementById('workspace-title');
+    title.textContent = name;
+    if (data && typeof title.append === 'function') {
+        title.append(wbElement('span', 'workspace-count', formatGameCount(data.items.length)));
+    }
+    title.title = input[0];
     renderGameLibrary();
 }
 
@@ -123,7 +126,7 @@ function showGameLibraryToast(message) {
 }
 
 function renderGameLibraryFilters(items) {
-    for (const [filter, zh, en] of [['all', '全部', 'All'], ['missing', '缺图', 'Missing'], ['problem', '需检查', 'Check']]) {
+    for (const [filter, zh, en] of [['all', '全部', 'All'], ['missing', '缺封面', 'Missing artwork'], ['problem', '需检查', 'Check']]) {
         const button = document.getElementById('game-library-filter-' + filter);
         const count = items.filter(item => gameMatchesImageFilter(item, filter)).length;
         button.textContent = workbenchText(zh, en) + ' ' + count;
@@ -145,14 +148,17 @@ function renderGameLibrary() {
     panel.setAttribute('aria-busy', String(gameLibrary.loading));
     panel.setAttribute('aria-label', text('当前游戏列表', 'Current games'));
     const search = document.getElementById('game-library-search');
-    search.placeholder = text('搜索游戏或 ROM', 'Search games or ROMs');
+    const systemName = gameLibraryInput()[1];
+    const systemAbbreviation = systemName ? getSystemAbbreviation(systemName) : '';
+    search.placeholder = systemAbbreviation
+        ? text(`搜索 ${systemAbbreviation} 游戏`, `Search ${systemAbbreviation} games`)
+        : text('搜索游戏或 ROM', 'Search games or ROMs');
     search.setAttribute('aria-label', search.placeholder);
     search.disabled = gameLibrary.loading || !gameLibrary.data;
     const hasImageDirectory = Boolean(gameLibraryInput()[2]);
     document.getElementById('image-directory-notice').hidden = hasImageDirectory;
     document.getElementById('image-directory-message').textContent = text('尚未指定图片目录，设置后可检查和补全游戏图片。', 'Choose an artwork folder to check and fill in game images.');
     document.getElementById('choose-image-directory').textContent = text('指定图片目录', 'Choose artwork folder');
-    document.getElementById('game-library-note').textContent = text('点击“一键补全”预览名称与图片建议，或在游戏行中单独补图。', 'Use Auto-complete to preview name and artwork suggestions, or update artwork from its game row.');
     const status = document.getElementById('game-library-status');
     const retry = document.getElementById('game-library-retry');
     retry.textContent = text('重新读取', 'Retry');
@@ -160,6 +166,17 @@ function renderGameLibrary() {
     const items = (gameLibrary.data?.items || []).filter(item => typeof workbenchOverview === 'undefined'
         || workbenchOverview.scope === 'all' || wbStorageKind(item.rom_path) === workbenchOverview.scope);
     renderGameLibraryFilters(items);
+    const gamesStatus = document.getElementById('games-status');
+    const missingCount = gameLibrary.data ? items.filter(item => gameMatchesImageFilter(item, 'missing')).length : 0;
+    gamesStatus.hidden = !missingCount;
+    if (missingCount) {
+        const complete = wbElement('button', 'btn btn-muted', text('一键补全', 'Complete all'));
+        complete.type = 'button'; complete.id = 'games-complete-button'; complete.onclick = () => startCompletion();
+        complete.disabled = document.getElementById('preview-button').disabled;
+        gamesStatus.replaceChildren(wbIcon('photo'),
+            wbElement('span', 'overview-status-text', text(`${missingCount} 个游戏缺少封面`, `${missingCount} ${missingCount === 1 ? 'game' : 'games'} missing artwork`)),
+            complete);
+    } else gamesStatus.replaceChildren();
     const query = search.value.trim().toLowerCase();
     const filtered = items.filter(item => gameMatchesImageFilter(item, gameLibrary.filter)
         && [item.label, item.rom_name].some(value => value.toLowerCase().includes(query)));
