@@ -177,7 +177,7 @@ def rollback_pack(config_path=None):
 
 def fetch_pack(output, ref='master'):
     def request(url, maximum):
-        req = urllib.request.Request(url, headers={'User-Agent': 'PLCN-data-pack'})
+        req = urllib.request.Request(url, headers={'User-Agent': 'RetroArchAssistant-data-pack'})
         with urllib.request.urlopen(req, timeout=60) as response:
             body = response.read(maximum + 1)
         if len(body) > maximum:
@@ -209,7 +209,7 @@ def fetch_pack(output, ref='master'):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description='RetroArch Assistant translation data packs')
+    parser = argparse.ArgumentParser(prog='retroarch-assistant data', description='RetroArch Assistant translation data packs')
     parser.add_argument('--config', default=str(app_paths.config_path()))
     commands = parser.add_subparsers(dest='command', required=True)
     build = commands.add_parser('build')

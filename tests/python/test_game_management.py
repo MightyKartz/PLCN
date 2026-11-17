@@ -14,7 +14,7 @@ SYSTEM = 'Nintendo - Game Boy Advance'
 
 @pytest.fixture
 def library(tmp_path, monkeypatch):
-    monkeypatch.setenv('PLCN_HOME', str(tmp_path / 'home'))
+    monkeypatch.setenv('RETROARCH_ASSISTANT_HOME', str(tmp_path / 'home'))
     root = tmp_path / 'RetroArch'; (root / 'playlists').mkdir(parents=True)
     source = tmp_path / 'source'; source.mkdir()
     destination = tmp_path / 'card' / 'GBA'

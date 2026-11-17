@@ -17,7 +17,7 @@ SYSTEM='Sega - Saturn'
 
 @pytest.fixture
 def prepared(tmp_path,monkeypatch):
-    home=tmp_path/'home';home.mkdir();monkeypatch.setenv('PLCN_HOME',str(home))
+    home=tmp_path/'home';home.mkdir();monkeypatch.setenv('RETROARCH_ASSISTANT_HOME',str(home))
     roms=tmp_path/'Roms';roms.mkdir();lists=tmp_path/'playlists';lists.mkdir()
     cue=roms/'游戏.cue';track=roms/'data.bin';track.write_bytes(bytes(2352*32))
     cue.write_text('FILE "data.bin" BINARY\n TRACK 01 MODE1/2352\n INDEX 01 00:00:00\n',encoding='utf-8')
@@ -115,7 +115,7 @@ def remote(tmp_path,monkeypatch):
     import mtp_runtime as mtp
     import disc_inspection
     from types import SimpleNamespace
-    home=tmp_path/'home';home.mkdir();monkeypatch.setenv('PLCN_HOME',str(home))
+    home=tmp_path/'home';home.mkdir();monkeypatch.setenv('RETROARCH_ASSISTANT_HOME',str(home))
     if not shutil.which('chdman'): pytest.skip('MAME chdman required')
     uri=lambda storage,path='':mtp.uri('handheld',storage,path)
     root=uri(0x10001,'RetroArch');playlist=uri(0x10001,'RetroArch/playlists/SS.lpl')

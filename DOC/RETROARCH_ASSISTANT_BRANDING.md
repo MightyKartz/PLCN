@@ -10,16 +10,14 @@
 - README、中英文操作说明、桌面指南及未来 Release 草稿配置。
 - 设置入口简化为“设置”，内部提供设备与游戏库、资料来源、偏好设置、任务与恢复。
 
-## 保留的兼容标识
+## 更名后的运行约定
 
-- `src/plcn.py` 与 Linux `plcn` 命令。
-- 仓库 URL、PLCN_HOME／PLCN_VERSION 等环境变量。
-- 原 PLCN 用户数据与缓存目录、备份和恢复记录、浏览器语言与主题键。
-- macOS bundle identifier `io.github.mightykartz.plcn` 与原 Windows AppId。
-- Windows 原安装路径，并在新构建中提供 `PLCN.exe` 兼容入口。
-- RetroArch 标准主机标识、列表字段、ROM 与核心路径，以及已有工作目录前缀。
+- CLI 使用 `retroarch-assistant`，源码入口 `src/retroarch_assistant.py`。
+- 数据与缓存目录改为 `RetroArchAssistant`，环境变量使用 `RETROARCH_ASSISTANT_` 前缀；不提供旧名称回退或 CLI 别名。
+- 现有配置、人工规则、备份和恢复记录通过[一次性迁移](MIGRATION.md)保留。
+- macOS bundle identifier 为 `io.github.mightykartz.retroarchassistant`。Windows 使用新安装目录，保留中性的安装器 GUID 以识别安装登记。
+- 仓库为 `MightyKartz/retroarch-assistant`。RetroArch 标准主机标识、列表格式和设备 ROM 路径保持原格式。
 
-没有自动迁移用户数据、重命名 ROM 或发布新的 Release。历史 Release 的 PLCN 文件名仍然有效；更名包将由后续发布提供。
 
 ## 验证
 

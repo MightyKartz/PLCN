@@ -1,4 +1,4 @@
-"""Command-line argument parsing and dispatch for PLCN."""
+"""Command-line argument parsing and dispatch for RetroArch Assistant."""
 import argparse
 import json
 import os
@@ -19,19 +19,24 @@ def load_config():
 
 
 def main():
-    app_paths.initialize()
+    if len(sys.argv) > 1 and sys.argv[1] == 'migrate':
+        from app_migration import main as migrate_main
+        migrate_main(sys.argv[2:])
+        return
     if len(sys.argv) > 1 and sys.argv[1] == 'data':
         from data_pack import main as data_main
+        app_paths.initialize()
         data_main(sys.argv[2:])
         return
     if len(sys.argv) == 1 or sys.argv[1] == 'ui':
         from server import run_server
+        app_paths.initialize()
         run_server(open_browser=True)
         return
 
     config = load_config()
 
-    parser = argparse.ArgumentParser(description="RetroArch Assistant — game library and handheld management (legacy plcn CLI)")
+    parser = argparse.ArgumentParser(prog="retroarch-assistant", description="RetroArch Assistant — game library and handheld management")
     parser.add_argument("command", nargs="?", help="Subcommand: 'ui' to open Web UI")
     parser.add_argument("--playlist", help="Path to the RetroArch playlist file (.lpl)")
     parser.add_argument("--system", help="System name (e.g., 'Sega - Saturn')")
@@ -40,6 +45,7 @@ def main():
     parser.add_argument("--batch-dir", help="Directory containing multiple .lpl files for batch processing")
 
     args = parser.parse_args()
+    app_paths.initialize()
 
     # Determine values from args or config
     # Priority: Args > Config

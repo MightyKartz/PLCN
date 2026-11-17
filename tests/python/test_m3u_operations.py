@@ -14,7 +14,7 @@ SYSTEM='Sega - Saturn'
 
 @pytest.fixture
 def library(tmp_path,monkeypatch):
-    monkeypatch.setenv('PLCN_HOME',str(tmp_path/'home'))
+    monkeypatch.setenv('RETROARCH_ASSISTANT_HOME',str(tmp_path/'home'))
     root=tmp_path/'RetroArch';lists=root/'playlists';lists.mkdir(parents=True)
     roms=tmp_path/'Roms';saves=tmp_path/'saves';states=tmp_path/'states'
     for path in [roms,saves,states]: path.mkdir()
@@ -189,7 +189,7 @@ def test_corrupted_computer_backup_prevents_restore_before_any_change(library):
 def test_mtp_disconnect_after_rename_can_restore_from_computer_backup(tmp_path,monkeypatch):
     import disc_inspection as inspection
     import mtp_runtime as mtp
-    monkeypatch.setenv('PLCN_HOME',str(tmp_path/'home'))
+    monkeypatch.setenv('RETROARCH_ASSISTANT_HOME',str(tmp_path/'home'))
     uri=lambda storage,path:mtp.uri('device',storage,path)
     playlist=uri(0x10001,'RetroArch/playlists/SS.lpl');root=uri(0x10001,'RetroArch')
     mapping=[{'android_directory':'/storage/CARD/Roms','directory':uri(0x20001,'Roms')},

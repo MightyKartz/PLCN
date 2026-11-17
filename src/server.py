@@ -125,7 +125,7 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
         try:
             with open(os.path.join(TEMPLATE_DIR, "plcn.html"), 'rb') as f:
                 content = f.read()
-                content = content.replace(b'{{PLCN_VERSION}}', VERSION.encode('utf-8'))
+                content = content.replace(b'{{RETROARCH_ASSISTANT_VERSION}}', VERSION.encode('utf-8'))
                 self.send_response(200)
                 self.send_header("Content-type", "text/html")
                 self.send_header('Set-Cookie', f'plcn_session={SESSION_TOKEN}; HttpOnly; SameSite=Strict; Path=/')

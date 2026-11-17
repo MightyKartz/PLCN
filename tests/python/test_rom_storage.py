@@ -11,7 +11,7 @@ from task_control import TaskCancelled
 
 @pytest.fixture
 def library(tmp_path,monkeypatch):
-    home=tmp_path/'home';home.mkdir();monkeypatch.setenv('PLCN_HOME',str(home))
+    home=tmp_path/'home';home.mkdir();monkeypatch.setenv('RETROARCH_ASSISTANT_HOME',str(home))
     root=tmp_path/'Roms';root.mkdir();game=root/'子目录';game.mkdir()
     rom=game/'游戏 (Japan).gba';rom.write_bytes(bytes(range(256))*8000)
     playlist=tmp_path/'GBA.lpl'

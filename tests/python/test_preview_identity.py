@@ -37,7 +37,7 @@ def test_evidence_classification_is_read_only_and_never_claims_a_verified_releas
 def test_browsing_and_repair_share_uuids_and_preserve_original_snapshots(tmp_path, monkeypatch, remote):
     from playlist_analysis import analyze_playlist
     from playlist_browser import read_playlist
-    monkeypatch.setenv('PLCN_HOME', str(tmp_path/'home'))
+    monkeypatch.setenv('RETROARCH_ASSISTANT_HOME', str(tmp_path/'home'))
     source = tmp_path/'names';source.mkdir()
     system = 'Nintendo - Nintendo Entertainment System'
     (source/'NES.csv').write_text('Name EN,Name CN\nGame,游戏\n', encoding='utf-8')

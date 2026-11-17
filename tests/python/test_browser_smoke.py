@@ -38,7 +38,7 @@ def chrome_binary():
         if candidate and Path(candidate).is_file():
             return candidate
     message = 'Browser smoke requires Chrome/Chromium; set CHROME_BIN to its executable'
-    if os.environ.get('PLCN_REQUIRE_BROWSER') == '1':
+    if os.environ.get('RETROARCH_ASSISTANT_REQUIRE_BROWSER') == '1':
         pytest.fail(message)
     pytest.skip(message)
 
@@ -47,9 +47,9 @@ def chrome_binary():
 def test_home_to_library_to_preview(tmp_path, monkeypatch, chrome_binary, viewport):
     home = tmp_path / 'home'
     home.mkdir()
-    monkeypatch.setenv('PLCN_HOME', str(home))
+    monkeypatch.setenv('RETROARCH_ASSISTANT_HOME', str(home))
     monkeypatch.setattr(server, 'CONFIG_FILE', str(home / 'config.json'))
-    monkeypatch.setattr(DatabaseManager, 'DB_FILE', str(home / 'cache/plcn.db'))
+    monkeypatch.setattr(DatabaseManager, 'DB_FILE', str(home / 'cache/library.db'))
     monkeypatch.setattr(retroarch_scanner, 'list_adb_devices', lambda **kwargs: [])
     monkeypatch.setattr(retroarch_scanner, 'default_scan_candidates', lambda: [])
     monkeypatch.setattr(single_artwork, 'catalog_names', lambda *args: ['Shadowrun (USA)'])

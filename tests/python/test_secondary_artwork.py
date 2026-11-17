@@ -16,7 +16,7 @@ def page(caption='1995 DOS cover'):
 
 @pytest.fixture
 def provider(tmp_path, monkeypatch):
-    monkeypatch.setenv('PLCN_HOME', str(tmp_path))
+    monkeypatch.setenv('RETROARCH_ASSISTANT_HOME', str(tmp_path))
     monkeypatch.setattr(secondary, 'api', lambda *args: [page()])
     return {'system': 'DOS', 'kind': 'Named_Boxarts', 'query': 'Sword and Fairy'}
 

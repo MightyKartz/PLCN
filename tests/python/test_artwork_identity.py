@@ -9,7 +9,7 @@ from database import DatabaseManager
 
 @pytest.fixture
 def library(tmp_path, monkeypatch):
-    monkeypatch.setenv('PLCN_HOME', str(tmp_path / 'profile'))
+    monkeypatch.setenv('RETROARCH_ASSISTANT_HOME', str(tmp_path / 'profile'))
     import data_pack
     path = tmp_path / 'names.sqlite3'
     db = DatabaseManager(str(path))

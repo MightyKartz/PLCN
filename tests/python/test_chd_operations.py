@@ -17,7 +17,7 @@ SYSTEM='Sega - Saturn'
 
 @pytest.fixture
 def optical(tmp_path,monkeypatch):
-    home=tmp_path/'home';home.mkdir();monkeypatch.setenv('PLCN_HOME',str(home))
+    home=tmp_path/'home';home.mkdir();monkeypatch.setenv('RETROARCH_ASSISTANT_HOME',str(home))
     root=tmp_path/'游戏 库';root.mkdir();cue=root/'测试 Disc1.cue';binary=root/'音轨.bin'
     # 100 synthetic raw sectors, including audio and a stored INDEX 00 pregap.
     binary.write_bytes(bytes(2352*60)+bytes(range(256))*(2352*40//256)+bytes(range(2352*40%256)))
@@ -30,7 +30,7 @@ def optical(tmp_path,monkeypatch):
 
 def available_tool():
     capability=chd_tool.capability()
-    if not capability['available'] and os.environ.get('PLCN_REQUIRE_CHD')=='1': pytest.fail(capability['message'])
+    if not capability['available'] and os.environ.get('RETROARCH_ASSISTANT_REQUIRE_CHD')=='1': pytest.fail(capability['message'])
     if not capability['available']: pytest.skip('Install MAME chdman to run real optical round-trip tests')
     return capability
 

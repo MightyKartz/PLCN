@@ -32,7 +32,7 @@ def process_options():
 @contextmanager
 def service(binary, profile):
     profile.mkdir(parents=True, exist_ok=True)
-    env = dict(os.environ, PLCN_HOME=str(profile))
+    env = dict(os.environ, RETROARCH_ASSISTANT_HOME=str(profile))
     process = subprocess.Popen([str(binary), '--no-browser'], cwd=profile, env=env, **process_options())
     client = requests.Session()
     client.trust_env = False
@@ -90,7 +90,7 @@ def check_binary(binary, workspace):
     profile.mkdir()
     marker = profile / 'keep-user-data.txt'
     marker.write_text('Keep settings when uninstalling', encoding='utf-8')
-    env = dict(os.environ, PLCN_HOME=str(profile))
+    env = dict(os.environ, RETROARCH_ASSISTANT_HOME=str(profile))
     run([str(binary), '--self-check'], cwd=profile, env=env, **process_options())
     check = json.loads((profile / 'self-check.json').read_text(encoding='utf-8'))
     assert check['ok'] and check['product'] == NAME
@@ -130,8 +130,7 @@ def windows_shell_folder(folder_id):
 def preserve_windows_shortcuts():
     # A portable install can have shortcuts without an installer registration.
     # Resolve actual shell folders (including redirected Desktop locations).
-    paths = [windows_shell_folder(2) / 'PLCN/PLCN.lnk', windows_shell_folder(16) / 'PLCN.lnk',
-             windows_shell_folder(2) / ENGLISH_NAME / (ENGLISH_NAME + '.lnk'),
+    paths = [windows_shell_folder(2) / ENGLISH_NAME / (ENGLISH_NAME + '.lnk'),
              windows_shell_folder(16) / (ENGLISH_NAME + '.lnk')]
     snapshots = {path: path.read_bytes() if path.exists() else None for path in paths}
     try:
@@ -154,7 +153,7 @@ def preserve_windows_shortcuts():
 
 def check_installer(package, workspace):
     if installer_registration_exists():
-        raise RuntimeError('RetroArch Assistant / PLCN already has an installer registration; use a clean Windows runner for this test')
+        raise RuntimeError('RetroArch Assistant already has an installer registration; use a clean Windows runner for this test')
     destination = workspace / 'installed app 中文'
     group = 'RetroArch Assistant smoke ' + workspace.name
     uninstaller = destination / 'unins000.exe'

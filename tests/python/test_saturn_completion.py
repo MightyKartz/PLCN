@@ -142,7 +142,7 @@ def test_confirmed_version_survives_new_preview_with_original_remote_uri(saturn_
     path = playlist([('龙之力量/CN [Dragon_Force]', '龙之力量')])
     remote = 'mtp://device/00010001/RetroArch/playlists/Sega%20-%20Saturn.lpl'
     document=json.loads(path.read_text(encoding='utf-8')); item=document['items'][0]
-    monkeypatch.setenv('PLCN_HOME',str(source.parent/'runtime'))
+    monkeypatch.setenv('RETROARCH_ASSISTANT_HOME',str(source.parent/'runtime'))
     artwork_identity.remember({'system':'Sega - Saturn','playlist_path':remote,'rom_path':item['path'],'label':item['label']},'Dragon Force (USA)','Named_Boxarts')
     row=analyze_playlist(path,'Sega - Saturn',str(source),verify_artwork=True,source_playlist_path=remote)[0]
     assert row['thumbnail_source']=='Dragon Force (USA)'
