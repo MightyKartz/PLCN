@@ -299,3 +299,31 @@ def test_home_overview_uses_minimal_concept():
     assert 'gm-manual-scan' not in html
     assert 'openAutoScan()' in html
     assert '还没有游戏。点击「添加游戏」开始。' in html
+
+
+def test_add_games_workspace_is_single_column_with_auto_analysis():
+    html = read_template()
+
+    assert 'id="gm-preview"' not in html
+    assert "'gm-preview'" not in html
+    assert 'gmAutoAnalyze' in html
+    assert 'reanalyze' in html
+    assert 'setTimeout(gmAutoAnalyze, 400)' in html
+    assert "'gm-files'" in html
+    assert 'gm-destination-fields' in html
+    assert 'gm-change-destination' in html
+    assert 'gm-destination-summary' in html
+    assert 'gm-playlist-path' in html
+    assert 'gm-file-list' in html
+    assert 'gm-mode-import' in html
+    assert 'gm-mode-remove' in html
+    assert '选择要导入的游戏' in html
+    assert '已选 ' in html
+    assert '放到' in html
+    assert '正在分析' in html
+    assert '已导入 ' in html
+    assert 'Imported ' in html
+    assert '备份位置' in html
+    assert 'Backup location' in html
+    assert 'gm-status-problem' in html
+    assert 'previewGameImport' in html
