@@ -96,12 +96,18 @@ def preview(handler, context, payload):
 def apply(handler, context, payload):
     from api_common import background
     from playlist_transport import apply_playlist
+    import completion_receipts
     options = payload.get('options') or {}
     def work(jid):
         context.job_manager.contexts[jid] = {'thumbnails_dir': payload.get('thumbnails_dir')}
-        return apply_playlist(payload.get('playlist_path'), payload.get('changes'), payload.get('thumbnails_dir'),
-                              options=options, progress=lambda a, b, text: context.job_manager.update_job(jid, a, b, text),
-                              cancel_check=lambda: context.job_manager.cancelled(jid))
+        result = apply_playlist(payload.get('playlist_path'), payload.get('changes'), payload.get('thumbnails_dir'),
+                                options=options, progress=lambda a, b, text: context.job_manager.update_job(jid, a, b, text),
+                                cancel_check=lambda: context.job_manager.cancelled(jid))
+        system = next((change.get('system') for change in payload.get('changes') or [] if change.get('system')), '')
+        if not system:
+            system = os.path.splitext(os.path.basename(str(payload.get('playlist_path') or '')))[0] or '游戏列表'
+        result['receipt_id'] = completion_receipts.create([result], '补全 ' + system)
+        return result
     reply(handler, {'job_id': background(context.job_manager, '应用游戏列表变更', work)})
 
 
@@ -142,11 +148,32 @@ def batch_apply(handler, context, payload):
     if not job or job['status'] != 'completed' or not review or not job['result']['can_apply']:
         raise ValueError('请先生成有效的全部主机汇总，再确认应用')
     review = stored.pop('batch_review')
+    import completion_receipts
     def work(jid):
         context.job_manager.contexts[jid] = {'thumbnails_dir': review['thumbnails_dir']}
-        return apply_review(review, lambda a, b, text: context.job_manager.update_job(jid, a, b, text),
-                            lambda: context.job_manager.cancelled(jid), payload.get('continue_on_error', True))
+        result = apply_review(review, lambda a, b, text: context.job_manager.update_job(jid, a, b, text),
+                              lambda: context.job_manager.cancelled(jid), payload.get('continue_on_error', True))
+        result['receipt_id'] = completion_receipts.create(result.get('playlists'), '补全全部主机')
+        return result
     reply(handler, {'job_id': background(context.job_manager, '应用已确认的全部主机变更', work)})
+
+
+def completion_receipts_list(handler, context, query):
+    import completion_receipts
+    reply(handler, {'receipts': completion_receipts.list_receipts()})
+
+
+def completion_undo(handler, context, payload):
+    from api_common import background
+    import completion_receipts
+    receipt_id = payload.get('id')
+    if not isinstance(receipt_id, str):
+        raise ValueError('缺少要撤销的补全记录')
+    def work(jid):
+        return completion_receipts.undo(receipt_id,
+                                        progress=lambda a, b, text: context.job_manager.update_job(jid, a, b, text),
+                                        cancel_check=lambda: context.job_manager.cancelled(jid))
+    reply(handler, {'job_id': background(context.job_manager, '撤销补全', work)})
 
 
 def batch_discard(handler, context, payload):

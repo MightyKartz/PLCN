@@ -132,9 +132,12 @@ class ThumbnailDownloader:
             existing_source = artwork_path(self.thumbnails_dir, system, game_english_name, type_name)
             if existing_source != Path(target_path) and valid_image_file(existing_source):
                 atomic_write_bytes(target_path, existing_source.read_bytes())
-                results.append({'type': type_name, 'game': game_chinese_name, 'source': game_english_name,
-                                'system': system, 'status': 'success', 'reason': 'reused_local',
-                                'message': '已复用本地图片', 'path': target_path, 'url': url})
+                detail = {'type': type_name, 'game': game_chinese_name, 'source': game_english_name,
+                          'system': system, 'status': 'success', 'reason': 'reused_local',
+                          'message': '已复用本地图片', 'path': target_path, 'url': url}
+                if replace:
+                    detail['replaced_sha256'] = expected
+                results.append(detail)
                 continue
 
             # print(f"Downloading {type_name} for {game_english_name}...")
@@ -183,7 +186,7 @@ class ThumbnailDownloader:
                                         'message': '服务器返回了无效图片', 'path': target_path, 'url': url})
                         continue
                     atomic_write_bytes(target_path, content)
-                    results.append({
+                    detail = {
                         "type": type_name,
                         "game": game_chinese_name,
                         "source": game_english_name,
@@ -194,7 +197,10 @@ class ThumbnailDownloader:
                         "gallery_kind": download_kind,
                         "path": target_path,
                         "url": url
-                    })
+                    }
+                    if replace:
+                        detail['replaced_sha256'] = expected
+                    results.append(detail)
                 else:
                     results.append({
                         "type": type_name,
