@@ -99,6 +99,60 @@ def apply_playlist(path, changes, thumbnails, *, options, progress, cancel_check
                 remote_backup = mtp.write(path, Path(local_path).read_bytes(), original_digest)
             else:
                 remote_backup = verified_push_adb_playlist(local_path, path, expected_remote)
+        writeback = summary.get('writeback') or {}
+        undo_playlist = None
+        if options.get('write_names', True) and applied and applied.get('applied'):
+            undo_playlist = {'path': path,
+                             'transport': 'mtp' if mtp.is_mtp(path) else 'adb' if remote else 'local',
+                             'after_sha256': hashlib.sha256(Path(local_path).read_bytes()).hexdigest(),
+                             'backup': remote_backup if remote else writeback.get('backup_path'),
+                             'history_id': writeback.get('history_id')}
+        undo_images = []
+        if download or relabel_changes:
+            from single_artwork import read_target
+            from safe_io import atomic_write_bytes
+            seen_destinations = set()
+            candidates = []
+            def image_destination(relative):
+                return (mtp.join(thumbnails, *relative.parts) if mtp.is_mtp(thumbnails)
+                        else thumbnails.rstrip('/') + '/' + relative.as_posix() if is_adb_uri(thumbnails)
+                        else str(Path(thumbnails) / relative))
+            for detail in summary.get('details', []):
+                if detail.get('status') != 'success' or not detail.get('path'):
+                    continue
+                staged = Path(detail['path'])
+                if not staged.is_file():
+                    continue
+                destination = image_destination(staged.relative_to(local_images))
+                if destination in seen_destinations:
+                    continue
+                seen_destinations.add(destination)
+                candidates.append((staged, staged.relative_to(local_images), destination, detail.get('replaced_sha256')))
+            for target in writeback.get('relabel_copies') or []:
+                staged = Path(target)
+                if not staged.is_file():
+                    continue
+                destination = image_destination(staged.relative_to(local_images))
+                if destination in seen_destinations:
+                    continue
+                seen_destinations.add(destination)
+                candidates.append((staged, staged.relative_to(local_images), destination, None))
+            for staged, relative, destination, replaced_sha in candidates:
+                staged_sha = hashlib.sha256(staged.read_bytes()).hexdigest()
+                backup = Path(app_paths.user_data_dir() / 'artwork-backups' / (replaced_sha + '.png')) if replaced_sha else None
+                if mtp.is_mtp(thumbnails):
+                    if str(relative) in existing_mtp or mtp_digests.get(destination) == staged_sha:
+                        continue
+                elif is_adb_uri(thumbnails):
+                    previous = read_target(destination)
+                    if previous is not None and hashlib.sha256(previous).hexdigest() == staged_sha:
+                        continue
+                    if previous is not None:
+                        old_sha = hashlib.sha256(previous).hexdigest()
+                        backup = Path(app_paths.user_data_dir() / 'artwork-backups' / (old_sha + '.png'))
+                        atomic_write_bytes(backup, previous)
+                undo_images.append({'destination': destination, 'sha256': staged_sha,
+                                    'replaced_backup': str(backup) if backup else None})
         if remote_images and (download or relabel_changes):
             progress(len(changes), len(changes), '正在推送缩略图到实机...')
             if mtp.is_mtp(thumbnails):
@@ -136,6 +190,7 @@ def apply_playlist(path, changes, thumbnails, *, options, progress, cancel_check
         annotate_download_summary_paths(summary, local_root=local_images, final_root=thumbnails)
         result = build_apply_job_result(summary, apply_summary=applied, changes=changes,
                                         transport='mtp' if mtp.is_mtp(path) else 'adb' if remote else 'local', remote_backup=remote_backup)
+        result['undo'] = {'playlist': undo_playlist, 'images': undo_images}
         # Remember explicit choices only after the verified write and image
         # publication. Use the real playlist URI and resulting label, not staging.
         if download and any(change.get('artwork_source_confirmed') for change in changes):

@@ -168,6 +168,7 @@ def _apply_changes_locked(playlist_path, changes, thumbnails_dir, backup=True, p
         "applied": [],
         "skipped": [],
         "failed": [],
+        "relabel_copies": [],
     }
 
     playlist_manager = PlaylistManager(playlist_path)
@@ -362,6 +363,7 @@ def _apply_changes_locked(playlist_path, changes, thumbnails_dir, backup=True, p
             target = artwork_path(thumbnails_dir, record['system'], record['new_label'], kind)
             if not valid_image_file(target) and valid_image_file(old):
                 atomic_write_bytes(target, old.read_bytes())
+                writeback['relabel_copies'].append(str(target))
     if not download_tasks:
         return finalize(downloader.empty_summary(0))
     if not download_thumbnails:
