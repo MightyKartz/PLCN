@@ -16,6 +16,7 @@
         <header class="topbar">
             <div class="device-identity"><span class="icon" data-ui-icon="device-gamepad"></span><button id="workbench-device" type="button" onclick="openDesktop('library')" aria-label="设备详情" data-i18n-aria-label="设备详情" data-i18n="当前掌机">当前掌机</button><span id="workbench-connection" class="connection-state" data-i18n="未连接">未连接</span></div>
             <div id="storage-scope" class="storage-segments" role="group" aria-label="游戏存储范围" data-i18n-aria-label="游戏存储范围"><button type="button" data-scope="all" onclick="setStorageScope('all')" aria-pressed="true" data-i18n="全部存储">全部存储</button><button type="button" data-scope="internal" onclick="setStorageScope('internal')" aria-pressed="false" data-i18n="内部存储">内部存储</button><button type="button" data-scope="card" onclick="setStorageScope('card')" aria-pressed="false" data-i18n="存储卡">存储卡</button></div>
+            <div id="library-read-banner" class="library-read-banner" role="status" hidden><span class="library-read-spinner" aria-hidden="true"></span><span id="library-read-banner-message"></span><button class="btn btn-small btn-muted" id="library-read-banner-retry" type="button" onclick="retryLibraryRead()" hidden data-i18n="重试">重试</button></div>
             <div class="top-spacer"></div>
 
             <div class="utility-group" aria-label="工具" data-i18n-aria-label="工具">
@@ -69,7 +70,6 @@
             </aside>
 
             <section class="main-panel filters-compact">
-                <div id="library-read-banner" class="library-read-banner" role="status" hidden><span class="library-read-spinner" aria-hidden="true"></span><span id="library-read-banner-message"></span><button class="btn btn-small btn-muted" id="library-read-banner-retry" type="button" onclick="retryLibraryRead()" hidden data-i18n="重试">重试</button></div>
                 <section class="desktop-welcome" id="library-onboarding">
                     <header class="home-intro"><h1 id="home-title" data-i18n="打开游戏库">打开游戏库</h1><p id="home-description"></p></header>
                     <p id="home-message" role="alert" hidden></p>
