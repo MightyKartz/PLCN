@@ -205,7 +205,7 @@ function renderLibrarySystemTabs(container, groups) {
     allButton.className = `playlist-system-tab${selectedLibrarySystem === '' ? ' active' : ''}`;
     const allIcon = wbIcon('layout-grid');
     const allName = document.createElement('span'); allName.className = 'system-display-name';
-    allName.textContent = 'ALL';
+    allName.textContent = workbenchText('全部游戏', 'All games');
     const allCount = document.createElement('span'); allCount.className = 'system-game-count';
     allCount.textContent = currentDeviceScan?.totals?.items
         ?? [...groups.values()].reduce((total, items) => total
