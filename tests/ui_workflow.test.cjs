@@ -602,3 +602,12 @@ test('import uses the decoded filename of an existing MTP playlist', () => {
     vm.createContext(context);vm.runInContext(source('gmChangeSystem'),context);context.gmChangeSystem();
     assert.equal(fields.playlist.value,system+'.lpl');
 });
+
+test('new handheld system requires an explicit copy directory instead of using the library storage', () => {
+    const fields={system:{value:'MD'},destination:{},android:{},playlist:{}};
+    const context={gmField:id=>fields[id],gameManagement:{setup:{android:true,profiles:[]},root:'mtp://device/00010001/RetroArch'},
+        currentDeviceScan:{playlists:[]},getSystemAbbreviation:()=> 'MD',gmInvalidate:()=>{},gmRenderDestinationSummary:()=>{},gmAutoAnalyze:()=>{}};
+    vm.createContext(context);vm.runInContext(source('gmChangeSystem'),context);context.gmChangeSystem();
+    assert.equal(fields.destination.value,'');
+    assert.equal(fields.android.value,'');
+});

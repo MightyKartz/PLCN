@@ -144,6 +144,23 @@ def validate_import(payload):
             raise ValueError('目标目录必须属于当前掌机')
         if not android.startswith(('/storage/', '/sdcard/')) or any(p in {'.', '..'} for p in android.split('/')):
             raise ValueError('请填写掌机实际游戏目录，例如 /storage/卡号/Roms/GBA')
+        # Infer storage roots only from saved mappings whose relative folders agree.
+        # A library on internal storage does not imply that ROMs belong there.
+        for profile in scan.profiles().get(root, []):
+            source = profile['directory']
+            logical = profile['android_directory'].rstrip('/')
+            if not mtp.is_mtp(source) or mtp.parse(source)[0] != mtp.parse(root)[0]:
+                continue
+            if not logical.startswith(('/storage/', '/sdcard/')):
+                continue
+            size = 4 if logical.startswith('/storage/emulated/') else 3 if logical.startswith('/storage/') else 2
+            mount = '/'.join(logical.split('/')[:size])
+            if mtp.parse(source)[2] != logical[len(mount):].strip('/').split('/'):
+                continue
+            if android == mount or android.startswith(mount + '/'):
+                expected = mtp.uri(mtp.parse(source)[0], mtp.parse(source)[1], android[len(mount):].lstrip('/'))
+                if mtp.parse(destination) != mtp.parse(expected):
+                    raise ValueError('复制目录与掌机启动目录不一致，请重新选择目标存储和目录')
     else:
         if '://' in root or '://' in destination:
             raise ValueError('导入请使用本地目录或 MTP 连接')

@@ -73,6 +73,7 @@ function gmRenderDestinationSummary() {
     const root = gameManagement.root.replaceAll('\\', '/').replace(/\/+$/, '');
     let destination = gmField('destination').value.trim().replaceAll('\\', '/');
     if (destination.startsWith(root)) destination = destination.slice(root.length) || '/';
+    if (!destination) {summary.textContent = workbenchText('请选择游戏复制到的目录', 'Choose where to copy the games'); return;}
     summary.textContent = getSystemAbbreviation(gmField('system').value) + ' · ' + destination;
 }
 function gmWorkspace(mode) {
@@ -108,7 +109,7 @@ function closeGameManagement() {
 function gmInput(form, id, zh, en, value = '') {
     const label = wbElement('label', 'gm-field', workbenchText(zh, en));
     const input = wbElement('input', ''); input.id = 'gm-' + id; input.type = 'text'; input.value = value;
-    input.oninput = () => {input.removeAttribute('aria-invalid'); gmInvalidate(); if (id === 'destination') gmRenderDestinationSummary(); gmScheduleAnalyze();}; label.append(input); form.append(label); return input;
+    input.oninput = () => {input.removeAttribute('aria-invalid'); gmInvalidate(); if (id === 'destination') {gmField('android').value = ''; gmRenderDestinationSummary();} gmScheduleAnalyze();}; label.append(input); form.append(label); return input;
 }
 async function openGameImport() {
     if (workbench.operation) return;
@@ -168,7 +169,7 @@ function gmChangeSystem() {
     const system = gmField('system').value;
     const profile = gameManagement.setup.profiles.find(profile => profile.system === system);
     const playlist = currentDeviceScan?.playlists?.find(playlist => playlist.valid && playlist.system === system);
-    gmField('destination').value = profile?.directory || gameManagement.root.replace(/\/$/, '') + '/roms/' + getSystemAbbreviation(system);
+    gmField('destination').value = profile?.directory || (gameManagement.setup.android ? '' : gameManagement.root.replace(/\/$/, '') + '/roms/' + getSystemAbbreviation(system));
     gmField('android').value = profile?.android_directory || '';
     const filename = playlist?.path?.replaceAll('\\', '/').split('/').pop();
     gmField('playlist').value = playlist?.path?.startsWith('mtp://') ? decodeURIComponent(filename) : filename || system + '.lpl';
@@ -203,7 +204,7 @@ async function gmBrowseRemote(path) {
             browser.append(gmButton(storage.label || '存储', storage.label || 'Storage', () => gmBrowseRemote(storage.path.split('/').slice(0, 4).join('/') + '/')));
         }
         browser.append(gmButton('上级目录', 'Parent folder', () => gmBrowseRemote(data.parent)), gmButton('使用此目录', 'Use this folder', () => {
-            gmField('destination').value = data.path; browser.hidden = true; gmInvalidate(); gmRenderDestinationSummary(); gmAutoAnalyze();
+            gmField('android').value = ''; gmField('destination').value = data.path; browser.hidden = true; gmInvalidate(); gmRenderDestinationSummary(); gmAutoAnalyze();
         }, false));
         for (const directory of data.directories) {
             const button = gmButton(directory.name, directory.name, () => gmBrowseRemote(directory.path));
@@ -247,6 +248,13 @@ async function previewGameImport() {
     gameManagement.preview = null; gameManagement.analysisFiles = null;
     gmField('apply').hidden = false; gmField('apply').disabled = true; gmStatus(workbenchText('正在分析…', 'Analyzing…'));
     try {
+        if (gameManagement.setup.android && !gmField('destination').value.trim()) {
+            gmField('destination-fields').hidden = false;
+            document.getElementById('gm-change-destination').setAttribute('aria-expanded', 'true');
+            gmStatus(workbenchText('请选择掌机上的目标目录，再确认实际启动路径。', 'Choose a destination folder on the handheld, then confirm its launch path.'), true);
+            gmField('pick-destination').scrollIntoView({block:'center'}); gmField('pick-destination').focus();
+            return;
+        }
         if (gameManagement.setup.android && !gmField('android').value.trim()) {
             const destination = gmField('destination').value.trim();
             const hints = await desktopRequest('/api/content/hints', {root:gameManagement.root,

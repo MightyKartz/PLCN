@@ -275,3 +275,22 @@ def test_name_edit_preserves_three_artwork_types_and_refuses_collisions(library)
     assert not (thumbnails / SYSTEM / 'Named_Boxarts/New label.png').exists()
     Image.new('RGB', (4,4), 'red').save(thumbnails / SYSTEM / 'Named_Boxarts/New label.png')
     with pytest.raises(ValueError, match='已有不同图片'): games.edit_preview(payload)
+
+
+def test_import_rejects_storage_and_folder_mapping_mismatch(tmp_path, monkeypatch):
+    source=tmp_path/'Game.gba'; source.write_bytes(b'rom')
+    root='mtp://device/00010001/RetroArch'
+    monkeypatch.setattr(games.scan, 'profiles', lambda: {root:[{
+        'directory':'mtp://device/00020001/Roms/SS',
+        'android_directory':'/storage/CARD/Roms/SS'}, {
+        'directory':'mtp://device/00010001/RetroArch/roms/GBA',
+        'android_directory':'/storage/CARD/Roms/GBA'}]})
+    payload={'root':root,'destination':'mtp://device/00010001/RetroArch/roms/GBA',
+             'android_directory':'/storage/CARD/Roms/GBA','system':SYSTEM,'sources':[str(source)]}
+    with pytest.raises(ValueError,match='复制目录与掌机启动目录不一致'):
+        games.validate_import(payload)
+    payload['destination']='mtp://device/00020001/Roms/Wrong'
+    with pytest.raises(ValueError,match='复制目录与掌机启动目录不一致'):
+        games.validate_import(payload)
+    payload['destination']='mtp://device/00020001/Roms/GBA'
+    assert games.validate_import(payload)['destination']==payload['destination']
