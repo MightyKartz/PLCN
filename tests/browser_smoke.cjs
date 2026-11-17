@@ -104,9 +104,14 @@ async function click(selector) {
         // A read response may have rendered a new control during those frames.
         const element = document.querySelector(selector);
         if (!element || element.disabled) return null;
-        const rect = element.getBoundingClientRect();
+        const first = element.getBoundingClientRect();
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        const again = document.querySelector(selector);
+        if (!again || again.disabled) return null;
+        const rect = again.getBoundingClientRect();
+        if (first.x !== rect.x || first.y !== rect.y || first.width !== rect.width || first.height !== rect.height) return null;
         const x = rect.left + rect.width / 2, y = rect.top + rect.height / 2;
-        if (!element.contains(document.elementFromPoint(x, y))) return null;
+        if (!again.contains(document.elementFromPoint(x, y))) return null;
         return {x, y};
     }, `unobscured painted control ${selector}`, selector);
     await send('Input.dispatchMouseEvent', {type: 'mouseMoved', ...point});
@@ -213,12 +218,26 @@ async function main() {
     await click('#library-all-systems');
     assert.equal(await evaluate(()=>document.querySelector('.workbench-pending').getAttribute('aria-pressed')),'false');
 
+    const rectOf = sel => evaluate(s => {
+        const r = document.querySelector(s).getBoundingClientRect();
+        return {x: Math.round(r.x), y: Math.round(r.y), width: Math.round(r.width), height: Math.round(r.height)};
+    }, sel);
+    const rectsBefore = {
+        topbar: await rectOf('.topbar'),
+        panelHeader: await rectOf('.panel-header'),
+        previewButton: await rectOf('#preview-button'),
+    };
     holdOverview=true;
     await evaluate(()=>refreshWorkbenchOverview());
     for(let attempt=0;!heldOverview&&attempt<150;attempt++)await delay(100);
     assert.ok(heldOverview,'refresh request held');
     assert.equal(await evaluate(()=>document.querySelector('#library-read-dialog').open),false);
     assert.equal(await evaluate(visible,'#library-read-banner'),true);
+    assert.deepEqual({
+        topbar: await rectOf('.topbar'),
+        panelHeader: await rectOf('.panel-header'),
+        previewButton: await rectOf('#preview-button'),
+    }, rectsBefore, 'refresh banner must not shift layout');
     assert.equal(await evaluate(()=>document.querySelectorAll('.workbench-cards > button').length),cardCount);
     await screenshot('01-library-refresh');
     holdOverview=false;await send('Fetch.continueRequest',{requestId:heldOverview});heldOverview=null;
