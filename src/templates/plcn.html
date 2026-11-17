@@ -21,12 +21,7 @@
 
             <div class="utility-group" aria-label="工具" data-i18n-aria-label="工具">
                 <button id="task-center-button" class="btn btn-muted top-toggle task-center-button" type="button" onclick="openDesktop('tasks')" title="任务中心" aria-label="任务中心" data-i18n-title="任务中心" data-i18n-aria-label="任务中心"><span class="icon" data-ui-icon="circle-check"></span><span id="task-center-badge" class="task-center-badge" hidden></span></button>
-                <button class="btn btn-muted top-toggle" id="language-display-btn" type="button" onclick="toggleUILanguage()" title="切换界面语言" aria-label="切换界面语言" data-i18n-title="切换界面语言" data-i18n-aria-label="切换界面语言">
-                    <svg class="ui-language-icon" data-icon="ui-to-en" width="20" height="20" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 1 0 20"></path><path d="M12 2a14.5 14.5 0 0 0 0 20"></path><path d="M2 12h20"></path></svg>
-                </button>
-                <button class="btn btn-muted top-toggle" id="theme-toggle-btn" type="button" onclick="toggleTheme()" title="切换浅色/深色主题" aria-label="切换浅色/深色主题" aria-pressed="false" data-i18n-title="切换浅色/深色主题" data-i18n-aria-label="切换浅色/深色主题">
-                    <svg class="theme-toggle-icon" data-icon="theme-to-dark" width="20" height="20" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path d="M20.4 14.4A7.8 7.8 0 0 1 9.6 3.6a8.2 8.2 0 1 0 10.8 10.8Z"></path></svg>
-                </button>
+                <button class="btn btn-muted top-toggle" id="settings-button" type="button" onclick="openDesktop('library')" title="设置" aria-label="设置" data-i18n-title="设置" data-i18n-aria-label="设置"><span class="icon" data-ui-icon="settings"></span></button>
             </div>
         </header>
 
@@ -66,7 +61,7 @@
                     </div>
                 </section>
                 </div>
-                <div class="sidebar-footer"><details class="tools-menu"><summary><span class="icon" data-ui-icon="tool"></span><span data-i18n="工具">工具</span></summary><div><button id="storage-entry" type="button" onclick="this.closest('details').open=false; openStorageOptimization()" data-i18n="光盘 CHD 转换">光盘 CHD 转换</button><button id="rom-storage-entry" type="button" onclick="this.closest('details').open=false; openRomStorage()" data-i18n="目录整理与 ROM 压缩">目录整理与 ROM 压缩</button></div></details><button class="sidebar-settings" type="button" onclick="openDesktop('library')"><span class="icon" data-ui-icon="settings"></span><span data-i18n="设置">设置</span></button></div>
+                <div class="sidebar-footer"><details class="tools-menu"><summary><span class="icon" data-ui-icon="tool"></span><span data-i18n="工具">工具</span></summary><div><button id="storage-entry" type="button" onclick="this.closest('details').open=false; openStorageOptimization()" data-i18n="光盘 CHD 转换">光盘 CHD 转换</button><button id="rom-storage-entry" type="button" onclick="this.closest('details').open=false; openRomStorage()" data-i18n="目录整理与 ROM 压缩">目录整理与 ROM 压缩</button></div></details></div>
             </aside>
 
             <section class="main-panel filters-compact">

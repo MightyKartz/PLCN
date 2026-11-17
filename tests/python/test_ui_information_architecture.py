@@ -238,11 +238,11 @@ def test_legacy_name_search_workbench_is_removed():
 def test_dark_theme_active_states_are_restrained():
     html = read_template()
 
-    assert "--dark-active-bg: #18263a" in html
-    assert "--dark-active-border: #2f486a" in html
-    assert "--dark-selected-bg: #172536" in html
-    assert "--dark-selected-rail: #5f8fd4" in html
-    assert "--dark-focus-ring: rgba(95, 143, 212, 0.2)" in html
+    assert "--dark-active-bg: var(--primary-soft)" in html
+    assert "--dark-active-border: var(--primary)" in html
+    assert "--dark-selected-bg: var(--primary-soft)" in html
+    assert "--dark-selected-rail: var(--primary)" in html
+    assert "--dark-focus-ring: rgba(59, 130, 246, .35)" in html
     assert "body[data-theme=\"dark\"] .filter-btn.active" in html
     assert "body[data-theme=\"dark\"] .playlist-system-tab.active" in html
     assert ".preview-table tr.selected" not in html
@@ -259,3 +259,13 @@ def test_desktop_recover_buttons_are_idle_gated():
     assert html.count("syncIdleButtons();") >= 3
     assert "finally { syncIdleButtons(); }" in html
     assert "function assertWorkbenchIdle()" in html
+
+
+def test_topbar_chrome_uses_settings_button():
+    html = read_template()
+
+    assert 'id="settings-button"' in html
+    assert 'id="language-display-btn"' not in html
+    assert 'id="theme-toggle-btn"' not in html
+    assert 'class="sidebar-settings"' not in html
+    assert 'class="tools-menu"' in html
