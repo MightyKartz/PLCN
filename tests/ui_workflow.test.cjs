@@ -539,3 +539,22 @@ test('direct completion reports applied games and counts only review items as ma
     toasts[0].details();
     assert.notEqual(previewed,undefined);
 });
+
+for (const errors of [[], ['NES: playlist changed']]) {
+    test(`all-systems completion reports ${errors.length} failed playlists and retains undo`, () => {
+        let toast;
+        const context = {
+            invalidateWorkbenchPreview: () => {}, workbenchText: zh => zh,
+            showActionToast: value => { toast = value; }, openDesktop: () => 'tasks',
+            batchRunCreatedArtworkDir: false
+        };
+        vm.createContext(context);
+        vm.runInContext(source('finishBatchRun'), context);
+        context.finishBatchRun('completed', {rows: []}, {
+            applied_count: 2, receipt_id: 'partial-receipt', errors, playlists: [], download_summary: {types: {}}
+        });
+        assert.equal(toast.message, errors.length ? '已补全 2 个游戏，1 个列表处理失败' : '已补全 2 个游戏');
+        assert.equal(toast.receiptId, 'partial-receipt');
+        assert.equal(toast.details(), 'tasks');
+    });
+}
