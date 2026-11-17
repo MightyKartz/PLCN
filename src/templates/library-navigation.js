@@ -187,7 +187,6 @@ function findPreferredLibrarySystem(groups) {
 
 function selectAllLibrarySystems() {
     if (workbench.operation) return;
-    if (typeof workbenchOverview !== 'undefined') workbenchOverview.onlyMissing = false;
     selectedLibrarySystem = '';
     invalidateWorkbenchPreview();
     for (const id of ['playlist_path', 'system_name']) document.getElementById(id).value = '';
