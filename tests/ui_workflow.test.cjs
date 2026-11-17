@@ -570,3 +570,35 @@ for (const state of [{applying:true}, {jobId:'writing'}]) {
         assert.equal(context.gameLibrary.activeIndex,0);
     });
 }
+
+for (const launchFolder of ['', '/storage/CARD/Roms/MD']) {
+    test(`import ${launchFolder ? 'recovers the launch folder and enables confirmation' : 'keeps confirmation visible and explains a missing launch folder'}`, async () => {
+        let focused=false, submitted;
+        const fields={apply:{},destination:{value:'mtp://device/00020001/Roms/MD'},system:{value:'MD'},
+            android:{value:'',parentElement:{hidden:true},setAttribute(){},removeAttribute(){},scrollIntoView(){},focus(){focused=true;}},
+            playlist:{value:'MD.lpl'},'destination-fields':{},'playlist-path':{}};
+        const context={gameManagement:{sources:['Game.md'],setup:{android:true},generation:1,analysisToken:0},
+            gmField:id=>fields[id],gmStatus:()=>{},workbenchText:zh=>zh,gmError:error=>error.message,
+            document:{getElementById:()=>({setAttribute(){}})},
+            desktopRequest:async()=>({android_directory:launchFolder}),
+            gmJob:async(url,payload)=>{submitted=payload;return {id:'preview',result:{files:[],playlist:'MD.lpl',can_apply:true,required_bytes:10,free_bytes:100,added:[{}]}};},
+            gmRenderFiles:()=>{},gameSize:String};
+        vm.createContext(context);vm.runInContext(source('previewGameImport'),context);
+        await context.previewGameImport();
+        assert.equal(fields.apply.hidden,false);
+        assert.equal(fields.apply.disabled,!launchFolder);
+        assert.equal(focused,!launchFolder);
+        if (launchFolder) assert.equal(submitted.android_directory,launchFolder);
+        else {assert.equal(submitted,undefined);assert.equal(fields['destination-fields'].hidden,false);}
+    });
+}
+
+test('import uses the decoded filename of an existing MTP playlist', () => {
+    const system='Sega - Mega Drive - Genesis';
+    const fields={system:{value:system},destination:{},android:{},playlist:{}};
+    const context={gmField:id=>fields[id],gameManagement:{setup:{profiles:[]},root:'mtp://device/00020001/RetroArch'},
+        currentDeviceScan:{playlists:[{valid:true,system,path:'mtp://device/00020001/RetroArch/playlists/Sega%20-%20Mega%20Drive%20-%20Genesis.lpl'}]},
+        getSystemAbbreviation:()=> 'MD',gmInvalidate:()=>{},gmRenderDestinationSummary:()=>{},gmAutoAnalyze:()=>{}};
+    vm.createContext(context);vm.runInContext(source('gmChangeSystem'),context);context.gmChangeSystem();
+    assert.equal(fields.playlist.value,system+'.lpl');
+});

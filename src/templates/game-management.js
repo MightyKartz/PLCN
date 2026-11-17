@@ -21,7 +21,7 @@ function gmStatus(text, problem = false) {
 }
 function gmInvalidate() {
     gameManagement.preview = null; gameManagement.analysisFiles = null; gameManagement.analysisToken++;
-    const apply = gmField('apply'); if (apply) apply.hidden = true;
+    const apply = gmField('apply'); if (apply) {apply.hidden = gameManagement.mode !== 'import'; apply.disabled = true;}
 }
 let gmAnalyzeTimer = 0;
 function gmScheduleAnalyze() {
@@ -95,7 +95,7 @@ function gmWorkspace(mode) {
         if (gameManagement.job) await desktopRequest('/api/jobs/cancel', {job_id:gameManagement.job});
     }); cancel.id = 'gm-cancel'; cancel.hidden = true;
     const apply = gmButton(mode === 'import' ? '确认导入' : '确认移出列表', mode === 'import' ? 'Import games' : 'Remove entries', applyGameManagement, false);
-    apply.id = 'gm-apply'; apply.hidden = true;
+    apply.id = 'gm-apply'; apply.hidden = mode !== 'import'; apply.disabled = true;
     footer.append(status, cancel, apply); section.append(header, body, footer); workspace.append(section);
     title.tabIndex = -1; title.focus(); return form;
 }
@@ -108,7 +108,7 @@ function closeGameManagement() {
 function gmInput(form, id, zh, en, value = '') {
     const label = wbElement('label', 'gm-field', workbenchText(zh, en));
     const input = wbElement('input', ''); input.id = 'gm-' + id; input.type = 'text'; input.value = value;
-    input.oninput = () => {gmInvalidate(); if (id === 'destination') gmRenderDestinationSummary(); gmScheduleAnalyze();}; label.append(input); form.append(label); return input;
+    input.oninput = () => {input.removeAttribute('aria-invalid'); gmInvalidate(); if (id === 'destination') gmRenderDestinationSummary(); gmScheduleAnalyze();}; label.append(input); form.append(label); return input;
 }
 async function openGameImport() {
     if (workbench.operation) return;
@@ -170,7 +170,8 @@ function gmChangeSystem() {
     const playlist = currentDeviceScan?.playlists?.find(playlist => playlist.valid && playlist.system === system);
     gmField('destination').value = profile?.directory || gameManagement.root.replace(/\/$/, '') + '/roms/' + getSystemAbbreviation(system);
     gmField('android').value = profile?.android_directory || '';
-    gmField('playlist').value = playlist?.path?.replaceAll('\\', '/').split('/').pop() || system + '.lpl';
+    const filename = playlist?.path?.replaceAll('\\', '/').split('/').pop();
+    gmField('playlist').value = playlist?.path?.startsWith('mtp://') ? decodeURIComponent(filename) : filename || system + '.lpl';
     gmInvalidate(); gmRenderDestinationSummary(); gmAutoAnalyze();
 }
 async function gmPickSource(kind) {
@@ -235,7 +236,7 @@ async function gmJob(route, payload) {
     } finally {
         gameManagement.busy = false; gameManagement.job = null; gmField('cancel').hidden = true;
         gmField('results').querySelectorAll('button').forEach(button => {button.disabled = false;});
-        gmField('fields').disabled = false; gmField('apply').disabled = false;
+        gmField('fields').disabled = false; gmField('apply').disabled = !gameManagement.preview;
         gmField('dialog').querySelector('header button').disabled = false; endWorkbenchOperation();
         if (gameManagement.mode === 'import' && gameManagement.reanalyze) { gameManagement.reanalyze = false; previewGameImport(); }
     }
@@ -244,8 +245,25 @@ async function previewGameImport() {
     if (!gameManagement.sources.length) return;
     const generation = gameManagement.generation, token = ++gameManagement.analysisToken;
     gameManagement.preview = null; gameManagement.analysisFiles = null;
-    gmField('apply').hidden = true; gmStatus(workbenchText('正在分析…', 'Analyzing…'));
+    gmField('apply').hidden = false; gmField('apply').disabled = true; gmStatus(workbenchText('正在分析…', 'Analyzing…'));
     try {
+        if (gameManagement.setup.android && !gmField('android').value.trim()) {
+            const destination = gmField('destination').value.trim();
+            const hints = await desktopRequest('/api/content/hints', {root:gameManagement.root,
+                system:gmField('system').value, directory:destination, playlist_name:gmField('playlist').value.trim()});
+            if (generation !== gameManagement.generation || token !== gameManagement.analysisToken) return;
+            if (!gmField('android').value.trim()) gmField('android').value = hints.android_directory || '';
+            if (!gmField('android').value.trim()) {
+                gmField('destination-fields').hidden = false;
+                gmField('android').parentElement.hidden = false;
+                document.getElementById('gm-change-destination').setAttribute('aria-expanded', 'true');
+                gmStatus(workbenchText('请填写掌机实际启动目录后才能导入。可在 RetroArch 的“加载内容”中查看完整路径。', 'Enter the Android launch folder before importing. Find its full path under Load Content in RetroArch.'), true);
+                gmField('android').setAttribute('aria-invalid', 'true');
+                gmField('android').scrollIntoView({block:'center'}); gmField('android').focus({preventScroll:true});
+                return;
+            }
+            gmField('android').removeAttribute('aria-invalid');
+        }
         const {id, result} = await gmJob('/api/games/preview', {mode:'import', root:gameManagement.root, sources:gameManagement.sources,
             destination:gmField('destination').value.trim(), system:gmField('system').value, android_directory:gmField('android').value.trim(), playlist_name:gmField('playlist').value.trim()});
         if (generation !== gameManagement.generation || token !== gameManagement.analysisToken) return;
@@ -254,13 +272,13 @@ async function previewGameImport() {
         const playlistPath = gmField('playlist-path'); if (playlistPath) playlistPath.textContent = result.playlist;
         if (result.can_apply) {
             gmStatus(workbenchText(`需要 ${gameSize(result.required_bytes)} · 可用 ${gameSize(result.free_bytes)}`, `Needs ${gameSize(result.required_bytes)} · ${gameSize(result.free_bytes)} free`));
-            const apply = gmField('apply'); apply.hidden = false;
+            const apply = gmField('apply'); apply.hidden = false; apply.disabled = false;
             apply.textContent = workbenchText(`导入 ${result.added.length} 个游戏`, `Import ${result.added.length} ${result.added.length === 1 ? 'game' : 'games'}`);
         } else {
             gmStatus(result.conflicts.length ? workbenchText('同名文件内容不同，请更换目标目录或调整来源。', 'Same-name files contain different data. Choose another destination or change the source.')
                 : result.required_bytes > result.free_bytes ? workbenchText('目标空间不足。', 'Not enough destination space.')
                 : workbenchText('没有需要导入的新内容。', 'There is nothing new to import.'), true);
-            gmField('apply').hidden = true;
+            gmField('apply').disabled = true;
         }
     } catch (error) {if (generation === gameManagement.generation && token === gameManagement.analysisToken) gmStatus(gmError(error), true);}
 }
@@ -274,7 +292,7 @@ async function openGameRemoval(indices) {
         const {id, result} = await gmJob('/api/games/preview', payload); gameManagement.preview = id;
         for (const item of result.removed) gmField('results').append(wbElement('strong', 'gm-result-name', item.label || item.path), wbElement('small', 'gm-path', item.path));
         gmField('status').textContent = workbenchText(`将移出 ${result.count} 个列表条目。修改前会保存列表备份。`, `${result.count} playlist entries will be removed. A playlist backup is saved first.`);
-        gmField('apply').hidden = false;
+        gmField('apply').hidden = false; gmField('apply').disabled = false;
     } catch (error) {gmField('status').textContent = gmError(error);}
 }
 async function applyGameManagement() {

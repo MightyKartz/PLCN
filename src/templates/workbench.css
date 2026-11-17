@@ -145,3 +145,5 @@ body:has(#action-toast:not([hidden])) .status{bottom:92px;}
 #game-inspector #artwork-dialog header{top:-18px;}#game-inspector #artwork-dialog footer{bottom:-24px;border-top:1px solid var(--border);}
 #game-inspector #artwork-dialog h2{font-size:17px;}#game-inspector .artwork-compare{grid-template-columns:minmax(0,1fr);}
 #game-inspector .artwork-source-controls{flex-wrap:wrap;}#game-inspector #artwork-source{min-width:0;width:100%;}#game-inspector #artwork-upload{max-width:100%;box-sizing:border-box;}#game-inspector #artwork-kinds{display:flex;flex-direction:column;}
+
+.gm-mode-import .gm-workspace-footer{position:sticky;bottom:-24px;z-index:3;background:var(--surface);padding:14px 16px;margin-top:24px;box-shadow:0 -6px 18px #0001;border:1px solid var(--border);border-radius:var(--radius-lg);}.gm-mode-import .gm-workspace-footer .btn{flex:none;}.gm-mode-import #gm-android[aria-invalid="true"]{border-color:var(--amber);}
