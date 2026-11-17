@@ -284,19 +284,28 @@ async function main() {
     assert.equal(await evaluate(() => document.querySelector('#game-library-rows .game-image-placeholder').textContent), '缺图');
     assert.equal(await evaluate(visible, '#game-library-grid'), true);
     assert.equal(await evaluate(()=>document.querySelectorAll('#game-library-grid .game-cover-card').length),1);
-    assert.equal(await evaluate(() => document.querySelector('#preview-button').textContent), '补全名称与封面');
-    assert.equal(await evaluate(() => document.querySelector('#completion-entry-note').textContent), '自动匹配中文名与图片，预览后确认应用。');
-    assert.equal(await evaluate(visible, '#completion-entry-note'), true);
+    assert.equal(await evaluate(()=>document.querySelector('#game-library-grid .game-card-art').textContent),'缺封面');
+    assert.equal(await evaluate(()=>document.querySelector('#workspace-title .workspace-count').textContent),'1 个游戏');
+    assert.equal(await evaluate(() => document.querySelector('.completion-entry').hidden), true);
+    assert.equal(await evaluate(() => document.querySelector('#games-status').hidden), false);
+    assert.equal(await evaluate(() => document.querySelector('#games-status .overview-status-text').textContent), '1 个游戏缺少封面');
+    assert.equal(await evaluate(() => document.querySelector('#games-complete-button').textContent), '一键补全');
+    assert.equal(await evaluate(() => document.querySelector('#games-complete-button').disabled), false);
+    assert.equal(await evaluate(() => document.querySelector('#game-library-filter-missing').textContent), '缺封面 1');
+    assert.equal(await evaluate(() => document.querySelector('#game-library-search').placeholder), '搜索 SNES 游戏');
+    assert.equal(await evaluate(() => document.querySelector('#game-library-note')), null);
+    assert.equal(await evaluate(() => document.querySelector('#game-selection-toolbar').hidden), true);
     await screenshot('02-games');
     await click('#game-library-grid .game-card-open');
     await waitFor(()=>gameInspector.details,'inspector metadata loaded');
     assert.equal(await evaluate(visible,'#game-inspector'),true);
     assert.equal(await evaluate(()=>document.querySelectorAll('dialog[open]').length),0);
+    assert.equal(await evaluate(()=>Boolean(document.querySelector('#inspector-more'))&&!document.querySelector('#inspector-more').open),true);
+    assert.equal(await evaluate(()=>document.querySelector('#inspector-remove').title),'保留游戏文件、封面和存档');
     await screenshot('02-game-inspector');
     await click('#inspector-edit-name');
     await evaluate(()=>{const input=document.querySelector('#inspector-name');input.value='My Shadowrun';input.dispatchEvent(new Event('input',{bubbles:true}));});
-    await click('#inspector-preview-name');
-    await waitFor(()=>Boolean(gameInspector.preview),'name preview ready');
+    assert.equal(await evaluate(()=>document.querySelector('#inspector-preview-name')),null);
     await click('#inspector-save');
     await waitFor(()=>gameLibrary.data?.items[0]?.label==='My Shadowrun','name saved in playlist');
     await waitFor(()=>gameLibrary.activeIndex===0&&Boolean(gameInspector.details),'inspector retained after name edit');
@@ -359,7 +368,10 @@ async function main() {
     assert.equal(fs.readFileSync(path.join(libraryPath,'Roms/SNES/Imported demo.sfc'),'utf8'),'game import fixture');
     await click('#gm-dialog header button');
     await click('#game-view-grid');
+    assert.equal(await evaluate(()=>document.querySelector('#game-selection-toolbar').hidden),true);
     await click('#game-library-grid [data-game-card="1"] .game-card-select');
+    await waitFor(()=>!document.querySelector('#game-selection-toolbar').hidden,'selection toolbar shown after select');
+    await screenshot('02-games-selection');
     await click('#game-selection-complete');
     await waitFor(()=>Boolean(workbench.previewKey)&&!workbench.operation,'selected metadata preview');
     assert.equal(await evaluate(()=>currentChanges.length),1);
@@ -461,7 +473,7 @@ async function main() {
     await waitFor(() => document.querySelector('#workspace-title')?.textContent.includes('SNES')
         && document.querySelector('#game-library')?.getAttribute('aria-busy') === 'false'
         && document.querySelector('.game-library-table tbody tr'), 'SNES reselected for preview');
-    await click('#preview-button');
+    await click('#games-complete-button');
     await waitFor(() => !document.querySelector('#option-download-artwork').disabled
         && document.querySelector('#preview-table-body .new-label-text')?.textContent === '暗影狂奔', 'default preview');
     assert.equal(await evaluate(() => document.querySelector('#option-write-names').checked && document.querySelector('#option-download-artwork').checked), true);
@@ -577,7 +589,7 @@ async function main() {
     await waitFor(() => document.querySelectorAll('#game-library-rows .artwork-chip-invalid').length === 1, 'damaged artwork keeps individual markers');
     assert.equal(await evaluate(() => document.querySelector('#game-library-filter-problem').textContent.endsWith('1')), true);
     await screenshot('04-damaged-artwork');
-    await click('#preview-button');
+    await click('#games-complete-button');
     await waitFor(() => document.querySelector('#preview-table-body .new-label-text')?.textContent === '暗影狂奔', 'fresh preview');
     if (!await evaluate(() => document.querySelector('#option-download-artwork').checked)) {
         await click('#option-download-artwork');
