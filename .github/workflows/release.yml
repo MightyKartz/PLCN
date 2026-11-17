@@ -19,6 +19,7 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           pattern: RetroArchAssistant-*-unsigned
@@ -29,21 +30,5 @@ jobs:
           draft: true
           prerelease: true
           name: 'RetroArch Assistant ${{ github.ref_name }}'
-          body: |
-            RetroArch Assistant — scan games, organize playlists and complete names/artwork.
-            RetroArch 助手：扫描游戏、整理列表、补全资料，管理你的掌机游戏库。
-
-            Open your handheld, SD card or local library. Scan new games to preview incremental
-            playlist additions, complete names and artwork for existing lists, or add directories
-            manually. Tools include disc lists, CHD conversion, ROM organization and recovery.
-            Task details, retry and cancellation are available from the top-right task icon.
-
-            Uses the retroarch-assistant CLI, RETROARCH_ASSISTANT_HOME and RetroArchAssistant data directories.
-            Existing users must run the explicit one-time migration described in DOC/MIGRATION.md.
-            Settings, manual rules, backups and recovery records can be migrated; ROM files are not moved.
-
-            Download a matching installer below; no Python, Node.js or Xcode is needed.
-            Packages include ADB. Android authorization and vendor drivers may still be required.
-            Windows/macOS packages are not distribution-signed; macOS is not notarized.
-            See README installation notes for system security and device connection details.
+          body_path: RELEASE_PREVIEW.md
           files: release-artifacts/*
