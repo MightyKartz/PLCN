@@ -25,6 +25,7 @@ function gmInvalidate() {
     const configure = gmField('mapping-config'); if (configure) configure.hidden = true;
     const check = gmField('mapping-confirm'); if (check) check.checked = false;
     const mapping = gmField('mapping-status'); if (mapping) mapping.textContent = workbenchText('路径待分析', 'Path analysis pending');
+    gmField('update-existing')?.remove();
     const apply = gmField('apply'); if (apply) {apply.hidden = gameManagement.mode !== 'import'; apply.disabled = true;}
 }
 let gmAnalyzeTimer = 0;
@@ -313,6 +314,12 @@ async function previewGameImport() {
                 : result.required_bytes > result.free_bytes ? workbenchText('目标空间不足。', 'Not enough destination space.')
                 : result.skipped && !result.files.length ? workbenchText('未发现所选主机支持的游戏，请检查主机和文件格式。', 'No supported games found. Check the selected system and file formats.') : workbenchText('没有需要导入的新内容。', 'There is nothing new to import.'), true);
             gmField('apply').disabled = true;
+            gmField('update-existing')?.remove();
+            if (result.update_candidate) {
+                gmStatus(workbenchText('该游戏已存在，新文件内容不同。可以直接更新 ROM。', 'This game exists and the new file differs. You can update its ROM.'));
+                const update=gmButton('更新已有游戏 ROM', 'Update existing ROM',()=>updateImportedRom(result.update_candidate),false);update.id='gm-update-existing';
+                gmField('dialog').querySelector('footer').append(update);
+            }
         }
     } catch (error) {if (generation === gameManagement.generation && token === gameManagement.analysisToken) gmStatus(gmError(error), true);}
 }

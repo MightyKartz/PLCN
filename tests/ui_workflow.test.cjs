@@ -674,3 +674,24 @@ for (const confirmed of [false,true]) {
         assert.deepEqual(context.gameManagement.sources,['Chosen.md']);
     });
 }
+
+test('selecting identical ROM content clears a previously prepared replacement', async()=>{
+    const context={gameInspector:{romPlan:{id:'older-version'},status:'old status'},
+        inspectorJob:async()=>({result:{can_apply:false}}),workbenchText:zh=>zh,renderGameInspector:()=>{}};
+    vm.createContext(context);vm.runInContext(source('prepareRomUpdate'),context);
+    await context.prepareRomUpdate({source:'same-content.gba'});
+    assert.equal(context.gameInspector.romPlan,null);
+    assert.match(context.gameInspector.status,/无需更新/);
+});
+
+test('updating an import conflict waits for the selected library before preparing its ROM',async()=>{
+    let prepared=false, loaded=false;
+    const candidate={playlist:'GBA.lpl',expected:'snapshot',index:2,source:'new.gba'};
+    const context={workbench:{operation:null},closeGameManagement:()=>{},currentDeviceScan:{playlists:[{path:'GBA.lpl'}]},
+        selectScannedPlaylist:async()=>{},gameLibrary:{loading:true,data:null},gameLibraryInput:()=>['GBA.lpl','GBA','images'],
+        loadGameLibrary:async()=>{loaded=true;context.gameLibrary.data={expected:'snapshot'};},inspectGame:()=>{},
+        prepareRomUpdate:async payload=>{assert.equal(loaded,true);assert.equal(payload.source,'new.gba');prepared=true;},
+        showGameLibraryToast:message=>{throw Error(message);},gmError:error=>error.message,workbenchText:zh=>zh};
+    vm.createContext(context);vm.runInContext(source('updateImportedRom'),context);await context.updateImportedRom(candidate);
+    assert.equal(prepared,true);
+});

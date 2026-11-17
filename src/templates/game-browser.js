@@ -1,5 +1,5 @@
 /* Native cover browser and docked inspector; selection never mutates a playlist. */
-const gameInspector = {key:'', details:null, error:'', editing:false, draft:'', preview:null, saving:false, status:''};
+const gameInspector = {key:'', details:null, error:'', editing:false, draft:'', preview:null, romPlan:null, saving:false, status:''};
 let visibleGameItems = [];
 const gameSize = value => value == null ? workbenchText('未知', 'Unknown') : value < 1024 ? value + ' B'
     : new Intl.NumberFormat(currentUILanguage === 'en' ? 'en' : 'zh', {maximumFractionDigits:1}).format(value / (value >= 1024 ** 3 ? 1024 ** 3 : value >= 1024 ** 2 ? 1024 ** 2 : 1024)) + (value >= 1024 ** 3 ? ' GB' : value >= 1024 ** 2 ? ' MB' : ' KB');
@@ -62,8 +62,8 @@ function renderGameInspector() {
     if (!item) return;
     const key = JSON.stringify([gameLibraryInput()[0], gameLibrary.data.expected, item.index]);
     if (gameInspector.key !== key) {
-        Object.assign(gameInspector, {key, details:null, error:'', editing:false, draft:item.label, preview:null, status:''});
-        desktopRequest('/api/games/details', {playlist:gameLibraryInput()[0], expected:gameLibrary.data.expected, index:item.index})
+        Object.assign(gameInspector, {key, details:null, error:'', editing:false, draft:item.label, preview:null, romPlan:null, status:''});
+        desktopRequest('/api/games/details', {playlist:gameLibraryInput()[0], expected:gameLibrary.data.expected, index:item.index, system:gameLibraryInput()[1]})
             .then(details => {if (gameInspector.key !== key || !inspectorItem()) return; gameInspector.details = details; renderGameInspector();})
             .catch(error => {if (gameInspector.key !== key || !inspectorItem()) return; gameInspector.error = gmError(error); renderGameInspector();});
     }
@@ -100,9 +100,22 @@ function renderGameInspector() {
             const folder = gmButton('指定图片目录', 'Choose artwork folder', () => openPathSettings('thumbnails_override')); folder.id = 'inspector-artwork-folder'; actions.append(folder);
         }
         const edit = gmButton('编辑名称', 'Edit name', () => {gameInspector.editing = true; gameInspector.draft = item.label; renderGameInspector(); document.getElementById('inspector-name').focus();}); edit.id = 'inspector-edit-name'; edit.disabled = busy; actions.append(edit);
+        const update = gmButton('更新 ROM', 'Update ROM', pickRomUpdate); update.id = 'inspector-update-rom'; update.disabled = busy || !gameInspector.details?.rom_update_supported; update.title = gameInspector.details?.rom_update_supported ? workbenchText('备份并替换当前 ROM', 'Back up and replace this ROM') : workbenchText('需要可读取的单文件卡带 ROM（不超过 64 MiB）', 'Requires a readable single-file cartridge ROM (up to 64 MiB)'); actions.append(update);
         pane.append(actions);
     }
+    if (gameInspector.romPlan) {
+        const preview = wbElement('section','inspector-rom-update');
+        preview.append(wbElement('p','',workbenchText('新版文件：','New file: ')+gameInspector.romPlan.source_name),
+            wbElement('p','',gameSize(gameInspector.romPlan.old_size)+' → '+gameSize(gameInspector.romPlan.new_size)),
+            wbElement('p','',workbenchText('自动备份旧 ROM，保留路径、名称、图片与存档文件。更新前请退出 RetroArch。', 'Back up the old ROM; keep its path, title, artwork and saves. Quit RetroArch before updating.')));
+        const apply = gmButton('更新', 'Update', applyRomUpdate, false); apply.id = 'inspector-rom-confirm'; apply.disabled = busy;
+        const cancel = gmButton('取消', 'Cancel', () => {gameInspector.romPlan=null; renderGameInspector();}); cancel.disabled = busy;
+        preview.append(apply,cancel); pane.append(preview);
+    }
     const details = gameInspector.details;
+    if (details?.rom_update && details.rom_update.status !== 'restored') {
+        const restore = gmButton('恢复旧版 ROM', 'Restore previous ROM', restoreRomUpdate); restore.id='inspector-restore-rom'; restore.disabled=busy; pane.append(restore);
+    }
     if (details && details.file_status !== 'present') pane.append(wbElement('p', 'inspector-warning', workbenchText('文件未找到或路径尚未映射，请检查设备连接与扫描配置。', 'File missing or path not mapped. Check the connection and scan configuration.')));
     const meta = wbElement('dl', 'inspector-metadata');
     const storage = {local:workbenchText('本地', 'Local'), internal:workbenchText('内部存储', 'Internal storage'), card:workbenchText('存储卡', 'Storage card')}[wbStorageKind(item.rom_path)];
@@ -146,4 +159,55 @@ async function saveGameName() {
         retryGameLibrary(item.index); refreshWorkbenchOverview();
         showGameLibraryToast(workbenchText('名称已保存，修改前的列表已备份。', 'Name saved. The previous playlist was backed up.'));
     } catch (error) {gameInspector.status = gmError(error); renderGameInspector();}
+}
+
+async function pickRomUpdate() {
+    const item = inspectorItem(); if (!item || workbench.operation) return;
+    const key = gameInspector.key;
+    try {
+        if (!beginWorkbenchOperation('rom-picker')) return;
+        let picked;
+        try {picked=await desktopRequest('/api/desktop/pick',{kind:'file'});}
+        finally {endWorkbenchOperation();}
+        if (!picked.path || gameInspector.key !== key) return;
+        await prepareRomUpdate({playlist:gameLibraryInput()[0],expected:gameLibrary.data.expected,index:item.index,system:gameLibraryInput()[1],source:picked.path});
+    } catch (error) {gameInspector.status=gmError(error);}
+    renderGameInspector();
+}
+async function applyRomUpdate() {
+    const item=inspectorItem(), plan=gameInspector.romPlan; if (!item || !plan || workbench.operation) return;
+    gameInspector.romPlan=null;
+    try {
+        const {result}=await inspectorJob('/api/games/apply',{preview_job_id:plan.id});
+        if (result.status !== 'applied') {if (gameInspector.details) gameInspector.details.rom_update={id:result.operation_id,status:result.restored?'restored':'restore_pending'}; throw new Error((result.error || workbenchText('更新失败','Update failed'))+(result.restored ? workbenchText('；旧版已恢复','; previous ROM restored') : workbenchText('；请在任务与恢复中恢复旧版','; restore the previous ROM from Tasks')));}
+        gameInspector.key=''; retryGameLibrary(item.index);
+        showGameLibraryToast(workbenchText('ROM 已更新，旧版已备份。','ROM updated; previous version backed up.'));
+    } catch (error) {gameInspector.status=gmError(error); renderGameInspector();}
+}
+async function restoreRomUpdate() {
+    const item=inspectorItem(), record=gameInspector.details?.rom_update; if (!item || !record || workbench.operation) return;
+    try {
+        await inspectorJob('/api/m3u/recover',{id:record.id,action:'restore'});
+        gameInspector.key='';retryGameLibrary(item.index);showGameLibraryToast(workbenchText('已恢复旧版 ROM。','Previous ROM restored.'));
+    } catch (error) {gameInspector.status=gmError(error);renderGameInspector();}
+}
+
+async function prepareRomUpdate(payload) {
+    gameInspector.romPlan=null; gameInspector.status='';
+    const preview=await inspectorJob('/api/games/preview',{...payload,mode:'rom_update'});
+    if (!preview.result.can_apply) gameInspector.status=workbenchText('文件内容相同，无需更新。','The file is identical; no update needed.');
+    else gameInspector.romPlan={...preview.result,id:preview.id};
+    renderGameInspector();
+}
+async function updateImportedRom(candidate) {
+    if (workbench.operation) return;
+    closeGameManagement();
+    try {
+        const index=currentDeviceScan.playlists.findIndex(row=>row.path===candidate.playlist);
+        if (index<0) throw new Error(workbenchText('请先重新读取游戏库。','Reload the library first.'));
+        await selectScannedPlaylist(index);
+        if (gameLibrary.loading || !gameLibrary.data) {const input=gameLibraryInput(); await loadGameLibrary(input,JSON.stringify(input));}
+        if (gameLibrary.data?.expected!==candidate.expected) throw new Error(workbenchText('列表已变化，请重新选择游戏。','The playlist changed; select the game again.'));
+        inspectGame(candidate.index);await prepareRomUpdate(candidate);
+    } catch (error) {showGameLibraryToast(gmError(error));}
 }

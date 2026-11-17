@@ -125,7 +125,10 @@ def details(payload):
     if core_path == 'DETECT':
         core_path = data.get('default_core_path') or 'DETECT'
         core_name = data.get('default_core_name') or 'DETECT'
-    return {'index': index, 'label': item.get('label', ''), 'core_path': core_path, 'core_name': core_name,
+    import rom_updates
+    recovery = rom_updates.latest(path, location)
+    supported = rom_updates.supports(payload.get('system'), physical, member, probe)
+    return {'rom_update_supported':supported, 'rom_update':recovery, 'index': index, 'label': item.get('label', ''), 'core_path': core_path, 'core_name': core_name,
             'size': probe.get('size'), 'file_status': probe['status'], 'file_path': location, 'archive_member': member}
 
 
@@ -319,13 +322,22 @@ def import_preview(config, progress=lambda *args: None, cancelled=lambda: None):
             'android_directory': config['android_directory'], 'abi': '', 'playlist_name': config['playlist_name']})
     if profiles != saved.get(config['root'], []):
         write['patches'].append(tx.patch(str(scan.profiles_path()), saved, [config['root']], profiles))
-    return {'config': config, 'copies': copies, 'added': additions, 'duplicates': duplicate, 'resources': len(resources),
+    update_candidate = None
+    if len(copies) == 1 and copies[0]['state'] == 'conflict':
+        logical = posixpath.join(config['android_directory'], copies[0]['relative']) if mtp.is_mtp(config['destination']) else copies[0]['target']
+        existing_index = next((i for i, entry in enumerate(data['items']) if entry['path'] == logical), None)
+        if existing_index is not None:
+            update_candidate = {'playlist':config['playlist'],'expected':mtp.digest(raw),'index':existing_index,
+                                'system':config['system'],'source':copies[0]['source']}
+    return {'update_candidate':update_candidate, 'config': config, 'copies': copies, 'added': additions, 'duplicates': duplicate, 'resources': len(resources),
             'skipped': skipped, 'conflicts': conflicts, 'required_bytes': required, 'free_bytes': free,
             'can_apply': bool(additions or required) and not conflicts and required <= free,
             'transaction': write}
 
 
 def public_preview(plan):
+    if plan.get('rom_update'):
+        return {key:plan[key] for key in ('can_apply','source_name','old_size','new_size')}
     if 'edited' in plan:
         return {key: plan[key] for key in ('before', 'after', 'edited', 'artwork_copies', 'can_apply')}
     if 'removed' in plan:
@@ -333,10 +345,14 @@ def public_preview(plan):
     return {**{key: plan[key] for key in ('added', 'duplicates', 'resources', 'skipped', 'conflicts', 'required_bytes', 'free_bytes', 'can_apply')},
             'files': [{'name': f['relative'], 'size': f['size'], 'state': f['state']} for f in plan['copies']],
             'playlist': plan['config']['playlist'], 'mapping_state':plan['config']['mapping_state'],
-            'copy_count':sum(f['state']=='new' for f in plan['copies'])}
+            'copy_count':sum(f['state']=='new' for f in plan['copies']), 'update_candidate':plan.get('update_candidate')}
 
 
 def apply(plan, progress=lambda *args: None, cancelled=lambda: None):
+    if plan.get('rom_update'):
+        import rom_updates
+        cancelled(); progress(0,1,'正在备份并安全更新 ROM…')
+        return rom_updates.apply(plan)
     if 'config' in plan and plan['config']['mapping_state'] == 'unverified':
         raise ValueError('目标与启动路径的对应关系待核对，不能导入')
     change = next(change for change in plan['transaction']['writes'] if change['kind'] == 'playlist')
