@@ -336,16 +336,25 @@ async function main() {
     // then restore both playlist transactions. ROM copies remain on disk.
     await click('#manual-add-button');
     await waitFor(()=>document.querySelector('#gm-pick-files'),'game import loaded');
+    assert.equal(await evaluate(()=>document.querySelector('#gm-preview')),null);
+    assert.equal(await evaluate(()=>document.querySelector('#gm-destination-fields').hidden),true);
+    assert.equal(await evaluate(()=>document.querySelector('#gm-dialog header button.btn-text').textContent),'Cancel');
+    await screenshot('02-game-import-empty');
     await click('#gm-pick-files');
-    await waitFor(()=>document.querySelector('#gm-sources').textContent.includes('Imported demo.sfc'),'game files selected');
-    await evaluate(libraryPath=>{document.querySelector('#gm-destination').value=libraryPath+'/Roms/SNES';gmInvalidate();},libraryPath);
-    await click('#gm-preview');
-    await waitFor(()=>!gameManagement.busy&&!document.querySelector('#gm-apply').hidden,'import preview');
-    assert.equal(await evaluate(()=>document.querySelector('#gm-apply').textContent),'Import games');
+    await waitFor(()=>document.querySelector('#gm-sources')?.textContent.includes('Imported demo.sfc'),'game files selected');
+    await waitFor(()=>!gameManagement.busy&&!document.querySelector('#gm-apply').hidden
+        && document.querySelector('#gm-apply').textContent==='Import 1 game','auto analysis ready');
+    await click('#gm-change-destination');
+    assert.equal(await evaluate(()=>document.querySelector('#gm-destination-fields').hidden),false);
+    await screenshot('02-game-import-destination');
+    await evaluate(libraryPath=>{const input=document.querySelector('#gm-destination');input.value=libraryPath+'/Roms/SNES';input.dispatchEvent(new Event('input',{bubbles:true}));},libraryPath);
+    await waitFor(()=>document.querySelector('#gm-apply').hidden,'destination change invalidates analysis');
+    await waitFor(()=>!gameManagement.busy&&!document.querySelector('#gm-apply').hidden
+        && document.querySelector('#gm-apply').textContent==='Import 1 game','destination re-analysis ready');
     assert.equal(await evaluate(()=>document.querySelectorAll('dialog[open]').length),0);
     await screenshot('02-game-import-preview');
     await click('#gm-apply');
-    await waitFor(()=>document.querySelector('#gm-status').textContent.startsWith('Done:')&&!workbench.operation,'import completed');
+    await waitFor(()=>document.querySelector('#gm-status').textContent.startsWith('Imported 1 game')&&!workbench.operation,'import completed');
     await waitFor(()=>gameLibrary.data?.items.length===2,'new game visible');
     assert.equal(fs.readFileSync(path.join(libraryPath,'Roms/SNES/Imported demo.sfc'),'utf8'),'game import fixture');
     await click('#gm-dialog header button');
