@@ -96,7 +96,7 @@ def test_home_to_library_to_preview(tmp_path, monkeypatch, chrome_binary, viewpo
     incoming = tmp_path / 'incoming'; incoming.mkdir()
     (incoming / 'Imported demo.sfc').write_bytes(b'game import fixture')
     (incoming / 'Updated demo.sfc').write_bytes(b'new version fixture')
-    monkeypatch.setattr(native_dialog, 'pick', lambda kind='directory', initial='': [str(incoming / 'Imported demo.sfc')] if kind == 'files' else str(incoming / 'Updated demo.sfc') if kind == 'file' else initial if initial and Path(initial).is_dir() else str(tmp_path / '游戏库/rom-samples/RetroArch/Roms'))
+    monkeypatch.setattr(native_dialog, 'pick', lambda kind='directory', initial='': [str(incoming / 'Imported demo.sfc')] if kind == 'files' else str(incoming / 'Updated demo.sfc') if kind == 'rom' else initial if initial and Path(initial).is_dir() else str(tmp_path / '游戏库/rom-samples/RetroArch/Roms'))
     source = tmp_path / 'names'
     source.mkdir()
     playlists = tmp_path / '游戏库/playlists'

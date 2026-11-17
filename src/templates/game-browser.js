@@ -167,7 +167,7 @@ async function pickRomUpdate() {
     try {
         if (!beginWorkbenchOperation('rom-picker')) return;
         let picked;
-        try {picked=await desktopRequest('/api/desktop/pick',{kind:'file'});}
+        try {picked=await desktopRequest('/api/desktop/pick',{kind:'rom'});}
         finally {endWorkbenchOperation();}
         if (!picked.path || gameInspector.key !== key) return;
         await prepareRomUpdate({playlist:gameLibraryInput()[0],expected:gameLibrary.data.expected,index:item.index,system:gameLibraryInput()[1],source:picked.path});
