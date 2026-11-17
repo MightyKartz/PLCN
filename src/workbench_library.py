@@ -1,4 +1,6 @@
 """Read-only overview built from the same game rows as the library browser."""
+import re
+
 import mtp_runtime as mtp
 from playlist_browser import read_playlist
 from retroarch_scanner import scan_retroarch_target
@@ -20,8 +22,10 @@ def overview(root):
         locations = {}
         for item in library['items']:
             kind = storage_kind(item['rom_path'])
-            location = locations.setdefault(kind, {'count': 0, 'covers': [], 'missing': 0})
+            location = locations.setdefault(kind, {'count': 0, 'covers': [], 'missing': 0, 'non_chinese_names': 0})
             location['count'] += 1
+            if not re.search(r'[\u3400-\u4dbf\u4e00-\u9fff\U00020000-\U000323af]', item['label']):
+                location['non_chinese_names'] += 1
             if item['image_url'] and len(location['covers']) < 3:
                 location['covers'].append({'url': item['image_url'], 'label': item['label']})
             if any(state != 'exists' for state in item['artwork_status'].values()):

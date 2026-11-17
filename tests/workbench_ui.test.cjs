@@ -24,3 +24,11 @@ test('task shortcut shows active counts, a failure dot, and hides unknown status
  state.activeJobs=0;state.job={status:'completed'};render();assert.equal(badge.hidden,true);
  state.taskError=true;render();assert.equal(badge.hidden,true);assert.match(elements.get('task-center-button').title,/暂不可用/);
 });
+
+test('Chinese display-name counts follow the selected storage scope',()=>{
+ const {workbenchGroups}=runtime();
+ const data={playlists:[{system:'GBA',locations:{internal:{count:2,missing:0,non_chinese_names:1,covers:[]},card:{count:3,missing:1,non_chinese_names:2,covers:[]}}}]};
+ assert.equal(workbenchGroups(data,'all')[0].nonChineseNames,3);
+ assert.equal(workbenchGroups(data,'card')[0].nonChineseNames,2);
+ assert.equal(workbenchGroups(data,'internal')[0].nonChineseNames,1);
+});

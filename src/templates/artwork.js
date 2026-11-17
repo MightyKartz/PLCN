@@ -106,9 +106,11 @@ function openArtworkDialog(item, autoSearch = true) {
     if (workbench.operation) return;
     const [playlist_path, system, thumbnails] = gameLibraryInput();
     if (!thumbnails) { openPathSettings('thumbnails_override'); return; }
+    const docked = workbench.previewKey == null && typeof inspectGame === 'function';
+    if (docked) inspectGame(item.index);
     const key = JSON.stringify(gameLibraryInput());
     artworkDialogState = {context: {playlist_path, system, thumbnails, index: item.index, label: item.label, rom_path: item.rom_path},
-        key, fromPreview: workbench.previewKey != null, version: 0, candidate: null, busy: false, searching: false, applying: false, jobId: null, kindsTouched: false, returnFocus: document.activeElement};
+        docked, key, fromPreview: workbench.previewKey != null, version: 0, candidate: null, busy: false, searching: false, applying: false, jobId: null, kindsTouched: false, returnFocus: document.activeElement};
     if (!beginWorkbenchOperation('artwork')) { artworkDialogState = null; return; }
     const text = workbenchText;
     artworkElement('title').textContent = !item.image_url ? text('为这个游戏补图', 'Add artwork for this game')
@@ -139,7 +141,13 @@ function openArtworkDialog(item, autoSearch = true) {
     artworkElement('results').replaceChildren();
     artworkElement('confirm').textContent = text('确认', 'Confirm');
     invalidateArtworkCandidate();
-    artworkElement('dialog').showModal();
+    if (docked) {
+        const pane = document.getElementById('game-inspector');
+        pane.classList.add('editing-artwork');
+        pane.append(artworkElement('dialog'));
+        artworkElement('dialog').show();
+        pane.scrollTop = 0;
+    } else artworkElement('dialog').showModal();
     artworkElement('source').focus();
     artworkElement('identity').textContent = '';
     artworkElement('names').replaceChildren();
@@ -554,6 +562,11 @@ function closeArtworkDialog() {
 function finishArtworkDialog(state) {
     if (!state || artworkDialogState !== state || artworkElement('dialog').open) return;
     artworkDialogState = null;
+    if (state.docked) {
+        document.getElementById('game-inspector').classList.remove('editing-artwork');
+        document.body.append(artworkElement('dialog'));
+        renderGameInspector();
+    }
     if (workbench.operation === 'artwork') endWorkbenchOperation();
     const button = state.key === gameLibrary.key ? document.getElementById('game-artwork-action-' + state.context.index) : null;
     if (button) {
@@ -567,4 +580,8 @@ artworkElement('dialog').addEventListener('cancel', event => {
 });
 artworkElement('dialog').addEventListener('close', () => {
     finishArtworkDialog(artworkDialogState);
+});
+
+artworkElement('dialog').addEventListener('keydown', event => {
+    if (event.key === 'Escape' && artworkDialogState?.docked) {event.preventDefault(); closeArtworkDialog();}
 });

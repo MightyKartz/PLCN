@@ -539,3 +539,34 @@ test('direct completion reports applied games and counts only review items as ma
     toasts[0].details();
     assert.notEqual(previewed,undefined);
 });
+
+for (const closed of [true, false]) {
+    test(`task popover ignores a response after ${closed ? 'closing' : 'a newer refresh'}`, async () => {
+        let finish;
+        let renders = 0;
+        const panel = {matches:()=>!closed, addEventListener:()=>{}};
+        // Begin open, then close or supersede the request before it resolves.
+        let open = true;
+        panel.matches = () => open;
+        const body = {replaceChildren:()=>{renders++;}};
+        const context = {taskPopoverVersion:0, taskPopoverPoll:null,
+            document:{getElementById:id=>id==='task-popover'?panel:body},
+            desktopRequest:()=>new Promise(resolve=>{if (!finish) finish=resolve; else resolve({receipts:[]});}),
+            clearTimeout:()=>{},setTimeout:()=>{throw Error('stale refresh scheduled polling');}};
+        vm.createContext(context);vm.runInContext(source('refreshTaskPopover'),context);
+        const pending=context.refreshTaskPopover();
+        if (closed) open=false; else context.taskPopoverVersion++;
+        finish({jobs:[]});await pending;
+        assert.equal(renders,0);
+    });
+}
+
+for (const state of [{applying:true}, {jobId:'writing'}]) {
+    test(`game selection stays fixed while artwork is ${state.applying ? 'applying' : 'awaiting its result'}`, () => {
+        const context={gameInspector:{saving:false},artworkDialogState:state,gameLibrary:{activeIndex:0},
+            renderGameLibrary:()=>{throw Error('must not switch during a write');}};
+        vm.createContext(context);vm.runInContext(source('inspectGame'),context);
+        context.inspectGame(1);
+        assert.equal(context.gameLibrary.activeIndex,0);
+    });
+}

@@ -74,10 +74,10 @@ function setStorageScope(scope) {
 function workbenchGroups(data, scope) {
     const groups = new Map();
     for (const playlist of data.playlists) {
-        const group = groups.get(playlist.system) || {system:playlist.system,count:0,missing:0,covers:[],locations:new Set()};
+        const group = groups.get(playlist.system) || {system:playlist.system,count:0,missing:0,nonChineseNames:0,covers:[],locations:new Set()};
         for (const [kind, location] of Object.entries(playlist.locations)) {
             if (scope !== 'all' && scope !== kind) continue;
-            group.count += location.count; group.missing += location.missing;
+            group.count += location.count; group.missing += location.missing; group.nonChineseNames += location.non_chinese_names || 0;
             group.covers.push(...location.covers); group.locations.add(kind);
         }
         if (group.count) groups.set(playlist.system, group);
@@ -124,12 +124,13 @@ function renderWorkbenchOverview(visible) {
     const subtitle = wbElement('p','overview-subtitle',workbenchText(`${total} 个游戏 · ${groups.length} 个主机`,`${total} games · ${groups.length} systems`));
     if (autoScanState.plan?.unclassified.length) subtitle.textContent += workbenchText(` · ${autoScanState.plan.unclassified.length} 项待分类`,` · ${autoScanState.plan.unclassified.length} unclassified`);
     panel.append(subtitle);
-    if (missing > 0) {
+    const nonChineseNames = actual ? groups.reduce((n,g)=>n+g.nonChineseNames,0) : 0;
+    if (missing > 0 || nonChineseNames > 0) {
         const bar = wbElement('div','overview-status'); bar.id = 'overview-status';
         const complete = wbElement('button','btn btn-muted',workbenchText('一键补全','Complete all'));
         complete.type='button'; complete.id='overview-complete-button'; complete.onclick=()=>startCompletion();
         complete.disabled=document.getElementById('preview-button').disabled;
-        bar.append(wbIcon('photo'),wbElement('span','overview-status-text',workbenchText(`${missing} 个游戏缺少封面`,`${missing} games missing artwork`)),complete);
+        bar.append(wbIcon('photo'),wbElement('span','overview-status-text',[missing ? workbenchText(`${missing} 个游戏缺少封面`,`${missing} games missing artwork`) : '', nonChineseNames ? workbenchText(`${nonChineseNames} 个游戏尚未使用中文名`,`${nonChineseNames} games without Chinese names`) : ''].filter(Boolean).join(' · ')),complete);
         panel.append(bar);
     }
     const toolbar = wbElement('div','overview-toolbar'); toolbar.append(wbElement('h2','',workbenchText('主机','Systems')));

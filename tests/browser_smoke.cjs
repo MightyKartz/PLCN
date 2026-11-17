@@ -149,8 +149,12 @@ async function main() {
     assert.equal(await evaluate(()=>document.querySelector('.workbench-nav, #workbench-task')),null);
     await waitFor(()=>document.getElementById('task-center-badge').textContent==='1','task badge from active jobs');
     await click('#task-center-button');
-    await waitFor(()=>document.querySelector('#desktop-content').textContent.includes('等待取消的测试任务'),'top task entry');
-    await click('#desktop-close');
+    await waitFor(()=>document.querySelector('#task-popover-content').textContent.includes('等待取消的测试任务'),'top task entry');
+    assert.equal(await evaluate(()=>document.querySelector('#desktop-dialog').open),false);
+    await screenshot('01-task-popover');
+    await evaluate(()=>refreshTaskPopover());
+    assert.equal(await evaluate(()=>document.querySelector('#task-popover-content').textContent.includes('1 个列表失败')),true);
+    await click('#task-center-button');
     assert.equal(await evaluate(() => document.querySelector('#usb-debug-help, #home-local-open')), null);
     await click('#workbench-device');
     assert.equal(await evaluate(() => document.querySelectorAll('dialog[open]').length), 1);
@@ -217,7 +221,7 @@ async function main() {
     assert.equal(await evaluate(()=>document.querySelector('#automatic-scan-button')),null);
     assert.equal(await evaluate(()=>document.querySelector('.completion-entry').hidden),true);
     await waitFor(()=>document.querySelector('#overview-status'),'artwork status bar after overview load');
-    assert.match(await evaluate(()=>document.querySelector('.overview-status-text').textContent),/^\d+ 个游戏缺少封面$/);
+    assert.match(await evaluate(()=>document.querySelector('.overview-status-text').textContent),/^\d+ 个游戏缺少封面 · 1 个游戏尚未使用中文名$/);
     assert.equal(await evaluate(()=>document.querySelector('#overview-complete-button').textContent),'一键补全');
     assert.deepEqual(await evaluate(()=>Array.from(document.querySelectorAll('.platform-heading strong'),el=>el.textContent).sort()),['GBA','SNES']);
     assert.equal(await evaluate(()=>Array.from(document.querySelectorAll('.overview-system-card')).every(el=>el.title.length>0&&el.title!==el.querySelector('.platform-heading strong').textContent)),true);
@@ -303,6 +307,23 @@ async function main() {
     assert.equal(await evaluate(()=>Boolean(document.querySelector('#inspector-more'))&&!document.querySelector('#inspector-more').open),true);
     assert.equal(await evaluate(()=>document.querySelector('#inspector-remove').title),'保留游戏文件、封面和存档');
     await screenshot('02-game-inspector');
+    await click('#inspector-artwork');
+    await waitFor(()=>document.querySelector('#game-inspector #artwork-dialog')?.open,'docked artwork editor');
+    assert.equal(await evaluate(()=>document.querySelector('#artwork-dialog').matches(':modal')),false);
+    await waitFor(()=>document.querySelectorAll('#artwork-results .artwork-option').length>0,'docked artwork candidates');
+    await click('#artwork-results .artwork-option');
+    await waitFor(()=>!document.querySelector('#artwork-confirm').disabled,'docked comparison');
+    await evaluate(()=>renderGameInspector());
+    assert.equal(await evaluate(()=>Boolean(artworkDialogState.candidate)),true);
+    await screenshot('02-inline-artwork-comparison');
+    await evaluate(()=>{document.querySelector('#game-inspector').scrollTop=0;});
+    await screenshot('02-inline-artwork');
+    assert.equal(await evaluate(()=>document.querySelector('#game-inspector').scrollWidth<=document.querySelector('#game-inspector').clientWidth),true);
+    await evaluate(()=>inspectGame(0));
+    assert.equal(await evaluate(()=>artworkDialogState),null);
+    assert.equal(await evaluate(()=>workbench.operation),null);
+    assert.equal(await evaluate(()=>document.querySelector('#artwork-dialog').open),false);
+
     await click('#inspector-edit-name');
     await evaluate(()=>{const input=document.querySelector('#inspector-name');input.value='My Shadowrun';input.dispatchEvent(new Event('input',{bubbles:true}));});
     assert.equal(await evaluate(()=>document.querySelector('#inspector-preview-name')),null);

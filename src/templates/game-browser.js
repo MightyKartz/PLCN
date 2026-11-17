@@ -7,7 +7,8 @@ function setGameView(view) {
     gameLibrary.view = view; renderGameLibrary();
 }
 function inspectGame(index) {
-    if (gameInspector.saving) return;
+    if (gameInspector.saving || artworkDialogState?.applying || artworkDialogState?.jobId) return;
+    if (artworkDialogState?.docked) closeArtworkDialog();
     gameLibrary.activeIndex = index; renderGameLibrary();
 }
 function toggleGameSelection(index, checked) {
@@ -67,6 +68,8 @@ function renderGameInspector() {
             .catch(error => {if (gameInspector.key !== key || !inspectorItem()) return; gameInspector.error = gmError(error); renderGameInspector();});
     }
     const editingFocus = document.activeElement?.id === 'inspector-name' ? [document.activeElement.selectionStart, document.activeElement.selectionEnd] : null;
+    const artworkEditor = artworkDialogState?.docked ? document.getElementById('artwork-dialog') : null;
+    if (artworkEditor) artworkEditor.remove();
     pane.replaceChildren(); pane.setAttribute('aria-label', workbenchText('游戏详情', 'Game details'));
     const header = wbElement('header', 'inspector-header'); header.append(wbElement('h2', 'sr-only', workbenchText('游戏详情', 'Game details')));
     const close = gmButton('关闭详情', 'Close details', () => {gameLibrary.activeIndex = null; renderGameLibrary();});
@@ -123,6 +126,7 @@ function renderGameInspector() {
     const remove = gmButton('移出列表', 'Remove from playlist', () => openGameRemoval([item.index])); remove.id = 'inspector-remove'; remove.disabled = busy; remove.className = 'btn btn-text';
     remove.title = workbenchText('保留游戏文件、封面和存档', 'Keeps game files, artwork and saves'); footer.append(remove); pane.append(footer);
     const status = wbElement('p', 'inspector-status', gameInspector.error || gameInspector.status); status.id = 'inspector-status'; status.setAttribute('role', 'status'); pane.append(status);
+    if (artworkEditor) pane.append(artworkEditor);
     if (editingFocus) {const input = document.getElementById('inspector-name'); input?.focus(); input?.setSelectionRange(...editingFocus);}
 }
 async function inspectorJob(route, payload) {
