@@ -3,6 +3,10 @@ let currentUILanguage = 'zh';
 let currentTheme = 'light';
 
 const UI_EN = {
+    '扫描掌机游戏': 'Scan handheld games',
+    '请先在掌机核对存储和启动目录': 'Check the storage and launch folder on your handheld first',
+    '本地目录无需配置掌机启动路径': 'Local folders do not need a handheld launch path',
+    '启动目录的相对路径必须与所选复制目录一致': 'The launch folder must have the same relative path as the copy destination',
     '图片目录或主机无效': 'Invalid artwork folder or system',
     '名称编辑请使用本地或 MTP 图片目录': 'Use a local or MTP artwork folder to edit names',
     '图片目录必须属于当前掌机': 'The artwork folder must belong to the current handheld',

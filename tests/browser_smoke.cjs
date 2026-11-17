@@ -350,11 +350,7 @@ async function main() {
     await click('.tools-menu > summary');
     assert.doesNotMatch(await evaluate(()=>document.querySelector('.tools-menu').innerText),/\p{Script=Han}/u);
     await evaluate(()=>document.querySelector('.tools-menu').open=false);
-    await click('#manual-add-button');
-    await waitFor(()=>document.querySelector('#gm-source-scan')&&document.querySelector('#gm-source-import'),'add-games source choices');
-    assert.equal(await evaluate(()=>document.querySelector('#gm-source-import').getAttribute('aria-pressed')),'true');
-    assert.doesNotMatch(await evaluate(()=>document.querySelector('#gm-source-scan').innerText),/\p{Script=Han}/u);
-    await click('#gm-source-scan');
+    await click('#manual-scan-button');
     await waitFor(()=>document.querySelector('#auto-scan-dialog').open,'scan entry from add-games workspace');
     await waitFor(()=>!document.querySelector('#auto-scan-start').disabled,'English scan storage loaded');
     assert.doesNotMatch(await evaluate(()=>document.querySelector('#auto-scan-dialog').innerText),/\p{Script=Han}/u);
@@ -373,14 +369,14 @@ async function main() {
     await click('#gm-pick-files');
     await waitFor(()=>document.querySelector('#gm-sources')?.textContent.includes('Imported demo.sfc'),'game files selected');
     await waitFor(()=>!gameManagement.busy&&!document.querySelector('#gm-apply').hidden
-        && document.querySelector('#gm-apply').textContent==='Confirm: 1 entry / 1 file','auto analysis ready');
+        && document.querySelector('#gm-apply').textContent==='Import 1 game','auto analysis ready');
     await click('#gm-change-destination');
     assert.equal(await evaluate(()=>document.querySelector('#gm-destination-fields').hidden),false);
     await screenshot('02-game-import-destination');
     await evaluate(libraryPath=>{const input=document.querySelector('#gm-destination');input.value=libraryPath+'/Roms/SNES';input.dispatchEvent(new Event('input',{bubbles:true}));},libraryPath);
     await waitFor(()=>document.querySelector('#gm-apply').disabled,'destination change invalidates analysis');
     await waitFor(()=>!gameManagement.busy&&!document.querySelector('#gm-apply').hidden
-        && document.querySelector('#gm-apply').textContent==='Confirm: 1 entry / 1 file','destination re-analysis ready');
+        && document.querySelector('#gm-apply').textContent==='Import 1 game','destination re-analysis ready');
     assert.equal(await evaluate(()=>document.querySelectorAll('dialog[open]').length),0);
     await evaluate(()=>{gameManagement.setup.android=true;document.querySelector('#gm-android').value='';gmInvalidate();gmAutoAnalyze();});
     await waitFor(()=>document.querySelector('#gm-android').getAttribute('aria-invalid')==='true','missing Android launch directory guidance');
@@ -394,6 +390,11 @@ async function main() {
     await click('#gm-apply');
     await waitFor(()=>document.querySelector('#gm-status').textContent.startsWith('Added 1 entries')&&!workbench.operation,'import completed');
     await waitFor(()=>gameLibrary.data?.items.length===2,'new game visible');
+    assert.equal(await evaluate(()=>document.querySelector('#gm-fields').hidden),true);
+    assert.equal(await evaluate(visible,'#gm-view-games'),true);
+    assert.equal(await evaluate(visible,'#gm-add-more'),true);
+    assert.equal(await evaluate(visible,'#gm-complete-metadata'),true);
+    await screenshot('02-game-import-complete');
     assert.equal(fs.readFileSync(path.join(libraryPath,'Roms/SNES/Imported demo.sfc'),'utf8'),'game import fixture');
     await click('#gm-dialog header button');
     await click('#game-view-grid');
@@ -435,9 +436,7 @@ async function main() {
     });
     await click('#gm-dialog header button');
     await waitFor(()=>gameLibrary.data?.items.length===1,'original games restored');
-    await click('#manual-add-button');
-    await waitFor(()=>document.querySelector('#gm-source-scan'),'add-games source choices');
-    await click('#gm-source-scan');
+    await click('#manual-scan-button');
     await waitFor(()=>document.querySelector('#auto-scan-dialog').open,'auto-scan from add-games workspace');
     await click('#auto-scan-dialog footer button[onclick="openContentScan()"]');
     await waitFor(()=>!document.querySelector('#content-scan-fields').disabled,'English manual setup loaded');

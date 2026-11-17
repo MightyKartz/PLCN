@@ -163,6 +163,7 @@ function renderWorkbenchOverview(visible) {
 }
 function renderWorkbenchChrome(state) {
     for (const [selector,zh,en] of [
+        ['#manual-scan-button','扫描掌机游戏','Scan handheld games'],
         ['#manual-add-button','＋ 添加游戏','＋ Add games'],
         ['.tools-menu summary','工具','Tools'],['#device-switch-button','切换设备','Switch device']]) {
         const button=document.querySelector(selector);
@@ -183,6 +184,7 @@ function renderWorkbenchChrome(state) {
     document.getElementById('preview-button').title=workbenchText('补全当前列表；未选择主机时补全全部存储中的列表','Complete the selected playlist, or all storage locations when no system is selected');
     if (!document.getElementById('playlist_path').value && currentDeviceScan?.connected) document.getElementById('workspace-title').textContent=workbenchText('游戏库','Game library');
     document.getElementById('manual-add-button').hidden=state.previewValid;
+    document.getElementById('manual-scan-button').hidden=state.previewValid;
     if(workbenchOverview.data){
         const groups=workbenchGroups(workbenchOverview.data,workbenchOverview.scope);
         document.querySelectorAll('.playlist-system-tab').forEach(button=>{

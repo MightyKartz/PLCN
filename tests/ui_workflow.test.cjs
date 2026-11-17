@@ -660,3 +660,17 @@ test('an unverified import mapping keeps selected sources visible and blocks con
     assert.equal(fields.apply.hidden,false);assert.equal(fields.apply.disabled,true);
     assert.match(fields['mapping-status'].textContent,/待核对/);
 });
+
+for (const confirmed of [false,true]) {
+    test(`inline mapping ${confirmed ? 'saves explicit manual configuration and retains sources' : 'requires the handheld confirmation before saving'}`, async () => {
+        let saved=false, analyzed=false;
+        const fields={'mapping-confirm':{checked:confirmed},destination:{value:'mtp://device/00020001/Roms/MD'},system:{value:'MD'},android:{value:'/storage/CARD/Roms/MD'},playlist:{value:'MD.lpl'}};
+        const context={gameManagement:{root:'mtp://device/00010001/RetroArch',sources:['Chosen.md'],setup:{profiles:[]}},gmField:id=>fields[id],gmStatus:()=>{},workbenchText:zh=>zh,
+            gmJob:async(route,payload)=>{assert.equal(payload.confirmed,true);saved=true;return {result:{profiles:[{mapping_source:'manual'}]}};},
+            gmInvalidate:()=>{},previewGameImport:async()=>{analyzed=true;},gmError:error=>error.message};
+        vm.createContext(context);vm.runInContext(source('saveGameImportMapping'),context);
+        await context.saveGameImportMapping();
+        assert.equal(saved,confirmed);assert.equal(analyzed,confirmed);
+        assert.deepEqual(context.gameManagement.sources,['Chosen.md']);
+    });
+}

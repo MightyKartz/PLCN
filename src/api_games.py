@@ -36,3 +36,7 @@ def apply(handler, context, payload):
     reply(handler, {'job_id': background(context.job_manager, '更新游戏库', lambda jid: games.apply(plan,
         lambda a, b, text: context.job_manager.update_job(jid, a, b, text),
         lambda: checkpoint(lambda: context.job_manager.cancelled(jid))))})
+
+
+def save_mapping(handler, context, payload):
+    reply(handler, {'job_id':background(context.job_manager, '保存手动启动位置', lambda jid: games.save_import_mapping(payload))})

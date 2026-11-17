@@ -17,10 +17,13 @@ function gmError(error) {
     return 'Could not complete this operation. Check the source, destination and connection, then preview again.';
 }
 function gmStatus(text, problem = false) {
+    const retry = gmField('retry'), reconnect = gmField('reconnect'); if (retry) retry.hidden = !problem; if (reconnect) reconnect.hidden = !problem;
     const status = gmField('status'); status.textContent = text; status.classList.toggle('gm-status-problem', problem);
 }
 function gmInvalidate() {
     gameManagement.preview = null; gameManagement.analysisFiles = null; gameManagement.analysisToken++;
+    const configure = gmField('mapping-config'); if (configure) configure.hidden = true;
+    const check = gmField('mapping-confirm'); if (check) check.checked = false;
     const mapping = gmField('mapping-status'); if (mapping) mapping.textContent = workbenchText('路径待分析', 'Path analysis pending');
     const apply = gmField('apply'); if (apply) {apply.hidden = gameManagement.mode !== 'import'; apply.disabled = true;}
 }
@@ -41,7 +44,9 @@ function gmRenderFiles() {
     const sources = gameManagement.sources;
     gmField('retry').disabled = gameManagement.busy || !sources.length;
     if (!sources.length) {
-        pane.append(wbElement('h3', '', workbenchText('选择要导入的游戏', 'Choose games to import')));
+        gmField('apply').textContent = workbenchText('导入游戏', 'Import games');
+        gmStatus(workbenchText('请选择要导入的游戏。', 'Choose games to import.'));
+        pane.append(wbElement('h3', '', workbenchText('1 · 选择游戏', '1 · Choose games')));
         const buttons = wbElement('div', 'gm-source-buttons');
         const files = gmButton('选择文件', 'Choose files', () => gmPickSource('files')); files.id = 'gm-pick-files';
         const folder = gmButton('选择目录', 'Choose folder', () => gmPickSource('directory')); folder.id = 'gm-pick-folder';
@@ -50,25 +55,29 @@ function gmRenderFiles() {
     const head = wbElement('div', 'gm-section-head');
     const n = sources.length;
     head.append(wbElement('h3', '', gameManagement.sourceKind === 'directory'
-        ? workbenchText(`已选 ${n} 个目录`, `${n} ${n === 1 ? 'folder' : 'folders'} selected`)
-        : workbenchText(`已选 ${n} 个文件`, `${n} ${n === 1 ? 'file' : 'files'} selected`)));
+        ? workbenchText(`1 · 已选 ${n} 个目录`, `1 · ${n} ${n === 1 ? 'folder' : 'folders'} selected`)
+        : workbenchText(`1 · 已选 ${n} 个文件`, `1 · ${n} ${n === 1 ? 'file' : 'files'} selected`)));
     const actions = wbElement('div', 'gm-head-actions');
     const repick = wbElement('button', 'btn btn-text', workbenchText('重新选择', 'Choose again')); repick.type = 'button'; repick.id = 'gm-pick-files'; repick.onclick = () => gmPickSource('files');
     const refolder = wbElement('button', 'btn btn-text', workbenchText('选择目录', 'Choose folder')); refolder.type = 'button'; refolder.id = 'gm-pick-folder'; refolder.onclick = () => gmPickSource('directory');
-    actions.append(repick, refolder); head.append(actions); pane.append(head);
+    actions.append(repick, refolder, gmButton('清空', 'Clear', () => {gameManagement.sources=[]; gmInvalidate(); gmRenderFiles(); gmStatus(workbenchText('请选择要导入的游戏。', 'Choose games to import.'));})); head.append(actions); pane.append(head);
     const list = wbElement('div', 'gm-file-list'); list.id = 'gm-sources';
     const rows = gameManagement.analysisFiles
         ? gameManagement.analysisFiles.map(file => ({name:file.name, size:gameSize(file.size), state:file.state}))
         : sources.map(path => ({name:path.replaceAll('\\', '/').split('/').pop(), path, dir:gameManagement.sourceKind === 'directory'}));
-    for (const file of rows) {
+    for (const file of rows.slice(0, 6)) {
         const row = wbElement('div', 'gm-file-row'); if (file.path) row.title = file.path;
         row.append(wbIcon(file.dir ? 'layout-grid' : 'device-gamepad'), wbElement('span', 'gm-file-name', file.name));
         if (file.state === 'existing') row.append(wbElement('span', 'gm-file-tag', workbenchText('已存在', 'Already there')));
         else if (file.state === 'conflict') row.append(wbElement('span', 'gm-file-tag gm-file-conflict', workbenchText('冲突', 'Conflict')));
         if (file.size) row.append(wbElement('span', 'gm-file-size', file.size));
+        const source = sources.find(path => path === file.path || path.split('/').pop() === file.name);
+        if (source) {const remove = gmButton('移除', 'Remove', () => {gameManagement.sources = sources.filter(path => path !== source); gmInvalidate(); gmRenderFiles(); gmAutoAnalyze();}); remove.className = 'btn btn-text'; remove.setAttribute('aria-label',workbenchText('移除来源：','Remove source: ')+file.name); row.append(remove);}
         list.append(row);
     }
     pane.append(list);
+    if (rows.length > 6) {const more = wbElement('details','gm-more-files'); more.append(wbElement('summary','',workbenchText(`共 ${rows.length} 个文件，查看完整列表`, `${rows.length} files · View all`))); for (const file of rows.slice(6)) more.append(wbElement('p','',file.name)); pane.append(more);}
+
 }
 function gmRenderDestinationSummary() {
     const summary = gmField('destination-summary'); if (!summary || !gameManagement.setup) return;
@@ -106,8 +115,8 @@ function gmWorkspace(mode) {
     }); cancel.id = 'gm-cancel'; cancel.hidden = true;
     const apply = gmButton(mode === 'import' ? '确认导入' : '确认移出列表', mode === 'import' ? 'Import games' : 'Remove entries', applyGameManagement, false);
     apply.id = 'gm-apply'; apply.hidden = mode !== 'import'; apply.disabled = true;
-    const retry = gmButton('重新分析', 'Analyze again', gmAutoAnalyze); retry.id = 'gm-retry'; retry.disabled = true; retry.hidden = mode !== 'import';
-    const reconnect = gmButton('重新连接', 'Reconnect', reconnectGameImport); reconnect.id = 'gm-reconnect'; reconnect.hidden = mode !== 'import';
+    const retry = gmButton('重新分析', 'Analyze again', gmAutoAnalyze); retry.id = 'gm-retry'; retry.disabled = true; retry.hidden = true;
+    const reconnect = gmButton('重新连接', 'Reconnect', reconnectGameImport); reconnect.id = 'gm-reconnect'; reconnect.hidden = true;
     footer.append(status, retry, reconnect, cancel, apply); section.append(header, body, footer); workspace.append(section);
     title.tabIndex = -1; title.focus(); return form;
 }
@@ -135,23 +144,9 @@ async function openGameImport() {
         const setup = await desktopRequest('/api/content/setup?root=' + encodeURIComponent(root));
         if (generation !== gameManagement.generation) return;
         gameManagement.setup = setup;
-        const originPane = wbElement('section', 'gm-origin-pane');
-        originPane.append(wbElement('h3', '', workbenchText('从哪里添加', 'Add from')));
-        const originCards = wbElement('div', 'gm-source-cards');
-        const scanCard = wbElement('button', 'gm-source-card'); scanCard.type = 'button'; scanCard.id = 'gm-source-scan';
-        const scanBody = wbElement('span', 'gm-source-card-body');
-        scanBody.append(wbElement('strong', '', workbenchText('扫描游戏目录', 'Scan game folders')), wbElement('span', '', workbenchText('找出游戏目录里还没加入列表的游戏', "Find games in your folders that aren't in a playlist yet")));
-        scanCard.append(wbIcon('device-gamepad'), scanBody);
-        scanCard.onclick = () => { closeGameManagement(); openAutoScan(); };
-        const importCard = wbElement('button', 'gm-source-card'); importCard.type = 'button'; importCard.id = 'gm-source-import'; importCard.setAttribute('aria-pressed', 'true');
-        const importBody = wbElement('span', 'gm-source-card-body');
-        importBody.append(wbElement('strong', '', workbenchText('从电脑导入', 'Import from computer')), wbElement('span', '', workbenchText('复制电脑上的游戏到游戏库', 'Copy games from this computer into the library')));
-        const importCheck = wbElement('span', 'gm-source-check'); importCheck.append(wbIcon('circle-check'));
-        importCard.append(wbIcon('device-sd-card'), importBody, importCheck);
-        originCards.append(scanCard, importCard); originPane.append(originCards); form.append(originPane);
         const sourcePane = wbElement('section', 'gm-source-pane'); sourcePane.id = 'gm-files'; form.append(sourcePane); gmRenderFiles();
         const targetPane = wbElement('section', 'gm-target-pane');
-        const destHead = wbElement('div', 'gm-section-head'); destHead.append(wbElement('h3', '', workbenchText('放到', 'Put in')));
+        const destHead = wbElement('div', 'gm-section-head'); destHead.append(wbElement('h3', '', workbenchText('2 · 确认位置', '2 · Confirm location')));
         const fields = wbElement('div', 'gm-destination-fields'); fields.id = 'gm-destination-fields'; fields.hidden = true;
         const change = wbElement('button', 'btn btn-text', workbenchText('更改', 'Change')); change.type = 'button'; change.id = 'gm-change-destination';
         change.setAttribute('aria-expanded', 'false'); change.setAttribute('aria-controls', 'gm-destination-fields');
@@ -164,23 +159,28 @@ async function openGameImport() {
         select.append(...setup.systems.map(system => new Option(getSystemAbbreviation(system.name) + ' · ' + wbSystemName(system.name), system.name)));
         const selected = document.getElementById('system_name').value;
         if (setup.systems.some(system => system.name === selected)) select.value = selected;
-        select.onchange = gmChangeSystem; label.append(select); fields.append(label);
+        select.onchange = gmChangeSystem; label.append(select); targetPane.append(label);
         const destination = gmInput(fields, 'destination', '复制到目录', 'Copy to folder');
         if (setup.android) destination.type = 'hidden';
         const browse = gmButton('选择目标目录', 'Choose destination', gmBrowseDestination); browse.id = 'gm-pick-destination'; destination.parentElement.append(browse);
         const android = gmInput(fields, 'android', '掌机实际启动目录', 'Android launch folder'); android.parentElement.hidden = !setup.android;
+        const configure = wbElement('section','gm-mapping-config'); configure.id = 'gm-mapping-config'; configure.hidden = true;
+        configure.append(wbElement('h4','',workbenchText('配置启动位置', 'Configure launch location')), wbElement('p','',workbenchText('在掌机 RetroArch 中核对存储与完整目录，再保存手动配置。文件和名称选择会保留。', 'Check the storage and full folder in RetroArch on your handheld, then save the manual configuration. Your selection is kept.')));
+        const confirmation = wbElement('label','gm-confirm-mapping'); const checked = document.createElement('input'); checked.type = 'checkbox'; checked.id = 'gm-mapping-confirm';
+        confirmation.append(checked, document.createTextNode(workbenchText('我已在掌机核对以上位置（手动配置，未验证启动）', 'I checked this location on the handheld (manual configuration; startup unverified)')));
+        configure.append(confirmation, gmButton('保存启动位置并分析', 'Save location and analyze', saveGameImportMapping)); fields.append(configure);
         const advanced = wbElement('details', 'gm-advanced'); advanced.append(wbElement('summary', '', workbenchText('高级设置', 'Advanced settings')));
         gmInput(advanced, 'playlist', '目标列表文件名', 'Playlist filename'); fields.append(advanced);
         const browser = wbElement('div', 'gm-directory-browser'); browser.id = 'gm-browser'; browser.hidden = true; fields.append(browser);
         fields.append(wbElement('p', 'gm-policy', workbenchText('保留原文件名。相同文件复用，冲突文件不覆盖；BIOS 作为依赖复制，不加入游戏列表。', 'Keep original filenames. Reuse identical files and never overwrite conflicts. BIOS files are copied as dependencies, not game entries.')));
-        const playlistPath = wbElement('p', 'gm-path'); playlistPath.id = 'gm-playlist-path'; fields.append(playlistPath);
+        const playlistPath = wbElement('p', 'gm-path'); playlistPath.id = 'gm-playlist-path'; advanced.append(playlistPath);
         targetPane.append(fields); form.append(targetPane);
         form.disabled = false; gmField('status').textContent = workbenchText('选择文件或目录后开始分析。', 'Choose files or a folder to start the analysis.'); gmChangeSystem();
     } catch (error) { if (generation === gameManagement.generation) gmField('status').textContent = gmError(error); }
 }
 function gmChangeSystem() {
     const system = gmField('system').value;
-    const profile = gameManagement.setup.profiles.find(profile => profile.system === system);
+    const profile = [...gameManagement.setup.profiles].reverse().find(profile => profile.system === system);
     const playlist = currentDeviceScan?.playlists?.find(playlist => playlist.valid && playlist.system === system);
     gmField('destination').value = profile?.directory || (gameManagement.setup.android ? '' : gameManagement.root.replace(/\/$/, '') + '/roms/' + getSystemAbbreviation(system));
     gmField('android').value = profile?.android_directory || '';
@@ -298,18 +298,20 @@ async function previewGameImport() {
         if (generation !== gameManagement.generation || token !== gameManagement.analysisToken) return;
         gameManagement.preview = id; gameManagement.analysisFiles = result.mapping_state === 'unverified' ? null : result.files;
         const mapping = gmField('mapping-status');
-        if (mapping) mapping.textContent = result.mapping_state === 'unverified' ? workbenchText('待核对：没有已知的存储路径映射，已阻止导入。请先通过“扫描游戏目录”核对并保存对应目录配置。', 'Needs review: no known storage mapping. Import is blocked. Check and save the folder configuration in Scan game folders first.')
+        const configure = gmField('mapping-config');
+        if (configure) {configure.hidden = result.mapping_state !== 'unverified'; if (!configure.hidden) {gmField('destination-fields').hidden = false; document.getElementById('gm-change-destination').setAttribute('aria-expanded','true');}}
+        if (mapping) mapping.textContent = result.mapping_state === 'manual' ? workbenchText('已保存手动配置 · 游戏启动未验证', 'Manual configuration saved · Startup unverified') : result.mapping_state === 'unverified' ? workbenchText('待核对：请在下方配置启动位置后继续。', 'Needs review: configure the launch location below to continue.')
             : result.mapping_state === 'matched' ? workbenchText('与已保存映射一致；实际游戏启动仍需在掌机验证。', 'Matches saved mapping; game startup still requires handheld testing.') : workbenchText('本地文件路径；实际游戏启动尚未验证。', 'Local file paths; game startup is not verified.');
         gmRenderFiles();
         const playlistPath = gmField('playlist-path'); if (playlistPath) playlistPath.textContent = result.playlist;
         if (result.can_apply) {
             gmStatus(workbenchText(`复制 ${result.copy_count} 个文件 · 复用 ${result.duplicates} 个 · 跳过 ${result.skipped} 个 · 需要 ${gameSize(result.required_bytes)} · 可用 ${gameSize(result.free_bytes)}`, `Copy ${result.copy_count} files · Reuse ${result.duplicates} · Skip ${result.skipped} · Needs ${gameSize(result.required_bytes)} · ${gameSize(result.free_bytes)} free`));
             const apply = gmField('apply'); apply.hidden = false; apply.disabled = false;
-            apply.textContent = workbenchText(`确认导入：${result.added.length} 个条目 / ${result.copy_count ?? 0} 个文件`, `Confirm: ${result.added.length} ${result.added.length === 1 ? 'entry' : 'entries'} / ${result.copy_count ?? 0} ${result.copy_count === 1 ? 'file' : 'files'}`);
+            apply.textContent = workbenchText(result.added.length ? `导入 ${result.added.length} 个游戏` : `复制 ${result.copy_count} 个文件`, result.added.length ? `Import ${result.added.length} ${result.added.length === 1 ? 'game' : 'games'}` : `Copy ${result.copy_count} files`);
         } else {
             gmStatus(result.mapping_state === 'unverified' ? workbenchText('路径映射待核对，不能导入。', 'Storage mapping needs review; import is blocked.') : result.conflicts.length ? workbenchText('同名文件内容不同，请更换目标目录或调整来源。', 'Same-name files contain different data. Choose another destination or change the source.')
                 : result.required_bytes > result.free_bytes ? workbenchText('目标空间不足。', 'Not enough destination space.')
-                : workbenchText('没有需要导入的新内容。', 'There is nothing new to import.'), true);
+                : result.skipped && !result.files.length ? workbenchText('未发现所选主机支持的游戏，请检查主机和文件格式。', 'No supported games found. Check the selected system and file formats.') : workbenchText('没有需要导入的新内容。', 'There is nothing new to import.'), true);
             gmField('apply').disabled = true;
         }
     } catch (error) {if (generation === gameManagement.generation && token === gameManagement.analysisToken) gmStatus(gmError(error), true);}
@@ -339,16 +341,24 @@ async function applyGameManagement() {
         if (gameManagement.mode === 'import') {
             gmStatus(workbenchText(`新增 ${result.added} 个条目 · 复制 ${result.copied} 个文件 · 复用 ${result.reused} 个 · 跳过 ${result.skipped} 个 · 失败 ${result.failed} 个`, `Added ${result.added} entries · Copied ${result.copied} files · Reused ${result.reused} · Skipped ${result.skipped} · Failed ${result.failed}`));
             const backup = wbElement('details', 'gm-backup'); backup.append(wbElement('summary', '', workbenchText('备份位置', 'Backup location')), wbElement('p', 'gm-path', result.backup_directory));
-            results.replaceChildren(backup); results.hidden = false;
+            results.replaceChildren(wbElement('h3','',workbenchText('3 · 导入结果', '3 · Import result')), wbElement('p','',gmField('destination-summary').textContent), wbElement('p','',workbenchText('文件复制与列表更新已完成；请在掌机验证启动。', 'Files copied and playlist updated; test startup on the handheld.')), backup); results.hidden = false;
+            gmField('fields').hidden = true; gmField('apply').hidden = true;
+
         } else {
             gmStatus(workbenchText(`完成：新增 ${result.added} 个条目，移出 ${result.removed} 个条目。备份可在设置的恢复记录中查看。`, `Done: ${result.added} entries added, ${result.removed} removed. The backup is available in Settings → recovery history.`));
             results.replaceChildren(wbElement('p', 'gm-path', result.backup_directory));
         }
         resetGameLibrary(); await scanDevice();
-        const selected = currentDeviceScan?.playlists.findIndex(playlist => playlist.path === previousPlaylist);
+        const selected = currentDeviceScan?.playlists.findIndex(playlist => playlist.path === (gameManagement.mode === 'import' ? result.playlist_path : previousPlaylist));
         if (selected >= 0) await selectScannedPlaylist(selected);
         refreshWorkbenchOverview();
-        const done = gmButton('完成', 'Done', closeGameManagement, false); gmField('dialog').querySelector('footer').append(done);
+        const footer = gmField('dialog').querySelector('footer');
+        if (gameManagement.mode === 'import') {
+            const more = gmButton('继续添加', 'Add more', openGameImport); more.id = 'gm-add-more';
+            const complete = gmButton('补全名称与封面', 'Complete names and artwork', () => {closeGameManagement(); startCompletion();}); complete.id = 'gm-complete-metadata';
+            footer.append(more, complete);
+        }
+        const done = gmButton('查看游戏', 'View games', closeGameManagement, false); done.id = 'gm-view-games'; footer.append(done);
     } catch (error) {
         gmStatus(gmError(error) + workbenchText('；已复制文件会保留。请点击“重新分析”核对后继续；无法取得结果时先查看任务，避免重复写入。', '; copied files are kept. Use Analyze again to continue; if the result is unknown, check Tasks before writing again.'), true);
     }
@@ -386,3 +396,14 @@ function renderGameSelection(visible) {
 document.addEventListener('click', event => {
     if (gameManagement.open && !gameManagement.busy && event.target.closest('#scanned-playlists button, #library-all-systems')) closeGameManagement();
 });
+
+async function saveGameImportMapping() {
+    if (!gmField('mapping-confirm').checked) {gmStatus(workbenchText('请先在掌机核对并勾选确认。', 'Check the location on your handheld and tick the confirmation first.'), true); return;}
+    try {
+        const {result} = await gmJob('/api/games/mapping', {mode:'import', confirmed:true, root:gameManagement.root, sources:gameManagement.sources,
+            destination:gmField('destination').value.trim(), system:gmField('system').value,
+            android_directory:gmField('android').value.trim(), playlist_name:gmField('playlist').value.trim()});
+        gameManagement.setup.profiles = result.profiles;
+        gmInvalidate(); await previewGameImport();
+    } catch (error) {gmStatus(gmError(error), true);}
+}

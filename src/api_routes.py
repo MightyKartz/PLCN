@@ -43,6 +43,7 @@ GET_ROUTES = {
 }
 
 POST_ROUTES = {
+    '/api/games/mapping': api_games.save_mapping,
     '/api/games/preview': api_games.preview,
     '/api/games/details': api_games.details,
     '/api/games/apply': api_games.apply,

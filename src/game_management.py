@@ -162,7 +162,7 @@ def validate_import(payload):
                 expected = mtp.uri(mtp.parse(source)[0], mtp.parse(source)[1], android[len(mount):].lstrip('/'))
                 if mtp.parse(destination) != mtp.parse(expected):
                     raise ValueError('路径冲突：复制目录与掌机启动目录不一致，请重新选择目标存储和目录')
-                mapping_state = 'matched'
+                mapping_state = 'manual' if profile.get('mapping_source') == 'manual' else 'matched'
     else:
         if '://' in root or '://' in destination:
             raise ValueError('导入请使用本地目录或 MTP 连接')
@@ -182,6 +182,39 @@ def validate_import(payload):
     filename = scan.playlist_name(system, payload.get('playlist_name'))
     return {'root': root, 'destination': destination, 'system': system, 'sources': list(dict.fromkeys(selected)),
             'android_directory': android.rstrip('/'), 'mapping_state': mapping_state, 'playlist_name': filename, 'playlist': scan.join(root, 'playlists', filename)}
+
+
+def save_import_mapping(payload):
+    from safe_io import atomic_write_json, file_lock
+    if payload.get('confirmed') is not True:
+        raise ValueError('请先在掌机核对存储和启动目录')
+    config = validate_import(payload)
+    if not mtp.is_mtp(config['root']):
+        raise ValueError('本地目录无需配置掌机启动路径')
+    logical = config['android_directory']
+    size = 4 if logical.startswith('/storage/emulated/') else 3 if logical.startswith('/storage/') else 2
+    if mtp.parse(config['destination'])[2] != logical.split('/')[size:]:
+        raise ValueError('启动目录的相对路径必须与所选复制目录一致')
+    # Listing validates that the chosen physical directory is readable; it does
+    # not prove the Android mount point or game startup.
+    scan.folders(config['destination'])
+    path = scan.profiles_path()
+    with file_lock(path):
+        saved = scan.profiles()
+        rows = saved.setdefault(config['root'], [])
+        entry = next((row for row in rows if row['system'] == config['system'] and row['directory'] == config['destination']), None)
+        if entry is None:
+            entry = {'root':config['root'], 'system':config['system'], 'directory':config['destination'],
+                     'core_id':scan.SYSTEMS[config['system']][0], 'core_path':'DETECT',
+                     'extensions':scan.SYSTEMS[config['system']][2], 'recursive':True,
+                     'dat_path':'', 'dat_filter':False, 'abi':'', 'playlist_name':config['playlist_name']}
+            rows.append(entry)
+        entry.update(android_directory=config['android_directory'], mapping_source='manual')
+        if path.exists():
+            backup = path.with_name(path.name + '.bak-' + uuid.uuid4().hex)
+            backup.write_bytes(path.read_bytes())
+        atomic_write_json(path, saved)
+    return {'mapping_state':'manual', 'profiles':rows}
 
 
 def import_preview(config, progress=lambda *args: None, cancelled=lambda: None):
@@ -275,11 +308,16 @@ def import_preview(config, progress=lambda *args: None, cancelled=lambda: None):
     write = transaction(config['playlist'], raw, after, 'game_import', '导入游戏')
     saved = scan.profiles()
     profiles = list(saved.get(config['root'], []))
-    if not any(profile['directory'] == config['destination'] and profile['system'] == config['system'] for profile in profiles):
+    chosen = next((profile for profile in profiles if profile['directory'] == config['destination'] and profile['system'] == config['system']), None)
+    if chosen:
+        profiles.remove(chosen)
+        profiles.append(chosen)
+    else:
         profiles.append({'root': config['root'], 'directory': config['destination'], 'system': config['system'],
             'core_id': scan.SYSTEMS[config['system']][0], 'core_path': data.get('default_core_path') or 'DETECT',
             'extensions': ' '.join(sorted(extensions)), 'recursive': True, 'dat_path': '', 'dat_filter': False,
             'android_directory': config['android_directory'], 'abi': '', 'playlist_name': config['playlist_name']})
+    if profiles != saved.get(config['root'], []):
         write['patches'].append(tx.patch(str(scan.profiles_path()), saved, [config['root']], profiles))
     return {'config': config, 'copies': copies, 'added': additions, 'duplicates': duplicate, 'resources': len(resources),
             'skipped': skipped, 'conflicts': conflicts, 'required_bytes': required, 'free_bytes': free,
