@@ -842,6 +842,11 @@ async function main() {
     await screenshot('12-layout-moved');await click('#relocate-close');
     await click('#workbench-device');await click('[data-desktop-view="tasks"]');
     await waitFor(id=>document.querySelector('[data-rom-relocation="'+id+'"]'),'layout move receipt',moveId);
+    if(await evaluate(()=>workbench.operation))await waitFor(()=>!workbench.operation,'background scan finished');
+    await evaluate(()=>beginWorkbenchOperation('scan'));
+    assert.equal(await evaluate(id=>document.querySelector('[data-rom-relocation="'+id+'"] button').disabled,moveId),true,'idle-gated while operation active');
+    await evaluate(()=>endWorkbenchOperation());
+    assert.equal(await evaluate(id=>document.querySelector('[data-rom-relocation="'+id+'"] button').disabled,moveId),false,'idle-gated re-enabled');
     await click('[data-rom-relocation="'+moveId+'"] button');await click('.desktop-confirm button:last-of-type');
     await waitFor(id=>document.querySelector('[data-rom-relocation="'+id+'"] strong').textContent.includes('已恢复'),'move restored',moveId);
     await click('[data-rom-relocation="'+copyId+'"] button');await click('.desktop-confirm button:last-of-type');
