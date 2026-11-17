@@ -53,7 +53,7 @@ def migrate(source, cache_source=None):
                 new.parent.mkdir(parents=True, exist_ok=True)
                 temporary = Path(resources.enter_context(tempfile.TemporaryDirectory(prefix='.profile-migration-', dir=new.parent)))
                 stage = temporary / 'profile'
-            shutil.copytree(old, stage)
+            shutil.copytree(old, stage, ignore=shutil.ignore_patterns('instance.lock'))
             # Only live indexes and receipts change. Backups and transaction snapshots
             # retain their exact bytes, including the digests used by guarded restore.
             documents = list(stage.glob('*.json')) + list((stage / 'history').glob('*.json'))
@@ -70,7 +70,6 @@ def migrate(source, cache_source=None):
                     atomic_write_json(path, updated)
             for database in stage.rglob('plcn.db*'):
                 database.rename(database.with_name(database.name.replace('plcn.db', 'library.db', 1)))
-            (stage / 'instance.lock').unlink(missing_ok=True)
             if not parent_stage:
                 staged.append((stage, new))
         for stage, new in staged:

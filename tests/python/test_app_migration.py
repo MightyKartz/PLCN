@@ -27,21 +27,22 @@ def test_migration_relocates_rules_and_receipts_preserving_backup_bytes(tmp_path
     backup.write_bytes(original)
     playlist.write_bytes(b'{"items": [{"label": "Changed"}]}')
     ident = repair_history.record_write(playlist, backup, 1)
-    (old / 'manual_overrides.json').write_text('[{"name":"中文"}]')
-    (old / 'config.json').write_text(json.dumps({'manual_overrides_path': str(old / 'manual_overrides.json')}))
+    (old / 'manual_overrides.json').write_text('[{"name":"中文"}]', encoding='utf-8')
+    (old / 'config.json').write_text(json.dumps({'manual_overrides_path': str(old / 'manual_overrides.json')}), encoding='utf-8')
     transaction = old / 'm3u-operations/test'
     transaction.mkdir(parents=True)
     snapshot = transaction / 'metadata-0-before.json'
-    snapshot.write_text(json.dumps({'path': str(old / 'original')}))
+    snapshot.write_text(json.dumps({'path': str(old / 'original')}), encoding='utf-8')
     digest = file_digest(snapshot)
-    (transaction / 'manifest.json').write_text(json.dumps({'backup':str(snapshot), 'backup_digest':digest}))
+    (transaction / 'manifest.json').write_text(json.dumps({'backup':str(snapshot), 'backup_digest':digest}), encoding='utf-8')
     (old / 'cache/plcn.db').write_bytes(b'cached database')
     monkeypatch.setenv('RETROARCH_ASSISTANT_HOME', str(new))
     migrate(old)
     assert not old.exists()
-    assert json.loads((new / 'config.json').read_text())['manual_overrides_path'] == str(new / 'manual_overrides.json')
-    assert json.loads((new / 'manual_overrides.json').read_text())[0]['name'] == '中文'
-    manifest = json.loads((new / 'm3u-operations/test/manifest.json').read_text())
+    assert not (new / 'instance.lock').exists()
+    assert json.loads((new / 'config.json').read_text(encoding='utf-8'))['manual_overrides_path'] == str(new / 'manual_overrides.json')
+    assert json.loads((new / 'manual_overrides.json').read_text(encoding='utf-8'))[0]['name'] == '中文'
+    manifest = json.loads((new / 'm3u-operations/test/manifest.json').read_text(encoding='utf-8'))
     assert manifest['backup'] == str(new / 'm3u-operations/test/metadata-0-before.json')
     assert file_digest(manifest['backup']) == digest
     assert (new / 'cache/library.db').read_bytes() == b'cached database'
@@ -54,24 +55,24 @@ def test_separate_cache_migration(tmp_path, monkeypatch):
     old, cache = tmp_path / 'old', tmp_path / 'old-cache'
     old.mkdir(); cache.mkdir()
     (cache / 'plcn.db').write_bytes(b'db')
-    (old / 'config.json').write_text(json.dumps({'cache_path': str(cache / 'data')}))
+    (old / 'config.json').write_text(json.dumps({'cache_path': str(cache / 'data')}), encoding='utf-8')
     new, new_cache = tmp_path / 'new', tmp_path / 'new-cache'
     monkeypatch.setattr(app_paths, 'user_data_dir', lambda: new)
     monkeypatch.setattr(app_paths, 'cache_dir', lambda: new_cache)
     migrate(old, cache)
     assert not cache.exists()
     assert (new_cache / 'library.db').read_bytes() == b'db'
-    assert json.loads((new / 'config.json').read_text())['cache_path'] == str(new_cache / 'data')
+    assert json.loads((new / 'config.json').read_text(encoding='utf-8'))['cache_path'] == str(new_cache / 'data')
 
 
 def test_existing_destination_and_running_source_are_refused(tmp_path, monkeypatch):
     old, new = tmp_path / 'old', tmp_path / 'new'
     old.mkdir(); new.mkdir()
-    (new / 'config.json').write_text('{"mine":true}')
+    (new / 'config.json').write_text('{"mine":true}', encoding='utf-8')
     monkeypatch.setenv('RETROARCH_ASSISTANT_HOME', str(new))
     with pytest.raises(ValueError, match='already exists'):
         migrate(old)
-    assert json.loads((new / 'config.json').read_text()) == {'mine':True}
+    assert json.loads((new / 'config.json').read_text(encoding='utf-8')) == {'mine':True}
     (new / 'config.json').unlink(); new.rmdir()
     lock = InstanceLock(old)
     assert lock.acquire()
@@ -85,11 +86,11 @@ def test_existing_destination_and_running_source_are_refused(tmp_path, monkeypat
 
 def test_invalid_live_json_preserves_source(tmp_path, monkeypatch):
     old, new = tmp_path / 'old', tmp_path / 'new'
-    old.mkdir(); (old / 'config.json').write_text('broken')
+    old.mkdir(); (old / 'config.json').write_text('broken', encoding='utf-8')
     monkeypatch.setenv('RETROARCH_ASSISTANT_HOME', str(new))
     with pytest.raises(ValueError):
         migrate(old)
-    assert (old / 'config.json').read_text() == 'broken'
+    assert (old / 'config.json').read_text(encoding='utf-8') == 'broken'
     assert not new.exists()
 
 
