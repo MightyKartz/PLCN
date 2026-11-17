@@ -42,16 +42,33 @@ function desktopElement(tag, text, parent) {
     return element;
 }
 
-function desktopButton(parent, text, action) {
+function desktopButton(parent, text, action, {requiresIdle = false} = {}) {
     const button = desktopElement('button', text, parent);
     button.type = 'button'; button.className = 'btn btn-muted';
+    if (requiresIdle) {
+        button.dataset.requiresIdle = 'true';
+        button.disabled = Boolean(workbench.operation);
+    }
     button.onclick = async () => {
         button.disabled = true;
+        button.dataset.busy = 'true';
         try { await action(); }
         catch (error) { document.getElementById('desktop-message').textContent = error.message; }
-        finally { button.disabled = false; }
+        finally {
+            delete button.dataset.busy;
+            button.disabled = requiresIdle && Boolean(workbench.operation);
+        }
     };
     return button;
+}
+
+function syncIdleButtons() {
+    document.querySelectorAll('#desktop-dialog [data-requires-idle]').forEach(button => {
+        if (button.dataset.busy) return;
+        button.disabled = Boolean(workbench.operation) || (button.dataset.dataTask === 'true' && desktopDataPending);
+        if (workbench.operation) button.title = desktopText('请等待当前操作完成。', 'Wait for the current operation to finish.');
+        else button.removeAttribute('title');
+    });
 }
 
 async function openDesktop(view = 'library') {
@@ -104,13 +121,13 @@ async function refreshDesktop() {
             desktopElement('p', state.active ? `${state.active.revision} · ${state.active.created_at}` : desktopText('使用内置或自定义 CSV；可以完全离线使用。', 'Bundled or custom CSV data; available offline.'), body);
             if (desktopDataJobId) await renderDataTask(body, version);
             if (version !== desktopRenderVersion || !desktopDialog.open) return;
-            desktopButton(body, desktopText('检查更新', 'Check updates'), () => desktopDataTask('/api/data/check')).disabled = desktopDataPending || Boolean(workbench.operation);
-            desktopButton(body, desktopText('下载并比较', 'Download and compare'), () => desktopDataTask('/api/data/fetch')).disabled = desktopDataPending || Boolean(workbench.operation);
+            desktopButton(body, desktopText('检查更新', 'Check updates'), () => desktopDataTask('/api/data/check'), {requiresIdle: true}).dataset.dataTask = 'true';
+            desktopButton(body, desktopText('下载并比较', 'Download and compare'), () => desktopDataTask('/api/data/fetch'), {requiresIdle: true}).dataset.dataTask = 'true';
             if (state.can_rollback) desktopButton(body, desktopText('回滚数据源', 'Roll back data'), async () => {
                 assertWorkbenchIdle();
                 if (!await desktopConfirm(desktopText('恢复上一次名称数据源？人工规则会保留。', 'Restore the previous data source? Manual corrections are preserved.'))) return;
                 await desktopRequest('/api/data/rollback', {}); await desktopReloadSource(); await refreshDesktop();
-            });
+            }, {requiresIdle: true});
             desktopElement('p', desktopText('更新不会自动启用。先检查新增、移除和译名变化，再选择是否启用。', 'Updates are not activated automatically. Review added, removed and renamed entries before activation.'), body);
             for (const pack of state.packs) {
                 const entry = desktopElement('div', undefined, body); entry.className = 'desktop-entry';
@@ -120,14 +137,14 @@ async function refreshDesktop() {
                 desktopElement('p', pack.path, packDetails);
                 desktopButton(entry, desktopText('与当前数据比较', 'Compare with active data'), async () => {
                     await desktopDataTask('/api/data/compare', { pack: pack.path });
-                });
+                }, {requiresIdle: true});
                 if (pack.active) desktopElement('span', desktopText('正在使用', 'Active'), entry);
                 else desktopButton(entry, desktopText('启用', 'Activate'), async () => {
                     assertWorkbenchIdle();
                     if (!await desktopConfirm(desktopText('启用此数据包并清除当前预览？人工规则会保留。', 'Activate this pack and clear the current preview? Manual corrections are preserved.'))) return;
                     await desktopRequest('/api/data/activate', { pack: pack.path });
                     await desktopReloadSource(); await refreshDesktop();
-                });
+                }, {requiresIdle: true});
             }
         } else {
             const state = await desktopRequest('/api/desktop');
@@ -189,8 +206,8 @@ async function refreshDesktop() {
                 desktopElement('p','本次文件净释放：'+storageBytes(record.actual_image_delta_bytes)+'（不含电脑与元数据备份）',entry);
                 for(const output of record.restored_retained_outputs||[])desktopElement('p','保留仍有新引用或未能完整检查的输出：'+output.path,entry);
                 if(record.error)desktopElement('p',record.error,entry);
-                if(record.status!=='restored')desktopButton(entry,'恢复原目录与引用',()=>recoverRomRelocation(record.id,'restore'));
-                if(!['completed','restored'].includes(record.status))desktopButton(entry,'核对后继续整理',()=>recoverRomRelocation(record.id,'resume'));
+                if(record.status!=='restored')desktopButton(entry,'恢复原目录与引用',()=>recoverRomRelocation(record.id,'restore'),{requiresIdle: true});
+                if(!['completed','restored'].includes(record.status))desktopButton(entry,'核对后继续整理',()=>recoverRomRelocation(record.id,'resume'),{requiresIdle: true});
                 if(record.status==='completed'&&record.mode==='copy')desktopButton(entry,'预览更新引用／移动',()=>{desktopDialog.close();openRomRelocation({operation_id:record.id,file_ids:record.selected_ids,playlist:record.playlist});});
             }
             desktopElement('h3','电脑 CHD 转换',body);
@@ -212,8 +229,8 @@ async function refreshDesktop() {
                 if(record.error)desktopElement('p',record.error,entry);
                 desktopElement('p','引用范围：'+record.roots.join('、'),entry);
                 for(const output of record.restored_retained_outputs||[])desktopElement('p','恢复时保留仍有引用或未能完整检查的 CHD：'+output.path,entry);
-                if(record.status!=='restored')desktopButton(entry,'恢复原镜像与引用',async()=>recoverChdDeployment(record.id,'restore'));
-                if(!['completed','restored'].includes(record.status))desktopButton(entry,'核对后继续',async()=>recoverChdDeployment(record.id,record.status==='restore_pending'||record.status==='restoring'?'restore':'resume'));
+                if(record.status!=='restored')desktopButton(entry,'恢复原镜像与引用',async()=>recoverChdDeployment(record.id,'restore'),{requiresIdle: true});
+                if(!['completed','restored'].includes(record.status))desktopButton(entry,'核对后继续',async()=>recoverChdDeployment(record.id,record.status==='restore_pending'||record.status==='restoring'?'restore':'resume'),{requiresIdle: true});
             }
             desktopElement('h3',desktopText('列表与多盘修改记录','Playlist and multi-disc history'),body);
             for(const record of state.m3u_operations || []){
@@ -222,8 +239,8 @@ async function refreshDesktop() {
                 desktopElement('p',record.playlist,entry);
                 desktopElement('p',record.created_at+' · '+record.id,entry);
                 if(record.error)desktopElement('p',record.error,entry);
-                if(record.status!=='restored')desktopButton(entry,record.mode.startsWith('game_') ? desktopText('恢复此次列表修改','Restore this playlist change') : '恢复此次多盘修改',async()=>{await recoverM3u(record.id,'restore',record.mode);});
-                if(['partial','applying','prepared'].includes(record.status))desktopButton(entry,'核对后继续操作',async()=>{await recoverM3u(record.id,'resume',record.mode);});
+                if(record.status!=='restored')desktopButton(entry,record.mode.startsWith('game_') ? desktopText('恢复此次列表修改','Restore this playlist change') : '恢复此次多盘修改',async()=>{await recoverM3u(record.id,'restore',record.mode);},{requiresIdle: true});
+                if(['partial','applying','prepared'].includes(record.status))desktopButton(entry,'核对后继续操作',async()=>{await recoverM3u(record.id,'resume',record.mode);},{requiresIdle: true});
             }
             desktopElement('h3', desktopText('本地列表恢复', 'Restore local playlists'), body);
             desktopElement('p', desktopText('恢复会先检查文件是否变化，并保留恢复前备份。ADB 备份位于设备上，请手动恢复。', 'Restore checks for external changes and backs up the current file. ADB backups remain on the device for manual recovery.'), body);
@@ -239,7 +256,7 @@ async function refreshDesktop() {
                     if (!await desktopConfirm(desktopText('恢复此列表到修复前状态？当前文件也会先备份。', 'Restore the playlist to its previous state? The current file will be backed up.'))) return;
                     await desktopRequest('/api/history/restore', { id: record.id });
                     desktopClearPreview(); await refreshDesktop();
-                });
+                }, {requiresIdle: true});
             }
             const appDetails = desktopElement('details', undefined, body);
             desktopElement('summary', desktopText('应用数据与日志', 'Application data and logs'), appDetails);
@@ -247,6 +264,7 @@ async function refreshDesktop() {
             desktopButton(appDetails, desktopText('打开数据目录', 'Open data folder'), () => desktopRequest('/api/fs/open', { path: state.data_dir }));
         }
     } catch (error) { document.getElementById('desktop-message').textContent = error.message; }
+    finally { syncIdleButtons(); }
 }
 
 function assertWorkbenchIdle() {
