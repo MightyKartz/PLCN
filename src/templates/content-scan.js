@@ -235,7 +235,7 @@ async function completeImportedContent() {
     document.getElementById('retroarch_root').value = contentScan.setup.root;
     closeContentScan(); await scanDevice();
     const index = currentDeviceScan?.playlists?.findIndex(p => p.path === imported.playlist_path);
-    if (index >= 0) { await selectScannedPlaylist(index); await previewTask(); }
+    if (index >= 0) { await selectScannedPlaylist(index); await runDirectCompletion(); }
 }
 async function downloadContentCore() {
     try {

@@ -230,14 +230,7 @@ test('preview options reject turning both operations off and preserve the select
 
 test('all-systems completion applies the analyzed preview job and skips apply when nothing to do', async () => {
     const calls=[]; let finished;
-    const wrap={hidden:true};
     const elements={
-        'batch-review-dialog':{querySelector:()=>wrap,showModal(){this.open=true;}},
-        'batch-review-status':{dataset:{},textContent:''},
-        'batch-run-progress':{removeAttribute(){}},
-        'batch-review-rows':{replaceChildren(){}},
-        'batch-review-title':{textContent:''},
-        'batch-run-note':{textContent:''},
         'thumbnails_override':{value:''},
         'rom_name_cn_path':{value:''},
     };
@@ -246,12 +239,13 @@ test('all-systems completion applies the analyzed preview job and skips apply wh
         document:{getElementById:id=>elements[id]},
         beginWorkbenchOperation:()=>true,endWorkbenchOperation:()=>{},
         workbenchText:zh=>zh,getThumbnailsDirectory:()=>'/lib/thumbnails',
-        setBatchRunRunning:()=>{},finishBatchRun:(...args)=>{finished=args;},
-        watchBatchRunJob:async()=>context.analysis,
+        renderWorkbench:()=>{},refreshAfterCompletion:()=>{},invalidateWorkbenchPreview:()=>{},
+        finishBatchRun:(...args)=>{finished=args;},
+        watchCompletionJob:async jobId=>jobId==='preview-1'?context.analysis:context.applyResult,
         desktopRequest:async(url,body)=>{calls.push({url,body});
             return url==='/api/batch/preview'?{job_id:'preview-1'}:url==='/api/batch/apply'?{job_id:'apply-1'}:{};}};
     vm.createContext(context);vm.runInContext(source('runAllSystemsCompletion'),context);
-    context.analysis={can_apply:true,rows:[]};
+    context.analysis={can_apply:true,rows:[]};context.applyResult={receipt_id:'r1'};
     await context.runAllSystemsCompletion();
     assert.deepEqual(calls.map(call=>call.url),['/api/batch/preview','/api/batch/apply']);
     assert.equal(calls[1].body.preview_job_id,'preview-1');
@@ -512,4 +506,36 @@ test('scan adopts the currently browsed directory and waits for system/path dete
     await context.previewContentScan();
     assert.equal(submitted.directory,'mtp://device/00020001/Roms/SS');
     assert.equal(submitted.android_directory,'/storage/card/Roms/SS');assert.equal(picker.hidden,true);
+});
+
+test('direct completion reports applied games and counts only review items as manual work', async () => {
+    const toasts=[]; let previewed;
+    const elements={'playlist_path':{value:'/lib/SNES.lpl'},'system_name':{value:'SNES'}};
+    const changes=[
+        {index:0,new_label:'暗影狂奔',thumbnail_source:'Shadowrun (USA)',actionable:true},
+        {index:1,new_label:'极速传说',thumbnail_source:'F-Zero',actionable:false},
+        {index:2,new_label:'存疑游戏',thumbnail_source:'Dubious',identity:{requires_review:true},actionable:false},
+    ];
+    const context={workbench:{operation:null},
+        document:{getElementById:id=>elements[id]||{value:'',disabled:false}},
+        getProcessingOptions:()=>({download_thumbnails:true,write_names:true}),
+        getThumbnailsDirectory:()=>'/thumbs',
+        beginWorkbenchOperation:()=>true,endWorkbenchOperation:()=>{},
+        invalidateWorkbenchPreview:()=>{},renderWorkbench:()=>{},refreshAfterCompletion:()=>{},
+        workbenchInputKey:()=>'k',saveConfig:async()=>true,
+        desktopRequest:async(url)=>url==='/api/playlist/preview'?{changes}:{job_id:'apply-1'},
+        preparePreviewChanges:list=>list,isActionableChange:c=>c.actionable===true,
+        currentMatchesWriteName:()=>false,
+        watchCompletionJob:async()=>({applied_count:1,receipt_id:'r1',download_summary:{types:{}}}),
+        showActionToast:toast=>toasts.push(toast),
+        workbenchText:zh=>zh,uiText:x=>x,previewTask:scope=>{previewed=scope;},
+        openDesktop:()=>{}};
+    vm.createContext(context);
+    vm.runInContext(source('needsManualReview')+source('runDirectCompletion'),context);
+    await context.runDirectCompletion();
+    assert.equal(toasts.length,1);
+    assert.equal(toasts[0].message,'已补全 1 个游戏，1 个游戏需手动处理');
+    assert.equal(toasts[0].receiptId,'r1');
+    toasts[0].details();
+    assert.notEqual(previewed,undefined);
 });

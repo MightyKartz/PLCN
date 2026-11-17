@@ -25,7 +25,7 @@
             </div>
         </header>
 
-        <p id="workbench-busy" class="workbench-busy legacy-busy" role="status" aria-live="polite"><span id="workbench-busy-label"></span><button id="task-status-button" class="btn btn-small btn-muted" type="button" onclick="openDesktop('tasks')" hidden data-i18n="查看任务">查看任务</button></p>
+        <p id="workbench-busy" class="workbench-busy legacy-busy" role="status" aria-live="polite"><span id="workbench-busy-label"></span><button id="completion-cancel" class="btn btn-small btn-text" type="button" onclick="cancelCompletion()" hidden data-i18n="取消">取消</button><button id="task-status-button" class="btn btn-small btn-muted" type="button" onclick="openDesktop('tasks')" hidden data-i18n="查看任务">查看任务</button></p>
         <main class="workspace">
             <aside class="sidebar">
                 <div class="sidebar-scroll">            <div class="brand">
@@ -83,7 +83,7 @@
                         <button id="browse-games-button" class="btn btn-muted" type="button" onclick="invalidateWorkbenchPreview()" hidden data-i18n="返回游戏列表">返回游戏列表</button>
                         <div class="completion-entry">
                             <span id="completion-entry-note" data-i18n="自动匹配中文名与图片，预览后确认应用。">自动匹配中文名与图片，预览后确认应用。</span>
-                            <button id="preview-button" class="btn btn-muted" onclick="startCompletion()" disabled type="button" aria-describedby="completion-entry-note" data-i18n="一键补全">一键补全</button>
+                            <button id="preview-button" class="btn btn-muted" onclick="previewTask()" disabled type="button" aria-describedby="completion-entry-note" data-i18n="一键补全">一键补全</button>
                         </div>
                         <button id="manual-add-button" class="btn" type="button" data-input-control onclick="openGameImport()" data-i18n="＋ 添加游戏">＋ 添加游戏</button><button id="apply-button" class="btn btn-success" onclick="applyChanges()" disabled type="button" data-i18n="确认应用">确认应用</button>
                     </div>
@@ -192,6 +192,12 @@
         </main>
 
         <div id="status" class="status"></div>
+    </div>
+    <div id="action-toast" class="action-toast" role="status" aria-live="polite" hidden>
+        <span id="action-toast-text"></span>
+        <button id="action-toast-undo" class="btn btn-small btn-text" type="button" hidden data-i18n="撤销">撤销</button>
+        <button id="action-toast-details" class="btn btn-small btn-text" type="button" hidden data-i18n="查看">查看</button>
+        <button id="action-toast-close" class="action-toast-close" type="button" onclick="hideActionToast()" aria-label="关闭" data-i18n-aria-label="关闭"><span class="icon" data-ui-icon="x"></span></button>
     </div>
 
     <dialog id="fileModal" class="file-picker-dialog" aria-labelledby="modalTitle" onclose="fileListVersion++; filePickerReturnFocus?.focus()">
@@ -334,14 +340,6 @@
             <p id="artwork-skipped" class="artwork-help" role="status"></p>
         </div>
         <footer><button id="artwork-confirm" class="btn" type="button" onclick="confirmArtwork()" disabled></button></footer>
-    </dialog>
-    <dialog id="batch-review-dialog" aria-labelledby="batch-review-title">
-        <header class="batch-review-header"><h2 id="batch-review-title" data-i18n="一键补全 · 全部主机">一键补全 · 全部主机</h2><button id="batch-run-close" class="btn btn-muted" type="button" onclick="closeBatchRun()" data-i18n="关闭">关闭</button></header>
-        <p id="batch-review-status" role="status" aria-live="polite"></p>
-        <progress id="batch-run-progress"></progress>
-        <div class="batch-review-table-wrap" hidden><table><thead><tr><th data-i18n="主机">主机</th><th data-i18n="修改名称">修改名称</th><th data-i18n="补全图片">补全图片</th><th data-i18n="需手动处理">需手动处理</th><th data-i18n="结果">结果</th></tr></thead><tbody id="batch-review-rows"></tbody></table></div>
-        <p id="batch-run-note"></p>
-        <footer class="batch-review-footer"><button id="batch-run-tasks" class="btn btn-muted" type="button" onclick="showBatchRunTasks()" data-i18n="查看任务明细" hidden>查看任务明细</button><button id="batch-run-cancel" class="btn btn-muted" type="button" onclick="cancelBatchRun()" data-i18n="取消">取消</button><button id="batch-run-done" class="btn" type="button" onclick="closeBatchRun()" data-i18n="完成" hidden>完成</button></footer>
     </dialog>
     <dialog id="content-scan-dialog" aria-labelledby="content-scan-title">
         <header><div><h2 id="content-scan-title" data-i18n="手动添加游戏">手动添加游戏</h2><p data-i18n="指定目录、主机与核心，预览后增量加入游戏列表。">指定目录、主机与核心，预览后增量加入游戏列表。</p></div><button id="content-scan-close" class="btn btn-muted" type="button" onclick="closeContentScan()" data-i18n="关闭">关闭</button></header>

@@ -147,7 +147,7 @@ async function refreshDesktop() {
                 }, {requiresIdle: true});
             }
         } else {
-            const state = await desktopRequest('/api/desktop');
+            const [state, receiptData] = await Promise.all([desktopRequest('/api/desktop'), desktopRequest('/api/completion/receipts')]);
             if (version !== desktopRenderVersion || !desktopDialog.open) return;
             const expanded = new Set(Array.from(body.querySelectorAll('details[data-task-id][open]'), element => element.dataset.taskId));
             body.replaceChildren();
@@ -188,6 +188,19 @@ async function refreshDesktop() {
             if (!state.jobs.length) desktopElement('p', desktopText('暂无任务。', 'No tasks yet.'), body);
             clearTimeout(desktopPoll);
             if (state.active_jobs) desktopPoll = setTimeout(refreshDesktop, 2000);
+            const receipts = receiptData.receipts || [];
+            if (receipts.length) {
+                desktopElement('h3', desktopText('最近补全', 'Recent completions'), body);
+                for (const receipt of receipts) {
+                    const entry = desktopElement('div', undefined, body); entry.className = 'desktop-entry';
+                    desktopElement('strong', receipt.label || desktopText('补全', 'Completion'), entry);
+                    const counts = receipt.counts || {};
+                    const when = receipt.created_at ? new Date(receipt.created_at).toLocaleString() : '';
+                    desktopElement('p', `${when} · ${counts.playlists || 0} ${desktopText('个列表', 'playlists')} · ${counts.images || 0} ${desktopText('张图片', 'images')}`, entry);
+                    if (receipt.status === 'applied') desktopButton(entry, desktopText('撤销', 'Undo'), () => undoCompletion(receipt.id), {requiresIdle: true});
+                    else desktopElement('span', receipt.status === 'partially_undone' ? desktopText('部分撤销', 'Partially undone') : desktopText('已撤销', 'Undone'), entry);
+                }
+            }
             desktopElement('h3','ROM ZIP 电脑副本',body);
             for(const record of state.rom_storage_operations || []){
                 const entry=desktopElement('div',undefined,body);entry.className='desktop-entry';entry.dataset.romStorageOperation=record.id;

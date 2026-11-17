@@ -219,6 +219,10 @@ function renderWorkbench() {
         ? workbench.taskMessage || workbenchText('正在处理，请稍候…', 'Working, please wait…') : '';
     document.getElementById('workbench-busy').hidden = !state.busy || workbench.operation === 'artwork';
     document.getElementById('task-status-button').hidden = !workbench.jobId;
+    const completionRunning = workbench.operation === 'apply' && Boolean(batchRunJobId || workbench.jobId);
+    document.getElementById('workbench-busy').classList.toggle('completion-running', completionRunning);
+    document.getElementById('completion-cancel').hidden = !completionRunning;
+    document.getElementById('action-toast-undo').disabled = Boolean(workbench.operation);
     const counts = buildRepairPreviewSummary(currentChanges, getRepairMode());
     document.getElementById('preview-plan-scope').textContent = formatPreviewScope(counts, 'repair');
     document.querySelectorAll('.filter-btn').forEach(button => {
