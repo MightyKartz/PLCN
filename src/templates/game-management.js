@@ -69,6 +69,20 @@ async function openGameImport() {
         const setup = await desktopRequest('/api/content/setup?root=' + encodeURIComponent(root));
         if (generation !== gameManagement.generation) return;
         gameManagement.setup = setup;
+        const originPane = wbElement('section', 'gm-origin-pane');
+        originPane.append(wbElement('h3', '', workbenchText('从哪里添加', 'Add from')));
+        const originCards = wbElement('div', 'gm-source-cards');
+        const scanCard = wbElement('button', 'gm-source-card'); scanCard.type = 'button'; scanCard.id = 'gm-source-scan';
+        const scanBody = wbElement('span', 'gm-source-card-body');
+        scanBody.append(wbElement('strong', '', workbenchText('扫描游戏目录', 'Scan game folders')), wbElement('span', '', workbenchText('找出游戏目录里还没加入列表的游戏', "Find games in your folders that aren't in a playlist yet")));
+        scanCard.append(wbIcon('device-gamepad'), scanBody);
+        scanCard.onclick = () => { closeGameManagement(); openAutoScan(); };
+        const importCard = wbElement('button', 'gm-source-card'); importCard.type = 'button'; importCard.id = 'gm-source-import'; importCard.setAttribute('aria-pressed', 'true');
+        const importBody = wbElement('span', 'gm-source-card-body');
+        importBody.append(wbElement('strong', '', workbenchText('从电脑导入', 'Import from computer')), wbElement('span', '', workbenchText('复制电脑上的游戏到游戏库', 'Copy games from this computer into the library')));
+        const importCheck = wbElement('span', 'gm-source-check'); importCheck.append(wbIcon('circle-check'));
+        importCard.append(wbIcon('device-sd-card'), importBody, importCheck);
+        originCards.append(scanCard, importCard); originPane.append(originCards); form.append(originPane);
         const sourcePane = wbElement('section', 'gm-source-pane');
         sourcePane.append(wbElement('h3', '', workbenchText('来源', 'Source')), wbElement('p', '', workbenchText('从电脑选取游戏文件或目录，源文件会保留。', 'Choose game files or a folder on your computer. Source files are kept.')));
         const buttons = wbElement('div', 'gm-source-buttons');
@@ -76,7 +90,6 @@ async function openGameImport() {
         const folder = gmButton('选择目录', 'Choose folder', () => gmPickSource('directory')); folder.id = 'gm-pick-folder'; buttons.append(files, folder);
         const sources = wbElement('div', 'gm-source-summary'); sources.id = 'gm-sources';
         sourcePane.append(buttons, sources);
-        const manual = gmButton('设备上已有游戏？指定扫描目录', 'Already on the device? Set up a scan', () => {closeGameManagement(); openContentScan(root);}); manual.id = 'gm-manual-scan'; manual.classList.add('btn-text'); sourcePane.append(manual);
         const targetPane = wbElement('section', 'gm-target-pane'); targetPane.append(wbElement('h3', '', workbenchText('导入目标', 'Destination')));
         const label = wbElement('label', 'gm-field', workbenchText('主机', 'System'));
         const select = wbElement('select', ''); select.id = 'gm-system';

@@ -151,6 +151,9 @@ function renderWorkbench() {
     const playlistPath = document.getElementById('playlist_path').value;
     const allSystems = !playlistPath;
     document.getElementById('preview-button').disabled = allSystems ? (!state.canReviewBatch || !currentDeviceScan?.playlists?.length) : !state.canPreview;
+    document.querySelector('.completion-entry').hidden = allSystems && !state.previewValid;
+    const overviewComplete = document.getElementById('overview-complete-button');
+    if (overviewComplete) overviewComplete.disabled = document.getElementById('preview-button').disabled;
     document.getElementById('preview-options').hidden = !state.previewValid;
     for (const id of ['option-write-names', 'option-download-artwork']) document.getElementById(id).disabled = state.busy;
     const apply = document.getElementById('apply-button');

@@ -212,11 +212,16 @@ async function main() {
     await waitFor(()=>!document.querySelector('#library-read-dialog').open,'read retry closes overlay');
     const cardCount=await evaluate(()=>document.querySelectorAll('.workbench-cards > button').length);
     assert.equal(await evaluate(()=>document.querySelectorAll('.platform-locations').length),0);
-    assert.equal(await evaluate(()=>document.querySelector('.workbench-summary').textContent.includes('待分类')),false);
-    await click('.workbench-pending');
-    assert.equal(await evaluate(()=>document.querySelector('.workbench-pending').getAttribute('aria-pressed')),'true');
+    assert.match(await evaluate(()=>document.querySelector('.overview-subtitle').textContent),/^\d+ 个游戏 · \d+ 个主机$/);
+    assert.equal(await evaluate(()=>document.querySelector('.overview-subtitle').textContent.includes('待分类')),false);
+    assert.equal(await evaluate(()=>document.querySelector('#automatic-scan-button')),null);
+    assert.equal(await evaluate(()=>document.querySelector('.completion-entry').hidden),true);
+    await waitFor(()=>document.querySelector('#overview-status'),'artwork status bar after overview load');
+    assert.match(await evaluate(()=>document.querySelector('.overview-status-text').textContent),/^\d+ 个游戏缺少封面$/);
+    assert.equal(await evaluate(()=>document.querySelector('#overview-complete-button').textContent),'一键补全');
+    assert.deepEqual(await evaluate(()=>Array.from(document.querySelectorAll('.platform-heading strong'),el=>el.textContent).sort()),['GBA','SNES']);
+    assert.equal(await evaluate(()=>Array.from(document.querySelectorAll('.overview-system-card')).every(el=>el.title.length>0&&el.title!==el.querySelector('.platform-heading strong').textContent)),true);
     await click('#library-all-systems');
-    assert.equal(await evaluate(()=>document.querySelector('.workbench-pending').getAttribute('aria-pressed')),'false');
 
     const rectOf = sel => evaluate(s => {
         const r = document.querySelector(s).getBoundingClientRect();
@@ -244,7 +249,7 @@ async function main() {
     await waitFor(()=>document.querySelector('#library-read-banner').hidden,'refresh done');
     await waitFor(() => document.querySelectorAll('.playlist-system-tab').length === 3
         && !document.querySelector('#library-all-systems').disabled
-        && !document.querySelector('#preview-button').disabled, 'all-systems row and scan completion');
+        && document.querySelector('#overview-complete-button')?.disabled === false, 'all-systems row and scan completion');
     assert.equal(await evaluate(() => document.querySelector('#library-all-systems').getAttribute('aria-pressed')), 'true');
     assert.deepEqual(await evaluate(()=>Array.from(document.querySelectorAll('.playlist-system-tab .system-display-name'),el=>el.textContent)),['全部游戏','GBA','SNES']);
     assert.equal(await evaluate(()=>Array.from(document.querySelectorAll('.playlist-system-tab')).every(row=>row.firstElementChild.tagName.toLowerCase()==='svg'&&row.children.length===3)),true);
@@ -252,6 +257,7 @@ async function main() {
     await waitFor(()=>document.querySelector('#desktop-dialog').open,'settings dialog from topbar');
     await click('#desktop-close');
 
+    assert.equal(await evaluate(() => document.querySelector('#overview-complete-button').disabled), false);
     assert.equal(await evaluate(() => document.querySelector('#preview-button').disabled), false);
     assert.equal(await evaluate(visible, '#game-library'), false);
     assert.equal(await evaluate(() => document.querySelector('#workspace-title').textContent), '游戏库');
@@ -305,7 +311,12 @@ async function main() {
     await click('.tools-menu > summary');
     assert.doesNotMatch(await evaluate(()=>document.querySelector('.tools-menu').innerText),/\p{Script=Han}/u);
     await evaluate(()=>document.querySelector('.tools-menu').open=false);
-    await click('#automatic-scan-button');
+    await click('#manual-add-button');
+    await waitFor(()=>document.querySelector('#gm-source-scan')&&document.querySelector('#gm-source-import'),'add-games source choices');
+    assert.equal(await evaluate(()=>document.querySelector('#gm-source-import').getAttribute('aria-pressed')),'true');
+    assert.doesNotMatch(await evaluate(()=>document.querySelector('#gm-source-scan').innerText),/\p{Script=Han}/u);
+    await click('#gm-source-scan');
+    await waitFor(()=>document.querySelector('#auto-scan-dialog').open,'scan entry from add-games workspace');
     await waitFor(()=>!document.querySelector('#auto-scan-start').disabled,'English scan storage loaded');
     assert.doesNotMatch(await evaluate(()=>document.querySelector('#auto-scan-dialog').innerText),/\p{Script=Han}/u);
     await click('#auto-scan-start');
@@ -364,14 +375,17 @@ async function main() {
     await click('#gm-dialog header button');
     await waitFor(()=>gameLibrary.data?.items.length===1,'original games restored');
     await click('#manual-add-button');
-    await waitFor(()=>document.querySelector('#gm-manual-scan'),'game import options');
-    await click('#gm-manual-scan');
+    await waitFor(()=>document.querySelector('#gm-source-scan'),'add-games source choices');
+    await click('#gm-source-scan');
+    await waitFor(()=>document.querySelector('#auto-scan-dialog').open,'auto-scan from add-games workspace');
+    await click('#auto-scan-dialog footer button[onclick="openContentScan()"]');
     await waitFor(()=>!document.querySelector('#content-scan-fields').disabled,'English manual setup loaded');
     assert.equal(await evaluate(()=>document.querySelector('#content-scan-title').textContent),'Add games manually');
     assert.doesNotMatch(await evaluate(()=>document.querySelector('#content-scan-dialog footer').innerText),/\p{Script=Han}/u);
     assert.doesNotMatch(await evaluate(()=>document.querySelector('#content-scan-recommendation').textContent),/\p{Script=Han}/u);
     await screenshot('02-english-manual-add');
     await click('#content-scan-close');
+    await click('#auto-scan-dialog header > button');
     await screenshot('02-one-click-complete-en');
     await evaluate(() => document.querySelector('#choose-image-directory').click());
     assert.equal(await evaluate(() => document.querySelector('label[for="thumbnails_override"]').textContent), 'Artwork folder (optional override)');
@@ -389,7 +403,7 @@ async function main() {
         .filter(name => name.endsWith('.lpl'))
         .map(name => [name, fs.readFileSync(libraryPath + '/playlists/' + name)]));
     const beforeRun = playlistFiles();
-    await click('#preview-button');
+    await click('#overview-complete-button');
     await waitFor(() => document.querySelector('#batch-review-dialog').open && batchRunJobId, 'all-systems run started');
     assert.equal(await evaluate(visible, '#batch-run-cancel'), true);
     await click('#batch-run-cancel');

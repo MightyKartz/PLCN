@@ -1,5 +1,5 @@
 /* Real-data library workbench. Artwork and job state are read-only projections. */
-const workbenchOverview = {key: '', data: null, error: '', scope: 'all', query: '', view: 'grid', loading: false, job: null, receipt: '', onlyMissing: false, activeJobs: 0, taskError: false};
+const workbenchOverview = {key: '', data: null, error: '', scope: 'all', loading: false, job: null, receipt: '', activeJobs: 0, taskError: false};
 const libraryRead = {owner:'', stage:'', root:'', readyRoot:'', blocking:false, error:'', retry:'', focus:null};
 function beginLibraryRead(owner, stage, root = '', blocking = libraryRead.readyRoot !== root) {
     Object.assign(libraryRead, {owner, stage, root, blocking, error:'', retry:owner});
@@ -113,68 +113,56 @@ function renderWorkbenchOverview(visible) {
     const key = JSON.stringify([root, currentDeviceScan.playlists.map(p => [p.path,p.item_count,p.modified_at])]);
     if (key !== workbenchOverview.key) {
         const rootChanged = workbenchOverview.key && JSON.parse(workbenchOverview.key)[0] !== root;
-        if(rootChanged)workbenchOverview.onlyMissing=false;
         workbenchOverview.key = key; if (rootChanged) workbenchOverview.data = null; workbenchOverview.error = '';
         loadWorkbenchOverview(key, root);
     }
     panel.replaceChildren();
     const actual = workbenchOverview.data;
     const groups = actual ? workbenchGroups(actual, workbenchOverview.scope) : [...new Set(currentDeviceScan.playlists.map(p => p.system))].map(system => ({system,count:currentDeviceScan.playlists.filter(p => p.system === system).reduce((n,p)=>n+p.item_count,0),covers:[],locations:new Set()}));
-    const summary = wbElement('div','workbench-summary');
     const total = actual ? groups.reduce((n,g)=>n+g.count,0) : currentDeviceScan.totals?.items || 0;
-    const missing = actual ? groups.reduce((n,g)=>n+g.missing,0) : null;
-    for (const [value,label] of [[total,workbenchText('游戏','games')],[groups.length,workbenchText('主机','systems')]]) {
-        const stat = wbElement('span','workbench-stat'); stat.append(wbElement('strong','',value),wbElement('span','',label)); summary.append(stat);
+    const missing = actual ? groups.reduce((n,g)=>n+g.missing,0) : 0;
+    const subtitle = wbElement('p','overview-subtitle',workbenchText(`${total} 个游戏 · ${groups.length} 个主机`,`${total} games · ${groups.length} systems`));
+    if (autoScanState.plan?.unclassified.length) subtitle.textContent += workbenchText(` · ${autoScanState.plan.unclassified.length} 项待分类`,` · ${autoScanState.plan.unclassified.length} unclassified`);
+    panel.append(subtitle);
+    if (missing > 0) {
+        const bar = wbElement('div','overview-status'); bar.id = 'overview-status';
+        const complete = wbElement('button','btn btn-muted',workbenchText('一键补全','Complete all'));
+        complete.type='button'; complete.id='overview-complete-button'; complete.onclick=()=>startCompletion();
+        complete.disabled=document.getElementById('preview-button').disabled;
+        bar.append(wbIcon('photo'),wbElement('span','overview-status-text',workbenchText(`${missing} 个游戏缺少封面`,`${missing} games missing artwork`)),complete);
+        panel.append(bar);
     }
-    if (missing !== null) {
-        const pending = wbElement('button','workbench-pending',workbenchText(`${missing} 项待补全`,`${missing} need artwork`));
-        pending.type='button'; pending.setAttribute('aria-pressed',String(workbenchOverview.onlyMissing));
-        pending.title=workbenchText('查看需要补全资料的主机，再选择主机处理','Show systems needing artwork, then select one to review');
-        pending.onclick=()=>{workbenchOverview.onlyMissing=!workbenchOverview.onlyMissing;renderWorkbenchOverview(true);};summary.append(pending);
-    }
-    if(autoScanState.plan?.unclassified.length)summary.append(wbElement('span','workbench-stat',workbenchText(`${autoScanState.plan.unclassified.length} 项待分类`,`${autoScanState.plan.unclassified.length} unclassified`)));
-    panel.append(summary);
-    const toolbar = wbElement('div','overview-toolbar'); toolbar.append(wbElement('h2','',workbenchOverview.onlyMissing ? workbenchText('待补全的主机','Systems needing artwork') : workbenchText('按主机浏览','Browse by system')));
-    const search = wbElement('input','overview-search'); search.type = 'search'; search.placeholder = workbenchText('搜索主机','Search systems'); search.setAttribute('aria-label',search.placeholder); search.value = workbenchOverview.query;
-    search.oninput = () => {workbenchOverview.query = search.value; filterOverviewCards();}; toolbar.append(search);
-    for (const [view,icon,label] of [['grid','layout-grid',uiText('网格视图')],['list','list',uiText('列表视图')]]) {
-        const button = wbElement('button','view-switch'); button.type = 'button'; button.append(wbIcon(icon)); button.setAttribute('aria-label',label); button.setAttribute('aria-pressed', String(workbenchOverview.view === view));
-        button.onclick = () => {workbenchOverview.view=view;renderWorkbenchOverview(true);}; toolbar.append(button);
-    }
+    const toolbar = wbElement('div','overview-toolbar'); toolbar.append(wbElement('h2','',workbenchText('主机','Systems')));
     panel.append(toolbar);
-    const grid = wbElement('div','overview-system-grid workbench-cards ' + (workbenchOverview.view === 'list' ? 'cards-list' : ''));
+    const grid = wbElement('div','overview-system-grid workbench-cards');
     const showLocations=workbenchOverview.scope==='all'&&new Set(groups.flatMap(group=>[...group.locations])).size>1;
     for (const group of groups) {
         const card = wbElement('button','overview-system-card'); card.type = 'button';
-        card.dataset.needsArtwork=String(group.missing>0);
-        card.dataset.search = (group.system + ' ' + wbSystemName(group.system) + ' ' + getSystemAbbreviation(group.system)).toLowerCase();
+        card.title = group.system;
         card.setAttribute('aria-label',workbenchText('浏览 ','Browse ') + group.system);
         const art = wbElement('div','platform-art');
         for (const cover of group.covers.slice(0,3)) {
             const image = document.createElement('img'); image.src = cover.url; image.alt = cover.label; image.loading='lazy'; image.onerror=()=>image.remove(); art.append(image);
         }
         if (!group.covers.length) {art.classList.add('art-empty'); art.append(wbIcon('device-gamepad'),wbElement('span','',workbenchOverview.loading ? workbenchText('正在读取封面','Loading covers') : workbenchText('暂无封面','No artwork yet')));}
-        const details=wbElement('div','overview-system-details'); const heading=wbElement('div','platform-heading'); heading.append(wbElement('strong','',wbSystemName(group.system)),wbElement('span','platform-badge',getSystemAbbreviation(group.system)));
+        const details=wbElement('div','overview-system-details'); const heading=wbElement('div','platform-heading'); heading.append(wbElement('strong','',getSystemAbbreviation(group.system)));
         details.append(heading,wbElement('span','',formatGameCount(group.count)));
         const locations=wbElement('div','platform-locations');
         for (const location of group.locations) locations.append(wbElement('span','',workbenchText(({internal:'内部存储',card:'存储卡',local:'本地目录'})[location],({internal:'Internal',card:'SD card',local:'Local'})[location])));
         if(showLocations)details.append(locations);card.append(art,details);
-        card.onclick=async()=>{const missingOnly=workbenchOverview.onlyMissing;selectedLibrarySystem=group.system;renderDeviceScan(currentDeviceScan);await selectFirstPlaylistForSystem(group.system);if(missingOnly)setGameLibraryFilter('missing');};grid.append(card);
+        card.onclick=async()=>{selectedLibrarySystem=group.system;renderDeviceScan(currentDeviceScan);await selectFirstPlaylistForSystem(group.system);};grid.append(card);
     }
     panel.append(grid);
-    const note=wbElement('p','overview-note');note.id='overview-note';
-    note.textContent=workbenchOverview.error ? workbenchText('资料读取失败：','Could not read artwork: ')+workbenchOverview.error : !groups.length ? workbenchText('此范围没有游戏。可扫描新增游戏，或手动添加目录。','No games here. Scan or add a directory.') : workbenchOverview.loading ? workbenchText('正在核对真实游戏与封面…','Reading your games and artwork…') : workbenchText('数量来自现有游戏列表；扫描可发现尚未导入的游戏。','Counts reflect existing playlists. Scan to discover new games.');panel.append(note);
+    if (workbenchOverview.error || !groups.length) {
+        const note=wbElement('p','overview-note');note.id='overview-note';
+        note.textContent=workbenchOverview.error ? workbenchText('资料读取失败：','Could not read artwork: ')+workbenchOverview.error : workbenchText('还没有游戏。点击「添加游戏」开始。','No games yet. Choose Add games to start.');
+        panel.append(note);
+    }
     if (workbenchOverview.error) {const retry=wbElement('button','btn btn-muted',workbenchText('重新读取','Retry'));retry.onclick=refreshWorkbenchOverview;panel.append(retry);}
-    filterOverviewCards();
-    if(workbenchOverview.onlyMissing&&!groups.some(group=>group.missing>0))note.textContent=workbenchText('此范围没有待补全资料。点击 ALL 返回全部主机。','No artwork is missing here. Select ALL to return to all systems.');
-}
-function filterOverviewCards() {
-    const query=workbenchOverview.query.trim().toLowerCase();
-    document.querySelectorAll('.workbench-cards > button').forEach(card=>{card.hidden=!card.dataset.search.includes(query)||(workbenchOverview.onlyMissing&&card.dataset.needsArtwork!=='true');});
 }
 function renderWorkbenchChrome(state) {
     for (const [selector,zh,en] of [
-        ['#automatic-scan-button','扫描新增游戏','Scan new games'],['#manual-add-button','＋ 添加游戏','＋ Add games'],
+        ['#manual-add-button','＋ 添加游戏','＋ Add games'],
         ['.tools-menu summary','工具','Tools'],['#device-switch-button','切换设备','Switch device']]) {
         const button=document.querySelector(selector);
         if(button?.lastChild?.nodeType===3)button.lastChild.textContent=workbenchText(zh,en);
@@ -193,7 +181,7 @@ function renderWorkbenchChrome(state) {
         :document.getElementById('playlist_path').value?workbenchText('补全整个列表','Complete entire playlist'):workbenchText('补全全部存储','Complete all storage');
     document.getElementById('preview-button').title=workbenchText('补全当前列表；未选择主机时补全全部存储中的列表','Complete the selected playlist, or all storage locations when no system is selected');
     if (!document.getElementById('playlist_path').value && currentDeviceScan?.connected) document.getElementById('workspace-title').textContent=workbenchText('游戏库','Game library');
-    for (const id of ['automatic-scan-button','manual-add-button']) document.getElementById(id).hidden=state.previewValid;
+    document.getElementById('manual-add-button').hidden=state.previewValid;
     if(workbenchOverview.data){
         const groups=workbenchGroups(workbenchOverview.data,workbenchOverview.scope);
         document.querySelectorAll('.playlist-system-tab').forEach(button=>{

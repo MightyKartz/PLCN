@@ -258,3 +258,33 @@ def test_topbar_chrome_uses_settings_button():
     assert 'id="theme-toggle-btn"' not in html
     assert 'class="sidebar-settings"' not in html
     assert 'class="tools-menu"' in html
+
+
+def test_home_overview_uses_minimal_concept():
+    html = read_template()
+
+    assert 'id="automatic-scan-button"' not in html
+    assert 'automatic-scan-button' not in html
+    assert 'id="manual-add-button" class="btn"' in html
+    assert "completion-entry').hidden = allSystems" in html
+    assert "'overview-status'" in html
+    assert "'overview-complete-button'" in html
+    assert "startCompletion()" in html
+    assert '个游戏缺少封面' in html
+    assert 'games missing artwork' in html
+    assert 'overview-subtitle' in html
+    assert '个主机' in html
+    assert 'workbench-summary' not in html
+    assert 'workbench-pending' not in html
+    assert 'onlyMissing' not in html
+    assert 'overview-search' not in html
+    assert 'filterOverviewCards' not in html
+    assert 'platform-badge' not in html
+    assert "getSystemAbbreviation(group.system)" in html
+    assert '从哪里添加' in html
+    assert 'gm-source-scan' in html
+    assert 'gm-source-import' in html
+    assert "'aria-pressed', 'true'" in html
+    assert 'gm-manual-scan' not in html
+    assert 'openAutoScan()' in html
+    assert '还没有游戏。点击「添加游戏」开始。' in html
