@@ -241,7 +241,7 @@ async function runGameJob(route, payload, onProgress) {
                 try {
                     const state = await desktopRequest('/api/desktop');
                     if (!state.jobs.some(job => job.id === started.job_id)) {
-                        events.close(); reject(new Error(workbenchText('服务已重启，原任务结果未知。请检查任务与目标文件，再重新分析。', 'The service restarted; the task result is unknown. Check Tasks and destination files, then analyze again.')));
+                        events.close(); reject(new Error(workbenchText('服务已重启，原任务结果未知。请检查列表修改记录与目标文件，再重新分析。', 'The service restarted; the task result is unknown. Check playlist history and destination files, then analyze again.')));
                     }
                 } catch (error) {onProgress({connectionError:true, message:error.message});}
             };
@@ -352,7 +352,7 @@ async function applyGameManagement() {
             gmField('fields').hidden = true; gmField('apply').hidden = true;
 
         } else {
-            gmStatus(workbenchText(`完成：新增 ${result.added} 个条目，移出 ${result.removed} 个条目。备份可在设置的恢复记录中查看。`, `Done: ${result.added} entries added, ${result.removed} removed. The backup is available in Settings → recovery history.`));
+            gmStatus(workbenchText(`完成：新增 ${result.added} 个条目，移出 ${result.removed} 个条目。备份可在列表修改记录中查看。`, `Done: ${result.added} entries added, ${result.removed} removed. The backup is available in Playlist history.`));
             results.replaceChildren(wbElement('p', 'gm-path', result.backup_directory));
         }
         resetGameLibrary(); await scanDevice();

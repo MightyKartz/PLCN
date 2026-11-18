@@ -37,7 +37,7 @@ async function storageJob(route,payload){
         return await new Promise((resolve,reject)=>{
             const events=new EventSource('/api/progress?job_id='+encodeURIComponent(started.job_id));
             events.onmessage=event=>{const job=JSON.parse(event.data);
-                if(['failed','cancelled'].includes(job.status)){events.close();reject(new Error(job.error||'任务已取消；已验证结果见任务与恢复'));}
+                if(['failed','cancelled'].includes(job.status)){events.close();reject(new Error(job.error||'任务已取消；已验证结果见操作记录'));}
                 else if(job.status==='completed'){events.close();resolve({id:started.job_id,result:job.result});}
                 else storageField('status').textContent=job.message||'正在处理…';
             };
@@ -102,6 +102,6 @@ async function convertStorage(){
             const line=document.createElement('p');line.textContent=text;panel.appendChild(line);
         }
         const deploy=document.createElement('button');deploy.type='button';deploy.className='btn btn-muted';deploy.textContent='预览回传／替换方案';deploy.onclick=()=>{closeStorageOptimization();openChdDeployment(result);};panel.appendChild(deploy);
-        storageField('status').textContent='已完成。原文件保留；任务记录已保存，可在设置 → 任务与恢复查看。';
-    }catch(error){storageField('status').textContent=error.message+'；已验证输出与错误记录见设置 → 任务与恢复。';}
+        storageField('status').textContent='已完成。原文件保留；任务记录已保存，可在操作记录查看。';
+    }catch(error){storageField('status').textContent=error.message+'；已验证输出与错误记录见操作记录。';}
 }

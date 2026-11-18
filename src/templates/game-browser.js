@@ -179,7 +179,7 @@ async function applyRomUpdate() {
     gameInspector.romPlan=null;
     try {
         const {result}=await inspectorJob('/api/games/apply',{preview_job_id:plan.id});
-        if (result.status !== 'applied') {if (gameInspector.details) gameInspector.details.rom_update={id:result.operation_id,status:result.restored?'restored':'restore_pending'}; throw new Error((result.error || workbenchText('更新失败','Update failed'))+(result.restored ? workbenchText('；旧版已恢复','; previous ROM restored') : workbenchText('；请在任务与恢复中恢复旧版','; restore the previous ROM from Tasks')));}
+        if (result.status !== 'applied') {if (gameInspector.details) gameInspector.details.rom_update={id:result.operation_id,status:result.restored?'restored':'restore_pending'}; throw new Error((result.error || workbenchText('更新失败','Update failed'))+(result.restored ? workbenchText('；旧版已恢复','; previous ROM restored') : workbenchText('；可在此处恢复旧版','; restore the previous ROM here')));}
         gameInspector.key=''; retryGameLibrary(item.index);
         showGameLibraryToast(workbenchText('ROM 已更新，旧版已备份。','ROM updated; previous version backed up.'));
     } catch (error) {gameInspector.status=gmError(error); renderGameInspector();}

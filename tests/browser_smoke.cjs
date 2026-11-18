@@ -149,18 +149,11 @@ async function main() {
     assert.equal(await evaluate(()=>document.getElementById('scan-default-btn').getAttribute('aria-label')),'重新检测');
     await screenshot('01-home');
     assert.equal(await evaluate(()=>document.querySelector('.workbench-nav, #workbench-task')),null);
-    await waitFor(()=>document.getElementById('task-center-badge').textContent==='1','task badge from active jobs');
-    await click('#task-center-button');
-    await waitFor(()=>document.querySelector('#task-popover-content').textContent.includes('等待取消的测试任务'),'top task entry');
-    assert.equal(await evaluate(()=>document.querySelector('#desktop-dialog').open),false);
-    await screenshot('01-task-popover');
-    await evaluate(()=>refreshTaskPopover());
-    assert.equal(await evaluate(()=>document.querySelector('#task-popover-content').textContent.includes('1 个列表失败')),true);
-    await click('#task-center-button');
+    assert.equal(await evaluate(()=>document.querySelector('#task-center-button,#task-popover,[data-desktop-view="tasks"]')),null);
     assert.equal(await evaluate(() => document.querySelector('#usb-debug-help, #home-local-open')), null);
     await click('#workbench-device');
     assert.equal(await evaluate(() => document.querySelectorAll('dialog[open]').length), 1);
-    assert.equal(await evaluate(() => document.querySelectorAll('[data-desktop-view]').length), 4);
+    assert.equal(await evaluate(() => document.querySelectorAll('[data-desktop-view]').length), 3);
     await click('[data-desktop-view="preferences"]');
     await waitFor(visible,'preferences settings','#preference-settings');
     await evaluate(()=>{const select=document.getElementById('preference-language');select.value='en';select.dispatchEvent(new Event('change',{bubbles:true}));});
@@ -180,22 +173,6 @@ async function main() {
     await click('[data-desktop-view="data"]');
     await waitFor(() => document.querySelector('#desktop-content h3')?.textContent === '名称数据库', 'name database settings');
     await screenshot('01-name-settings');
-    await click('[data-desktop-view="tasks"]');
-    await waitFor(() => document.querySelector('#desktop-content')?.textContent.includes('本地列表恢复'), 'tasks and restore settings');
-    assert.equal(await evaluate(() => document.querySelector('#desktop-content').textContent.includes('本次运行的任务')), true);
-    assert.equal(await evaluate(() => document.querySelector('.bottom-dock, #details-drawer')), null);
-    await click('#desktop-content .desktop-entry:nth-of-type(2) details > summary');
-    await waitFor(() => document.querySelector('#desktop-content details[open]')?.textContent.includes('测试图片网络失败'), 'task logs and failed image receipts');
-    assert.equal(await evaluate(() => document.querySelector('#desktop-content details[open]').textContent.includes('开始补图')), true);
-    assert.equal(await evaluate(visible, '#desktop-close'), true);
-    await screenshot('01-task-settings');
-    await click('#desktop-content button');
-    await waitFor(() => document.querySelector('#desktop-content').textContent.includes('测试任务已取消'), 'task cancellation');
-    assert.equal(await evaluate(() => document.querySelector('#desktop-content details[open]')?.textContent.includes('测试图片网络失败')), true);
-    await click('#desktop-content button');
-    await waitFor(() => document.querySelectorAll('#desktop-content [data-job-id]').length === 3
-        && !Array.from(document.querySelectorAll('#desktop-content [data-job-id] strong')).some(node => /处理中|等待中/.test(node.textContent)), 'image retry without changing playlists');
-    await screenshot('01-tasks-after-retry');
     await click('#desktop-close');
 
     await click('#workbench-device');
@@ -282,6 +259,18 @@ async function main() {
     await click('#settings-library-tab');
     await waitFor(visible,'detected library settings','#path-settings');
     assert.equal(await evaluate(visible,'#artwork-directory-settings'),false);
+    await click('#desktop-close');
+
+    await click('#completion-history-link');
+    await waitFor(()=>document.querySelector('#desktop-content [data-job-id] details'),'completion history from library');
+    await click('#desktop-content [data-job-id] details > summary');
+    await waitFor(()=>document.querySelector('#desktop-content details[open]')?.textContent.includes('测试图片网络失败'),'failed image details');
+    assert.equal(await evaluate(visible, '#desktop-dialog .desktop-toolbar'),false);
+    assert.equal(await evaluate(()=>document.querySelector('#desktop-content [data-chd-operation],[data-rom-storage-operation]')),null);
+    await click('#desktop-content [data-job-id] > button');
+    await waitFor(()=>document.querySelectorAll('#desktop-content [data-job-id]').length===2
+        && !workbench.operation,'artwork retry without editing any playlists');
+    await screenshot('01-completion-history');
     await click('#desktop-close');
 
     assert.equal(await evaluate(() => document.querySelector('#overview-complete-button').disabled), false);
@@ -578,7 +567,7 @@ async function main() {
     assert.deepEqual(playlistFiles(), beforeRun);
     await click('#action-toast-details');
     await waitFor(() => document.querySelector('#desktop-dialog').open
-        && document.querySelector('#desktop-content').textContent.includes('最近补全'), 'details opens task center with recent completions');
+        && document.querySelector('#desktop-content').textContent.includes('最近补全'), 'details opens recent completion history');
     await evaluate(() => [...document.querySelectorAll('#desktop-content h3')]
         .find(h => h.textContent === '最近补全')?.scrollIntoView({block: 'center'}));
     await screenshot('02-tasks-recent-completions');
@@ -835,7 +824,7 @@ async function main() {
     await click('.playlist-system-tab[aria-label="Sega - Saturn"]');
     await waitFor(()=>gameLibrary.data?.items.length===2,'two launch entries after grouping');
     assert.equal(await evaluate(()=>gameLibrary.data.items[0].game_id),originalGameId);
-    await click('#workbench-device');await click('[data-desktop-view="tasks"]');
+    await click('#game-library-discs');await click('#disc-inspection-close-history');
     await waitFor(()=>document.querySelector('[data-m3u-operation] button'),'durable M3U history');
     await click('[data-m3u-operation] button');
     await click('.desktop-confirm button:last-of-type');
@@ -845,6 +834,7 @@ async function main() {
     await waitFor(()=>gameLibrary.data?.items.length===3,'restored library cache refreshed');
     await screenshot('08-m3u-restored');
     await click('#desktop-close');
+    await click('#disc-inspection-close');
     await evaluate(()=>toggleTheme());
     await click('#game-library-discs');
     await waitFor(()=>document.querySelectorAll('#disc-inspection-groups > details').length===2,'restored groups inspected');
@@ -887,12 +877,14 @@ async function main() {
     await click('#storage-close');await evaluate(()=>toggleTheme());if (!await evaluate(() => document.querySelector('.tools-menu').open)) await click('.tools-menu > summary');
     await click('#storage-entry');await click('#storage-analyze');
     await waitFor(()=>!storageTask.busy&&!document.querySelector('#storage-analysis').hidden,'dark CHD analysis');
-    await screenshot('09-chd-analysis-dark');await click('#storage-close');
-    if(canConvert){await click('#workbench-device');await click('[data-desktop-view="tasks"]');await waitFor(()=>document.querySelector('[data-chd-operation]'),'CHD durable task history');await screenshot('09-chd-tasks');await click('#desktop-close');}
+    await screenshot('09-chd-analysis-dark');
+    if(!canConvert) await click('#storage-close');
 
     if(canConvert){
         const originalM3u=fs.readFileSync(path.join(discRoms,'Game.m3u'));
-        await click('#workbench-device');await click('[data-desktop-view="tasks"]');
+        await click('#storage-close-history');
+        await waitFor(()=>document.querySelector('[data-chd-operation]'),'CHD durable history');
+        await screenshot('09-chd-history');
         await click('[data-chd-operation] button');
         await waitFor(()=>document.querySelector('#deploy-dialog').open,'deployment dialog');
         assert.equal(await evaluate(()=>document.querySelector('#deploy-mode').value),'copy');
@@ -909,14 +901,14 @@ async function main() {
         assert.equal(fs.existsSync(rawCue),false);assert.equal(fs.existsSync(rawTrack),false);
         assert.equal(fs.existsSync(path.join(discRoms,'Game (Disc 1).chd')),true);
         assert.equal(fs.readFileSync(path.join(discRoms,'Game.m3u'),'utf8').includes('Game (Disc 1).chd'),true);
-        await screenshot('10-chd-deployed');await click('#deploy-close');
-        await click('#workbench-device');await click('[data-desktop-view="tasks"]');await waitFor(()=>document.querySelector('[data-chd-deployment]'),'deployment receipt displayed');
+        await screenshot('10-chd-deployed');
+        await click('#deploy-close-history');await waitFor(()=>document.querySelector('[data-chd-deployment]'),'deployment receipt displayed');
         await click('[data-chd-deployment] button');await click('.desktop-confirm button:last-of-type');
         await waitFor(()=>document.querySelector('[data-chd-deployment] strong').textContent.includes('已恢复'),'deployment restored');
         assert.deepEqual(fs.readFileSync(rawCue),cueBefore);assert.deepEqual(fs.readFileSync(rawTrack),rawBefore);
         assert.deepEqual(fs.readFileSync(path.join(discRoms,'Game.m3u')),originalM3u);
         assert.equal(fs.existsSync(path.join(discRoms,'Game (Disc 1).chd')),false);
-        await screenshot('10-chd-restored');await click('#desktop-close');
+        await screenshot('10-chd-restored');await click('#desktop-close');await click('#deploy-close');
     }
 
     // Cartridge directory analysis and real ZIP generation: separate synthetic library.
@@ -959,9 +951,9 @@ async function main() {
     await click('#rom-storage-fields > label:first-of-type button');
     await waitFor(()=>document.querySelector('#rom-storage-source').value.length>0,'source reopened');
     await click('#rom-storage-analyze');await waitFor(()=>!romStorage.busy&&!document.querySelector('#rom-storage-analysis').hidden,'dark directory analysis');
-    await evaluate(()=>document.querySelector('#rom-storage-dialog').scrollTop=0);await screenshot('11-rom-layout-dark');await click('#rom-storage-close');
-    await click('#workbench-device');await click('[data-desktop-view="tasks"]');await waitFor(()=>document.querySelector('[data-rom-storage-operation]'),'ZIP durable history');
-    await screenshot('11-rom-zip-tasks');await click('#desktop-close');
+    await evaluate(()=>document.querySelector('#rom-storage-dialog').scrollTop=0);await screenshot('11-rom-layout-dark');
+    await click('#rom-storage-close-history');await waitFor(()=>document.querySelector('[data-rom-storage-operation]'),'ZIP durable history');
+    await screenshot('11-rom-zip-history');await click('#desktop-close');await click('#rom-storage-close');
 
     // Stage 4B: move a synthetic CHD-only multi-disc set, then restore both operations.
     const layoutRoot=path.join(libraryPath,'layout-samples','RetroArch'),layoutLists=path.join(layoutRoot,'playlists'),layoutRoms=path.join(layoutRoot,'Roms'),layoutNested=path.join(layoutRoms,'多盘游戏');
@@ -1006,8 +998,8 @@ async function main() {
     for(const file of [layoutM3u,...layoutDiscs])assert.equal(fs.existsSync(file),false);
     assert.equal(fs.readFileSync(path.join(layoutRoms,'多盘.m3u'),'utf8'),layoutDiscs.map(file=>path.basename(file)).join('\n')+'\n');
     assert.equal(JSON.parse(fs.readFileSync(layoutPlaylist,'utf8')).items[0].path.replaceAll('\\','/'),path.join(layoutRoms,'多盘.m3u').replaceAll('\\','/'));
-    await screenshot('12-layout-moved');await click('#relocate-close');
-    await click('#workbench-device');await click('[data-desktop-view="tasks"]');
+    await screenshot('12-layout-moved');
+    await click('#relocate-close-history');
     await waitFor(id=>document.querySelector('[data-rom-relocation="'+id+'"]'),'layout move receipt',moveId);
     if(await evaluate(()=>workbench.operation))await waitFor(()=>!workbench.operation,'background scan finished');
     await evaluate(()=>beginWorkbenchOperation('scan'));
@@ -1020,7 +1012,7 @@ async function main() {
     await waitFor(id=>document.querySelector('[data-rom-relocation="'+id+'"] strong').textContent.includes('已恢复'),'copy restored',copyId);
     for(const [file,bytes] of layoutBefore)assert.deepEqual(fs.readFileSync(file),bytes);
     for(const file of [layoutM3u,...layoutDiscs])assert.equal(fs.existsSync(path.join(layoutRoms,path.basename(file))),false);
-    await screenshot('12-layout-restored');await click('#desktop-close');
+    await screenshot('12-layout-restored');await click('#desktop-close');await click('#relocate-close');
 
     assert.deepEqual(errors, [], 'Page errors');
     console.log(`Browser smoke OK (${width}×${height}): home → local library → SNES → translated preview`);

@@ -76,15 +76,6 @@ def test_home_to_library_to_preview(tmp_path, monkeypatch, chrome_binary, viewpo
                   'Named_Titles': {'success': 0, 'failed': 0, 'skipped': 1}},
         'details': [{'system': 'NES', 'source': 'Game', 'game': '游戏', 'type': 'Named_Snaps',
                      'status': 'failed', 'reason': 'network_error', 'message': '测试图片网络失败'}]}})
-    pending = jobs.create_job()
-    jobs.update_job(pending, 1, 2, '等待取消的测试任务')
-    original_cancel = jobs.cancel
-    def cancel(job_id):
-        original_cancel(job_id)
-        if job_id == pending:
-            from task_control import TaskCancelled
-            jobs.fail_job(job_id, TaskCancelled('测试任务已取消'))
-    monkeypatch.setattr(jobs, 'cancel', cancel)
     from thumbnail_downloader import ThumbnailDownloader
     monkeypatch.setattr(ThumbnailDownloader, 'download_batch', lambda *args, **kwargs: ThumbnailDownloader.empty_summary())
     original_analyze = playlist_service.analyze_playlist

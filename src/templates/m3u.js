@@ -81,7 +81,7 @@ async function applyM3u(){
     try{const {result}=await m3uJob('/api/m3u/apply',{preview_job_id:id});m3uEditor.changed=true;reflectM3uResult(result);
         m3uField('status').textContent='已完成，原光盘和存档保留。电脑备份：'+result.backup_directory+'。关闭后刷新游戏库。';
         m3uField('review').hidden=true;
-    }catch(error){m3uEditor.changed=true;m3uField('status').textContent=error.message+'；请在设置 → 任务与恢复查看多盘操作记录。';}
+    }catch(error){m3uEditor.changed=true;m3uField('status').textContent=error.message+'；请在操作记录查看多盘操作记录。';}
 }
 async function closeM3uEditor(){
     if(m3uEditor.busy)return;invalidateM3uPreview();m3uField('dialog').close();

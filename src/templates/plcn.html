@@ -20,12 +20,11 @@
             <div class="top-spacer"></div>
 
             <div class="utility-group" aria-label="工具" data-i18n-aria-label="工具">
-                <button id="task-center-button" class="btn btn-muted top-toggle task-center-button" type="button" popovertarget="task-popover" title="任务中心" aria-label="任务中心" data-i18n-title="任务中心" data-i18n-aria-label="任务中心"><span class="icon" data-ui-icon="circle-check"></span><span id="task-center-badge" class="task-center-badge" hidden></span></button>
                 <button class="btn btn-muted top-toggle" id="settings-button" type="button" onclick="openDesktop()" title="设置" aria-label="设置" data-i18n-title="设置" data-i18n-aria-label="设置"><span class="icon" data-ui-icon="settings"></span></button>
             </div>
         </header>
 
-        <p id="workbench-busy" class="workbench-busy legacy-busy" role="status" aria-live="polite"><span id="workbench-busy-label"></span><button id="completion-cancel" class="btn btn-small btn-text" type="button" onclick="cancelCompletion()" hidden data-i18n="取消">取消</button><button id="task-status-button" class="btn btn-small btn-muted" type="button" onclick="openDesktop('tasks')" hidden data-i18n="查看任务">查看任务</button></p>
+        <p id="workbench-busy" class="workbench-busy legacy-busy" role="status" aria-live="polite"><span id="workbench-busy-label"></span><button id="completion-cancel" class="btn btn-small btn-text" type="button" onclick="cancelCompletion()" hidden data-i18n="取消">取消</button></p>
         <main class="workspace">
             <aside class="sidebar">
                 <div class="sidebar-scroll">            <div class="brand">
@@ -83,6 +82,8 @@
                     </div>
 
                     <div class="panel-actions">
+                        <button id="completion-history-link" class="btn btn-text" type="button" onclick="openOperationHistory('completion')" hidden data-i18n="补全记录">补全记录</button>
+                        <button id="playlist-history-link" class="btn btn-text" type="button" onclick="openOperationHistory('playlist')" hidden data-i18n="列表修改记录">列表修改记录</button>
                         <button id="browse-games-button" class="btn btn-muted" type="button" onclick="invalidateWorkbenchPreview()" hidden data-i18n="返回游戏列表">返回游戏列表</button>
                         <div class="completion-entry">
                             <span id="completion-entry-note" data-i18n="自动匹配中文名与图片，预览后确认应用。">自动匹配中文名与图片，预览后确认应用。</span>
@@ -224,18 +225,12 @@
     <input id="playlist_path" type="hidden">
     <input id="system_name" type="hidden">
 
-    <section id="task-popover" popover="auto" aria-labelledby="task-popover-title">
-        <header><h2 id="task-popover-title" data-i18n="任务中心">任务中心</h2><button class="btn btn-text" type="button" popovertarget="task-popover" popovertargetaction="hide" data-i18n="关闭">关闭</button></header>
-        <div id="task-popover-content" aria-live="polite"></div>
-        <footer><button id="task-popover-details" class="btn btn-muted" type="button" onclick="document.getElementById('task-popover').hidePopover();openDesktop('tasks')" data-i18n="任务与恢复">任务与恢复</button></footer>
-    </section>
     <dialog id="desktop-dialog" aria-labelledby="desktop-title">
         <header><h2 id="desktop-title" data-i18n="设置">设置</h2><button id="desktop-close" class="btn btn-muted" onclick="closeDesktopSettings()" type="button" data-i18n="关闭">关闭</button></header>
         <nav class="desktop-toolbar" aria-label="设置页面" data-i18n-aria-label="设置页面">
             <button id="settings-preferences-tab" data-desktop-view="preferences" class="btn" onclick="openDesktop('preferences')" data-i18n="偏好设置">偏好设置</button>
             <button id="settings-library-tab" data-desktop-view="library" class="btn" onclick="openDesktop('library')" data-i18n="设备与游戏库">设备与游戏库</button>
             <button data-desktop-view="data" class="btn" onclick="openDesktop('data')" data-i18n="资料来源">资料来源</button>
-            <button data-desktop-view="tasks" class="btn" onclick="openDesktop('tasks')" data-i18n="任务与恢复">任务与恢复</button>
         </nav>
         <section id="path-settings" aria-labelledby="settings-library-tab" hidden>
 
@@ -391,13 +386,13 @@
         <footer><button id="content-scan-cancel" class="btn btn-muted" type="button" onclick="cancelContentScan()" hidden data-i18n="取消任务">取消任务</button><button id="content-scan-start" class="btn btn-muted" type="button" onclick="previewContentScan()" data-i18n="开始扫描">开始扫描</button><button id="content-scan-apply" class="btn" type="button" onclick="applyContentScan()" hidden data-i18n="确认更新列表">确认更新列表</button><button id="content-scan-complete" class="btn" type="button" onclick="completeImportedContent()" hidden data-i18n="预览名称与图片补全">预览名称与图片补全</button></footer>
     </dialog>
     <dialog id="disc-inspection-dialog" aria-labelledby="disc-inspection-title">
-        <header class="disc-inspection-header"><div><h2 id="disc-inspection-title" data-i18n="多盘与引用检查">多盘与引用检查</h2><p data-i18n="只读检查，不改写列表、核心或游戏文件。候选组仍需核对。">只读检查，不改写列表、核心或游戏文件。候选组仍需核对。</p></div><button type="button" class="btn btn-muted" onclick="closeDiscInspection()" data-i18n="关闭">关闭</button></header>
+        <header class="disc-inspection-header"><div><h2 id="disc-inspection-title" data-i18n="多盘与引用检查">多盘与引用检查</h2><p data-i18n="只读检查，不改写列表、核心或游戏文件。候选组仍需核对。">只读检查，不改写列表、核心或游戏文件。候选组仍需核对。</p></div><div class="operation-header-actions"><button id="disc-inspection-close-history" class="btn btn-text" type="button" onclick="openOperationHistory('discs')" data-input-control data-i18n="操作记录">操作记录</button><button id="disc-inspection-close" type="button" class="btn btn-muted" onclick="closeDiscInspection()" data-i18n="关闭">关闭</button></div></header>
         <p id="disc-inspection-summary" role="status" aria-live="polite"></p><div id="disc-inspection-coverage" class="disc-coverage"></div>
         <div class="disc-inspection-tools"><input id="disc-inspection-search" type="search" placeholder="搜索游戏或文件路径" aria-label="搜索游戏组" oninput="discInspection.limit=100;renderDiscInspection()" data-i18n-placeholder="搜索游戏或文件路径" data-i18n-aria-label="搜索游戏组"><select id="disc-inspection-filter" aria-label="筛选游戏组" onchange="discInspection.limit=100;renderDiscInspection()" data-i18n-aria-label="筛选游戏组"><option value="all" data-i18n="全部分组">全部分组</option><option value="attention" data-i18n="需检查">需检查</option><option value="m3u" data-i18n="已有 M3U">已有 M3U</option><option value="candidate" data-i18n="候选分组">候选分组</option></select></div>
         <div id="disc-inspection-groups"></div><button id="disc-inspection-more" type="button" class="btn btn-muted" onclick="discInspection.limit+=100;renderDiscInspection()" hidden data-i18n="显示更多">显示更多</button>
     </dialog>
     <dialog id="m3u-dialog" aria-labelledby="m3u-title">
-        <header class="disc-inspection-header"><div><h2 id="m3u-title" data-i18n="多盘 M3U 方案">多盘 M3U 方案</h2><p data-i18n="选择与排序 → 预览文件、列表和存档变化 → 确认应用">选择与排序 → 预览文件、列表和存档变化 → 确认应用</p></div><button id="m3u-close" class="btn btn-muted" type="button" onclick="closeM3uEditor()" data-i18n="关闭">关闭</button></header>
+        <header class="disc-inspection-header"><div><h2 id="m3u-title" data-i18n="多盘 M3U 方案">多盘 M3U 方案</h2><p data-i18n="选择与排序 → 预览文件、列表和存档变化 → 确认应用">选择与排序 → 预览文件、列表和存档变化 → 确认应用</p></div><div class="operation-header-actions"><button id="m3u-close-history" class="btn btn-text" type="button" onclick="openOperationHistory('discs')" data-input-control data-i18n="操作记录">操作记录</button><button id="m3u-close" class="btn btn-muted" type="button" onclick="closeM3uEditor()" data-i18n="关闭">关闭</button></div></header>
         <fieldset id="m3u-fields"><label><span data-i18n="显示名称">显示名称</span><input id="m3u-label"></label><label><span data-i18n="M3U 文件名">M3U 文件名</span><input id="m3u-filename"></label>
         <label><span data-i18n="操作范围">操作范围</span><select id="m3u-mode"><option value="switch" data-i18n="保存 M3U 并更新当前列表">保存 M3U 并更新当前列表</option><option value="file" data-i18n="仅保存 M3U，保留当前列表">仅保存 M3U，保留当前列表</option></select></label>
         <ol id="m3u-discs"></ol><details><summary data-i18n="存档衔接选项">存档衔接选项</summary><label><span data-i18n="延续哪张盘的游戏内存档">延续哪张盘的游戏内存档</span><select id="m3u-save-source"></select></label><label class="m3u-check"><input id="m3u-preserve-states" type="checkbox"><span data-i18n="保留原即时存档，不迁移；切换后从游戏内存档继续">保留原即时存档，不迁移；切换后从游戏内存档继续</span></label><p data-i18n="无法确认实际存档目录、覆盖设置或核心规则时，不自动切换列表，可选择仅保存 M3U。">无法确认实际存档目录、覆盖设置或核心规则时，不自动切换列表，可选择仅保存 M3U。</p></details></fieldset>
@@ -407,7 +402,7 @@
     <script src="/assets/workflow.js"></script>
     <script src="/assets/ui.js"></script>
     <dialog id="storage-dialog" aria-labelledby="storage-title" oncancel="if(storageTask.busy)event.preventDefault();else invalidateStoragePlan()">
-        <header class="disc-inspection-header"><div><h2 id="storage-title" data-i18n="存储优化">存储优化</h2><p data-i18n="分析空间 → 选择光盘 → 电脑转换与内容验证">分析空间 → 选择光盘 → 电脑转换与内容验证</p></div><button id="storage-close" class="btn btn-muted" type="button" onclick="closeStorageOptimization()" data-i18n="关闭">关闭</button></header>
+        <header class="disc-inspection-header"><div><h2 id="storage-title" data-i18n="存储优化">存储优化</h2><p data-i18n="分析空间 → 选择光盘 → 电脑转换与内容验证">分析空间 → 选择光盘 → 电脑转换与内容验证</p></div><div class="operation-header-actions"><button id="storage-close-history" class="btn btn-text" type="button" onclick="openOperationHistory('chd')" data-input-control data-i18n="操作记录">操作记录</button><button id="storage-close" class="btn btn-muted" type="button" onclick="closeStorageOptimization()" data-i18n="关闭">关闭</button></div></header>
         <p class="storage-scope" data-i18n="本步仅在电脑生成 CHD 副本，保留原文件和启动引用。完成后可另行预览回传与替换方案。">本步仅在电脑生成 CHD 副本，保留原文件和启动引用。完成后可另行预览回传与替换方案。</p>
         <details id="storage-settings" open><summary data-i18n="工作目录与转换工具">工作目录与转换工具</summary><fieldset id="storage-fields" oninput="invalidateStoragePlan()"><legend data-i18n="转换设置">转换设置</legend>
             <label><span data-i18n="电脑工作目录">电脑工作目录</span><div class="storage-input"><input id="storage-workspace" placeholder="留空使用应用数据目录" data-i18n-placeholder="留空使用应用数据目录"><button class="btn btn-muted" type="button" onclick="pickStoragePath('workspace','directory')" data-i18n="选择目录">选择目录</button></div></label>
@@ -421,7 +416,7 @@
         <footer><button id="storage-cancel" class="btn btn-muted" type="button" onclick="cancelStorageTask()" hidden data-i18n="取消任务">取消任务</button><button id="storage-analyze" class="btn btn-muted" type="button" onclick="analyzeStorage()" data-i18n="分析空间与工具">分析空间与工具</button><button id="storage-convert" class="btn" type="button" onclick="convertStorage()" disabled data-i18n="确认仅在电脑转换">确认仅在电脑转换</button></footer>
     </dialog>
     <dialog id="rom-storage-dialog" aria-labelledby="rom-storage-title" oncancel="if(romStorage.busy)event.preventDefault();else invalidateRomStorage()">
-        <header class="disc-inspection-header"><div><h2 id="rom-storage-title" data-i18n="目录整理与 ROM 压缩">目录整理与 ROM 压缩</h2><p data-i18n="检查源目录 → 核对冲突与格式 → 生成电脑 ZIP 副本">检查源目录 → 核对冲突与格式 → 生成电脑 ZIP 副本</p></div><button id="rom-storage-close" class="btn btn-muted" type="button" onclick="closeRomStorage()" data-i18n="关闭">关闭</button></header>
+        <header class="disc-inspection-header"><div><h2 id="rom-storage-title" data-i18n="目录整理与 ROM 压缩">目录整理与 ROM 压缩</h2><p data-i18n="检查源目录 → 核对冲突与格式 → 生成电脑 ZIP 副本">检查源目录 → 核对冲突与格式 → 生成电脑 ZIP 副本</p></div><div class="operation-header-actions"><button id="rom-storage-close-history" class="btn btn-text" type="button" onclick="openOperationHistory('romStorage')" data-input-control data-i18n="操作记录">操作记录</button><button id="rom-storage-close" class="btn btn-muted" type="button" onclick="closeRomStorage()" data-i18n="关闭">关闭</button></div></header>
         <p class="storage-scope" data-i18n="先分析目录与冲突，再单独预览整理或 ZIP 回传方案。默认仅复制，更新引用与清理需核对存档、运行报告及备份。">先分析目录与冲突，再单独预览整理或 ZIP 回传方案。默认仅复制，更新引用与清理需核对存档、运行报告及备份。</p>
         <details id="rom-storage-settings" open><summary data-i18n="目录与输出设置">目录与输出设置</summary><fieldset id="rom-storage-fields" oninput="invalidateRomStorage()"><legend data-i18n="目录与输出位置">目录与输出位置</legend>
             <label><span data-i18n="游戏源目录">游戏源目录</span><div class="storage-input"><input id="rom-storage-source" readonly placeholder="选择本机或存储卡上的游戏目录" data-i18n-placeholder="选择本机或存储卡上的游戏目录"><button type="button" class="btn btn-muted" onclick="pickRomStorage('source')" data-i18n="选择目录">选择目录</button></div></label>
@@ -436,7 +431,7 @@
         <footer><button id="rom-storage-cancel" class="btn btn-muted" type="button" onclick="cancelRomStorage()" hidden data-i18n="取消任务">取消任务</button><button id="rom-storage-analyze" class="btn btn-muted" type="button" onclick="analyzeRomStorage()" data-i18n="分析目录与 ZIP 支持">分析目录与 ZIP 支持</button><button id="rom-storage-relocate" class="btn btn-muted" type="button" onclick="previewRomLayout()" disabled data-i18n="预览目录整理">预览目录整理</button><button id="rom-storage-convert" class="btn" type="button" onclick="convertRomStorage()" disabled data-i18n="确认生成电脑 ZIP 副本">确认生成电脑 ZIP 副本</button></footer>
     </dialog>
     <dialog id="relocate-dialog" aria-labelledby="relocate-title" oncancel="if(romRelocation.busy)event.preventDefault();else invalidateRelocation()">
-        <header class="disc-inspection-header"><div><h2 id="relocate-title" data-i18n="目录整理与 ZIP 回传">目录整理与 ZIP 回传</h2><p data-i18n="核对目标与存档 → 预览引用和备份 → 确认执行">核对目标与存档 → 预览引用和备份 → 确认执行</p></div><button id="relocate-close" class="btn btn-muted" type="button" onclick="closeRomRelocation()" data-i18n="关闭">关闭</button></header>
+        <header class="disc-inspection-header"><div><h2 id="relocate-title" data-i18n="目录整理与 ZIP 回传">目录整理与 ZIP 回传</h2><p data-i18n="核对目标与存档 → 预览引用和备份 → 确认执行">核对目标与存档 → 预览引用和备份 → 确认执行</p></div><div class="operation-header-actions"><button id="relocate-close-history" class="btn btn-text" type="button" onclick="openOperationHistory('romStorage')" data-input-control data-i18n="操作记录">操作记录</button><button id="relocate-close" class="btn btn-muted" type="button" onclick="closeRomRelocation()" data-i18n="关闭">关闭</button></div></header>
         <p id="relocate-origin" class="storage-scope"></p>
         <details id="relocate-settings" open><summary data-i18n="执行方式与运行报告">执行方式与运行报告</summary><fieldset id="relocate-fields" oninput="invalidateRelocation()"><legend data-i18n="本次整理">本次整理</legend>
             <label><span data-i18n="执行方式">执行方式</span><select id="relocate-mode"><option value="copy" data-i18n="仅复制到目标，保留原文件与引用">仅复制到目标，保留原文件与引用</option><option value="switch" data-i18n="复制并更新引用，保留原文件">复制并更新引用，保留原文件</option><option value="replace" data-i18n="复制、更新引用并清理有备份的原文件">复制、更新引用并清理有备份的原文件</option></select></label>
@@ -449,7 +444,7 @@
         <footer><button id="relocate-cancel" class="btn btn-muted" type="button" onclick="cancelRomRelocation()" hidden data-i18n="取消任务">取消任务</button><button id="relocate-preview" class="btn btn-muted" type="button" onclick="previewRomRelocation()" data-i18n="预览变更与备份">预览变更与备份</button><button id="relocate-apply" class="btn" type="button" onclick="applyRomRelocation()" disabled data-i18n="确认执行此方案">确认执行此方案</button></footer>
     </dialog>
     <dialog id="deploy-dialog" aria-labelledby="deploy-title" oncancel="if(chdDeployment.busy)event.preventDefault();else invalidateDeployment()">
-        <header class="disc-inspection-header"><div><h2 id="deploy-title" data-i18n="CHD 回传与替换">CHD 回传与替换</h2><p data-i18n="核对内容验证结果 → 预览目标与备份 → 确认执行">核对内容验证结果 → 预览目标与备份 → 确认执行</p></div><button id="deploy-close" class="btn btn-muted" type="button" onclick="closeChdDeployment()" data-i18n="关闭">关闭</button></header>
+        <header class="disc-inspection-header"><div><h2 id="deploy-title" data-i18n="CHD 回传与替换">CHD 回传与替换</h2><p data-i18n="核对内容验证结果 → 预览目标与备份 → 确认执行">核对内容验证结果 → 预览目标与备份 → 确认执行</p></div><div class="operation-header-actions"><button id="deploy-close-history" class="btn btn-text" type="button" onclick="openOperationHistory('chd')" data-input-control data-i18n="操作记录">操作记录</button><button id="deploy-close" class="btn btn-muted" type="button" onclick="closeChdDeployment()" data-i18n="关闭">关闭</button></div></header>
         <p id="deploy-origin" class="storage-scope"></p>
         <details id="deploy-settings" open><summary data-i18n="选择光盘与执行方式">选择光盘与执行方式</summary><fieldset id="deploy-fields" oninput="invalidateDeployment()"><legend data-i18n="本次范围">本次范围</legend>
             <div id="deploy-discs"></div>
