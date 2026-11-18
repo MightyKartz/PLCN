@@ -1522,16 +1522,19 @@ body[data-theme="dark"] .badge.ready {
     border-radius: 14px;
     padding: 24px;
     color: var(--text);
-    background: var(--panel, var(--surface));
+    background: var(--bg);
 }
 
 #desktop-dialog::backdrop {
     background: #10243e66;
 }
 
-body[data-theme="dark"] #desktop-dialog {
-    background: var(--surface-tint);
-    color: var(--text);
+body[data-theme="dark"] #desktop-dialog::backdrop {
+    background: rgb(0 0 0 / 56%);
+}
+
+#desktop-dialog:has(#preference-settings:not([hidden])) {
+    width: min(540px, 92vw);
 }
 
 #desktop-dialog header {
