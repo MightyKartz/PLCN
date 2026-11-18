@@ -168,6 +168,14 @@ async function main() {
     assert.equal(await evaluate(()=>document.getElementById('desktop-close').textContent),'Close');
     assert.equal(await evaluate(()=>localStorage.getItem('plcn-ui-language')),'en');
     await evaluate(()=>{const select=document.getElementById('preference-language');select.value='zh';select.dispatchEvent(new Event('change',{bubbles:true}));});
+    await click('#preference-theme input[value="system"]');
+    await send('Emulation.setEmulatedMedia', {features:[{name:'prefers-color-scheme',value:'dark'}]});
+    await waitFor(()=>document.body.dataset.theme==='dark','system theme changes while preferences are open');
+    await screenshot('01-preferences-dark');
+    await click('#preference-theme input[value="light"]');
+    assert.equal(await evaluate(()=>document.body.dataset.theme),'light');
+    assert.equal(await evaluate(()=>localStorage.getItem('plcn-theme')),'light');
+    await send('Emulation.setEmulatedMedia', {features:[]});
     await screenshot('01-preferences');
     await click('[data-desktop-view="data"]');
     await waitFor(() => document.querySelector('#desktop-content h3')?.textContent === '名称数据库', 'name database settings');
@@ -270,7 +278,10 @@ async function main() {
     assert.equal(await evaluate(()=>document.querySelector('#library-all-systems .system-game-count').textContent),String(cardCount));
     assert.equal(await evaluate(()=>Array.from(document.querySelectorAll('.playlist-system-tab')).every(row=>row.firstElementChild.tagName.toLowerCase()==='svg'&&row.children.length===3)),true);
     await click('#settings-button');
-    await waitFor(()=>document.querySelector('#desktop-dialog').open,'settings dialog from topbar');
+    await waitFor(visible,'preferences from topbar','#preference-settings');
+    await click('#settings-library-tab');
+    await waitFor(visible,'detected library settings','#path-settings');
+    assert.equal(await evaluate(visible,'#artwork-directory-settings'),false);
     await click('#desktop-close');
 
     assert.equal(await evaluate(() => document.querySelector('#overview-complete-button').disabled), false);

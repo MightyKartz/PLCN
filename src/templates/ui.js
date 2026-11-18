@@ -1,8 +1,11 @@
 /* Display preferences, translations and shared presentation helpers. */
 let currentUILanguage = 'zh';
 let currentTheme = 'light';
+let themePreference = 'system';
+const systemAppearance = matchMedia('(prefers-color-scheme: dark)');
 
 const UI_EN = {
+    '系统': 'System',
     '扫描掌机游戏': 'Scan handheld games',
     '请先在掌机核对存储和启动目录': 'Check the storage and launch folder on your handheld first',
     '本地目录无需配置掌机启动路径': 'Local folders do not need a handheld launch path',
@@ -663,20 +666,29 @@ function formatItemCount(count) {
 }
 
 function toggleTheme() {
-    applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
-    localStorage.setItem('plcn-theme', currentTheme);
+    saveThemePreference(currentTheme === 'dark' ? 'light' : 'dark');
     showStatus(uiText(currentTheme === 'dark' ? '深色模式已开启' : '浅色模式已开启'), 'info');
 }
 
 function applyTheme(theme) {
-    currentTheme = theme === 'dark' ? 'dark' : 'light';
+    themePreference = theme === 'dark' || theme === 'light' ? theme : 'system';
+    currentTheme = themePreference === 'system' ? (systemAppearance.matches ? 'dark' : 'light') : themePreference;
     document.body.dataset.theme = currentTheme;
     renderThemeButton();
 }
 
+systemAppearance.addEventListener('change', () => {
+    if (themePreference === 'system') applyTheme('system');
+});
+
+function saveThemePreference(theme) {
+    applyTheme(theme);
+    localStorage.setItem('plcn-theme', themePreference);
+}
+
 function initializeDisplayPreferences() {
     applyUILanguage(localStorage.getItem('plcn-ui-language') || 'zh');
-    applyTheme(localStorage.getItem('plcn-theme') || 'light');
+    applyTheme(localStorage.getItem('plcn-theme'));
 }
 
 function shortPath(path) {

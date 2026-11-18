@@ -1,7 +1,7 @@
 /* Desktop management, the native file picker and application startup. */
 const desktopDialog = document.getElementById('desktop-dialog');
 let desktopPoll = null;
-let desktopView = 'library';
+let desktopView = 'preferences';
 let desktopDataJobId = null;
 let desktopDataPending = false;
 let desktopRenderVersion = 0;
@@ -96,7 +96,10 @@ function syncIdleButtons() {
     });
 }
 
-async function openDesktop(view = 'library') {
+async function openDesktop(view = 'preferences', focusArtworkPath = false) {
+    document.getElementById('artwork-directory-settings').hidden = !focusArtworkPath
+        && Boolean(currentDeviceScan?.directories?.thumbnails)
+        && !document.getElementById('thumbnails_override').value.trim();
     desktopView = view;
     document.getElementById('desktop-message').textContent = '';
     document.querySelectorAll('[data-desktop-view]').forEach(button => {
@@ -126,7 +129,7 @@ async function refreshDesktop() {
     try {
         if (desktopView === 'preferences') {
             document.getElementById('preference-language').value = currentUILanguage;
-            document.getElementById('preference-theme').value = currentTheme;
+            document.querySelectorAll('#preference-theme input').forEach(option => { option.checked = option.value === themePreference; });
             return;
         }
         if (desktopView === 'library') {
@@ -389,7 +392,7 @@ openFilePicker = async function(inputId, directoryMode) {
 };
 
 async function openPathSettings(focusId = 'retroarch_root') {
-    await openDesktop('library');
+    await openDesktop('library', focusId === 'thumbnails_override');
     document.getElementById(focusId).focus();
 }
 

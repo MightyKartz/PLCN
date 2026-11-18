@@ -21,7 +21,7 @@
 
             <div class="utility-group" aria-label="工具" data-i18n-aria-label="工具">
                 <button id="task-center-button" class="btn btn-muted top-toggle task-center-button" type="button" popovertarget="task-popover" title="任务中心" aria-label="任务中心" data-i18n-title="任务中心" data-i18n-aria-label="任务中心"><span class="icon" data-ui-icon="circle-check"></span><span id="task-center-badge" class="task-center-badge" hidden></span></button>
-                <button class="btn btn-muted top-toggle" id="settings-button" type="button" onclick="openDesktop('library')" title="设置" aria-label="设置" data-i18n-title="设置" data-i18n-aria-label="设置"><span class="icon" data-ui-icon="settings"></span></button>
+                <button class="btn btn-muted top-toggle" id="settings-button" type="button" onclick="openDesktop()" title="设置" aria-label="设置" data-i18n-title="设置" data-i18n-aria-label="设置"><span class="icon" data-ui-icon="settings"></span></button>
             </div>
         </header>
 
@@ -232,9 +232,9 @@
     <dialog id="desktop-dialog" aria-labelledby="desktop-title">
         <header><h2 id="desktop-title" data-i18n="设置">设置</h2><button id="desktop-close" class="btn btn-muted" onclick="closeDesktopSettings()" type="button" data-i18n="关闭">关闭</button></header>
         <nav class="desktop-toolbar" aria-label="设置页面" data-i18n-aria-label="设置页面">
+            <button id="settings-preferences-tab" data-desktop-view="preferences" class="btn" onclick="openDesktop('preferences')" data-i18n="偏好设置">偏好设置</button>
             <button id="settings-library-tab" data-desktop-view="library" class="btn" onclick="openDesktop('library')" data-i18n="设备与游戏库">设备与游戏库</button>
             <button data-desktop-view="data" class="btn" onclick="openDesktop('data')" data-i18n="资料来源">资料来源</button>
-            <button id="settings-preferences-tab" data-desktop-view="preferences" class="btn" onclick="openDesktop('preferences')" data-i18n="偏好设置">偏好设置</button>
             <button data-desktop-view="tasks" class="btn" onclick="openDesktop('tasks')" data-i18n="任务与恢复">任务与恢复</button>
         </nav>
         <section id="path-settings" aria-labelledby="settings-library-tab" hidden>
@@ -253,7 +253,7 @@
                         </div>
                         <div class="device-summary" id="device-summary" data-i18n="等待扫描 RetroArch 目录">等待扫描 RetroArch 目录</div>
 
-                        <details class="directory-details">
+                        <details class="directory-details" hidden>
                             <summary data-i18n="目录详情">目录详情</summary>
                             <div class="detected-list">
                                 <div class="detected-row">
@@ -282,7 +282,7 @@
 
                     </section>
 
-                    <div class="form-group">
+                    <div class="form-group" id="artwork-directory-settings" hidden>
                         <label for="thumbnails_override" data-i18n="图片目录（可选覆盖）">图片目录（可选覆盖）</label>
                         <div class="input-group">
                             <input type="text" id="thumbnails_override" data-input-control data-i18n-placeholder="留空使用游戏库自动检测的目录" placeholder="留空使用游戏库自动检测的目录">
@@ -294,8 +294,14 @@
     </section>
         <section id="preference-settings" aria-labelledby="settings-preferences-tab" hidden>
             <div class="form-group"><label for="preference-language" data-i18n="界面语言">界面语言</label><select id="preference-language" onchange="applyUILanguage(this.value);localStorage.setItem('plcn-ui-language',currentUILanguage);openDesktop('preferences')"><option value="zh" lang="zh">简体中文</option><option value="en">English</option></select></div>
-            <div class="form-group"><label for="preference-theme" data-i18n="外观">外观</label><select id="preference-theme" onchange="applyTheme(this.value);localStorage.setItem('plcn-theme',currentTheme)"><option value="light" data-i18n="浅色">浅色</option><option value="dark" data-i18n="深色">深色</option></select></div>
-            <p class="artwork-help" data-i18n="语言与外观偏好会自动保存。">语言与外观偏好会自动保存。</p>
+            <fieldset id="preference-theme">
+                <legend data-i18n="外观">外观</legend>
+                <div class="theme-options">
+                    <label><input type="radio" name="app-theme" value="system" onchange="saveThemePreference(this.value)"><span data-i18n="系统">系统</span></label>
+                    <label><input type="radio" name="app-theme" value="light" onchange="saveThemePreference(this.value)"><span data-i18n="浅色">浅色</span></label>
+                    <label><input type="radio" name="app-theme" value="dark" onchange="saveThemePreference(this.value)"><span data-i18n="深色">深色</span></label>
+                </div>
+            </fieldset>
         </section>
         <p id="desktop-message" role="status"></p><div id="desktop-content"></div><details id="data-source-settings"><summary data-i18n="自定义数据路径">自定义数据路径</summary>
 
