@@ -89,8 +89,7 @@ async function undoCompletion(receiptId) {
         const skipped = summary?.skipped?.length || 0;
         showActionToast({message: skipped
             ? workbenchText(`已撤销部分内容，${skipped} 项在补全后被改动，已保留`, `Partially undone; ${skipped} items changed since completion were kept`)
-            : workbenchText('已撤销', 'Undone'),
-            details: () => openDesktop('tasks')});
+            : workbenchText('已撤销', 'Undone')});
     } catch (error) {
         showActionToast({message: workbenchText('撤销失败：', 'Undo failed: ') + error.message});
     } finally {
@@ -143,11 +142,10 @@ async function runDirectCompletion(scope = null) {
         const included = prepared.filter(change => change.enabled !== false && isActionableChange(change));
         const needsManual = prepared.filter(change => !(change.enabled !== false && isActionableChange(change))
             && needsManualReview(change, options)).length;
-        const openTasks = () => openDesktop('tasks');
         if (!included.length) {
             showActionToast({message: workbenchText('没有可自动补全的内容', 'Nothing can be completed automatically')
                 + (needsManual ? workbenchText(`，${needsManual} 个游戏需手动处理`, `, ${needsManual} games need manual work`) : ''),
-                details: needsManual ? () => previewTask(scope) : openTasks});
+                details: needsManual ? () => previewTask(scope) : null});
             return;
         }
         const applyOptions = {...options};
@@ -167,13 +165,13 @@ async function runDirectCompletion(scope = null) {
         if (result?.memory_warning) message += ' · ' + result.memory_warning;
         if (needsManual) message += workbenchText(`，${needsManual} 个游戏需手动处理`, `, ${needsManual} games need manual work`);
         showActionToast({message, receiptId: result?.receipt_id || '',
-            details: needsManual ? () => previewTask(scope) : openTasks});
+            details: needsManual ? () => previewTask(scope) : null});
     } catch (error) {
         if (error.cancelled) {
             showActionToast({message: workbenchText('已取消，已完成的部分会保留', 'Cancelled; completed work is kept.'),
-                receiptId: error.result?.receipt_id || '', details: () => openDesktop('tasks')});
+                receiptId: error.result?.receipt_id || ''});
         } else {
-            showActionToast({message: error.message, details: () => openDesktop('tasks')});
+            showActionToast({message: error.message});
         }
     } finally {
         workbench.jobId = null;
@@ -238,21 +236,19 @@ function finishBatchRun(outcome, analysis, applyResult, errorMessage = '') {
         ?? (applyResult?.playlists || []).reduce((total, item) => total + (item.applied_count || 0), 0);
     const failedImages = Object.values(applyResult?.download_summary?.types || {})
         .reduce((total, stats) => total + (stats.failed || 0), 0);
-    const openTasks = () => openDesktop('tasks');
     if (outcome === 'cancelled') {
         showActionToast({message: analysis
             ? workbenchText('已取消，已完成的部分会保留。', 'Cancelled; completed work is kept.')
             : workbenchText('已取消，未写入任何内容。', 'Cancelled; nothing was written.'),
-            receiptId: applyResult?.receipt_id || '', details: openTasks});
+            receiptId: applyResult?.receipt_id || ''});
     } else if (outcome === 'failed') {
-        showActionToast({message: errorMessage || workbenchText('处理失败，请查看任务明细。', 'The run failed; see task details.'),
-            details: openTasks});
+        showActionToast({message: errorMessage || workbenchText('补全失败。', 'Completion failed.')});
     } else if (applyResult) {
         let text = workbenchText(`已补全 ${completed} 个游戏`,
             `Completed ${completed} ${completed === 1 ? 'game' : 'games'}`);
         if (failedImages) text += workbenchText(`，${failedImages} 张封面下载失败`, `, ${failedImages} images failed`);
         if (manual) text += workbenchText(`，${manual} 个游戏需手动处理`, `, ${manual} games need manual work`);
-        showActionToast({message: text, receiptId: applyResult.receipt_id || '', details: openTasks});
+        showActionToast({message: text, receiptId: applyResult.receipt_id || ''});
     } else {
         showActionToast({message: workbenchText('没有需要自动补全的内容', 'Nothing needed auto-completion')
             + (manual ? workbenchText(`，${manual} 个游戏需手动处理`, `, ${manual} games need manual work`) : '')});

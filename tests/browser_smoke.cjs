@@ -148,18 +148,11 @@ async function main() {
     assert.equal(await evaluate(()=>document.title),'RetroArch 助手');
     await screenshot('01-home');
     assert.equal(await evaluate(()=>document.querySelector('.workbench-nav, #workbench-task')),null);
-    await waitFor(()=>document.getElementById('task-center-badge').textContent==='1','task badge from active jobs');
-    await click('#task-center-button');
-    await waitFor(()=>document.querySelector('#task-popover-content').textContent.includes('等待取消的测试任务'),'top task entry');
-    assert.equal(await evaluate(()=>document.querySelector('#desktop-dialog').open),false);
-    await screenshot('01-task-popover');
-    await evaluate(()=>refreshTaskPopover());
-    assert.equal(await evaluate(()=>document.querySelector('#task-popover-content').textContent.includes('1 个列表失败')),true);
-    await click('#task-center-button');
+    assert.equal(await evaluate(() => document.querySelector('#task-center-button, #task-popover')), null);
     assert.equal(await evaluate(() => document.querySelector('#usb-debug-help, #home-local-open')), null);
     await click('#workbench-device');
     assert.equal(await evaluate(() => document.querySelectorAll('dialog[open]').length), 1);
-    assert.equal(await evaluate(() => document.querySelectorAll('[data-desktop-view]').length), 3);
+    assert.deepEqual(await evaluate(() => Array.from(document.querySelectorAll('[data-desktop-view]'), button => button.dataset.desktopView)), ['library', 'data']);
     await waitFor(visible, 'general settings', '#preference-settings');
     assert.equal(await evaluate(visible, '#settings-artwork-folder'), false);
     assert.equal(await evaluate(() => document.querySelector('[name="settings-theme"]:checked').value), 'system');
@@ -197,7 +190,7 @@ async function main() {
     await click('[data-desktop-view="data"]');
     await waitFor(() => document.querySelector('#desktop-content h3')?.textContent === '名称数据库', 'name database settings');
     await screenshot('01-name-settings');
-    await click('[data-desktop-view="tasks"]');
+    await evaluate(() => openDesktop('tasks'));
     await waitFor(() => document.querySelector('#desktop-content')?.textContent.includes('本地列表恢复'), 'tasks and restore settings');
     assert.equal(await evaluate(() => document.querySelector('#desktop-content').textContent.includes('本次运行的任务')), true);
     assert.equal(await evaluate(() => document.querySelector('.bottom-dock, #details-drawer')), null);
@@ -518,20 +511,13 @@ async function main() {
     await evaluate(() => { runAllSystemsCompletion(); });
     await waitFor(() => document.querySelector('#action-toast-text').textContent.startsWith('已补全'), 'completed all-systems toast');
     assert.equal(await evaluate(visible, '#action-toast-undo'), true);
-    assert.equal(await evaluate(visible, '#action-toast-details'), true);
+    assert.equal(await evaluate(visible, '#action-toast-details'), false);
     await screenshot('02-all-systems-done');
     await waitFor(() => !workbench.operation, 'run finished before undo');
     await click('#action-toast-undo');
     await waitFor(() => document.querySelector('#action-toast-text').textContent.startsWith('已撤销'), 'all-systems undo applied');
     await waitFor(() => !workbench.operation, 'undo finished');
     assert.deepEqual(playlistFiles(), beforeRun);
-    await click('#action-toast-details');
-    await waitFor(() => document.querySelector('#desktop-dialog').open
-        && document.querySelector('#desktop-content').textContent.includes('最近补全'), 'details opens task center with recent completions');
-    await evaluate(() => [...document.querySelectorAll('#desktop-content h3')]
-        .find(h => h.textContent === '最近补全')?.scrollIntoView({block: 'center'}));
-    await screenshot('02-tasks-recent-completions');
-    await click('#desktop-close');
     await evaluate(()=>toggleTheme());
     await evaluate(()=>toggleUILanguage());
     await evaluate(() => { runAllSystemsCompletion(); });
@@ -785,7 +771,7 @@ async function main() {
     await click('.playlist-system-tab[aria-label="Sega - Saturn"]');
     await waitFor(()=>gameLibrary.data?.items.length===2,'two launch entries after grouping');
     assert.equal(await evaluate(()=>gameLibrary.data.items[0].game_id),originalGameId);
-    await click('#workbench-device');await click('[data-desktop-view="tasks"]');
+    await click('#workbench-device');await evaluate(() => openDesktop('tasks'));
     await waitFor(()=>document.querySelector('[data-m3u-operation] button'),'durable M3U history');
     await click('[data-m3u-operation] button');
     await click('.desktop-confirm button:last-of-type');
@@ -838,11 +824,11 @@ async function main() {
     await click('#storage-entry');await click('#storage-analyze');
     await waitFor(()=>!storageTask.busy&&!document.querySelector('#storage-analysis').hidden,'dark CHD analysis');
     await screenshot('09-chd-analysis-dark');await click('#storage-close');
-    if(canConvert){await click('#workbench-device');await click('[data-desktop-view="tasks"]');await waitFor(()=>document.querySelector('[data-chd-operation]'),'CHD durable task history');await screenshot('09-chd-tasks');await click('#desktop-close');}
+    if(canConvert){await click('#workbench-device');await evaluate(() => openDesktop('tasks'));await waitFor(()=>document.querySelector('[data-chd-operation]'),'CHD durable task history');await screenshot('09-chd-tasks');await click('#desktop-close');}
 
     if(canConvert){
         const originalM3u=fs.readFileSync(path.join(discRoms,'Game.m3u'));
-        await click('#workbench-device');await click('[data-desktop-view="tasks"]');
+        await click('#workbench-device');await evaluate(() => openDesktop('tasks'));
         await click('[data-chd-operation] button');
         await waitFor(()=>document.querySelector('#deploy-dialog').open,'deployment dialog');
         assert.equal(await evaluate(()=>document.querySelector('#deploy-mode').value),'copy');
@@ -860,7 +846,7 @@ async function main() {
         assert.equal(fs.existsSync(path.join(discRoms,'Game (Disc 1).chd')),true);
         assert.equal(fs.readFileSync(path.join(discRoms,'Game.m3u'),'utf8').includes('Game (Disc 1).chd'),true);
         await screenshot('10-chd-deployed');await click('#deploy-close');
-        await click('#workbench-device');await click('[data-desktop-view="tasks"]');await waitFor(()=>document.querySelector('[data-chd-deployment]'),'deployment receipt displayed');
+        await click('#workbench-device');await evaluate(() => openDesktop('tasks'));await waitFor(()=>document.querySelector('[data-chd-deployment]'),'deployment receipt displayed');
         await click('[data-chd-deployment] button');await click('.desktop-confirm button:last-of-type');
         await waitFor(()=>document.querySelector('[data-chd-deployment] strong').textContent.includes('已恢复'),'deployment restored');
         assert.deepEqual(fs.readFileSync(rawCue),cueBefore);assert.deepEqual(fs.readFileSync(rawTrack),rawBefore);
@@ -910,7 +896,7 @@ async function main() {
     await waitFor(()=>document.querySelector('#rom-storage-source').value.length>0,'source reopened');
     await click('#rom-storage-analyze');await waitFor(()=>!romStorage.busy&&!document.querySelector('#rom-storage-analysis').hidden,'dark directory analysis');
     await evaluate(()=>document.querySelector('#rom-storage-dialog').scrollTop=0);await screenshot('11-rom-layout-dark');await click('#rom-storage-close');
-    await click('#workbench-device');await click('[data-desktop-view="tasks"]');await waitFor(()=>document.querySelector('[data-rom-storage-operation]'),'ZIP durable history');
+    await click('#workbench-device');await evaluate(() => openDesktop('tasks'));await waitFor(()=>document.querySelector('[data-rom-storage-operation]'),'ZIP durable history');
     await screenshot('11-rom-zip-tasks');await click('#desktop-close');
 
     // Stage 4B: move a synthetic CHD-only multi-disc set, then restore both operations.
@@ -957,7 +943,7 @@ async function main() {
     assert.equal(fs.readFileSync(path.join(layoutRoms,'多盘.m3u'),'utf8'),layoutDiscs.map(file=>path.basename(file)).join('\n')+'\n');
     assert.equal(JSON.parse(fs.readFileSync(layoutPlaylist,'utf8')).items[0].path.replaceAll('\\','/'),path.join(layoutRoms,'多盘.m3u').replaceAll('\\','/'));
     await screenshot('12-layout-moved');await click('#relocate-close');
-    await click('#workbench-device');await click('[data-desktop-view="tasks"]');
+    await click('#workbench-device');await evaluate(() => openDesktop('tasks'));
     await waitFor(id=>document.querySelector('[data-rom-relocation="'+id+'"]'),'layout move receipt',moveId);
     if(await evaluate(()=>workbench.operation))await waitFor(()=>!workbench.operation,'background scan finished');
     await evaluate(()=>beginWorkbenchOperation('scan'));

@@ -218,7 +218,6 @@ function renderWorkbench() {
     document.getElementById('workbench-busy-label').textContent = state.busy && workbench.operation !== 'artwork'
         ? workbench.taskMessage || workbenchText('正在处理，请稍候…', 'Working, please wait…') : '';
     document.getElementById('workbench-busy').hidden = !state.busy || workbench.operation === 'artwork';
-    document.getElementById('task-status-button').hidden = !workbench.jobId;
     const completionRunning = workbench.operation === 'apply' && Boolean(batchRunJobId || workbench.jobId);
     document.getElementById('workbench-busy').classList.toggle('completion-running', completionRunning);
     document.getElementById('completion-cancel').hidden = !completionRunning;

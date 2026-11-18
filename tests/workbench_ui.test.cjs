@@ -14,17 +14,6 @@ test('first read blocks until overview returns, later reads preserve interaction
  finish('scan','读取失败');assert.equal(state.error,'读取失败');assert.equal(state.readyRoot,'root');
 });
 
-test('task shortcut shows active counts, a failure dot, and hides unknown status',()=>{
- const {workbenchOverview:state,renderWorkbenchTaskBadge:render,elements}=runtime();
- state.job={status:'failed'};render();
- const badge=elements.get('task-center-badge');
- assert.equal(badge.hidden,false);assert.equal(badge.textContent,'');assert.equal(badge.classList['task-failed'],true);
- state.activeJobs=2;state.job={status:'running'};render();
- assert.equal(badge.textContent,'2');assert.equal(badge.classList['task-failed'],false);
- state.activeJobs=0;state.job={status:'completed'};render();assert.equal(badge.hidden,true);
- state.taskError=true;render();assert.equal(badge.hidden,true);assert.match(elements.get('task-center-button').title,/暂不可用/);
-});
-
 test('Chinese display-name counts follow the selected storage scope',()=>{
  const {workbenchGroups}=runtime();
  const data={playlists:[{system:'GBA',locations:{internal:{count:2,missing:0,non_chinese_names:1,covers:[]},card:{count:3,missing:1,non_chinese_names:2,covers:[]}}}]};

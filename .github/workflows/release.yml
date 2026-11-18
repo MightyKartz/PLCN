@@ -36,7 +36,7 @@ jobs:
             Open your handheld, SD card or local library. Scan new games to preview incremental
             playlist additions, complete names and artwork for existing lists, or add directories
             manually. Tools include disc lists, CHD conversion, ROM organization and recovery.
-            Task details, retry and cancellation are available from the top-right task icon.
+            Cancel completion from its progress banner and undo from its result notification.
 
             Uses the retroarch-assistant CLI, RETROARCH_ASSISTANT_HOME and RetroArchAssistant data directories.
             Existing users must run the explicit one-time migration described in DOC/MIGRATION.md.

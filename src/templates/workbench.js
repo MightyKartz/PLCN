@@ -1,5 +1,5 @@
 /* Real-data library workbench. Artwork and job state are read-only projections. */
-const workbenchOverview = {key: '', data: null, error: '', scope: 'all', loading: false, job: null, receipt: '', activeJobs: 0, taskError: false};
+const workbenchOverview = {key: '', data: null, error: '', scope: 'all', loading: false, receipt: ''};
 const libraryRead = {owner:'', stage:'', root:'', readyRoot:'', blocking:false, error:'', retry:'', focus:null};
 function beginLibraryRead(owner, stage, root = '', blocking = libraryRead.readyRoot !== root) {
     Object.assign(libraryRead, {owner, stage, root, blocking, error:'', retry:owner});
@@ -171,7 +171,6 @@ function renderWorkbenchChrome(state) {
     }
     document.getElementById('workbench-device').setAttribute('aria-label',workbenchText('设备详情','Device details'));
     document.getElementById('workbench-device').title=workbenchText('查看设备详情与切换游戏库','Device details and switch library');
-    renderWorkbenchTaskBadge();
     document.getElementById('workbench-device').textContent=!currentDeviceScan?.connected ? workbenchText('设备与游戏库','Device & library') : currentDeviceScan.transport==='local' ? workbenchText('本地游戏库','Local library') : workbenchText('当前掌机','Handheld');
     const connection=document.getElementById('workbench-connection');connection.textContent=currentDeviceScan?.connected ? workbenchText('已连接','Connected') : workbenchText('未连接','Disconnected');connection.classList.toggle('connected',Boolean(currentDeviceScan?.connected));
     const hasDevicePaths=workbenchOverview.data?.playlists.some(p=>p.locations.internal||p.locations.card);
@@ -193,26 +192,17 @@ function renderWorkbenchChrome(state) {
         });
     }
 }
-function renderWorkbenchTaskBadge() {
-    const job=workbenchOverview.job;
-    const failed=job?.status==='failed'||job?.partial;
-    const count=workbenchOverview.activeJobs;
-    const button=document.getElementById('task-center-button'),badge=document.getElementById('task-center-badge');
-    badge.hidden=workbenchOverview.taskError||(!count&&!failed);badge.textContent=count?String(count):'';badge.classList.toggle('task-failed',!count&&Boolean(failed));
-    const label=workbenchOverview.taskError?workbenchText('任务状态暂不可用，点击查看详情','Task status unavailable; open details'):count?workbenchText(`任务中心：${count} 个任务进行中`,`Task center: ${count} active tasks`):failed?workbenchText('任务中心：最近任务需要处理','Task center: latest task needs attention'):workbenchText('任务中心','Task center');
-    button.title=label;button.setAttribute('aria-label',label);
-}
 async function pollWorkbenchTask() {
     try {
         const data=await desktopRequest('/api/jobs/status');const job=data.job;
-        workbenchOverview.job=job||null;workbenchOverview.activeJobs=data.active_count;workbenchOverview.taskError=false;
         if(job&&!['pending','running'].includes(job.status)){
             const receipt=job.id+job.status;
             if(workbenchOverview.receipt!==receipt){const previous=workbenchOverview.receipt;workbenchOverview.receipt=receipt;if(previous&&!libraryRead.owner&&!libraryRead.error)refreshWorkbenchOverview();}
         }
-    }catch(error){workbenchOverview.taskError=true;}
-    renderWorkbenchTaskBadge();
-    setTimeout(pollWorkbenchTask,3000);
+    } catch (error) {
+        console.warn('Could not refresh task status:', error);
+    }
+    setTimeout(pollWorkbenchTask, 3000);
 }
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('[data-ui-icon]').forEach(el=>el.replaceWith(wbIcon(el.dataset.uiIcon)));pollWorkbenchTask();});
 
@@ -276,7 +266,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     document.getElementById('auto-scan-dialog').addEventListener('cancel',event=>{if(autoScanState.busy)event.preventDefault();else ++autoScanState.generation;});
     document.getElementById('library-read-dialog').addEventListener('cancel',event=>{event.preventDefault();if(!libraryRead.owner)leaveLibraryRead();});
 });
-if (typeof module !== 'undefined') module.exports = {workbenchGroups,wbStorageKind,workbenchOverview,loadWorkbenchOverview,libraryRead,beginLibraryRead,finishLibraryRead,renderWorkbenchTaskBadge};
+if (typeof module !== 'undefined') module.exports = {workbenchGroups,wbStorageKind,workbenchOverview,loadWorkbenchOverview,libraryRead,beginLibraryRead,finishLibraryRead};
 
 async function cancelAutoScan(){
     if(!autoScanState.job)return;

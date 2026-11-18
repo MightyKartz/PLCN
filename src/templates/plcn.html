@@ -20,12 +20,11 @@
             <div class="top-spacer"></div>
 
             <div class="utility-group" aria-label="工具" data-i18n-aria-label="工具">
-                <button id="task-center-button" class="btn btn-muted top-toggle task-center-button" type="button" popovertarget="task-popover" title="任务中心" aria-label="任务中心" data-i18n-title="任务中心" data-i18n-aria-label="任务中心"><span class="icon" data-ui-icon="circle-check"></span><span id="task-center-badge" class="task-center-badge" hidden></span></button>
                 <button class="btn btn-muted top-toggle" id="settings-button" type="button" onclick="openDesktop('library')" title="设置" aria-label="设置" data-i18n-title="设置" data-i18n-aria-label="设置"><span class="icon" data-ui-icon="settings"></span></button>
             </div>
         </header>
 
-        <p id="workbench-busy" class="workbench-busy legacy-busy" role="status" aria-live="polite"><span id="workbench-busy-label"></span><button id="completion-cancel" class="btn btn-small btn-text" type="button" onclick="cancelCompletion()" hidden data-i18n="取消">取消</button><button id="task-status-button" class="btn btn-small btn-muted" type="button" onclick="openDesktop('tasks')" hidden data-i18n="查看任务">查看任务</button></p>
+        <p id="workbench-busy" class="workbench-busy legacy-busy" role="status" aria-live="polite"><span id="workbench-busy-label"></span><button id="completion-cancel" class="btn btn-small btn-text" type="button" onclick="cancelCompletion()" hidden data-i18n="取消">取消</button></p>
         <main class="workspace">
             <aside class="sidebar">
                 <div class="sidebar-scroll">            <div class="brand">
@@ -220,17 +219,11 @@
     <input id="playlist_path" type="hidden">
     <input id="system_name" type="hidden">
 
-    <section id="task-popover" popover="auto" aria-labelledby="task-popover-title">
-        <header><h2 id="task-popover-title" data-i18n="任务中心">任务中心</h2><button class="btn btn-text" type="button" popovertarget="task-popover" popovertargetaction="hide" data-i18n="关闭">关闭</button></header>
-        <div id="task-popover-content" aria-live="polite"></div>
-        <footer><button id="task-popover-details" class="btn btn-muted" type="button" onclick="document.getElementById('task-popover').hidePopover();openDesktop('tasks')" data-i18n="任务与恢复">任务与恢复</button></footer>
-    </section>
     <dialog id="desktop-dialog" aria-labelledby="desktop-title">
         <header><h2 id="desktop-title" data-i18n="设置">设置</h2><button id="desktop-close" class="btn btn-muted" onclick="closeDesktopSettings()" type="button" data-i18n="关闭">关闭</button></header>
         <nav class="desktop-toolbar" aria-label="设置页面" data-i18n-aria-label="设置页面">
             <button id="settings-library-tab" data-desktop-view="library" class="btn" onclick="openDesktop('library')" data-i18n="常规">常规</button>
             <button data-desktop-view="data" class="btn" onclick="openDesktop('data')" data-i18n="资料来源">资料来源</button>
-            <button data-desktop-view="tasks" class="btn" onclick="openDesktop('tasks')" data-i18n="任务与恢复">任务与恢复</button>
         </nav>
         <section id="path-settings" aria-labelledby="settings-library-tab" hidden>
             <section id="preference-settings" class="settings-preferences">
