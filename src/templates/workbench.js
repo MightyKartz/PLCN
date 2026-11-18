@@ -113,6 +113,89 @@ function refreshWorkbenchOverview() {
     workbenchOverview.key = '';
     renderWorkbench();
 }
+// Reuse decoded images when the surrounding overview is redrawn for the same library read.
+const overviewFans = new WeakMap();
+
+function renderPlatformFan(group, data) {
+    const candidates = new Map();
+    for (const cover of group.covers) {
+        const path = cover.url.split('&v=')[0];
+        if (!candidates.has(path)) candidates.set(path, cover);
+        if (candidates.size === 5) break;
+    }
+    const covers = [...candidates.values()];
+    const key = JSON.stringify([group.system, covers.map(cover => cover.url)]);
+    if (data && !overviewFans.has(data)) overviewFans.set(data, new Map());
+    const cache = data && overviewFans.get(data);
+    if (cache?.has(key)) return cache.get(key);
+
+    const art = wbElement('div', 'platform-art');
+    art.setAttribute('aria-hidden', 'true');
+    const fan = wbElement('div', 'platform-fan');
+    art.append(fan);
+    cache?.set(key, art);
+
+    const preferredRatio = wbCoverFrameRatio(group.system);
+    const height = Math.min(160, 146 / Math.sqrt(preferredRatio));
+    function showCovers(selected) {
+        const arranged = selected.length === 1 ? [null, selected[0], null] : [selected[0], selected[1], selected[2]];
+        const widths = arranged.map(cover => height * (cover?.ratio ?? preferredRatio));
+        const [left, center, right] = widths;
+        const offsets = [
+            -(left + center) / 2 + Math.min(left, center) * 0.2,
+            0,
+            (right + center) / 2 - Math.min(right, center) * 0.2,
+        ];
+        const width = 2 * (Math.max(...widths.map((value, index) => Math.abs(offsets[index]) + value / 2)) + 20);
+        const fanHeight = height + 30;
+        fan.style.setProperty('--fan-width', width + 'px');
+        fan.style.setProperty('--fan-ratio', width / fanHeight);
+        fan.style.setProperty('--cover-height', height / fanHeight * 100 + '%');
+        fan.replaceChildren(...arranged.map((cover, index) => {
+            const slot = wbElement('span', 'platform-cover');
+            slot.style.setProperty('--cover-width', widths[index] / width * 100 + '%');
+            slot.style.setProperty('--cover-center', (0.5 + offsets[index] / width) * 100 + '%');
+            if (cover) {
+                slot.title = cover.label;
+                slot.append(cover.image);
+            } else {
+                slot.classList.add('is-empty');
+            }
+            return slot;
+        }));
+    }
+
+    showCovers([]);
+    if (covers.length) {
+        const images = covers.map((cover, index) => new Promise(resolve => {
+            const image = document.createElement('img');
+            image.alt = '';
+            image.loading = 'lazy';
+            image.className = 'platform-cover-probe';
+            image.onload = () => {
+                image.remove();
+                image.classList.remove('platform-cover-probe');
+                resolve({label: cover.label, image, ratio: image.naturalWidth / image.naturalHeight, index});
+            };
+            image.onerror = () => {
+                image.remove();
+                resolve(null);
+            };
+            image.src = cover.url;
+            art.append(image);
+        }));
+        Promise.all(images).then(loaded => {
+            const distance = cover => Math.abs(Math.log(cover.ratio / preferredRatio));
+            const chosen = loaded.filter(Boolean)
+                .sort((a, b) => distance(a) - distance(b))
+                .slice(0, 3)
+                .sort((a, b) => a.index - b.index);
+            showCovers(chosen);
+        });
+    }
+    return art;
+}
+
 function renderWorkbenchOverview(visible) {
     const panel = document.getElementById('library-overview'); panel.hidden = !visible;
     if (!visible) return;
@@ -167,29 +250,7 @@ function renderWorkbenchOverview(visible) {
         const arrow = wbElement('span', 'overview-system-arrow', '›');
         arrow.setAttribute('aria-hidden', 'true');
         heading.append(badge, details, arrow);
-        const art = wbElement('div', 'platform-art');
-        art.setAttribute('aria-hidden', 'true');
-        for (let index = 0; index < 3; index++) {
-            const slot = wbElement('span', 'platform-cover');
-            const cover = group.covers[index];
-            if (cover) {
-                const image = document.createElement('img');
-                image.alt = '';
-                image.loading = 'lazy';
-                slot.title = cover.label;
-                image.onerror = () => {
-                    image.remove();
-                    slot.removeAttribute('title');
-                    slot.classList.add('is-empty');
-                };
-                image.src = cover.url;
-                slot.append(image);
-            } else {
-                slot.classList.add('is-empty');
-            }
-            art.append(slot);
-        }
-        card.append(heading, art);
+        card.append(heading, renderPlatformFan(group, actual));
         card.onclick = () => browseLibrarySystem(group.system);
         grid.append(card);
     }

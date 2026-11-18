@@ -212,7 +212,7 @@ async function main() {
     assert.match(await evaluate(()=>document.querySelector('.overview-status-text').textContent),/^\d+ 个游戏缺少封面 · 1 个游戏尚未使用中文名$/);
     assert.equal(await evaluate(()=>document.querySelector('#overview-complete-button').textContent),'一键补全');
     assert.deepEqual(await evaluate(()=>Array.from(document.querySelectorAll('.platform-heading strong'),el=>el.textContent).sort()),['Game Boy Advance','超级任天堂']);
-    assert.equal(await evaluate(()=>Array.from(document.querySelectorAll('.platform-art')).every(art=>art.children.length===3)),true);
+    assert.equal(await evaluate(()=>Array.from(document.querySelectorAll('.platform-fan')).every(fan=>fan.children.length===3)),true);
     await click('#library-all-systems');
 
     const rectOf = sel => evaluate(s => {
@@ -278,43 +278,68 @@ async function main() {
     assert.equal(await evaluate(() => document.querySelector('#preview-button').disabled), false);
     assert.equal(await evaluate(visible, '#game-library'), false);
     assert.equal(await evaluate(() => document.querySelector('#workspace-title').textContent), '游戏库');
-    const slots = await evaluate(async () => {
-        const playlist = workbenchOverview.data.playlists[0];
-        const {covers} = playlist.locations.local;
-        const canvas = document.createElement('canvas');
-        canvas.width = 32;
-        canvas.height = 16;
-        const context = canvas.getContext('2d');
-        context.fillStyle = '#2461a6';
-        context.fillRect(0, 0, 32, 16);
-        covers.push(
-            {url: canvas.toDataURL(), label: 'Landscape cover'},
-            {url: 'data:image/png,broken', label: 'Unreadable cover'},
-        );
-        renderWorkbenchOverview(true);
-        const frames = [...document.querySelector('.platform-art').children];
-        const image = frames[0].querySelector('img');
-        image.loading = 'eager';
-        await image.decode();
-        const broken = frames[1].querySelector('img');
-        if (broken) {
-            broken.loading = 'eager';
-            await new Promise(resolve => broken.addEventListener('error', resolve, {once:true}));
-        }
-        const result = {
-            title: frames[0].title,
-            fit: getComputedStyle(image).objectFit,
-            sizes: frames.map(frame=>[frame.offsetWidth,frame.offsetHeight]),
-            empty: frames.map(frame=>frame.classList.contains('is-empty')),
+    const gbaCard = '.overview-system-card[data-system="Nintendo - Game Boy Advance"]';
+    const originalCovers = await evaluate(() => {
+        const {covers} = workbenchOverview.data.playlists
+            .find(playlist => playlist.system === 'Nintendo - Game Boy Advance').locations.local;
+        const makeCover = (width, height, color, label) => {
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const context = canvas.getContext('2d');
+            context.fillStyle = color;
+            context.fillRect(0, 0, width, height);
+            return {url: canvas.toDataURL(), label};
         };
-        covers.splice(-2);
-        renderWorkbenchOverview(true);
-        return result;
+        return covers.splice(0, covers.length,
+            makeCover(48, 30, '#2461a6', 'First landscape'),
+            makeCover(30, 48, '#b7562a', 'Portrait outlier'),
+            {url: 'data:image/png,broken', label: 'Unreadable cover'},
+            makeCover(48, 30, '#749268', 'Middle landscape'),
+            makeCover(48, 30, '#c79a45', 'Last landscape'),
+        );
     });
-    assert.equal(slots.title, 'Landscape cover');
-    assert.equal(slots.fit, 'contain');
-    assert.deepEqual(slots.empty, [false,true,true]);
-    assert.ok(slots.sizes.every(([w,h])=>Math.abs(w-slots.sizes[0][0])<=1 && Math.abs(h-slots.sizes[0][1])<=1));
+    await evaluate(()=>renderWorkbenchOverview(true));
+    await waitFor(selector=>document.querySelectorAll(selector+' .platform-fan img').length===3,
+        'three landscape covers selected from five candidates', gbaCard);
+    const fan = await evaluate(selector => {
+        const card = document.querySelector(selector);
+        const art = card.querySelector('.platform-art');
+        renderWorkbenchOverview(true);
+        const currentArt = document.querySelector(selector +' .platform-art');
+        const covers = [...currentArt.querySelectorAll('.platform-cover')];
+        return {
+            titles: covers.map(slot=>slot.title),
+            ratios: covers.map(slot=>slot.offsetWidth / slot.offsetHeight),
+            front: getComputedStyle(covers[1]).zIndex,
+            reused: art===currentArt,
+        };
+    }, gbaCard);
+    assert.deepEqual(fan.titles, ['First landscape', 'Middle landscape', 'Last landscape']);
+    assert.ok(fan.ratios.every(ratio=>Math.abs(ratio-1.6)<0.03));
+    assert.equal(fan.front,'1');
+    assert.equal(fan.reused,true);
+
+    await send('Emulation.setDeviceMetricsOverride', {width:390,height:530,deviceScaleFactor:1,mobile:false});
+    await send('Emulation.setEmulatedMedia', {features:[{name:'prefers-reduced-motion',value:'reduce'}]});
+    assert.ok(await evaluate(selector=>{
+        const card = document.querySelector(selector);
+        const bounds = card.getBoundingClientRect();
+        return [...card.querySelectorAll('.platform-cover')].every(slot=>{
+            const rect = slot.getBoundingClientRect();
+            return rect.left>=bounds.left && rect.right<=bounds.right &&
+                getComputedStyle(slot).transitionDuration==='0s';
+        });
+    }, gbaCard));
+    await screenshot('01-cover-fan-narrow');
+    await send('Emulation.setEmulatedMedia', {features:[]});
+    await send('Emulation.setDeviceMetricsOverride', {width:Number(width),height:Number(height),deviceScaleFactor:1,mobile:false});
+    await evaluate(covers => {
+        const location = workbenchOverview.data.playlists
+            .find(playlist => playlist.system === 'Nintendo - Game Boy Advance').locations.local;
+        location.covers = covers;
+        renderWorkbenchOverview(true);
+    }, originalCovers);
     assert.equal(await evaluate(()=>document.getElementById('manual-scan-button').textContent),'扫描新增游戏');
     await screenshot('01-system-covers');
 
@@ -326,7 +351,7 @@ async function main() {
     }, overviewSearch);
     const filteredCard = '#library-overview .overview-system-card:not([hidden])';
     assert.equal(await evaluate(selector=>document.querySelectorAll(selector).length,filteredCard),1);
-    await send('Emulation.setDeviceMetricsOverride', {width:390,height:470,deviceScaleFactor:1,mobile:false});
+    await send('Emulation.setDeviceMetricsOverride', {width:390,height:400,deviceScaleFactor:1,mobile:false});
     const overviewScrollTop = await evaluate(()=>{
         const panel = document.querySelector('.main-panel');
         panel.scrollTop = 90;

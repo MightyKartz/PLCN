@@ -76,21 +76,38 @@ body[data-theme="dark"] .topbar {background:var(--bg);}
 .workbench-cards .overview-system-details strong {font-size:16px;font-weight:600;overflow-wrap:anywhere;}
 .workbench-cards .overview-system-details>span {color:var(--muted);font-size:12px;}
 .workbench-cards .overview-system-arrow {margin:0 4px 0 auto;color:var(--muted);font-size:19px;line-height:1;}
-.platform-art {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+.platform-art {position:relative;display:grid;place-items:center;height:190px;min-width:0;}
+@media (max-width:560px) {.platform-art {height:auto;min-height:125px;}}
+.platform-fan {position:relative;isolation:isolate;width:min(100%,var(--fan-width));aspect-ratio:var(--fan-ratio);}
 .platform-cover {
-    position:relative;
+    position:absolute;
     display:grid;
     place-items:center;
-    aspect-ratio:4/5;
-    min-width:0;
+    width:var(--cover-width);
+    height:var(--cover-height);
+    left:var(--cover-center);
+    top:54%;
     overflow:hidden;
-    border:1px solid var(--border);
+    transform:translate(calc(-50% + var(--fan-shift,0px)),-50%) rotate(var(--fan-angle,0deg));
+    outline:1px solid var(--border-strong);
     border-radius:5px;
     background:var(--surface-soft);
+    box-shadow:0 3px 8px var(--cover-shadow);
+    --cover-shadow:rgb(0 0 0 / 18%);
 }
+.platform-cover:first-child {--fan-angle:-5deg;}
+.platform-cover:nth-child(2) {top:49%;z-index:1;}
+.platform-cover:last-child {--fan-angle:5deg;}
 .platform-cover img {position:absolute;inset:0;width:100%;height:100%;object-fit:contain;}
 .platform-cover.is-empty::after {content:"";width:12px;border-top:1px solid var(--border-strong);}
-body[data-theme="dark"] .workbench-cards :is(.overview-system-card,.platform-cover) {border-color:var(--border-strong);}
+.platform-cover-probe {position:absolute;inset:0;width:100%;height:100%;opacity:0;pointer-events:none;}
+body[data-theme="dark"] .platform-cover {--cover-shadow:rgb(0 0 0 / 35%);}
+body[data-theme="dark"] .workbench-cards .overview-system-card {border-color:var(--border-strong);}
+@media (hover:hover) and (prefers-reduced-motion:no-preference) {
+    .platform-cover {transition:transform .16s;}
+    .overview-system-card:hover .platform-cover:first-child {--fan-shift:-6px;--fan-angle:-6deg;}
+    .overview-system-card:hover .platform-cover:last-child {--fan-shift:6px;--fan-angle:6deg;}
+}
 body[data-theme="dark"] .workbench-cards .overview-system-card:hover {border-color:var(--quiet);}
 .platform-locations {display:flex;flex-wrap:wrap;gap:5px;}
 .platform-locations span {font-size:10px;padding:3px 6px;background:var(--surface-soft);color:var(--muted);border:1px solid var(--border);border-radius:4px;}

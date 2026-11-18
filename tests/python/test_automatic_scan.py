@@ -93,3 +93,20 @@ def test_overview_counts_display_names_without_chinese_per_storage(monkeypatch):
     assert locations['card']['non_chinese_names'] == 2
     assert locations['internal']['non_chinese_names'] == 1
     assert locations['card']['missing'] == 0
+
+
+def test_cover_candidates_are_bounded_unique_box_art(monkeypatch):
+    monkeypatch.setattr(workbench_library, 'scan_retroarch_target', lambda root: {
+        'playlists': [{'path': 'games.lpl', 'system': 'GBA', 'valid': True}], 'directories': {}})
+    entries = [
+        {'label': title, 'rom_path': '/storage/CARD/' + title, 'image_url': url,
+         'artwork_status': {'Named_Boxarts': state}}
+        for title, url, state in [
+            ('Screenshot only', '/snap', 'missing'), ('Original', '/one', 'exists'),
+            ('Duplicate', '/one', 'exists'),
+            *((str(number), f'/cover{number}', 'exists') for number in range(2, 8)),
+        ]
+    ]
+    monkeypatch.setattr(workbench_library, 'read_playlist', lambda *args: {'items': entries})
+    covers = workbench_library.overview('root')['playlists'][0]['locations']['card']['covers']
+    assert [cover['label'] for cover in covers] == ['Original', '2', '3', '4', '5']
