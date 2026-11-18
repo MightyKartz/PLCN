@@ -2,7 +2,7 @@
 
 [中文](README.md) · [Download](https://github.com/MightyKartz/retroarch-assistant/releases/latest)
 
-A RetroArch game library and handheld management assistant. Scan games, organize playlists, and complete names and artwork in a local browser UI. Launch the desktop package with a double click; Python, Node.js and Xcode are not required.
+A RetroArch game library and handheld management assistant. Scan games, organize playlists, and complete names and artwork in its own desktop window. Double-click the desktop app to launch it. Python, Node.js and Xcode are not required.
 
 The game library now includes a cover grid, a detailed list and a docked game inspector. Select multiple games to complete only their metadata or remove their playlist entries while keeping ROMs, artwork and saves. **Add games** opens an inline source/preview/destination workspace for verified file copies. Display-name edits preserve ROM filenames, core settings and existing artwork. Playlist changes can be restored from Settings → Tasks and recovery.
 
@@ -28,6 +28,8 @@ Download a **Release asset**, not the Source code archive. Public downloads do n
 | Apple Silicon Mac | `RetroArchAssistant-macOS-arm64.dmg` | Drag RetroArch Assistant to Applications, then open |
 | Intel Mac | `RetroArchAssistant-macOS-x64.dmg` | Same as above |
 | Linux x64 CLI | `RetroArchAssistant-Linux-x64.tar.gz` | Extract, run `./retroarch-assistant --help` |
+
+Windows opens the default browser when the [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) is unavailable. Use `--browser` to open the workbench in a browser.
 
 GitHub-built Windows/macOS packages currently have no distribution certificate signature; macOS builds are not notarized. System security may block first launch. Consult [Apple](https://support.apple.com/102445) or [Microsoft](https://support.microsoft.com/en-us/windows/security/threat-malware-protection/smart-app-control-frequently-asked-questions). Corporate policies and Smart App Control can prevent execution; disabling protection is not recommended.
 

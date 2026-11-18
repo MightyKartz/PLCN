@@ -191,11 +191,36 @@ def test_desktop_launcher_restores_streams_after_service_exit(desktop_home, monk
     import desktop
     import sys
     stdout, stderr = sys.stdout, sys.stderr
-    monkeypatch.setattr(sys, 'argv', ['desktop.py'])
+    monkeypatch.setattr(sys, 'argv', ['desktop.py', '--browser'])
     monkeypatch.setattr(server, 'run_server', lambda **kwargs: print('service completed'))
     desktop.main()
     assert sys.stdout is stdout and sys.stderr is stderr
     assert 'service completed' in (desktop_home / 'logs/desktop.log').read_text(encoding='utf-8')
+
+
+@pytest.mark.parametrize(('platform', 'args', 'runtime', 'expected'), [
+    ('darwin', [], True, 'window'),
+    ('win32', [], True, 'window'),
+    ('win32', [], False, 'browser'),
+    ('darwin', ['--browser'], True, 'browser'),
+    ('darwin', ['--no-browser'], True, 'headless'),
+])
+def test_desktop_entry_uses_platform_window_unless_overridden(desktop_home, monkeypatch,
+                                                             platform, args, runtime, expected):
+    import desktop
+    import desktop_window
+    import sys
+
+    launches = []
+    monkeypatch.setattr(sys, 'argv', ['desktop.py', *args])
+    monkeypatch.setattr(desktop.app_paths, 'user_data_dir', lambda: desktop_home)
+    monkeypatch.setattr(sys, 'platform', platform)
+    monkeypatch.setattr(desktop, 'webview2_available', lambda: runtime)
+    monkeypatch.setattr(desktop_window, 'run_window', lambda: launches.append('window'))
+    monkeypatch.setattr(server, 'run_server',
+                        lambda open_browser: launches.append('browser' if open_browser else 'headless'))
+    desktop.main()
+    assert launches == [expected]
 
 
 def test_retry_reports_adb_target_without_creating_local_uri_directory(tmp_path, desktop_home, monkeypatch):

@@ -35,7 +35,8 @@ def service(binary, profile, mode='--no-browser', *, extra_env=None):
     profile.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ, RETROARCH_ASSISTANT_HOME=str(profile))
     env.update(extra_env or {})
-    process = subprocess.Popen([str(binary), mode], cwd=profile, env=env, **process_options())
+    command = [str(binary), mode] if mode else [str(binary)]
+    process = subprocess.Popen(command, cwd=profile, env=env, **process_options())
     client = requests.Session()
     client.trust_env = False
     url = None
@@ -136,7 +137,7 @@ def check_binary(binary, workspace, window_preview=False):
         preview = workspace / 'window profile'
         with ExitStack() as stack:
             adb_env = stack.enter_context(isolated_adb(binary)) if sys.platform == 'win32' else {}
-            stack.enter_context(service(binary, preview, '--window', extra_env=adb_env))
+            stack.enter_context(service(binary, preview, mode=None, extra_env=adb_env))
             log = preview / 'logs' / 'desktop.log'
             deadline = time.monotonic() + 30
             while 'GET /api/jobs/status HTTP/' not in log.read_text(encoding='utf-8'):
@@ -144,7 +145,7 @@ def check_binary(binary, workspace, window_preview=False):
                     raise TimeoutError('The WebView did not start the workbench')
                 time.sleep(.2)
             env = dict(os.environ, RETROARCH_ASSISTANT_HOME=str(preview), **adb_env)
-            run([str(binary), '--window'], cwd=preview, env=env, **process_options())
+            run([str(binary)], cwd=preview, env=env, **process_options())
             activation = '"POST /api/desktop/activate HTTP/1.1" 200'
             assert activation in log.read_text(encoding='utf-8'), 'Second launch did not activate the window'
     assert marker.read_text(encoding='utf-8') == 'Keep settings when uninstalling'
@@ -216,6 +217,7 @@ def check_installer(package, workspace, window_preview=False):
         if uninstaller.exists():
             run([str(uninstaller), *flags, '/LOG=' + str(workspace / 'uninstall.log')], cwd=workspace)
     assert not (destination / (BINARY_NAME + '.exe')).exists(), 'Uninstaller left the executable behind'
+    assert not (destination / '_internal' / 'platform-tools' / 'adb.exe').exists(), 'Uninstaller left bundled ADB behind'
     assert not installer_registration_exists(), 'Uninstaller left its registry entry behind'
     assert marker.read_text(encoding='utf-8') == 'Keep settings when uninstalling', 'Uninstall removed user data'
 

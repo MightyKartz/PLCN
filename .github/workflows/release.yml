@@ -42,7 +42,8 @@ jobs:
             Existing users must run the explicit one-time migration described in DOC/MIGRATION.md.
             Settings, manual rules, backups and recovery records can be migrated; ROM files are not moved.
 
-            Download a matching installer below; no Python, Node.js or Xcode is needed.
+            Double-click the installed app to open its own window. Windows opens your browser if WebView2 is unavailable.
+            Download a matching installer below. Python, Node.js and Xcode are not required.
             Packages include ADB. Android authorization and vendor drivers may still be required.
             Windows/macOS packages are not distribution-signed; macOS is not notarized.
             See README installation notes for system security and device connection details.

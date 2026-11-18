@@ -2,13 +2,13 @@
 
 ## 当前发布方式
 
-PLCN 现在通过 GitHub Actions 自动发布。发布工作流位于 [`.github/workflows/release.yml`](.github/workflows/release.yml)，只在推送 `v*` tag 时触发。
+RetroArch 助手通过 [GitHub Actions](.github/workflows/release.yml) 构建产物。推送 `v*` tag 会生成预发布草稿，调试执行仅构建产物。
 
-不要再手动创建 release 或上传附件。Release 页面、构建产物和附件上传都由 tag 触发的 Actions run 完成。
+Release 草稿和初始附件由 tag 触发的 Actions run 创建。公开发布前核对状态、附件和签名。
 
-## 本 PR 不发布
+## 开发 PR
 
-普通修复 PR 和文档 PR 不应创建、移动或推送 `v*` tag。当前 PLCN core safety PR 的预期也是 **不发布 release**：合并代码和文档即可，等维护者明确决定发布版本时再从 `main` 创建 tag。
+开发 PR 在对应系统上构建并验收，发布时从已验收的 `main` 创建 tag。
 
 ## 发布前准备
 
@@ -16,7 +16,7 @@ PLCN 现在通过 GitHub Actions 自动发布。发布工作流位于 [`.github/
 2. 如果用户可见版本发生变化，更新 UI 中的版本展示。
 3. 更新 `RELEASE_NOTES.md`，保持中文更新在前、英文更新在后。
 4. 更新 `README.md` 和 `README_EN.md` 中的最新版本说明、安装说明或开发状态。
-5. 确认 `RELEASE_NOTES.md` 是本次 release 页面要展示的正文；当前 workflow 会通过 `body_path: RELEASE_NOTES.md` 读取它。
+5. 核对工作流的双语草稿正文，公开前补上本次 `RELEASE_NOTES.md` 中的版本说明。
 
 ## 发布前验证
 
@@ -44,13 +44,11 @@ git push origin vX.Y.Z
 
 推送 tag 后，GitHub Actions 会自动：
 
-- 在 Ubuntu、Windows、macOS 上安装依赖并运行 PyInstaller。
-- 打包 Linux 和 macOS 可执行文件为 `.tar.gz`，Windows 保留 `.exe`。
-- 创建 GitHub Release，并使用 `RELEASE_NOTES.md` 作为 release notes。
-- 上传以下资产：
-  - `PLCN-Linux-x64.tar.gz`
-  - `PLCN-macOS-x64.tar.gz`
-  - `PLCN-Windows-x64.exe`
+- 构建并检查 Windows 安装版和便携版、macOS Apple Silicon 和 Intel DMG，以及 Linux x64 CLI。
+- 在 Windows 安装包上验证默认窗口启动、重复启动和退出。
+- 将 `RetroArchAssistant-Windows-x64-Setup.exe`、`RetroArchAssistant-Windows-x64-Portable.zip`、`RetroArchAssistant-macOS-arm64.dmg`、`RetroArchAssistant-macOS-x64.dmg` 和 `RetroArchAssistant-Linux-x64.tar.gz` 上传至预发布草稿。
+
+工作流生成的 Windows 和 macOS 附件是未做发行签名的预览包。发行签名、公证和真机检查见 [桌面使用指南](DOC/DESKTOP_GUIDE.md#签名与正式发布)。
 
 ## 发布后验证
 
@@ -60,7 +58,7 @@ gh run watch --repo MightyKartz/retroarch-assistant <run-id>
 gh release view vX.Y.Z --repo MightyKartz/retroarch-assistant --json tagName,name,url,assets
 ```
 
-确认 release 页面使用的是当前 `RELEASE_NOTES.md` 正文，并且 Linux、macOS、Windows 三个平台资产都存在后，再对外引用 release 链接。
+确认版本说明、五个附件和签名状态与发布目标相符，再对外提供 Release 链接。
 
 ## GitHub 仓库介绍格式
 

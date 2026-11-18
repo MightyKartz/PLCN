@@ -2,7 +2,7 @@
 
 [English](README_EN.md) · [下载安装包](https://github.com/MightyKartz/retroarch-assistant/releases/latest)
 
-RetroArch 游戏库与掌机管理工具。扫描游戏、整理列表、补全资料，管理你的掌机游戏库。双击启动，在浏览器中管理本地、SD 卡或 USB Android 掌机上的游戏库，无需安装 Python、Node.js 或 Xcode。
+RetroArch 游戏库与掌机管理工具。扫描游戏、整理列表、补全资料，管理你的掌机游戏库。双击打开独立窗口，管理本地、SD 卡或 USB Android 掌机上的游戏库，无需安装 Python、Node.js 或 Xcode。
 
 ## 主要功能
 
@@ -27,6 +27,8 @@ RetroArch 游戏库与掌机管理工具。扫描游戏、整理列表、补全�
 | Mac M 系列 | `RetroArchAssistant-macOS-arm64.dmg` | 打开，拖入“应用程序”，启动 RetroArch 助手 |
 | Mac Intel | `RetroArchAssistant-macOS-x64.dmg` | 同上 |
 | Linux x64（命令行） | `RetroArchAssistant-Linux-x64.tar.gz` | 解压，运行 `./retroarch-assistant --help` |
+
+桌面包默认打开独立窗口。Windows 未安装 [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) 时使用默认浏览器，也可通过 `--browser` 主动打开浏览器版。
 
 **当前 GitHub 自动构建的 macOS / Windows 包未做发行证书签名，macOS 未公证。** 首次打开可能被系统拦截；请先核对下载来源，再按 [Apple 官方说明](https://support.apple.com/102445) 或 [Windows 安全说明](https://support.microsoft.com/en-us/windows/security/threat-malware-protection/smart-app-control-frequently-asked-questions)处理。企业策略或 Smart App Control 可能阻止运行，不建议关闭系统防护。
 

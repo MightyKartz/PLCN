@@ -10,7 +10,7 @@ Windows：安装 `RetroArchAssistant-Windows-x64-Setup.exe` 后，从开始菜�
 
 macOS：选择对应架构的 `RetroArchAssistant-macOS-arm64.dmg`（Apple Silicon）或 `RetroArchAssistant-macOS-x64.dmg`（Intel），将 `RetroArch Assistant.app` 拖到 Applications。当前 CI 产物为未签名/未公证预览，不能作为正式分发就绪的声明；发布者应完成下方签名验收。
 
-打开后出现浏览器工作台，关闭标签不停止服务。再次启动会打开已有服务，不创建第二个实例。需要停止时用“设置 → 退出 RetroArch 助手”，有运行任务时会提示先等待或取消。
+双击启动后打开独立窗口。再次启动会唤回已有窗口。关闭窗口或选择“设置 → 退出 RetroArch 助手”会停止本地服务，活动任务会阻止退出。
 
 1. 在首页选择已连接掌机的游戏库，或“手动指定设备目录”后扫描。首页不探测电脑本地目录或本地最近记录。macOS 连接 Android 掌机时选择 USB“文件传输”并保持解锁即可，无须 USB 调试；请关闭其它正在占用设备的文件传输程序。“设置 → 游戏库”只保留“游戏库目录”和“图片目录（可选覆盖）”，列表和系统名称由左侧选择决定。图片目录留空时自动检测；库中没有图片目录时按 `<游戏库>/thumbnails` 处理，设置中会标注“尚不存在，首次补图时自动创建”；手动覆盖适用于当前库的所有主机，切换主机、刷新并重开当前库后保留，打开其他库时清除。扫描完成后默认选中左侧列表顶部的“全部主机”；在左侧选择主机或具体列表，右侧立即显示当前名称、ROM 文件名和已有图片；浏览不执行名称匹配或写回。
 2. 选中主机后点击标题栏“一键补全”直接预览名称与图片，入口旁提示：“自动匹配中文名与图片，预览后确认应用。”预览顶部的“修改名称”“补全图片”默认都勾选；取消其一即仅改名或仅补图，至少保留一项。选项变化会重新分析，旧的行内编辑和勾选清除。仅补图按原 label 保存图片，本地、ADB 与 macOS MTP 都不改写 `.lpl`。
@@ -37,23 +37,23 @@ macOS：选择对应架构的 `RetroArchAssistant-macOS-arm64.dmg`（Apple Silic
 
 图片按当前列表名称保存，预览后列表或目标图片发生变化会拒绝写入，需要重新预览。两个条目共用同一图片文件名时，不允许通过单游戏操作覆盖共享图片。图片备份暂需手动恢复。
 
-系统文件选择器运行于独立 helper 的主线程；不可用时自动回退内置文件浏览。原生选择器的真实桌面交互仍在人工验收清单中。
+独立窗口直接打开系统文件选择器，浏览器模式通过独立进程打开。系统选择器不可用时回退到工作台内置浏览。
 
-## 独立窗口预览
+## 浏览器模式与开发入口
 
-预览构建可通过 `--window` 打开独立窗口。macOS 使用系统 WKWebView，Windows 使用 WebView2 Runtime。通过正常入口启动的浏览器实例需先从应用设置中退出。独立窗口沿用现有用户数据目录，语言和外观跟随各自的 WebView 或浏览器。
+macOS 使用系统 WKWebView，Windows 使用 WebView2 Runtime。Windows 缺少运行时会使用默认浏览器。浏览器模式下，关闭标签后本地服务继续运行，可从应用设置退出。切换模式前先退出原有实例。两种模式沿用同一用户数据目录，语言和外观由各自的浏览器或 WebView 保存。
 
 ```sh
-# macOS 安装版
-open -a "RetroArch Assistant" --args --window
-# Windows 便携版，在解压目录中运行
-.\RetroArchAssistant.exe --window
-# 源码
+# macOS 浏览器模式
+open -a "RetroArch Assistant" --args --browser
+# Windows 便携版浏览器模式
+.\RetroArchAssistant.exe --browser
+# 从源码打开独立窗口
 python -m pip install -r requirements-desktop.txt
-python src/desktop.py --window
+python src/desktop.py
 ```
 
-窗口关闭和设置里的退出操作均受任务状态约束。仍有任务时，可以在任务中心等待结果或请求取消。
+`--window` 可显式要求独立窗口，`--no-browser` 可只启动服务。现有 CLI 的 `ui` 命令仍打开浏览器。
 
 ## 数据库更新
 
