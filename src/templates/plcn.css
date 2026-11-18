@@ -41,8 +41,8 @@ body[data-theme="dark"] {
     --surface: #171A21;
     --surface-soft: #13161C;
     --surface-tint: #1B2333;
-    --border: #262A33;
-    --border-strong: #353A45;
+    --border: #464B56;
+    --border-strong: #636B79;
     --text: #F3F4F6;
     --muted: #9CA3AF;
     --quiet: #6B7280;
@@ -2730,6 +2730,10 @@ body[data-theme="dark"] .desktop-welcome p {
 .home-section-heading .btn {
     min-height: 32px;
     padding: 6px 12px;
+}
+
+body[data-theme="dark"] #scan-default-btn {
+    border-color: var(--border-strong);
 }
 
 .home-source {
