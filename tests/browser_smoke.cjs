@@ -12,6 +12,8 @@ let sequence = 0;
 let holdOverview = false;
 let holdSources = true;
 let heldSources = null;
+let holdRecent = false;
+let heldRecent = null;
 let heldOverview = null;
 let expectedOverviewFailure = false;
 
@@ -45,6 +47,11 @@ socket.addEventListener('message', event => {
         const {url, status} = message.params.response;
         if (url.startsWith(baseUrl + '/') && status >= 400 && !(expectedOverviewFailure && url.includes('/api/library/overview') && status === 503)) errors.push(`HTTP ${status}: ${url}`);
     } else if (message.method === 'Fetch.requestPaused') {
+        if (message.params.request.url.includes('/api/library/recent')) {
+            if (holdRecent) heldRecent = message.params.requestId;
+            else send('Fetch.continueRequest', {requestId:message.params.requestId}).catch(error=>errors.push(error.message));
+            return;
+        }
         if (message.params.request.url.includes('/api/library/sources')) {
             if (holdSources) heldSources = message.params.requestId;
             else send('Fetch.continueRequest', {requestId:message.params.requestId}).catch(error=>errors.push(error.message));
@@ -142,7 +149,7 @@ async function main() {
     await send('Runtime.enable');
     await send('Page.enable');
     await send('Network.enable');
-    await send('Fetch.enable', {patterns: [{urlPattern: 'https://thumbnails.libretro.com/*'}, {urlPattern: '*api/library/overview*'}, {urlPattern: '*api/library/sources*'}]});
+    await send('Fetch.enable', {patterns: [{urlPattern: 'https://thumbnails.libretro.com/*'}, {urlPattern: '*api/library/overview*'}, {urlPattern: '*api/library/sources*'}, {urlPattern: '*api/library/recent*'}]});
     await send('Emulation.setDeviceMetricsOverride', {width: Number(width), height: Number(height), deviceScaleFactor: 1, mobile: false});
     await send('Page.navigate', {url: baseUrl});
     await waitFor(() => document.readyState === 'complete' && !document.querySelector('#library-onboarding').hidden && !document.querySelector('#library-read-dialog').open, 'home is visible while device discovery is pending');
@@ -937,7 +944,16 @@ async function main() {
     assert.equal(JSON.parse(fs.readFileSync(discPath,'utf8')).items.length,2);
     assert.equal(fs.readFileSync(path.join(discRoms,m3uName),'utf8'),'GulliverBoy Disc2.chd\nGulliverBoy Disc1.chd\n');
     await screenshot('08-m3u-applied');
+    holdRecent = true;
     await click('#m3u-close');
+    for(let attempt=0;!heldRecent&&attempt<150;attempt++)await delay(100);
+    assert.ok(heldRecent, 'scan is waiting to save the opened library');
+    assert.equal(await evaluate(() => workbench.operation), 'scan');
+    assert.equal(await evaluate(() => [...document.querySelectorAll('#scanned-playlists button')].every(button => button.disabled)), true,
+        'Rebuilt navigation stays disabled until the scan finishes');
+    holdRecent = false;
+    await send('Fetch.continueRequest', {requestId:heldRecent});
+    heldRecent = null;
     await waitFor(()=>!document.querySelector('#m3u-dialog').open && !document.querySelector('#disc-inspection-dialog').open && !document.querySelector('#library-all-systems').disabled,'library refreshed after M3U');
     await click('.playlist-system-tab[aria-label="Sega - Saturn"]');
     await waitFor(()=>gameLibrary.data?.items.length===2,'two launch entries after grouping');

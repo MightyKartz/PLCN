@@ -228,6 +228,7 @@ function renderLibrarySystemTabs(container, groups) {
 
     const allButton = document.createElement('button');
     allButton.type = 'button';
+    allButton.disabled = Boolean(workbench.operation);
     allButton.id = 'library-all-systems';
     allButton.className = `playlist-system-tab${selectedLibrarySystem === '' ? ' active' : ''}`;
     const allIcon = wbIcon('layout-grid');
@@ -245,6 +246,7 @@ function renderLibrarySystemTabs(container, groups) {
     groups.forEach((items, groupName) => {
         const tabButton = document.createElement('button');
         tabButton.type = 'button';
+        tabButton.disabled = Boolean(workbench.operation);
         tabButton.className = `playlist-system-tab${groupName === selectedLibrarySystem ? ' active' : ''}`;
         const group = document.createElement('div');
         group.className = 'library-system-group';
