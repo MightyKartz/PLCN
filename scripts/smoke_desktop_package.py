@@ -140,7 +140,7 @@ def check_binary(binary, workspace, window_preview=False):
             stack.enter_context(service(binary, preview, mode=None, extra_env=adb_env))
             log = preview / 'logs' / 'desktop.log'
             deadline = time.monotonic() + 30
-            while 'GET /api/jobs/status HTTP/' not in log.read_text(encoding='utf-8'):
+            while 'GET /api/library/sources HTTP/' not in log.read_text(encoding='utf-8'):
                 if time.monotonic() >= deadline:
                     raise TimeoutError('The WebView did not start the workbench')
                 time.sleep(.2)
