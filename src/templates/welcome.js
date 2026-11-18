@@ -30,6 +30,9 @@ function renderLibraryHome() {
     refresh.setAttribute('aria-label', refresh.title);
     refresh.disabled = busy || libraryHome.loading;
     panel.setAttribute('aria-busy', String(libraryHome.loading || Boolean(libraryHome.opening)));
+    const manualFolder = document.getElementById('home-library-folder');
+    manualFolder.hidden = libraryHome.loading || Boolean(libraryHome.data?.sources.some(source => source.status === 'ready'));
+    manualFolder.disabled = busy;
     const message = document.getElementById('home-message');
     message.textContent = libraryHome.openError || libraryHome.error;
     message.hidden = !message.textContent;

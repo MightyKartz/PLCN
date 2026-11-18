@@ -9,6 +9,7 @@ const UI_EN = {
     '列表修改记录': 'Playlist history',
     '操作记录': 'History',
     '系统': 'System',
+    '选择本地游戏库': 'Choose local library',
     '扫描掌机游戏': 'Scan handheld games',
     '请先在掌机核对存储和启动目录': 'Check the storage and launch folder on your handheld first',
     '本地目录无需配置掌机启动路径': 'Local folders do not need a handheld launch path',

@@ -5,7 +5,7 @@ const vm = require('node:vm');
 const source = fs.readFileSync('src/templates/welcome.js', 'utf8');
 function harness(fetch = async()=>({ok:true,json:async()=>({sources:[],recent:[]})})) {
     const root = {value:''};
-    const context = {fetch, workbench:{operation:null}, workbenchText:zh=>zh,
+    const context = {fetch, window:{addEventListener(){}}, workbench:{operation:null}, workbenchText:zh=>zh,
         document:{getElementById:()=>root}, scanDevice:async()=>{context.opened++}, opened:0};
     vm.createContext(context);
     vm.runInContext(source + '\nrenderLibraryHome = () => {}; this.state = libraryHome;', context);

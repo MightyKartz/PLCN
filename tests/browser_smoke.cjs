@@ -507,6 +507,16 @@ async function main() {
     assert.equal(fs.readFileSync(path.join(libraryPath,'Roms/SNES/Imported demo.sfc'),'utf8'),'new version fixture');
     assert.deepEqual(fs.readFileSync(path.join(libraryPath,'playlists/Nintendo - Super Nintendo Entertainment System.lpl')),beforeRomUpdate);
     await screenshot('02-rom-updated');
+    const previousPage = await evaluate(()=>performance.timeOrigin);
+    await send('Page.reload');
+    await waitFor(previous=>performance.timeOrigin!==previous && document.querySelector('#library-onboarding')?.getAttribute('aria-busy')==='false','app reload before ROM recovery',previousPage);
+    await click('#workbench-device');
+    await click('#scan-device-btn');
+    await click(system);
+    await waitFor(()=>gameLibrary.data?.items.some(item=>item.label.includes('Imported demo')),'reopened imported game');
+    const importedIndex = await evaluate(()=>gameLibrary.data.items.find(item=>item.label.includes('Imported demo')).index);
+    await click(`[data-game-card="${importedIndex}"] .game-card-open`);
+    await waitFor(()=>document.querySelector('#inspector-restore-rom'),'durable ROM recovery entry');
     await click('#inspector-restore-rom');
     await waitFor(()=>!workbench.operation&&gameInspector.details&&!document.querySelector('#inspector-restore-rom'),'previous ROM restored');
     assert.equal(fs.readFileSync(path.join(libraryPath,'Roms/SNES/Imported demo.sfc'),'utf8'),'game import fixture');

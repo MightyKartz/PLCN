@@ -234,7 +234,7 @@ test('all-systems completion applies the analyzed preview job and skips apply wh
         'thumbnails_override':{value:''},
         'rom_name_cn_path':{value:''},
     };
-    const context={workbench:{operation:null},
+    const context={workbench:{operation:null},completionJobIds:new Set(),
         currentDeviceScan:{directories:{playlists:'/lib/playlists',thumbnails_exists:true}},
         document:{getElementById:id=>elements[id]},
         beginWorkbenchOperation:()=>true,endWorkbenchOperation:()=>{},
@@ -263,10 +263,10 @@ test('task transport keeps writes locked on disconnect and distinguishes cancell
     for (const status of ['cancelled','failed','completed']) {
         let events, closed=false, refreshes=0, applied=0;
         const notices=[];
-        const context={workbench:{operation:null}, EventSource:class {constructor(){events=this;} close(){closed=true;}},
+        const context={workbench:{operation:null}, completionJobIds:new Set(), EventSource:class {constructor(){events=this;} close(){closed=true;}},
             renderWorkbench:()=>{}, workbenchText:zh=>zh, downloadTaskOutcome,
             showStatus:(message,type)=>notices.push({message,type}),
-            applyCompletedJobToPreview:()=>applied++, desktopDialog:{open:true}, desktopView:'tasks',
+            applyCompletedJobToPreview:()=>applied++, desktopDialog:{open:true}, desktopView:'completion',
             refreshDesktop:()=>refreshes++, endWorkbenchOperation:()=>{context.workbench.operation=null;}};
         vm.createContext(context);vm.runInContext(source('trackProgress'),context);
         context.trackProgress('job-1');
@@ -516,7 +516,7 @@ test('direct completion reports applied games and counts only review items as ma
         {index:1,new_label:'极速传说',thumbnail_source:'F-Zero',actionable:false},
         {index:2,new_label:'存疑游戏',thumbnail_source:'Dubious',identity:{requires_review:true},actionable:false},
     ];
-    const context={workbench:{operation:null},
+    const context={workbench:{operation:null},completionJobIds:new Set(),
         document:{getElementById:id=>elements[id]||{value:'',disabled:false}},
         getProcessingOptions:()=>({download_thumbnails:true,write_names:true}),
         getThumbnailsDirectory:()=>'/thumbs',
@@ -541,21 +541,19 @@ test('direct completion reports applied games and counts only review items as ma
 });
 
 for (const closed of [true, false]) {
-    test(`task popover ignores a response after ${closed ? 'closing' : 'a newer refresh'}`, async () => {
+    test(`operation history ignores a response after ${closed ? 'closing' : 'a newer refresh'}`, async () => {
         let finish;
         let renders = 0;
-        const panel = {matches:()=>!closed, addEventListener:()=>{}};
-        // Begin open, then close or supersede the request before it resolves.
-        let open = true;
-        panel.matches = () => open;
+        const dialog = {open:true};
         const body = {replaceChildren:()=>{renders++;}};
-        const context = {taskPopoverVersion:0, taskPopoverPoll:null,
-            document:{getElementById:id=>id==='task-popover'?panel:body},
-            desktopRequest:()=>new Promise(resolve=>{if (!finish) finish=resolve; else resolve({receipts:[]});}),
-            clearTimeout:()=>{},setTimeout:()=>{throw Error('stale refresh scheduled polling');}};
-        vm.createContext(context);vm.runInContext(source('refreshTaskPopover'),context);
-        const pending=context.refreshTaskPopover();
-        if (closed) open=false; else context.taskPopoverVersion++;
+        const context = {desktopRenderVersion:0, desktopView:'completion', desktopDialog:dialog,
+            document:{getElementById:()=>body}, syncIdleButtons:()=>{},
+            desktopRequest:url=>url === '/api/desktop'
+                ? new Promise(resolve=>{finish=resolve;})
+                : Promise.resolve({receipts:[]})};
+        vm.createContext(context);vm.runInContext(source('refreshDesktop'),context);
+        const pending=context.refreshDesktop();
+        if (closed) dialog.open=false; else context.desktopRenderVersion++;
         finish({jobs:[]});await pending;
         assert.equal(renders,0);
     });
