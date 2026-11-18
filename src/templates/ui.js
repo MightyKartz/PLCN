@@ -6,6 +6,7 @@ const systemAppearance = matchMedia('(prefers-color-scheme: dark)');
 
 const UI_EN = {
     '系统': 'System',
+    '选择本地游戏库': 'Choose local library',
     '扫描掌机游戏': 'Scan handheld games',
     '请先在掌机核对存储和启动目录': 'Check the storage and launch folder on your handheld first',
     '本地目录无需配置掌机启动路径': 'Local folders do not need a handheld launch path',

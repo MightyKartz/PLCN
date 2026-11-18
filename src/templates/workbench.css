@@ -216,6 +216,8 @@ body:has(#action-toast:not([hidden])) .status{bottom:92px;}
 #inspector-update-rom{grid-column:1/-1;}.inspector-rom-update{padding:12px;background:var(--surface-soft);border:1px solid var(--border);border-radius:var(--radius);margin:12px 0;}.inspector-rom-update p{font-size:12px;line-height:1.7;overflow-wrap:anywhere;}.inspector-rom-update .btn{margin-right:6px;}#inspector-restore-rom{width:100%;margin-top:10px;}
 
 
+#home-library-folder {margin-top:10px;}
+
 #preference-theme {border:0;padding:0;margin:18px 0 0;min-width:0;}
 #preference-theme legend {padding:0;margin-bottom:8px;font-size:13px;font-weight:600;}
 .theme-options {display:inline-flex;max-width:100%;gap:3px;padding:3px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface-soft);}
