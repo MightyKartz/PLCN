@@ -144,6 +144,27 @@ def test_desktop_endpoints_and_shutdown_refuses_active_work(tmp_path, desktop_ho
         httpd.shutdown(); httpd.server_close(); thread.join(3)
 
 
+def test_relaunch_activates_existing_window_without_starting_another_service(desktop_home, monkeypatch):
+    calls = []
+    monkeypatch.setattr(server, 'PORT', 0)
+    with server.local_service() as (httpd, url):
+        service = threading.Thread(target=httpd.serve_forever, daemon=True)
+        service.start()
+        try:
+            with pytest.raises(RuntimeError, match='浏览器版'):
+                with server.local_service(activate_window=True):
+                    pytest.fail('A browser instance has no native window to activate')
+            httpd.activate_window = lambda: calls.append('activated')
+            assert requests.post(url + '/api/desktop/activate', json={}, timeout=3).status_code == 403
+            with server.local_service(activate_window=True) as (duplicate, existing_url):
+                assert duplicate is None
+                assert existing_url == url
+            assert calls == ['activated']
+        finally:
+            httpd.shutdown()
+            service.join()
+
+
 def test_compare_installed_pack_keeps_active_config_and_reuses_baseline(tmp_path, desktop_home):
     import data_pack
     from api_data import compare_active, managed_pack

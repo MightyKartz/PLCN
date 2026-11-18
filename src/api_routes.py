@@ -84,6 +84,7 @@ POST_ROUTES = {
     '/api/data/compare': api_data.compare,
     '/api/data/fetch': api_data.fetch,
     '/api/data/rollback': api_data.rollback,
+    '/api/desktop/activate': api_desktop.activate,
     '/api/desktop/pick': api_desktop.pick,
     '/api/desktop/shutdown': api_desktop.shutdown,
     '/api/fs/open': api_library.open_folder,

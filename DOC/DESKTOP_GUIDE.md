@@ -39,6 +39,22 @@ macOS：选择对应架构的 `RetroArchAssistant-macOS-arm64.dmg`（Apple Silic
 
 系统文件选择器运行于独立 helper 的主线程；不可用时自动回退内置文件浏览。原生选择器的真实桌面交互仍在人工验收清单中。
 
+## 独立窗口预览
+
+预览构建可通过 `--window` 打开独立窗口。macOS 使用系统 WKWebView，Windows 使用 WebView2 Runtime。通过正常入口启动的浏览器实例需先从应用设置中退出。独立窗口沿用现有用户数据目录，语言和外观跟随各自的 WebView 或浏览器。
+
+```sh
+# macOS 安装版
+open -a "RetroArch Assistant" --args --window
+# Windows 便携版，在解压目录中运行
+.\RetroArchAssistant.exe --window
+# 源码
+python -m pip install -r requirements-desktop.txt
+python src/desktop.py --window
+```
+
+窗口关闭和设置里的退出操作均受任务状态约束。仍有任务时，可以在任务中心等待结果或请求取消。
+
 ## 数据库更新
 
 “设置 → 名称数据库”提供检查上游版本、下载并比较、比较已安装包、启用和回滚。在同一面板查看新增、移除、译名变化和未翻译数量后再启用；这些数量不是准确率评估。切换会清除旧预览，人工规则保留。首次数据导入可能需要等待几秒，之后使用缓存。

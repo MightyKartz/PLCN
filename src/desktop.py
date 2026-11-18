@@ -7,15 +7,18 @@ import traceback
 
 import app_paths
 from app_brand import NAME
+from native_dialog import PICK_KINDS
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--pick', choices=['file', 'files', 'rom', 'directory', 'executable'])
+    parser.add_argument('--pick', choices=PICK_KINDS)
     parser.add_argument('--initial', default='')
     parser.add_argument('--result')
     parser.add_argument('--self-check', action='store_true')
-    parser.add_argument('--no-browser', action='store_true', help='Start the local service without opening a browser')
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument('--no-browser', action='store_true', help='Start the local service without opening a browser')
+    mode.add_argument('--window', action='store_true', help='Open the experimental standalone desktop window')
     args = parser.parse_args()
     if args.pick:
         from native_dialog import helper_pick
@@ -30,6 +33,8 @@ def main():
         import tkinter
         import server
         import data_pack
+        if sys.platform in ('darwin', 'win32') and getattr(sys, 'frozen', False):
+            import webview
         assert (app_paths.resource_root() / 'src/templates/plcn.html').is_file()
         assert all((app_paths.resource_root() / 'src/templates' / name).is_file()
                    for name in server.UI_ASSETS)
@@ -58,8 +63,12 @@ def main():
     with log_path.open('a', encoding='utf-8', buffering=1) as log:
         sys.stdout = sys.stderr = log
         try:
-            import server
-            server.run_server(open_browser=not args.no_browser)
+            if args.window:
+                from desktop_window import run_window
+                run_window()
+            else:
+                import server
+                server.run_server(open_browser=not args.no_browser)
         except Exception:
             traceback.print_exc()
             try:

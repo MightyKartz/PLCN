@@ -188,14 +188,14 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
 
 
 @contextmanager
-def local_service():
+def local_service(*, activate_window=False):
     """Own the loopback listener, device session and profile lock for one launch."""
     from app_runtime import InstanceLock
     from mtp_runtime import close as close_mtp
 
     instance = InstanceLock(app_paths.user_data_dir())
     if not instance.acquire():
-        yield None, instance.existing_url()
+        yield None, instance.existing_url(activate_window=activate_window)
         return
     try:
         app_paths.initialize()

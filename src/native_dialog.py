@@ -6,9 +6,10 @@ import subprocess
 import sys
 
 
+PICK_KINDS = ('file', 'files', 'rom', 'directory', 'executable')
+
+
 def helper_pick(kind, initial=''):
-    if kind not in {'file', 'files', 'rom', 'directory', 'executable'}:
-        raise ValueError('Invalid picker type')
     import tkinter as tk
     from tkinter import filedialog
     root = tk.Tk()
