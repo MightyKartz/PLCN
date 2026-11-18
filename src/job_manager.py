@@ -67,6 +67,14 @@ class JobManager:
         with self.lock:
             return any(job['status'] in ('pending', 'running') for job in self.jobs.values())
 
+    def prepare_shutdown(self):
+        """Stop accepting new jobs only when all existing jobs have finished."""
+        with self.lock:
+            if any(job['status'] in ('pending', 'running') for job in self.jobs.values()):
+                return False
+            self.stopping = True
+            return True
+
     def snapshot(self):
         with self.lock:
             return [dict(job, id=key) for key, job in reversed(list(self.jobs.items()))][:30]

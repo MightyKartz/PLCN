@@ -29,11 +29,8 @@ def pick(handler, context, payload):
 
 
 def shutdown(handler, context, payload):
-    jobs = context.job_manager
-    with jobs.lock:
-        if any(job['status'] in ('pending', 'running') for job in jobs.jobs.values()):
-            reply(handler, {'error': '仍有任务运行，请取消或等待完成后再退出'}, 409)
-            return
-        jobs.stopping = True
+    if not context.job_manager.prepare_shutdown():
+        reply(handler, {'error': '仍有任务运行，请取消或等待完成后再退出'}, 409)
+        return
     reply(handler, {'stopped': True})
     threading.Thread(target=handler.server.shutdown, daemon=True).start()

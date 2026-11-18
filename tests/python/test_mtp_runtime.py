@@ -242,9 +242,13 @@ def test_service_releases_mtp_before_retiring_http_instance(monkeypatch):
         def serve_forever(self):events.append('served')
     monkeypatch.setattr(server, 'LocalHTTPServer', lambda *args:FakeServer())
     monkeypatch.setattr(mtp, 'close', lambda:events.append('mtp_closed'))
-    instance = SimpleNamespace(publish=lambda *args:events.append('published'))
-    server._serve_instance(instance, False)
-    assert events == ['published','served','mtp_closed','http_closed']
+    import app_runtime
+    instance = SimpleNamespace(acquire=lambda: True,
+                               publish=lambda *args: events.append('published'),
+                               close=lambda: events.append('unlocked'))
+    monkeypatch.setattr(app_runtime, 'InstanceLock', lambda directory: instance)
+    server.run_server()
+    assert events == ['published', 'served', 'mtp_closed', 'http_closed', 'unlocked']
 
 
 def test_import_on_windows_does_not_load_native_mtp_or_libc(monkeypatch):

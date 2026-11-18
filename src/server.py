@@ -1,4 +1,5 @@
 """Local HTTP transport, session security and service startup."""
+from contextlib import contextmanager
 import hmac
 import http.server
 from http.cookies import SimpleCookie
@@ -186,44 +187,48 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
             reply(self, {'error': str(error)}, 400)
 
 
-def run_server(open_browser=False):
+@contextmanager
+def local_service():
+    """Own the loopback listener, device session and profile lock for one launch."""
     from app_runtime import InstanceLock
+    from mtp_runtime import close as close_mtp
+
     instance = InstanceLock(app_paths.user_data_dir())
     if not instance.acquire():
-        url = instance.existing_url()
-        if open_browser:
-            import webbrowser
-            webbrowser.open(url)
-        return url
+        yield None, instance.existing_url()
+        return
     try:
         app_paths.initialize()
-        return _serve_instance(instance, open_browser)
+        try:
+            httpd = LocalHTTPServer(('127.0.0.1', PORT), ConfigHandler)
+        except OSError:
+            httpd = LocalHTTPServer(('127.0.0.1', 0), ConfigHandler)
+        with httpd:
+            url = f'http://127.0.0.1:{httpd.server_address[1]}'
+            httpd.instance_id = secrets.token_urlsafe(24)
+            instance.publish(url, httpd.instance_id)
+            print(f'Starting server at {url}')
+            try:
+                yield httpd, url
+            finally:
+                # Release USB before another process can claim this profile.
+                close_mtp()
     finally:
         instance.close()
 
 
-def _serve_instance(instance, open_browser):
-    try:
-        httpd = LocalHTTPServer(('127.0.0.1', PORT), ConfigHandler)
-    except OSError:
-        httpd = LocalHTTPServer(('127.0.0.1', 0), ConfigHandler)
-    with httpd:
-        url = f'http://127.0.0.1:{httpd.server_address[1]}'
-        httpd.instance_id = secrets.token_urlsafe(24)
-        instance.publish(url, httpd.instance_id)
-        print(f'Starting server at {url}')
+def run_server(open_browser=False):
+    with local_service() as (httpd, url):
         if open_browser:
             import webbrowser
             webbrowser.open(url)
+        if httpd is None:
+            return url
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:
-            print("\nServer stopped.")
-        finally:
-            # Release USB before run_server removes the instance lock/record.
-            # A replacement process must not open a session while this one closes it.
-            from mtp_runtime import close
-            close()
+            print("Server stopped.")
+
 
 if __name__ == "__main__":
     run_server()
