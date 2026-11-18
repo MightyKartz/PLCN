@@ -343,6 +343,33 @@ async function main() {
     await send('Emulation.setDeviceMetricsOverride', {width:Number(width),height:Number(height),deviceScaleFactor:1,mobile:false});
     await evaluate(()=>filterLibrarySystems(''));
 
+    await click('.playlist-system-tab[aria-label="Nintendo - Game Boy Advance"]');
+    await waitFor(()=>gameLibrary.data?.items.length===1,'GBA cover grid');
+    const wideFrame = await evaluate(async () => {
+        const grid = document.getElementById('game-library-grid');
+        const entry = gameLibrary.data.items[0];
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 321;
+        const imageURL = entry.image_url;
+        entry.image_url = canvas.toDataURL();
+        renderGameLibrary();
+        const image = grid.querySelector('.game-card-art img');
+        image.loading = 'eager';
+        await image.decode();
+        const {width, height} = image.parentElement.getBoundingClientRect();
+        const fit = getComputedStyle(image).objectFit;
+        entry.image_url = imageURL;
+        renderGameLibrary();
+        setGameLibraryFilter('missing');
+        const card = grid.querySelector('.game-card-art').getBoundingClientRect();
+        setGameLibraryFilter('all');
+        return {frame: width / height, fit, filteredFrame: card.width / card.height};
+    });
+    assert.ok(Math.abs(wideFrame.frame-1.6)<0.01);
+    assert.equal(wideFrame.fit,'contain');
+    assert.equal(wideFrame.filteredFrame,wideFrame.frame);
+
     const system = '.playlist-system-tab[aria-label="Nintendo - Super Nintendo Entertainment System"]';
     await click(system);
     await waitFor(() => document.querySelector('#workspace-title')?.textContent.includes('SNES')
@@ -355,6 +382,10 @@ async function main() {
     assert.equal(await evaluate(() => document.querySelector('#game-library-filter-problem').textContent), '需检查 0');
     assert.equal(await evaluate(() => document.querySelector('#game-library-rows .game-image-placeholder').textContent), '缺图');
     assert.equal(await evaluate(visible, '#game-library-grid'), true);
+    assert.ok(await evaluate(()=>{
+        const card = document.querySelector('#game-library-grid .game-card-art').getBoundingClientRect();
+        return Math.abs(card.width / card.height - 2/3)<0.01;
+    }));
     assert.equal(await evaluate(()=>document.querySelectorAll('#game-library-grid .game-cover-card').length),1);
     assert.equal(await evaluate(()=>document.querySelector('#game-library-grid .game-card-art').textContent),'缺封面');
     assert.equal(await evaluate(()=>document.querySelector('#workspace-title .workspace-count').textContent),'1 个游戏');

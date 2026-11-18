@@ -62,6 +62,13 @@ function wbSystemName(system) {
     const abbr = getSystemAbbreviation(system);
     return currentUILanguage === 'en' ? system.replace(/^[^-]+ - /, '') : names[abbr] || system.replace(/^[^-]+ - /, '');
 }
+// Box art in these libraries spans portrait boxes, square cases and wide GBA packaging.
+function wbCoverFrameRatio(system) {
+    const ratios = {GBA: 8 / 5, NES: 3 / 4, MD: 3 / 4, FBNEO: 3 / 4,
+        GB: 4 / 5, GBC: 4 / 5, SNES: 2 / 3, MAME: 4 / 3};
+    return ratios[getSystemAbbreviation(system).toUpperCase()] ?? 1;
+}
+
 function wbStorageKind(path) {
     return /^\/(?:storage\/(?:emulated|self)|sdcard)\//.test(path) ? 'internal' : path.startsWith('/storage/') ? 'card' : 'local';
 }

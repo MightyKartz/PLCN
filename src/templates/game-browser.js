@@ -47,6 +47,7 @@ function renderGameBrowser(items) {
         button.setAttribute('aria-label', button.title); button.setAttribute('aria-pressed', String(gameLibrary.view === view)); switcher.append(button);
     }
     const grid = document.getElementById('game-library-grid'); grid.replaceChildren(); grid.hidden = gameLibrary.view !== 'grid';
+    grid.style.setProperty('--game-cover-ratio', wbCoverFrameRatio(gameLibraryInput()[1]));
     grid.classList.toggle('has-selection', Boolean(gameLibrary.selection.size));
     for (const item of items) {
         const card = wbElement('article', 'game-cover-card'); card.dataset.gameCard = item.index;
