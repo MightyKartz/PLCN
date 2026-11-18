@@ -142,9 +142,11 @@ async function main() {
     assert.equal(await evaluate(() => document.querySelector('#home-manual-open, #home-scan-open')), null);
     assert.equal(await evaluate(visible, '.sidebar'), false);
     assert.equal(await evaluate(visible, '#preview-area'), false);
-    assert.equal(await evaluate(() => document.querySelector('#home-devices [data-status="usb_only"]')?.textContent.includes('文件传输未就绪')), true);
-    assert.equal(await evaluate(() => document.querySelector('#home-devices [data-status="usb_only"] button')?.textContent), '等待文件传输');
+    assert.equal(await evaluate(() => document.querySelector('#home-devices [data-status="usb_only"]')?.textContent.includes('解锁掌机并选择 USB 文件传输')), true);
+    assert.equal(await evaluate(() => document.querySelector('#home-devices [data-status="usb_only"] button')), null);
     assert.equal(await evaluate(()=>document.title),'RetroArch 助手');
+    assert.equal(await evaluate(()=>document.getElementById('scan-default-btn').textContent.trim()),'');
+    assert.equal(await evaluate(()=>document.getElementById('scan-default-btn').getAttribute('aria-label')),'重新检测');
     await screenshot('01-home');
     assert.equal(await evaluate(()=>document.querySelector('.workbench-nav, #workbench-task')),null);
     await waitFor(()=>document.getElementById('task-center-badge').textContent==='1','task badge from active jobs');
@@ -312,6 +314,7 @@ async function main() {
     assert.equal(slots.fit, 'contain');
     assert.deepEqual(slots.empty, [false,true,true]);
     assert.ok(slots.sizes.every(([w,h])=>Math.abs(w-slots.sizes[0][0])<=1 && Math.abs(h-slots.sizes[0][1])<=1));
+    assert.equal(await evaluate(()=>document.getElementById('manual-scan-button').textContent),'扫描新增游戏');
     await screenshot('01-system-covers');
 
     const overviewSearch = '#overview-system-search';

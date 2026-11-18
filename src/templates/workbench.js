@@ -201,8 +201,9 @@ function renderWorkbenchOverview(visible) {
     if (workbenchOverview.error) {const retry=wbElement('button','btn btn-muted',workbenchText('重新读取','Retry'));retry.onclick=refreshWorkbenchOverview;panel.append(retry);}
 }
 function renderWorkbenchChrome(state) {
+    const localLibrary = currentDeviceScan?.transport === 'local';
     for (const [selector,zh,en] of [
-        ['#manual-scan-button','扫描掌机游戏','Scan handheld games'],
+        ['#manual-scan-button',localLibrary ? '扫描新增游戏' : '扫描掌机游戏',localLibrary ? 'Scan for new games' : 'Scan handheld games'],
         ['#manual-add-button','＋ 添加游戏','＋ Add games'],
         ['.tools-menu summary','工具','Tools'],['#device-switch-button','切换设备','Switch device']]) {
         const button=document.querySelector(selector);

@@ -1,5 +1,7 @@
 /* Library workbench — selected concept, real controls and artwork. */
 body {font-size:14px;}
+#scan-default-btn {width:36px;min-height:36px;padding:0;}
+#scan-default-btn .icon {width:18px;height:18px;}
 .app-shell {grid-template-columns:238px minmax(0,1fr);grid-template-rows:64px minmax(0,1fr);gap:0;}
 .workspace,.app-shell.library-loaded .workspace {display:contents;}
 .topbar {grid-column:2;grid-row:1;padding:0 24px;gap:22px;background:var(--bg);backdrop-filter:none;}
