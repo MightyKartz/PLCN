@@ -133,7 +133,6 @@ function renderDeviceScan(scan) {
     const list = document.getElementById('scanned-playlists');
     const librarySummary = document.getElementById('library-browser-summary');
     const previewIsActive = !document.getElementById('preview-area')?.hidden;
-    updateDeviceDirectoryRows(scan);
     list.innerHTML = '';
     if (!previewIsActive) setLibraryBrowserVisible(true);
 
@@ -320,20 +319,6 @@ function setPreviewAreaVisible(visible) {
     const previewArea = document.getElementById('preview-area');
     if (previewArea) previewArea.hidden = !visible;
     document.getElementById('library-browser')?.classList.toggle('has-preview', visible);
-}
-
-function updateDeviceDirectoryRows(scan) {
-    document.getElementById('settings-detected-directories').hidden = !scan;
-    const dirs = scan?.directories || {};
-    setPathText('device-playlists-dir', dirs.playlists || uiText('未检测'));
-    setPathText('device-thumbnails-dir', dirs.thumbnails || uiText('未检测'));
-    setPathText('device-config-file', dirs.config || uiText('未检测'));
-}
-
-function setPathText(id, value) {
-    const el = document.getElementById(id);
-    el.textContent = value;
-    el.title = value;
 }
 
 async function selectScannedPlaylist(index) {

@@ -70,8 +70,8 @@ def test_primary_labels_are_clear():
     assert "apply-summary-panel" in html
     assert "buildApplySummary" in html
     assert "确认应用" in html
-    assert "directory-details" in html
-    assert "目录详情" in html
+    assert "高级目录设置" not in html
+    assert 'id="settings-artwork-folder" class="form-group" hidden' in html
     assert "library-browser" in html
     assert "playlist-system-tabs" in html
     assert "playlist-list-panel" not in html

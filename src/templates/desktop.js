@@ -115,7 +115,8 @@ async function openDesktop(view = 'library') {
             root: document.getElementById('retroarch_root').value.trim(),
             artwork: document.getElementById('thumbnails_override').value.trim(),
         };
-        document.getElementById('settings-directory-options').open = false;
+        document.getElementById('settings-artwork-folder').hidden =
+            !settingsPathsAtOpen.artwork && (!currentDeviceScan?.connected || Boolean(getThumbnailsDirectory()));
     }
     if (view === 'library') {
         const root = document.getElementById('retroarch_root').value.trim();
@@ -416,7 +417,7 @@ async function openPathSettings(focusId = 'retroarch_root') {
     if (focusId === 'retroarch_root') {
         editSettingsRoot();
     } else {
-        document.getElementById('settings-directory-options').open = true;
+        document.getElementById('settings-artwork-folder').hidden = false;
         document.getElementById(focusId).focus();
     }
 }

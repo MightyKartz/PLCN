@@ -1,7 +1,7 @@
 /* Shared application styles, including desktop components and responsive states. */
 
 :root {
-    --bg: #F7F8FA;
+    --bg: #FFFFFF;
     --surface: #FFFFFF;
     --surface-soft: #F3F4F6;
     --surface-tint: #EFF4FF;
@@ -309,63 +309,10 @@ body[data-theme="dark"] .topbar {
     line-height: 1.35;
 }
 
-.directory-details {
-    margin: 10px 0 12px;
-}
-
-.directory-details summary {
-    min-height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 0 10px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--surface-soft);
-    color: var(--muted);
-    cursor: pointer;
-    font-size: var(--fs-xs);
-    font-weight: 600;
-    list-style: none;
-}
-
-.directory-details summary::-webkit-details-marker {
-    display: none;
-}
-
-.directory-details summary::after {
-    content: "+";
-    color: var(--primary);
-    font-weight: 600;
-}
-
-.directory-details[open] summary::after {
-    content: "-";
-}
-
 .device-summary.ready {
     border-color: #bce8cc;
     background: var(--green-soft);
     color: var(--green);
-}
-
-.detected-list {
-    display: grid;
-    gap: 8px;
-    margin: 8px 0 0;
-}
-
-.detected-list dt {
-    font-size: var(--fs-xs);
-    font-weight: 600;
-}
-
-.detected-path {
-    margin: 2px 0 0;
-    overflow-wrap: anywhere;
-    color: var(--muted);
-    font-size: var(--fs-xs);
 }
 
 .playlist-list {
@@ -1485,16 +1432,12 @@ body[data-theme="dark"] .badge.ready {
     border-radius: 14px;
     padding: 12px 22px 18px;
     color: var(--text);
-    background: var(--panel, var(--surface));
+    background: var(--bg);
 }
 
-#desktop-dialog::backdrop {
-    background: #10243e66;
-}
-
-body[data-theme="dark"] #desktop-dialog {
-    background: var(--surface-tint);
-    color: var(--text);
+#desktop-dialog::backdrop,
+.desktop-confirm::backdrop {
+    background: rgb(0 0 0 / 32%);
 }
 
 #desktop-dialog header {
@@ -1547,6 +1490,8 @@ body[data-theme="dark"] #desktop-dialog {
 .desktop-confirm {
     max-width: min(520px, 90vw);
     padding: 24px;
+    background: var(--bg);
+    color: var(--text);
     border: 1px solid var(--border-strong);
     border-radius: 12px;
 }
@@ -1559,14 +1504,6 @@ body[data-theme="dark"] #desktop-dialog {
     margin: 8px 8px 0 0;
 }
 
-.desktop-confirm::backdrop {
-    background: #10243e66;
-}
-
-body[data-theme="dark"] .desktop-confirm {
-    background: var(--surface-tint);
-    color: var(--text);
-}
 
 /* Native hidden state must win over component grid/flex display rules. */
 [hidden] {
@@ -1815,13 +1752,12 @@ body[data-theme="dark"] .desktop-confirm {
     font-size: var(--fs-body);
 }
 
-#settings-directory-options > .form-group {
-    margin-top: 12px;
+#settings-artwork-folder {
+    margin-top: 16px;
 }
 
-#settings-detected-directories h3 {
-    margin: 12px 0 0;
-    font-size: var(--fs-sm);
+.theme-choices {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 @media (max-width: 460px) {
@@ -1869,7 +1805,7 @@ input:focus-visible {
     outline-offset: 3px;
 }
 
-body[data-theme="dark"] :is(#path-settings,.workbench-busy) {
+body[data-theme="dark"] .workbench-busy {
     background: var(--surface-tint);
     color: var(--text);
 }

@@ -1,6 +1,8 @@
 /* Display preferences, translations and shared presentation helpers. */
 let currentUILanguage = 'zh';
 let currentTheme = 'light';
+let themePreference = 'system';
+const systemDarkTheme = window.matchMedia('(prefers-color-scheme: dark)');
 
 const UI_EN = {
     '扫描掌机游戏': 'Scan handheld games',
@@ -58,13 +60,13 @@ const UI_EN = {
     "设置": "Settings",
     "设备与游戏库": "Device & library",
     "资料来源": "Data sources",
-    "偏好设置": "Preferences",
     "界面语言": "Interface language",
     "外观": "Appearance",
     "浅色": "Light",
     "深色": "Dark",
     "常规": "General",
-    "高级目录设置": "Advanced folders",
+    "图片目录": "Artwork folder",
+    "系统": "System",
     "编辑路径": "Edit path",
     "自动跟随游戏库": "Use the library default",
     "游戏库": "Library",
@@ -89,9 +91,6 @@ const UI_EN = {
     '处理全部主机': 'Process all systems',
     '处理游戏库中的全部主机，自动应用已识别的名称和图片源。': 'Process all systems in this library and automatically apply identified names and artwork sources.',
     '游戏库目录': 'Library folder',
-    '图片目录（可选覆盖）': 'Artwork folder (optional override)',
-    '留空使用游戏库自动检测的目录': 'Leave empty to use the detected library folder',
-    '留空时跟随游戏库；手动覆盖会用于当前库的所有主机。': 'Leave empty to follow the library. An override applies to every system in this library.',
     '指定图片目录': 'Choose artwork folder',
     "选择左侧列表，然后预览名称与图片变更。": "Choose a list on the left, then preview name and artwork changes.",
     "整理你的 RetroArch 游戏库": "Organize your RetroArch library",
@@ -138,7 +137,6 @@ const UI_EN = {
     '连接目标': 'Target',
     '自动检测': 'Auto Detect',
     '扫描目录': 'Scan Path',
-    '目录详情': 'Directory Details',
     '游戏列表目录': 'Game List Directory',
     '封面缩略图目录': 'Thumbnail Directory',
     '配置文件': 'Config File',
@@ -252,7 +250,6 @@ const UI_EN = {
     '等待预览校对': 'Waiting for preview',
     '当前：未开始': 'Current: not started',
     '已选 0 项 · 等待游戏库': 'Selected 0 · Waiting for library',
-    '等待扫描 RetroArch 目录': 'Waiting to scan RetroArch directory',
     '等待选择 .lpl 文件': 'Waiting for .lpl file',
     '等待生成修复计划': 'Waiting to build repair plan',
     '请选择系统...': 'Choose system...',
@@ -446,7 +443,6 @@ Object.assign(UI_EN, {
     "电脑 ZIP 工作目录": "Computer ZIP workspace",
     "电脑工作目录": "Computer workspace",
     "留空使用应用数据目录": "Leave empty to use the application data folder",
-    "留空使用游戏库自动检测的目录": "Leave empty to use the detected library folder",
     "目录与输出位置": "Folders and output location",
     "目录与输出设置": "Folders and output settings",
     "目录整理与 ROM 压缩": "Organize folders and compress ROMs",
@@ -461,7 +457,6 @@ Object.assign(UI_EN, {
     "确认更新列表": "Update playlist",
     "确认更新前请退出 RetroArch，避免它覆盖列表。写入前自动备份原列表。": "Quit RetroArch before updating so it cannot overwrite the playlist. The original playlist is backed up before writing.",
     "确认生成电脑 ZIP 副本": "Create ZIP copies on this computer",
-    "等待扫描 RetroArch 目录": "Waiting to scan the RetroArch folder",
     "筛选游戏组": "Filter game groups",
     "缺少核心？从官方下载安装": "Missing a core? Download from the official source",
     "自动从 PATH 查找 chdman": "Find chdman on PATH automatically",
@@ -668,20 +663,24 @@ function formatItemCount(count) {
 
 function toggleTheme(theme = currentTheme === 'dark' ? 'light' : 'dark') {
     applyTheme(theme);
-    localStorage.setItem('plcn-theme', currentTheme);
-    showStatus(uiText(currentTheme === 'dark' ? '深色模式已开启' : '浅色模式已开启'), 'info');
+    localStorage.setItem('plcn-theme', themePreference);
 }
 
 function applyTheme(theme) {
-    currentTheme = theme === 'dark' ? 'dark' : 'light';
+    themePreference = theme === 'dark' || theme === 'light' ? theme : 'system';
+    currentTheme = themePreference === 'system' ? (systemDarkTheme.matches ? 'dark' : 'light') : themePreference;
     document.body.dataset.theme = currentTheme;
-    document.querySelector(`[name="settings-theme"][value="${currentTheme}"]`).checked = true;
+    document.documentElement.style.colorScheme = currentTheme;
+    document.querySelector(`[name="settings-theme"][value="${themePreference}"]`).checked = true;
     renderThemeButton();
 }
 
 function initializeDisplayPreferences() {
     applyUILanguage(localStorage.getItem('plcn-ui-language') || 'zh');
-    applyTheme(localStorage.getItem('plcn-theme') || 'light');
+    applyTheme(localStorage.getItem('plcn-theme'));
+    systemDarkTheme.addEventListener('change', () => {
+        if (themePreference === 'system') applyTheme('system');
+    });
 }
 
 function shortPath(path) {

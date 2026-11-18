@@ -243,8 +243,9 @@
                 </fieldset>
                 <fieldset class="preference-row">
                     <legend data-i18n="外观">外观</legend>
-                    <div class="preference-choices">
-                        <label><input type="radio" name="settings-theme" value="light" onchange="toggleTheme(this.value)" checked><span data-i18n="浅色">浅色</span></label>
+                    <div class="preference-choices theme-choices">
+                        <label><input type="radio" name="settings-theme" value="system" onchange="toggleTheme(this.value)" checked><span data-i18n="系统">系统</span></label>
+                        <label><input type="radio" name="settings-theme" value="light" onchange="toggleTheme(this.value)"><span data-i18n="浅色">浅色</span></label>
                         <label><input type="radio" name="settings-theme" value="dark" onchange="toggleTheme(this.value)"><span data-i18n="深色">深色</span></label>
                     </div>
                 </fieldset>
@@ -265,25 +266,14 @@
                 </div>
                 <p class="device-summary" id="device-summary" role="status" hidden></p>
             </section>
-            <details id="settings-directory-options" class="directory-details">
-                <summary data-i18n="高级目录设置">高级目录设置</summary>
-                <div class="form-group">
-                    <label for="thumbnails_override" data-i18n="图片目录（可选覆盖）">图片目录（可选覆盖）</label>
-                    <div class="input-group">
-                        <input type="text" id="thumbnails_override" data-input-control data-i18n-placeholder="自动跟随游戏库" placeholder="自动跟随游戏库" aria-describedby="effective-image-directory">
-                        <button class="btn btn-small btn-muted" onclick="openFilePicker('thumbnails_override', true)" data-input-control type="button" data-i18n="浏览">浏览</button>
-                    </div>
-                    <p id="effective-image-directory" class="artwork-help"></p>
+            <div id="settings-artwork-folder" class="form-group" hidden>
+                <label for="thumbnails_override" data-i18n="图片目录">图片目录</label>
+                <div class="input-group">
+                    <input type="text" id="thumbnails_override" data-input-control data-i18n-placeholder="自动跟随游戏库" placeholder="自动跟随游戏库" aria-describedby="effective-image-directory">
+                    <button class="btn btn-small btn-muted" onclick="openFilePicker('thumbnails_override', true)" data-input-control type="button" data-i18n="浏览">浏览</button>
                 </div>
-                <section id="settings-detected-directories" hidden>
-                    <h3 data-i18n="目录详情">目录详情</h3>
-                    <dl class="detected-list">
-                        <div><dt data-i18n="游戏列表目录">游戏列表目录</dt><dd class="detected-path" id="device-playlists-dir"></dd></div>
-                        <div><dt data-i18n="封面缩略图目录">封面缩略图目录</dt><dd class="detected-path" id="device-thumbnails-dir"></dd></div>
-                        <div><dt data-i18n="配置文件">配置文件</dt><dd class="detected-path" id="device-config-file"></dd></div>
-                    </dl>
-                </section>
-            </details>
+                <p id="effective-image-directory" class="artwork-help"></p>
+            </div>
         </section>
         <p id="desktop-message" role="status"></p><div id="desktop-content"></div><details id="data-source-settings"><summary data-i18n="自定义数据路径">自定义数据路径</summary>
 

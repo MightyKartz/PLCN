@@ -136,6 +136,7 @@ async function main() {
     await send('Network.enable');
     await send('Fetch.enable', {patterns: [{urlPattern: 'https://thumbnails.libretro.com/*'}, {urlPattern: '*api/library/overview*'}]});
     await send('Emulation.setDeviceMetricsOverride', {width: Number(width), height: Number(height), deviceScaleFactor: 1, mobile: false});
+    await send('Emulation.setEmulatedMedia', {features: [{name: 'prefers-color-scheme', value: 'light'}]});
     await send('Page.navigate', {url: baseUrl});
     await waitFor(() => document.readyState === 'complete'
         && document.querySelector('#library-onboarding')?.getAttribute('aria-busy') === 'false', 'home discovery');
@@ -160,7 +161,17 @@ async function main() {
     assert.equal(await evaluate(() => document.querySelectorAll('dialog[open]').length), 1);
     assert.equal(await evaluate(() => document.querySelectorAll('[data-desktop-view]').length), 3);
     await waitFor(visible, 'general settings', '#preference-settings');
-    assert.equal(await evaluate(() => document.querySelector('#settings-directory-options').open), false);
+    assert.equal(await evaluate(visible, '#settings-artwork-folder'), false);
+    assert.equal(await evaluate(() => document.querySelector('[name="settings-theme"]:checked').value), 'system');
+    await send('Emulation.setEmulatedMedia', {features: [{name: 'prefers-color-scheme', value: 'dark'}]});
+    await waitFor(() => document.body.dataset.theme === 'dark', 'system dark appearance');
+    assert.equal(await evaluate(() => getComputedStyle(document.querySelector('#desktop-dialog')).backgroundColor),
+        await evaluate(() => getComputedStyle(document.querySelector('.main-panel')).backgroundColor));
+    await screenshot('01-settings-dark');
+    await send('Emulation.setEmulatedMedia', {features: [{name: 'prefers-color-scheme', value: 'light'}]});
+    await waitFor(() => document.body.dataset.theme === 'light', 'system light appearance');
+    assert.equal(await evaluate(() => getComputedStyle(document.querySelector('#desktop-dialog')).backgroundColor),
+        await evaluate(() => getComputedStyle(document.querySelector('.main-panel')).backgroundColor));
     assert.equal(await evaluate(() => document.querySelector('#device-summary').hidden), true);
     await click('[name="settings-language"][value="en"]');
     assert.equal(await evaluate(() => document.title), 'RetroArch Assistant');
@@ -170,6 +181,13 @@ async function main() {
     assert.equal(await evaluate(() => document.body.dataset.theme), 'dark');
     assert.equal(await evaluate(() => localStorage.getItem('plcn-theme')), 'dark');
     await click('[name="settings-theme"][value="light"]');
+    await send('Emulation.setEmulatedMedia', {features: [{name: 'prefers-color-scheme', value: 'dark'}]});
+    assert.equal(await evaluate(() => document.body.dataset.theme), 'light');
+    await click('[name="settings-theme"][value="system"]');
+    assert.equal(await evaluate(() => document.body.dataset.theme), 'dark');
+    assert.equal(await evaluate(() => localStorage.getItem('plcn-theme')), 'system');
+    await send('Emulation.setEmulatedMedia', {features: [{name: 'prefers-color-scheme', value: 'light'}]});
+    await waitFor(() => document.body.dataset.theme === 'light', 'returned to light appearance');
     await click('[name="settings-language"][value="zh"]');
     await screenshot('01-preferences');
     await click('#desktop-close');
@@ -472,7 +490,7 @@ async function main() {
     await click('#auto-scan-dialog header > button');
     await screenshot('02-one-click-complete-en');
     await evaluate(() => document.querySelector('#choose-image-directory').click());
-    assert.equal(await evaluate(() => document.querySelector('label[for="thumbnails_override"]').textContent), 'Artwork folder (optional override)');
+    assert.equal(await evaluate(() => document.querySelector('label[for="thumbnails_override"]').textContent), 'Artwork folder');
     await screenshot('02-dark-en-path-settings');
     await click('#desktop-close');
     await waitFor(() => !document.querySelector('#desktop-dialog').open, 'closed path settings');
@@ -609,7 +627,7 @@ async function main() {
     const detected = path.join(libraryPath, 'thumbnails');
     fs.mkdirSync(detected);
     await click('#workbench-device');
-    await click('#settings-directory-options > summary');
+    assert.equal(await evaluate(visible, '#thumbnails_override'), true);
     await evaluate(() => { const input = document.querySelector('#thumbnails_override'); input.focus(); input.select(); });
     await send('Input.dispatchKeyEvent', {type: 'keyDown', key: 'Backspace', code: 'Backspace', windowsVirtualKeyCode: 8});
     await send('Input.dispatchKeyEvent', {type: 'keyUp', key: 'Backspace', code: 'Backspace', windowsVirtualKeyCode: 8});
