@@ -37,7 +37,7 @@ test('a queued settings close cannot discard the response for a reopened task vi
     const fields=new Map(),listeners=new Map(),pending=deferred();
     function node(){return {children:[],open:false,textContent:'',querySelectorAll(){return [];},replaceChildren(){this.children=[];},appendChild(child){this.children.push(child);},addEventListener(type,handler){listeners.set(type,handler);},showModal(){this.open=true;}};}
     const field=id=>{if(!fields.has(id))fields.set(id,node());return fields.get(id);};
-    const c={console,setTimeout,clearTimeout,currentUILanguage:'zh',openFilePicker(){},renderWorkbench(){},
+    const c={console,setTimeout,clearTimeout,currentUILanguage:'zh',currentDeviceScan:null,openFilePicker(){},renderWorkbench(){},
         document:{getElementById:field,createElement:node,querySelectorAll:()=>[]},desktopRequest:()=>pending.promise};
     vm.createContext(c);const source=fs.readFileSync(path.join(__dirname,'../src/templates/desktop.js'),'utf8');vm.runInContext(source.slice(0,source.indexOf('initializeDisplayPreferences();')),c);
     c.desktopRequest=()=>pending.promise;
