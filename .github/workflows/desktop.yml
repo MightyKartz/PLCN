@@ -67,7 +67,7 @@ jobs:
         run: python scripts/package_desktop.py --arch ${{ matrix.arch }}
       - name: Install, run and uninstall Windows Setup
         if: runner.os == 'Windows'
-        run: python scripts/smoke_desktop_package.py --installer dist/RetroArchAssistant-Windows-x64-Setup.exe
+        run: python scripts/smoke_desktop_package.py --installer dist/RetroArchAssistant-Windows-x64-Setup.exe --window-preview
       - name: Mount DMG, install and run macOS app
         if: runner.os == 'macOS'
         run: python scripts/smoke_desktop_package.py --dmg dist/RetroArchAssistant-macOS-${{ matrix.arch }}.dmg
