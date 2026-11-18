@@ -790,7 +790,7 @@ async function main() {
     await click('#disc-inspection-groups > details summary');
     await waitFor(()=>document.querySelectorAll('#disc-inspection-groups .disc-members li').length===2,'disc details expanded');
     await screenshot('07-disc-inspection');
-    await click('#disc-inspection-dialog .disc-inspection-header button');
+    await click('#disc-inspection-close');
     assert.deepEqual(fs.readFileSync(discPath),discBefore,'inspection must not write the playlist');
     await evaluate(()=>toggleTheme());
     await click('#game-library-discs');
@@ -843,7 +843,7 @@ async function main() {
     await click('#disc-inspection-groups > details:last-child .disc-group-body > button');
     await screenshot('08-m3u-editor-light');
     await click('#m3u-close');
-    await click('#disc-inspection-dialog .disc-inspection-header button');
+    await click('#disc-inspection-close');
 
 
     assert.deepEqual(fs.readFileSync(discPath),discBefore);

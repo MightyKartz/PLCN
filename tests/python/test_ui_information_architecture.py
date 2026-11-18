@@ -195,7 +195,7 @@ def test_primary_labels_are_clear():
     assert "Select a game before searching." not in html
 
 
-def test_legacy_overlays_removed_and_task_details_live_in_settings():
+def test_legacy_overlays_removed_and_recovery_is_contextual():
     html = read_template()
 
     assert 'id="inspector-panel"' not in html
@@ -213,7 +213,10 @@ def test_legacy_overlays_removed_and_task_details_live_in_settings():
     assert 'class="bottom-dock"' not in html
     assert 'renderTaskDetails' in html
     assert 'task-result-table' in html
-    assert 'data-i18n="查看任务"' in html
+    assert 'id="completion-history-link"' in html
+    assert 'id="playlist-history-link"' in html
+    assert 'id="task-center-button"' not in html
+    assert 'data-desktop-view="tasks"' not in html
     assert 'id="artwork-preview"' not in html
     assert "toggleDetailsDrawer" not in html
     assert "toggleTheme" in html
