@@ -30,6 +30,8 @@ def main():
     os.chdir(Path(__file__).resolve().parents[1])
     if not args.skip_build:
         run([sys.executable, 'scripts/prepare_adb.py'])
+        if sys.platform == 'darwin':
+            run([sys.executable, 'scripts/prepare_mtp.py'])
         run([sys.executable, '-m', 'PyInstaller', '--noconfirm', 'desktop.spec'])
     if sys.platform == 'win32':
         binary = (Path('dist') / BINARY_NAME / (BINARY_NAME + '.exe')).resolve()

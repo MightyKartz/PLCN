@@ -2,7 +2,7 @@
 
 [中文](README.md) · [Download](https://github.com/MightyKartz/retroarch-assistant/releases/latest)
 
-A RetroArch game library and handheld management assistant. Scan games, organize playlists, and complete names and artwork in a local browser UI. Launch the desktop package with a double click; Python, Node.js and Xcode are not required.
+A RetroArch game library and handheld management assistant. Scan games, organize playlists, and complete names and artwork in a standalone desktop window. Launch the desktop package with a double click; Python, Node.js and Xcode are not required.
 
 The game library now includes a cover grid, a detailed list and a docked game inspector. Select multiple games to complete only their metadata or remove their playlist entries while keeping ROMs, artwork and saves. **Add games** opens an inline source/preview/destination workspace for verified file copies. Display-name edits preserve ROM filenames, core settings and existing artwork. Playlist changes can be restored from Settings → Tasks and recovery.
 
@@ -40,7 +40,7 @@ Starting with v3.2.5, Windows/macOS packages include ADB. Android USB access sti
 3. **Add games** to choose computer files, a destination and a system in the inline workspace. For files already on the device, use the folder-scan option in that workspace.
 4. Open a card to inspect it or edit its display name. Multi-select games to complete only their metadata or remove their playlist entries.
 5. Use Tools for disc inspection, CHD conversion, directory organization and ROM ZIP copies. Review changes before writing and quit RetroArch first.
-6. Open the top-right task icon for progress, retry, cancellation and recovery. Click the device name for details; Settings also provides data sources and language/theme preferences.
+6. Open the top-right task icon for progress, retry, cancellation and recovery. Click the device name for details; Settings provides language and appearance preferences.
 
 Artwork searches prioritize Libretro, with alternate-source previews and local import available. Source and edition hints are shown before confirmation. Writes remove matching raw-disc companion entries such as CUE/BIN, without deleting ROM files or merging editions/discs just because their translated labels match.
 
@@ -53,8 +53,8 @@ Use the `retroarch-assistant` CLI and `RETROARCH_ASSISTANT_HOME`. Data and cache
 ## Development
 
 ```sh
-pip install -r requirements.txt
-python3 src/retroarch_assistant.py
+pip install -r requirements-desktop.txt
+python3 src/desktop.py
 python3 -m pytest -q
 python3 scripts/check_ui_js.py
 ```

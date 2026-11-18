@@ -6,11 +6,14 @@ from task_control import checkpoint
 
 def preview(handler, context, payload):
     mode = payload.get('mode')
-    if not isinstance(mode, str) or mode not in {'import', 'remove', 'edit'}:
+    if not isinstance(mode, str) or mode not in {'import', 'remove', 'edit', 'rom_update'}:
         raise ValueError('游戏管理操作无效')
     config = games.validate_import(payload) if mode == 'import' else None
     def work(jid):
-        if config:
+        if mode == 'rom_update':
+            import rom_updates
+            plan = rom_updates.prepare(payload)
+        elif config:
             plan = games.import_preview(config, lambda a, b, text: context.job_manager.update_job(jid, a, b, text),
                 lambda: checkpoint(lambda: context.job_manager.cancelled(jid)))
         else:
@@ -36,3 +39,7 @@ def apply(handler, context, payload):
     reply(handler, {'job_id': background(context.job_manager, '更新游戏库', lambda jid: games.apply(plan,
         lambda a, b, text: context.job_manager.update_job(jid, a, b, text),
         lambda: checkpoint(lambda: context.job_manager.cancelled(jid))))})
+
+
+def save_mapping(handler, context, payload):
+    reply(handler, {'job_id':background(context.job_manager, '保存手动启动位置', lambda jid: games.save_import_mapping(payload))})

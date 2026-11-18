@@ -41,7 +41,7 @@ class InstanceLock:
     def publish(self, url, instance_id):
         atomic_write_json(self.state_path, {'url': url, 'instance_id': instance_id, 'pid': os.getpid()})
 
-    def existing_url(self, attempts=25):
+    def existing_url(self, attempts=25, *, activate_window=False):
         for _ in range(attempts):
             try:
                 state = json.loads(self.state_path.read_text(encoding='utf-8'))
@@ -52,7 +52,13 @@ class InstanceLock:
                     session.trust_env = False
                     session.get(state['url'], timeout=1).raise_for_status()
                     reply = session.get(state['url'] + '/api/instance', timeout=1).json()
-                if reply['instance_id'] == state['instance_id']:
+                    if reply['instance_id'] != state['instance_id']:
+                        raise ValueError('Local instance changed')
+                    if activate_window:
+                        response = session.post(state['url'] + '/api/desktop/activate', json={}, timeout=5)
+                        if response.status_code == 409:
+                            raise RuntimeError('请先退出正在运行的浏览器版 RetroArch 助手，再启动独立窗口。')
+                        response.raise_for_status()
                     return state['url']
             except (OSError, ValueError, KeyError, requests.RequestException):
                 time.sleep(.1)

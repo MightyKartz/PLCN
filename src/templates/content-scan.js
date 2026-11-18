@@ -46,7 +46,7 @@ async function openContentScan(targetRoot = '') {
 
 function invalidateContentScan() {
     contentScan.revision++;
-    contentField('start').textContent = uiText('开始扫描');
+    wbIconButton(contentField('start'), 'scan', uiText('开始扫描'));
     contentScan.previewId = null; contentScan.imported = null;
     contentField('preview').hidden = true; contentField('apply').hidden = true; contentField('complete').hidden = true;
     renderContentConfiguration();
@@ -209,7 +209,7 @@ async function previewContentScan() {
         const {id, result} = await contentJob('/api/content/preview', payload);
         if (key !== JSON.stringify(contentPayload())) throw new Error(uiText('扫描配置已变化，请重新预览'));
         contentScan.previewId = id;
-        contentField('start').textContent = uiText('重新扫描');
+        wbIconButton(contentField('start'), 'refresh', uiText('重新扫描'));
         contentField('summary').textContent = formatPreviewScope(result, 'scan') + result.core_status + '。' + result.note;
         const rows = contentField('rows'); rows.replaceChildren();
         for (const item of result.added) {

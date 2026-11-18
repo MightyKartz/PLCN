@@ -2,70 +2,42 @@
 
 ## 当前发布方式
 
-PLCN 现在通过 GitHub Actions 自动发布。发布工作流位于 [`.github/workflows/release.yml`](.github/workflows/release.yml)，只在推送 `v*` tag 时触发。
+RetroArch 助手通过 `.github/workflows/desktop.yml` 构建和检查安装包。PR 和手动运行均可产生构建产物；推送 `v*` tag 时，`release.yml` 调用桌面构建并创建 **draft、prerelease** Release，尚不会公开发布。手动运行 `release.yml` 仅构建，不创建 Release。
 
-不要再手动创建 release 或上传附件。Release 页面、构建产物和附件上传都由 tag 触发的 Actions run 完成。
-
-## 本 PR 不发布
-
-普通修复 PR 和文档 PR 不应创建、移动或推送 `v*` tag。当前 PLCN core safety PR 的预期也是 **不发布 release**：合并代码和文档即可，等维护者明确决定发布版本时再从 `main` 创建 tag。
+普通开发 PR 不创建、移动或推送发布 tag。维护者决定发布后，从已通过验收的 main 提交创建 tag；检查草稿及附件后再决定公开。
 
 ## 发布前准备
 
-1. 确认要发布的 commit 已经在 `main`。
-2. 如果用户可见版本发生变化，更新 UI 中的版本展示。
-3. 更新 `RELEASE_NOTES.md`，保持中文更新在前、英文更新在后。
-4. 更新 `README.md` 和 `README_EN.md` 中的最新版本说明、安装说明或开发状态。
-5. 确认 `RELEASE_NOTES.md` 是本次 release 页面要展示的正文；当前 workflow 会通过 `body_path: RELEASE_NOTES.md` 读取它。
+1. 确认发布提交已合入 main，回归与平台构建通过。
+2. 在 `src/app_version.py` 更新版本，并核对安装包与 UI 的版本展示；构建可使用 `RETROARCH_ASSISTANT_VERSION` 覆盖，tag 不会自动更新源码版本。
+3. 同步中英文 README、使用指南、迁移说明与本次更新内容。Release 正文来源由 `release.yml` 配置；准备发布时核对其内联正文或 `body_path` 引用文件，不能仅更新历史 `RELEASE_NOTES.md`。
+4. 验证旧用户迁移、新安装、运行与卸载；真机、签名及公证未完成时如实注明。
 
-## 发布前验证
-
-常规发布前至少运行：
-
-```bash
+```sh
 python3 -m pytest -q
-python3 -m py_compile src/*.py
+python3 -m compileall -q src
+python3 scripts/check_ui_js.py
 git diff --check
 ```
 
-如果改动涉及前端模板，还要运行 `python3 scripts/check_ui_js.py`。
+pytest 会运行全部 `tests/*.test.cjs` 行为测试。CI 另在指定 Linux 配置强制执行真实浏览器和 CHD 工具测试。
 
-## 创建发布 tag
+## 安装包与草稿核对
 
-只在确认要发布时，从最新 `main` 创建 tag：
+| 平台 | 附件 |
+|---|---|
+| Windows x64 | `RetroArchAssistant-Windows-x64-Setup.exe`、`RetroArchAssistant-Windows-x64-Portable.zip` |
+| macOS Apple Silicon | `RetroArchAssistant-macOS-arm64.dmg` |
+| macOS Intel | `RetroArchAssistant-macOS-x64.dmg` |
+| Linux x64 CLI | `RetroArchAssistant-Linux-x64.tar.gz` |
 
-```bash
-git switch main
-git pull --ff-only origin main
+Windows / macOS 当前构建未做发行证书签名，macOS 未公证。CI 的安装运行检查不代表全部系统安全策略和 USB 设备均已人工验收。
 
-git tag -a vX.Y.Z -m "vX.Y.Z - 简短中文发布标题"
-git push origin vX.Y.Z
-```
+发布获得明确授权后，使用维护者选定的版本创建 tag。不要仅为验证构建创建 tag，直接手动运行桌面工作流即可。
 
-推送 tag 后，GitHub Actions 会自动：
-
-- 在 Ubuntu、Windows、macOS 上安装依赖并运行 PyInstaller。
-- 打包 Linux 和 macOS 可执行文件为 `.tar.gz`，Windows 保留 `.exe`。
-- 创建 GitHub Release，并使用 `RELEASE_NOTES.md` 作为 release notes。
-- 上传以下资产：
-  - `PLCN-Linux-x64.tar.gz`
-  - `PLCN-macOS-x64.tar.gz`
-  - `PLCN-Windows-x64.exe`
-
-## 发布后验证
-
-```bash
+```sh
 gh run list --repo MightyKartz/retroarch-assistant --workflow release.yml --limit 3
-gh run watch --repo MightyKartz/retroarch-assistant <run-id>
-gh release view vX.Y.Z --repo MightyKartz/retroarch-assistant --json tagName,name,url,assets
+gh release view vX.Y.Z --repo MightyKartz/retroarch-assistant --json tagName,name,url,isDraft,isPrerelease,assets
 ```
 
-确认 release 页面使用的是当前 `RELEASE_NOTES.md` 正文，并且 Linux、macOS、Windows 三个平台资产都存在后，再对外引用 release 链接。
-
-## GitHub 仓库介绍格式
-
-GitHub 仓库描述保持中文在前、英文在后，例如：
-
-```text
-扫描 RetroArch 游戏列表，一键生成中文名并下载官方封面。 Scans RetroArch game lists, localizes names to Chinese, and downloads official artwork.
-```
+确认目标提交、版本、草稿正文、附件和验收记录一致后，再公开 Release 并对外引用下载链接。

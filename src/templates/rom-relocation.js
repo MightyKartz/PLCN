@@ -67,8 +67,8 @@ async function applyRomRelocation(){
     romRelocation.preview=null;
     try{
         const {result}=await relocationJob('/api/rom-storage/relocation/apply',{preview_job_id:id});romRelocation.changed=true;
-        relocateField('review').hidden=true;relocateField('status').textContent='已完成。电脑备份：'+result.backup_directory+'；任务与恢复可还原原文件和引用。'+(result.mode==='copy'?'验证目标运行后，可修改执行方式并重新预览，或稍后从任务记录继续。':'');
-    }catch(error){romRelocation.changed=true;relocateField('status').textContent=error.message+'；请从设置 → 任务与恢复查看整理记录。';}
+        relocateField('review').hidden=true;relocateField('status').textContent='已完成。电脑备份：'+result.backup_directory+'；操作记录可还原原文件和引用。'+(result.mode==='copy'?'验证目标运行后，可修改执行方式并重新预览，或稍后从任务记录继续。':'');
+    }catch(error){romRelocation.changed=true;relocateField('status').textContent=error.message+'；请从操作记录查看整理记录。';}
 }
 async function recoverRomRelocation(id,action){
     assertWorkbenchIdle();if(!await desktopConfirm(action==='restore'?'恢复原目录与引用？先还原源文件，再还原引用和关联；仍有新引用的输出会保留。':'核对备份、目标、引用和存档设置后继续此方案？'))return;

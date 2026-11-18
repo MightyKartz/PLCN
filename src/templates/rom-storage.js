@@ -128,10 +128,10 @@ async function convertRomStorage(){
         const panel=romField('result');panel.replaceChildren();panel.hidden=false;romField('analysis').hidden=true;
         for(const line of ['ZIP 电脑副本已完成 · 掌机节省空间 0 B','输出目录：'+result.output_directory,
             ...result.results.map(row=>row.output+' · '+storageBytes(row.input_bytes)+' → '+storageBytes(row.output_bytes)+' · 解压内容逐字节一致'),
-            '原文件和列表保留；核心加载、存档及设备替换尚未验收。任务记录可在设置 → 任务与恢复查看。'])desktopElement('p',line,panel);
+            '原文件和列表保留；核心加载、存档及设备替换尚未验收。任务记录可在操作记录查看。'])desktopElement('p',line,panel);
         const deploy=desktopElement('button','预览 ZIP 回传／替换',panel);deploy.type='button';deploy.className='btn btn-muted';deploy.onclick=()=>{closeRomStorage();openRomRelocation({conversion_id:result.id,file_ids:result.results.map(row=>row.id),playlist:result.playlist});};
         romField('status').textContent='已完成电脑副本与解压校验。';romField('dialog').scrollTop=romField('dialog').scrollHeight;
-    }catch(error){romField('status').textContent=error.message+'；已完成副本与中断记录见任务与恢复。';}
+    }catch(error){romField('status').textContent=error.message+'；已完成副本与中断记录见操作记录。';}
 }
 
 function previewRomLayout(){

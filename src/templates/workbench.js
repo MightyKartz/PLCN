@@ -1,5 +1,5 @@
 /* Real-data library workbench. Artwork and job state are read-only projections. */
-const workbenchOverview = {key: '', data: null, error: '', scope: 'all', loading: false, job: null, receipt: '', activeJobs: 0, taskError: false};
+const workbenchOverview = {key: '', data: null, error: '', scope: 'all', loading: false};
 const libraryRead = {owner:'', stage:'', root:'', readyRoot:'', blocking:false, error:'', retry:'', focus:null};
 function beginLibraryRead(owner, stage, root = '', blocking = libraryRead.readyRoot !== root) {
     Object.assign(libraryRead, {owner, stage, root, blocking, error:'', retry:owner});
@@ -22,7 +22,8 @@ function renderLibraryRead() {
     document.getElementById('library-read-spinner').hidden = failed;
     document.getElementById('library-read-actions').hidden = !failed;
     document.getElementById('library-read-note').textContent = workbenchText(failed ? '检查掌机连接后重试，或选择其他游戏库。' : '首次读取掌机可能需要一些时间，请保持连接。', failed ? 'Check the connection and retry, or choose another library.' : 'The first read may take a moment. Keep your device connected.');
-    for (const [id,zh,en] of [['library-read-retry','重新读取','Retry'],['library-read-switch','切换设备','Switch device'],['library-read-banner-retry','重试','Retry']]) document.getElementById(id).textContent = workbenchText(zh,en);
+    for (const [id,zh,en,icon] of [['library-read-retry','重新读取','Retry','refresh'],['library-read-switch','切换设备','Switch device','device-gamepad']]) wbIconButton(document.getElementById(id), icon, workbenchText(zh,en));
+    document.getElementById('library-read-banner-retry').textContent = workbenchText('重试','Retry');
     if (active && libraryRead.blocking) {
         if (!dialog.open) {libraryRead.focus = document.activeElement; dialog.showModal();}
         if (failed) document.getElementById('library-read-retry').focus();
@@ -50,6 +51,12 @@ function wbIcon(name) {
     const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
     use.setAttribute('href', '/assets/workbench-icons.svg#' + name); icon.append(use); return icon;
 }
+function wbIconButton(button, name, label) {
+    button.classList.add('dialog-icon-button');
+    button.title = label;
+    button.setAttribute('aria-label', label);
+    button.replaceChildren(wbIcon(name));
+}
 function wbSystemIcon(system) {
     return ({NES:'console-nes',SNES:'console-snes',GB:'console-gameboy',GBC:'console-gameboy',GBA:'console-gba',SS:'console-saturn',MD:'console-megadrive',PS1:'console-playstation',MAME:'console-arcade',FBNeo:'console-arcade'})[getSystemAbbreviation(system)] || 'device-gamepad';
 }
@@ -62,6 +69,13 @@ function wbSystemName(system) {
     const abbr = getSystemAbbreviation(system);
     return currentUILanguage === 'en' ? system.replace(/^[^-]+ - /, '') : names[abbr] || system.replace(/^[^-]+ - /, '');
 }
+// Box art in these libraries spans portrait boxes, square cases and wide GBA packaging.
+function wbCoverFrameRatio(system) {
+    const ratios = {GBA: 8 / 5, NES: 3 / 4, MD: 3 / 4, FBNEO: 3 / 4,
+        GB: 4 / 5, GBC: 4 / 5, SNES: 2 / 3, MAME: 4 / 3};
+    return ratios[getSystemAbbreviation(system).toUpperCase()] ?? 1;
+}
+
 function wbStorageKind(path) {
     return /^\/(?:storage\/(?:emulated|self)|sdcard)\//.test(path) ? 'internal' : path.startsWith('/storage/') ? 'card' : 'local';
 }
@@ -74,10 +88,10 @@ function setStorageScope(scope) {
 function workbenchGroups(data, scope) {
     const groups = new Map();
     for (const playlist of data.playlists) {
-        const group = groups.get(playlist.system) || {system:playlist.system,count:0,missing:0,covers:[],locations:new Set()};
+        const group = groups.get(playlist.system) || {system:playlist.system,count:0,missing:0,nonChineseNames:0,covers:[],locations:new Set()};
         for (const [kind, location] of Object.entries(playlist.locations)) {
             if (scope !== 'all' && scope !== kind) continue;
-            group.count += location.count; group.missing += location.missing;
+            group.count += location.count; group.missing += location.missing; group.nonChineseNames += location.non_chinese_names || 0;
             group.covers.push(...location.covers); group.locations.add(kind);
         }
         if (group.count) groups.set(playlist.system, group);
@@ -106,6 +120,89 @@ function refreshWorkbenchOverview() {
     workbenchOverview.key = '';
     renderWorkbench();
 }
+// Reuse decoded images when the surrounding overview is redrawn for the same library read.
+const overviewFans = new WeakMap();
+
+function renderPlatformFan(group, data) {
+    const candidates = new Map();
+    for (const cover of group.covers) {
+        const path = cover.url.split('&v=')[0];
+        if (!candidates.has(path)) candidates.set(path, cover);
+        if (candidates.size === 5) break;
+    }
+    const covers = [...candidates.values()];
+    const key = JSON.stringify([group.system, covers.map(cover => cover.url)]);
+    if (data && !overviewFans.has(data)) overviewFans.set(data, new Map());
+    const cache = data && overviewFans.get(data);
+    if (cache?.has(key)) return cache.get(key);
+
+    const art = wbElement('div', 'platform-art');
+    art.setAttribute('aria-hidden', 'true');
+    const fan = wbElement('div', 'platform-fan');
+    art.append(fan);
+    cache?.set(key, art);
+
+    const preferredRatio = wbCoverFrameRatio(group.system);
+    const height = Math.min(160, 146 / Math.sqrt(preferredRatio));
+    function showCovers(selected) {
+        const arranged = selected.length === 1 ? [null, selected[0], null] : [selected[0], selected[1], selected[2]];
+        const widths = arranged.map(cover => height * (cover?.ratio ?? preferredRatio));
+        const [left, center, right] = widths;
+        const offsets = [
+            -(left + center) / 2 + Math.min(left, center) * 0.2,
+            0,
+            (right + center) / 2 - Math.min(right, center) * 0.2,
+        ];
+        const width = 2 * (Math.max(...widths.map((value, index) => Math.abs(offsets[index]) + value / 2)) + 20);
+        const fanHeight = height + 30;
+        fan.style.setProperty('--fan-width', width + 'px');
+        fan.style.setProperty('--fan-ratio', width / fanHeight);
+        fan.style.setProperty('--cover-height', height / fanHeight * 100 + '%');
+        fan.replaceChildren(...arranged.map((cover, index) => {
+            const slot = wbElement('span', 'platform-cover');
+            slot.style.setProperty('--cover-width', widths[index] / width * 100 + '%');
+            slot.style.setProperty('--cover-center', (0.5 + offsets[index] / width) * 100 + '%');
+            if (cover) {
+                slot.title = cover.label;
+                slot.append(cover.image);
+            } else {
+                slot.classList.add('is-empty');
+            }
+            return slot;
+        }));
+    }
+
+    showCovers([]);
+    if (covers.length) {
+        const images = covers.map((cover, index) => new Promise(resolve => {
+            const image = document.createElement('img');
+            image.alt = '';
+            image.loading = 'lazy';
+            image.className = 'platform-cover-probe';
+            image.onload = () => {
+                image.remove();
+                image.classList.remove('platform-cover-probe');
+                resolve({label: cover.label, image, ratio: image.naturalWidth / image.naturalHeight, index});
+            };
+            image.onerror = () => {
+                image.remove();
+                resolve(null);
+            };
+            image.src = cover.url;
+            art.append(image);
+        }));
+        Promise.all(images).then(loaded => {
+            const distance = cover => Math.abs(Math.log(cover.ratio / preferredRatio));
+            const chosen = loaded.filter(Boolean)
+                .sort((a, b) => distance(a) - distance(b))
+                .slice(0, 3)
+                .sort((a, b) => a.index - b.index);
+            showCovers(chosen);
+        });
+    }
+    return art;
+}
+
 function renderWorkbenchOverview(visible) {
     const panel = document.getElementById('library-overview'); panel.hidden = !visible;
     if (!visible) return;
@@ -124,35 +221,53 @@ function renderWorkbenchOverview(visible) {
     const subtitle = wbElement('p','overview-subtitle',workbenchText(`${total} 个游戏 · ${groups.length} 个主机`,`${total} games · ${groups.length} systems`));
     if (autoScanState.plan?.unclassified.length) subtitle.textContent += workbenchText(` · ${autoScanState.plan.unclassified.length} 项待分类`,` · ${autoScanState.plan.unclassified.length} unclassified`);
     panel.append(subtitle);
-    if (missing > 0) {
+    const nonChineseNames = actual ? groups.reduce((n,g)=>n+g.nonChineseNames,0) : 0;
+    if (missing > 0 || nonChineseNames > 0) {
         const bar = wbElement('div','overview-status'); bar.id = 'overview-status';
         const complete = wbElement('button','btn btn-muted',workbenchText('一键补全','Complete all'));
         complete.type='button'; complete.id='overview-complete-button'; complete.onclick=()=>startCompletion();
         complete.disabled=document.getElementById('preview-button').disabled;
-        bar.append(wbIcon('photo'),wbElement('span','overview-status-text',workbenchText(`${missing} 个游戏缺少封面`,`${missing} games missing artwork`)),complete);
+        bar.append(wbIcon('photo'),wbElement('span','overview-status-text',[missing ? workbenchText(`${missing} 个游戏缺少封面`,`${missing} games missing artwork`) : '', nonChineseNames ? workbenchText(`${nonChineseNames} 个游戏尚未使用中文名`,`${nonChineseNames} games without Chinese names`) : ''].filter(Boolean).join(' · ')),complete);
         panel.append(bar);
     }
-    const toolbar = wbElement('div','overview-toolbar'); toolbar.append(wbElement('h2','',workbenchText('主机','Systems')));
-    panel.append(toolbar);
     const grid = wbElement('div','overview-system-grid workbench-cards');
     const showLocations=workbenchOverview.scope==='all'&&new Set(groups.flatMap(group=>[...group.locations])).size>1;
     for (const group of groups) {
-        const card = wbElement('button','overview-system-card'); card.type = 'button';
-        card.title = group.system;
-        card.setAttribute('aria-label',workbenchText('浏览 ','Browse ') + group.system);
-        const art = wbElement('div','platform-art');
-        for (const cover of group.covers.slice(0,3)) {
-            const image = document.createElement('img'); image.src = cover.url; image.alt = cover.label; image.loading='lazy'; image.onerror=()=>image.remove(); art.append(image);
+        const displayName = wbSystemName(group.system);
+        const abbreviation = getSystemAbbreviation(group.system);
+        const count = formatGameCount(group.count);
+        const card = wbElement('button', 'overview-system-card');
+        card.type = 'button';
+        card.disabled = Boolean(workbench.operation);
+        card.dataset.system = group.system;
+        card.dataset.search = `${group.system} ${displayName} ${abbreviation}`.toLowerCase();
+        card.setAttribute('aria-label', `${displayName} · ${count}`);
+        const badge = wbElement('span', 'overview-system-badge', abbreviation);
+        badge.setAttribute('aria-hidden', 'true');
+        const heading = wbElement('div', 'platform-heading');
+        const details = wbElement('div', 'overview-system-details');
+        details.append(wbElement('strong', '', displayName), wbElement('span', '', count));
+        if (showLocations) {
+            const locations = wbElement('div', 'platform-locations');
+            for (const location of group.locations) locations.append(wbElement('span', '', workbenchText(
+                ({internal:'内部存储',card:'存储卡',local:'本地目录'})[location],
+                ({internal:'Internal',card:'SD card',local:'Local'})[location])));
+            details.append(locations);
         }
-        if (!group.covers.length) {art.classList.add('art-empty'); art.append(wbIcon('device-gamepad'),wbElement('span','',workbenchOverview.loading ? workbenchText('正在读取封面','Loading covers') : workbenchText('暂无封面','No artwork yet')));}
-        const details=wbElement('div','overview-system-details'); const heading=wbElement('div','platform-heading'); heading.append(wbElement('strong','',getSystemAbbreviation(group.system)));
-        details.append(heading,wbElement('span','',formatGameCount(group.count)));
-        const locations=wbElement('div','platform-locations');
-        for (const location of group.locations) locations.append(wbElement('span','',workbenchText(({internal:'内部存储',card:'存储卡',local:'本地目录'})[location],({internal:'Internal',card:'SD card',local:'Local'})[location])));
-        if(showLocations)details.append(locations);card.append(art,details);
-        card.onclick=async()=>{selectedLibrarySystem=group.system;renderDeviceScan(currentDeviceScan);await selectFirstPlaylistForSystem(group.system);};grid.append(card);
+        const arrow = wbElement('span', 'overview-system-arrow', '›');
+        arrow.setAttribute('aria-hidden', 'true');
+        heading.append(badge, details, arrow);
+        card.append(heading, renderPlatformFan(group, actual));
+        card.onclick = () => browseLibrarySystem(group.system);
+        grid.append(card);
     }
-    panel.append(grid);
+    if (groups.length) {
+        const empty = wbElement('p', 'overview-note', workbenchText('没有匹配的主机', 'No matching systems'));
+        empty.id = 'overview-system-empty';
+        empty.setAttribute('role', 'status');
+        panel.append(grid, empty);
+        filterLibrarySystems();
+    }
     if (workbenchOverview.error || !groups.length) {
         const note=wbElement('p','overview-note');note.id='overview-note';
         note.textContent=workbenchOverview.error ? workbenchText('资料读取失败：','Could not read artwork: ')+workbenchOverview.error : workbenchText('还没有游戏。点击「添加游戏」开始。','No games yet. Choose Add games to start.');
@@ -161,7 +276,9 @@ function renderWorkbenchOverview(visible) {
     if (workbenchOverview.error) {const retry=wbElement('button','btn btn-muted',workbenchText('重新读取','Retry'));retry.onclick=refreshWorkbenchOverview;panel.append(retry);}
 }
 function renderWorkbenchChrome(state) {
+    const localLibrary = currentDeviceScan?.transport === 'local';
     for (const [selector,zh,en] of [
+        ['#manual-scan-button',localLibrary ? '扫描新增游戏' : '扫描掌机游戏',localLibrary ? 'Scan for new games' : 'Scan handheld games'],
         ['#manual-add-button','＋ 添加游戏','＋ Add games'],
         ['.tools-menu summary','工具','Tools'],['#device-switch-button','切换设备','Switch device']]) {
         const button=document.querySelector(selector);
@@ -169,8 +286,7 @@ function renderWorkbenchChrome(state) {
     }
     document.getElementById('workbench-device').setAttribute('aria-label',workbenchText('设备详情','Device details'));
     document.getElementById('workbench-device').title=workbenchText('查看设备详情与切换游戏库','Device details and switch library');
-    renderWorkbenchTaskBadge();
-    document.getElementById('workbench-device').textContent=!currentDeviceScan?.connected ? workbenchText('设备与游戏库','Device & library') : currentDeviceScan.transport==='local' ? workbenchText('本地游戏库','Local library') : workbenchText('当前掌机','Handheld');
+    document.getElementById('workbench-device').textContent=!currentDeviceScan?.connected ? workbenchText('设备与游戏库','Device & library') : currentDeviceScan.transport==='local' ? workbenchText('本地游戏库','Local library') : currentDeviceScan.device?.model?.replaceAll('_',' ') || workbenchText('当前掌机','Handheld');
     const connection=document.getElementById('workbench-connection');connection.textContent=currentDeviceScan?.connected ? workbenchText('已连接','Connected') : workbenchText('未连接','Disconnected');connection.classList.toggle('connected',Boolean(currentDeviceScan?.connected));
     const hasDevicePaths=workbenchOverview.data?.playlists.some(p=>p.locations.internal||p.locations.card);
     document.getElementById('storage-scope').hidden=!currentDeviceScan?.connected || (currentDeviceScan.transport==='local'&&!hasDevicePaths);
@@ -182,36 +298,16 @@ function renderWorkbenchChrome(state) {
     document.getElementById('preview-button').title=workbenchText('补全当前列表；未选择主机时补全全部存储中的列表','Complete the selected playlist, or all storage locations when no system is selected');
     if (!document.getElementById('playlist_path').value && currentDeviceScan?.connected) document.getElementById('workspace-title').textContent=workbenchText('游戏库','Game library');
     document.getElementById('manual-add-button').hidden=state.previewValid;
+    document.getElementById('manual-scan-button').hidden=state.previewValid;
     if(workbenchOverview.data){
         const groups=workbenchGroups(workbenchOverview.data,workbenchOverview.scope);
         document.querySelectorAll('.playlist-system-tab').forEach(button=>{
             const count=button.querySelector('.system-game-count');
-            if(count)count.textContent=button.id==='library-all-systems'?groups.reduce((n,g)=>n+g.count,0):groups.find(g=>g.system===button.title)?.count||0;
+            if(count)count.textContent=button.id==='library-all-systems'?groups.length:groups.find(g=>g.system===button.title)?.count||0;
         });
     }
 }
-function renderWorkbenchTaskBadge() {
-    const job=workbenchOverview.job;
-    const failed=job?.status==='failed'||job?.partial;
-    const count=workbenchOverview.activeJobs;
-    const button=document.getElementById('task-center-button'),badge=document.getElementById('task-center-badge');
-    badge.hidden=workbenchOverview.taskError||(!count&&!failed);badge.textContent=count?String(count):'';badge.classList.toggle('task-failed',!count&&Boolean(failed));
-    const label=workbenchOverview.taskError?workbenchText('任务状态暂不可用，点击查看详情','Task status unavailable; open details'):count?workbenchText(`任务中心：${count} 个任务进行中`,`Task center: ${count} active tasks`):failed?workbenchText('任务中心：最近任务需要处理','Task center: latest task needs attention'):workbenchText('任务中心','Task center');
-    button.title=label;button.setAttribute('aria-label',label);
-}
-async function pollWorkbenchTask() {
-    try {
-        const data=await desktopRequest('/api/jobs/status');const job=data.job;
-        workbenchOverview.job=job||null;workbenchOverview.activeJobs=data.active_count;workbenchOverview.taskError=false;
-        if(job&&!['pending','running'].includes(job.status)){
-            const receipt=job.id+job.status;
-            if(workbenchOverview.receipt!==receipt){const previous=workbenchOverview.receipt;workbenchOverview.receipt=receipt;if(previous&&!libraryRead.owner&&!libraryRead.error)refreshWorkbenchOverview();}
-        }
-    }catch(error){workbenchOverview.taskError=true;}
-    renderWorkbenchTaskBadge();
-    setTimeout(pollWorkbenchTask,3000);
-}
-document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('[data-ui-icon]').forEach(el=>el.replaceWith(wbIcon(el.dataset.uiIcon)));pollWorkbenchTask();});
+document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('[data-ui-icon]').forEach(el=>el.replaceWith(wbIcon(el.dataset.uiIcon)));});
 
 const autoScanState={busy:false,job:null,previewId:null,plan:null,root:'',generation:0};
 async function openAutoScan(){
@@ -265,6 +361,13 @@ async function applyAutoScan(){
     const complete=document.getElementById('auto-scan-complete').checked;
     try{const {result}=await autoScanJob('/api/content/auto-apply',{preview_job_id:autoScanState.previewId,systems});autoScanState.previewId=null;document.getElementById('auto-scan-apply').hidden=true;
         document.getElementById('auto-scan-status').textContent=workbenchText(`已导入 ${result.added} 个游戏。原始游戏文件保持不变。`,`Imported ${result.added} games. Original game files are unchanged.`);
+        const backups = result.playlists.filter(playlist => playlist.backup);
+        if (backups.length) {
+            const details = wbElement('details', 'scan-backups');
+            details.append(wbElement('summary', '', workbenchText('本次列表备份', 'Playlist backups from this scan')));
+            for (const playlist of backups) details.append(wbElement('p', '', playlist.backup));
+            document.getElementById('auto-scan-results').append(details);
+        }
         await scanDevice();refreshWorkbenchOverview();
         if(complete){closeAutoScan();await runAllSystemsCompletion();}
     }catch(error){autoScanState.previewId=null;document.getElementById('auto-scan-apply').hidden=true;document.getElementById('auto-scan-status').textContent=error.message+workbenchText('；已完成的导入会保留，请重新扫描核对。','; completed imports are kept. Scan again to review.');}
@@ -273,7 +376,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     document.getElementById('auto-scan-dialog').addEventListener('cancel',event=>{if(autoScanState.busy)event.preventDefault();else ++autoScanState.generation;});
     document.getElementById('library-read-dialog').addEventListener('cancel',event=>{event.preventDefault();if(!libraryRead.owner)leaveLibraryRead();});
 });
-if (typeof module !== 'undefined') module.exports = {workbenchGroups,wbStorageKind,workbenchOverview,loadWorkbenchOverview,libraryRead,beginLibraryRead,finishLibraryRead,renderWorkbenchTaskBadge};
+if (typeof module !== 'undefined') module.exports = {workbenchGroups,wbStorageKind,workbenchOverview,loadWorkbenchOverview,libraryRead,beginLibraryRead,finishLibraryRead};
 
 async function cancelAutoScan(){
     if(!autoScanState.job)return;

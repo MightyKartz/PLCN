@@ -3,6 +3,7 @@ let lastAppliedChangeKeys = new Set();
 let lastAppliedDownloadEnabled = true;
 let lastAppliedWriteNames = true;
 
+const completionJobIds = new Set();
 let batchRunJobId = null;
 let batchRunStage = '';
 let batchRunCreatedArtworkDir = false;
@@ -44,7 +45,7 @@ function refreshAfterCompletion() {
     else resetGameLibrary();
     refreshWorkbenchOverview();
     renderWorkbench();
-    if (desktopDialog.open && desktopView === 'tasks') refreshDesktop();
+    if (desktopDialog.open && desktopView === 'completion') refreshDesktop();
 }
 
 function watchCompletionJob(jobId, prefix = '') {
@@ -84,18 +85,34 @@ async function undoCompletion(receiptId) {
     try {
         const started = await desktopRequest('/api/completion/undo', {id: receiptId});
         workbench.jobId = started.job_id;
+        completionJobIds.add(workbench.jobId);
         renderWorkbench();
         const summary = await watchCompletionJob(started.job_id, workbenchText('正在撤销：', 'Undoing: '));
         const skipped = summary?.skipped?.length || 0;
         showActionToast({message: skipped
             ? workbenchText(`已撤销部分内容，${skipped} 项在补全后被改动，已保留`, `Partially undone; ${skipped} items changed since completion were kept`)
             : workbenchText('已撤销', 'Undone'),
-            details: () => openDesktop('tasks')});
+            details: () => openOperationHistory('completion')});
     } catch (error) {
         showActionToast({message: workbenchText('撤销失败：', 'Undo failed: ') + error.message});
     } finally {
         workbench.jobId = null;
         invalidateWorkbenchPreview();
+        endWorkbenchOperation();
+        refreshAfterCompletion();
+    }
+}
+
+async function retryCompletionArtwork(jobId) {
+    if (!beginWorkbenchOperation('apply')) return;
+    try {
+        const started = await desktopRequest('/api/jobs/retry', {job_id: jobId});
+        workbench.jobId = started.job_id;
+        completionJobIds.add(workbench.jobId);
+        await refreshDesktop();
+        await watchCompletionJob(started.job_id, workbenchText('正在重试图片：', 'Retrying artwork: '));
+    } finally {
+        workbench.jobId = null;
         endWorkbenchOperation();
         refreshAfterCompletion();
     }
@@ -143,11 +160,11 @@ async function runDirectCompletion(scope = null) {
         const included = prepared.filter(change => change.enabled !== false && isActionableChange(change));
         const needsManual = prepared.filter(change => !(change.enabled !== false && isActionableChange(change))
             && needsManualReview(change, options)).length;
-        const openTasks = () => openDesktop('tasks');
+        const openHistory = () => openOperationHistory('completion');
         if (!included.length) {
             showActionToast({message: workbenchText('没有可自动补全的内容', 'Nothing can be completed automatically')
                 + (needsManual ? workbenchText(`，${needsManual} 个游戏需手动处理`, `, ${needsManual} games need manual work`) : ''),
-                details: needsManual ? () => previewTask(scope) : openTasks});
+                details: needsManual ? () => previewTask(scope) : openHistory});
             return;
         }
         const applyOptions = {...options};
@@ -157,6 +174,7 @@ async function runDirectCompletion(scope = null) {
             thumbnails_dir: thumbnailsDir, options: applyOptions
         });
         workbench.jobId = started.job_id;
+        completionJobIds.add(workbench.jobId);
         renderWorkbench();
         const result = await watchCompletionJob(started.job_id, workbenchText('正在补全：', 'Completing: '));
         const appliedCount = result?.applied_count ?? included.length;
@@ -167,13 +185,13 @@ async function runDirectCompletion(scope = null) {
         if (result?.memory_warning) message += ' · ' + result.memory_warning;
         if (needsManual) message += workbenchText(`，${needsManual} 个游戏需手动处理`, `, ${needsManual} games need manual work`);
         showActionToast({message, receiptId: result?.receipt_id || '',
-            details: needsManual ? () => previewTask(scope) : openTasks});
+            details: needsManual ? () => previewTask(scope) : openHistory});
     } catch (error) {
         if (error.cancelled) {
             showActionToast({message: workbenchText('已取消，已完成的部分会保留', 'Cancelled; completed work is kept.'),
-                receiptId: error.result?.receipt_id || '', details: () => openDesktop('tasks')});
+                receiptId: error.result?.receipt_id || '', details: () => openOperationHistory('completion')});
         } else {
-            showActionToast({message: error.message, details: () => openDesktop('tasks')});
+            showActionToast({message: error.message, details: () => openOperationHistory('completion')});
         }
     } finally {
         workbench.jobId = null;
@@ -196,6 +214,7 @@ async function runAllSystemsCompletion(options = {write_names: true, download_th
             rom_name_cn_path: document.getElementById('rom_name_cn_path').value, options,
         });
         batchRunJobId = started.job_id;
+        completionJobIds.add(batchRunJobId);
         batchRunStage = 'analysis';
         renderWorkbench();
         analysis = await watchCompletionJob(started.job_id,
@@ -207,6 +226,7 @@ async function runAllSystemsCompletion(options = {write_names: true, download_th
         }
         const applied = await desktopRequest('/api/batch/apply', {preview_job_id: started.job_id, continue_on_error: true});
         batchRunJobId = applied.job_id;
+        completionJobIds.add(batchRunJobId);
         batchRunStage = 'apply';
         renderWorkbench();
         const applyResult = await watchCompletionJob(applied.job_id,
@@ -238,21 +258,23 @@ function finishBatchRun(outcome, analysis, applyResult, errorMessage = '') {
         ?? (applyResult?.playlists || []).reduce((total, item) => total + (item.applied_count || 0), 0);
     const failedImages = Object.values(applyResult?.download_summary?.types || {})
         .reduce((total, stats) => total + (stats.failed || 0), 0);
-    const openTasks = () => openDesktop('tasks');
+    const openHistory = () => openOperationHistory('completion');
     if (outcome === 'cancelled') {
         showActionToast({message: analysis
             ? workbenchText('已取消，已完成的部分会保留。', 'Cancelled; completed work is kept.')
             : workbenchText('已取消，未写入任何内容。', 'Cancelled; nothing was written.'),
-            receiptId: applyResult?.receipt_id || '', details: openTasks});
+            receiptId: applyResult?.receipt_id || '', details: openHistory});
     } else if (outcome === 'failed') {
-        showActionToast({message: errorMessage || workbenchText('处理失败，请查看任务明细。', 'The run failed; see task details.'),
-            details: openTasks});
+        showActionToast({message: errorMessage || workbenchText('处理失败，请查看补全记录。', 'The run failed; see completion history.'),
+            details: openHistory});
     } else if (applyResult) {
         let text = workbenchText(`已补全 ${completed} 个游戏`,
             `Completed ${completed} ${completed === 1 ? 'game' : 'games'}`);
+        const failedPlaylists = applyResult.errors?.length || 0;
+        if (failedPlaylists) text += workbenchText(`，${failedPlaylists} 个列表处理失败`, `, ${failedPlaylists} playlists failed`);
         if (failedImages) text += workbenchText(`，${failedImages} 张封面下载失败`, `, ${failedImages} images failed`);
         if (manual) text += workbenchText(`，${manual} 个游戏需手动处理`, `, ${manual} games need manual work`);
-        showActionToast({message: text, receiptId: applyResult.receipt_id || '', details: openTasks});
+        showActionToast({message: text, receiptId: applyResult.receipt_id || '', details: openHistory});
     } else {
         showActionToast({message: workbenchText('没有需要自动补全的内容', 'Nothing needed auto-completion')
             + (manual ? workbenchText(`，${manual} 个游戏需手动处理`, `, ${manual} games need manual work`) : '')});
@@ -349,6 +371,7 @@ function formatApplySummaryText(summary) {
 }
 
 function trackProgress(jobId, mode = 'single') {
+    completionJobIds.add(jobId);
     workbench.jobId = jobId;
     workbench.operation = 'apply';
     renderWorkbench();
@@ -367,7 +390,7 @@ function trackProgress(jobId, mode = 'single') {
             const errors = job.result?.errors || [];
             if (errors.length) {
                 outcome.complete = false;
-                outcome.message = workbenchText(`${errors.length} 个列表处理失败，请在任务中查看`, `${errors.length} playlists failed; see Tasks`);
+                outcome.message = workbenchText(`${errors.length} 个列表处理失败，请在补全记录中查看`, `${errors.length} playlists failed; see completion history`);
             }
             if (mode === 'single' && job.result) applyCompletedJobToPreview(job.result);
             if (job.result?.memory_warning) outcome.message += ' · ' + job.result.memory_warning;
@@ -375,11 +398,11 @@ function trackProgress(jobId, mode = 'single') {
         } else showStatus(job.error || workbenchText('任务失败', 'Task failed'), 'error');
         workbench.jobId = null;
         endWorkbenchOperation();
-        if (desktopDialog.open && desktopView === 'tasks') refreshDesktop();
+        if (desktopDialog.open && desktopView === 'completion') refreshDesktop();
     };
     events.onerror = () => {
         // EventSource reconnects automatically; writes stay locked until a terminal event.
-        workbench.taskMessage = workbenchText('进度连接断开，正在重连；可在任务中查看状态。', 'Progress disconnected; reconnecting. Check Tasks for status.');
+        workbench.taskMessage = workbenchText('进度连接断开，正在重连；可在补全记录中查看状态。', 'Progress disconnected; reconnecting. Check completion history for status.');
         renderWorkbench();
     };
 }

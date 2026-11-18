@@ -72,8 +72,8 @@ async function applyChdDeployment(){
     chdDeployment.preview=null;
     try{
         const {result}=await deploymentJob('/api/chd/deployment/apply',{preview_job_id:id});chdDeployment.changed=true;
-        deployField('status').textContent='已完成。电脑备份：'+result.backup_directory+'。可从任务与恢复还原原镜像和引用。';deployField('review').hidden=true;
-    }catch(error){chdDeployment.changed=true;deployField('status').textContent=error.message+'；请在设置 → 任务与恢复检查 CHD 回传记录。';}
+        deployField('status').textContent='已完成。电脑备份：'+result.backup_directory+'。可从操作记录还原原镜像和引用。';deployField('review').hidden=true;
+    }catch(error){chdDeployment.changed=true;deployField('status').textContent=error.message+'；请在操作记录检查 CHD 回传记录。';}
 }
 async function recoverChdDeployment(id,action){
     assertWorkbenchIdle();

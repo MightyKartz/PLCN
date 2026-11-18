@@ -99,7 +99,7 @@ function buildDiscGroupDetails(group, files, data) {
         : workbenchText('保留现有独立入口。', 'The existing launch entry is retained.');
     body.appendChild(note);
     if (group.discs.length >= 2) {
-        const action=document.createElement('button');action.type='button';action.className='btn btn-muted';action.textContent='预览 M3U 方案';
+        const action=document.createElement('button');action.type='button';action.className='btn btn-muted';wbIconButton(action,'eye',workbenchText('预览 M3U 方案','Preview M3U plan'));
         action.onclick=()=>openM3uEditor(group,files);body.appendChild(action);
     }
     if (!group.total_known && group.discs.length) {

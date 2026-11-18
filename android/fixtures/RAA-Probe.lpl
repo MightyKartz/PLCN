@@ -1,0 +1,16 @@
+{
+    "version": "1.5",
+    "retroarch_assistant_probe": true,
+    "default_core_path": "DETECT",
+    "default_core_name": "DETECT",
+    "items": [
+        {
+            "path": "/storage/emulated/0/Documents/RAA-Probe/Probe.nes",
+            "label": "测试游戏",
+            "core_path": "DETECT",
+            "core_name": "DETECT",
+            "crc32": "DETECT",
+            "db_name": "Nintendo - Nintendo Entertainment System.lpl"
+        }
+    ]
+}

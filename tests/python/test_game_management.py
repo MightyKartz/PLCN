@@ -163,6 +163,7 @@ def test_mtp_import_keeps_android_paths_and_uses_verified_upload(library, monkey
     root, source, target, playlist, old, config = library
     (source / 'demo.gba').write_bytes(b'game')
     config.update(root='mtp://serial/00010001/RetroArch', destination='mtp://serial/00020001/Roms/GBA', android_directory='/storage/CARD/Roms/GBA', playlist='mtp://serial/00010001/RetroArch/playlists/GBA.lpl')
+    monkeypatch.setattr(games.scan, 'profiles', lambda: {config['root']:[{'directory':config['destination'], 'android_directory':config['android_directory'], 'system':config['system']}]})
     config = games.validate_import({**config, 'playlist_name':'GBA.lpl'})
     calls = []
     real_read, real_digest = games.scan.read, games.chd_io.digest
@@ -275,3 +276,70 @@ def test_name_edit_preserves_three_artwork_types_and_refuses_collisions(library)
     assert not (thumbnails / SYSTEM / 'Named_Boxarts/New label.png').exists()
     Image.new('RGB', (4,4), 'red').save(thumbnails / SYSTEM / 'Named_Boxarts/New label.png')
     with pytest.raises(ValueError, match='已有不同图片'): games.edit_preview(payload)
+
+
+def test_import_rejects_storage_and_folder_mapping_mismatch(tmp_path, monkeypatch):
+    source=tmp_path/'Game.gba'; source.write_bytes(b'rom')
+    root='mtp://device/00010001/RetroArch'
+    monkeypatch.setattr(games.scan, 'profiles', lambda: {root:[{
+        'directory':'mtp://device/00020001/Roms/SS',
+        'android_directory':'/storage/CARD/Roms/SS'}, {
+        'directory':'mtp://device/00010001/RetroArch/roms/GBA',
+        'android_directory':'/storage/CARD/Roms/GBA'}]})
+    payload={'root':root,'destination':'mtp://device/00010001/RetroArch/roms/GBA',
+             'android_directory':'/storage/CARD/Roms/GBA','system':SYSTEM,'sources':[str(source)]}
+    with pytest.raises(ValueError,match='复制目录与掌机启动目录不一致'):
+        games.validate_import(payload)
+    payload['destination']='mtp://device/00020001/Roms/Wrong'
+    with pytest.raises(ValueError,match='复制目录与掌机启动目录不一致'):
+        games.validate_import(payload)
+    payload['destination']='mtp://device/00020001/Roms/GBA'
+    assert games.validate_import(payload)['destination']==payload['destination']
+
+
+def test_unknown_mapping_blocks_preview_and_apply_without_device_io(tmp_path, monkeypatch):
+    source=tmp_path/'Game.gba';source.write_bytes(b'rom')
+    monkeypatch.setattr(games.scan,'profiles',lambda:{})
+    config=games.validate_import({'root':'mtp://device/00010001/RetroArch',
+        'destination':'mtp://device/00010001/RetroArch/roms/GBA','android_directory':'/storage/CARD/Roms/GBA',
+        'system':SYSTEM,'sources':[str(source)]})
+    monkeypatch.setattr(games.scan,'read',lambda path:pytest.fail('Unverified mapping must not access the device'))
+    plan=games.import_preview(config)
+    assert games.public_preview(plan)['mapping_state']=='unverified'
+    assert not plan['can_apply']
+    with pytest.raises(ValueError,match='待核对'):games.apply(plan)
+
+
+def test_missing_file_repair_reports_copy_without_new_playlist_entry(library):
+    root,source,target,playlist,old,config=library
+    game=source/'demo.gba';game.write_bytes(b'rom')
+    doc=json.loads(playlist.read_text());doc['items'].append({'path':str(target/'demo.gba'),'label':'Keep name'})
+    playlist.write_text(json.dumps(doc))
+    plan=games.import_preview(config);preview=games.public_preview(plan)
+    assert preview['can_apply'] and preview['copy_count']==1 and not preview['added']
+    result=games.apply(plan)
+    assert result['added']==0 and result['copied']==1 and result['failed']==0
+
+
+def test_inline_manual_mapping_requires_confirmation_and_keeps_manual_status(tmp_path, monkeypatch):
+    source=tmp_path/'Game.gba';source.write_bytes(b'rom')
+    monkeypatch.setenv('RETROARCH_ASSISTANT_HOME',str(tmp_path/'profile'))
+    monkeypatch.setattr(games.scan,'folders',lambda path:[])
+    payload={'root':'mtp://device/00010001/RetroArch','destination':'mtp://device/00020001/Roms/GBA',
+             'android_directory':'/storage/CARD/Roms/GBA','system':SYSTEM,'sources':[str(source)]}
+    assert games.validate_import(payload)['mapping_state']=='unverified'
+    with pytest.raises(ValueError,match='核对'):games.save_import_mapping(payload)
+    assert not games.scan.profiles_path().exists()
+    result=games.save_import_mapping({**payload,'confirmed':True})
+    assert result['mapping_state']=='manual'
+    assert games.validate_import(payload)['mapping_state']=='manual'
+    assert result['profiles'][0]['directory']==payload['destination']
+
+
+def test_manual_mapping_rejects_different_relative_directory(tmp_path, monkeypatch):
+    source=tmp_path/'Game.gba';source.write_bytes(b'rom')
+    monkeypatch.setenv('RETROARCH_ASSISTANT_HOME',str(tmp_path/'profile'))
+    payload={'confirmed':True,'root':'mtp://device/00010001/RetroArch','destination':'mtp://device/00020001/Roms/GBA',
+             'android_directory':'/storage/CARD/Other/GBA','system':SYSTEM,'sources':[str(source)]}
+    with pytest.raises(ValueError,match='相对路径'):games.save_import_mapping(payload)
+    assert not games.scan.profiles_path().exists()

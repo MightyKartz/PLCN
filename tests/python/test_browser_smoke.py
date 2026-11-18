@@ -76,15 +76,6 @@ def test_home_to_library_to_preview(tmp_path, monkeypatch, chrome_binary, viewpo
                   'Named_Titles': {'success': 0, 'failed': 0, 'skipped': 1}},
         'details': [{'system': 'NES', 'source': 'Game', 'game': '游戏', 'type': 'Named_Snaps',
                      'status': 'failed', 'reason': 'network_error', 'message': '测试图片网络失败'}]}})
-    pending = jobs.create_job()
-    jobs.update_job(pending, 1, 2, '等待取消的测试任务')
-    original_cancel = jobs.cancel
-    def cancel(job_id):
-        original_cancel(job_id)
-        if job_id == pending:
-            from task_control import TaskCancelled
-            jobs.fail_job(job_id, TaskCancelled('测试任务已取消'))
-    monkeypatch.setattr(jobs, 'cancel', cancel)
     from thumbnail_downloader import ThumbnailDownloader
     monkeypatch.setattr(ThumbnailDownloader, 'download_batch', lambda *args, **kwargs: ThumbnailDownloader.empty_summary())
     original_analyze = playlist_service.analyze_playlist
@@ -92,10 +83,27 @@ def test_home_to_library_to_preview(tmp_path, monkeypatch, chrome_binary, viewpo
         time.sleep(0.3)
         return original_analyze(*args, **kwargs)
     monkeypatch.setattr(playlist_service, 'analyze_playlist', slow_analyze)
+    # Hold the first batch preview until the UI cancels it. A fixed sleep lets
+    # faster runners finish the job before the real pointer reaches Cancel.
+    import batch_review
+    original_review = batch_review.prepare_review
+    first_review = [True]
+    def cancellable_review(*args, **kwargs):
+        if first_review[0]:
+            first_review[0] = False
+            cancel_check = kwargs.get('cancel_check') or args[6]
+            deadline = time.monotonic() + 30
+            while not cancel_check() and time.monotonic() < deadline:
+                time.sleep(0.05)
+            assert cancel_check(), 'Browser did not cancel its first batch preview'
+        return original_review(*args, **kwargs)
+    monkeypatch.setattr(batch_review, 'prepare_review', cancellable_review)
+
     import native_dialog
     incoming = tmp_path / 'incoming'; incoming.mkdir()
     (incoming / 'Imported demo.sfc').write_bytes(b'game import fixture')
-    monkeypatch.setattr(native_dialog, 'pick', lambda kind='directory', initial='': [str(incoming / 'Imported demo.sfc')] if kind == 'files' else initial if initial and Path(initial).is_dir() else str(tmp_path / '游戏库/rom-samples/RetroArch/Roms'))
+    (incoming / 'Updated demo.sfc').write_bytes(b'new version fixture')
+    monkeypatch.setattr(native_dialog, 'pick', lambda kind='directory', initial='': [str(incoming / 'Imported demo.sfc')] if kind == 'files' else str(incoming / 'Updated demo.sfc') if kind == 'rom' else initial if initial and Path(initial).is_dir() else str(tmp_path / '游戏库/rom-samples/RetroArch/Roms'))
     source = tmp_path / 'names'
     source.mkdir()
     playlists = tmp_path / '游戏库/playlists'

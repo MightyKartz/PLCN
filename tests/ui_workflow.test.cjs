@@ -234,7 +234,7 @@ test('all-systems completion applies the analyzed preview job and skips apply wh
         'thumbnails_override':{value:''},
         'rom_name_cn_path':{value:''},
     };
-    const context={workbench:{operation:null},
+    const context={workbench:{operation:null},completionJobIds:new Set(),
         currentDeviceScan:{directories:{playlists:'/lib/playlists',thumbnails_exists:true}},
         document:{getElementById:id=>elements[id]},
         beginWorkbenchOperation:()=>true,endWorkbenchOperation:()=>{},
@@ -263,10 +263,10 @@ test('task transport keeps writes locked on disconnect and distinguishes cancell
     for (const status of ['cancelled','failed','completed']) {
         let events, closed=false, refreshes=0, applied=0;
         const notices=[];
-        const context={workbench:{operation:null}, EventSource:class {constructor(){events=this;} close(){closed=true;}},
+        const context={workbench:{operation:null}, completionJobIds:new Set(), EventSource:class {constructor(){events=this;} close(){closed=true;}},
             renderWorkbench:()=>{}, workbenchText:zh=>zh, downloadTaskOutcome,
             showStatus:(message,type)=>notices.push({message,type}),
-            applyCompletedJobToPreview:()=>applied++, desktopDialog:{open:true}, desktopView:'tasks',
+            applyCompletedJobToPreview:()=>applied++, desktopDialog:{open:true}, desktopView:'completion',
             refreshDesktop:()=>refreshes++, endWorkbenchOperation:()=>{context.workbench.operation=null;}};
         vm.createContext(context);vm.runInContext(source('trackProgress'),context);
         context.trackProgress('job-1');
@@ -516,7 +516,7 @@ test('direct completion reports applied games and counts only review items as ma
         {index:1,new_label:'极速传说',thumbnail_source:'F-Zero',actionable:false},
         {index:2,new_label:'存疑游戏',thumbnail_source:'Dubious',identity:{requires_review:true},actionable:false},
     ];
-    const context={workbench:{operation:null},
+    const context={workbench:{operation:null},completionJobIds:new Set(),
         document:{getElementById:id=>elements[id]||{value:'',disabled:false}},
         getProcessingOptions:()=>({download_thumbnails:true,write_names:true}),
         getThumbnailsDirectory:()=>'/thumbs',
@@ -539,3 +539,175 @@ test('direct completion reports applied games and counts only review items as ma
     toasts[0].details();
     assert.notEqual(previewed,undefined);
 });
+
+for (const closed of [true, false]) {
+    test(`operation history ignores a response after ${closed ? 'closing' : 'a newer refresh'}`, async () => {
+        let finish;
+        let renders = 0;
+        const dialog = {open:true};
+        const body = {replaceChildren:()=>{renders++;}};
+        const context = {desktopRenderVersion:0, desktopView:'completion', desktopDialog:dialog,
+            document:{getElementById:()=>body}, syncIdleButtons:()=>{},
+            desktopRequest:url=>url === '/api/desktop'
+                ? new Promise(resolve=>{finish=resolve;})
+                : Promise.resolve({receipts:[]})};
+        vm.createContext(context);vm.runInContext(source('refreshDesktop'),context);
+        const pending=context.refreshDesktop();
+        if (closed) dialog.open=false; else context.desktopRenderVersion++;
+        finish({jobs:[]});await pending;
+        assert.equal(renders,0);
+    });
+}
+
+for (const state of [{applying:true}, {jobId:'writing'}]) {
+    test(`game selection stays fixed while artwork is ${state.applying ? 'applying' : 'awaiting its result'}`, () => {
+        const context={gameInspector:{saving:false},artworkDialogState:state,gameLibrary:{activeIndex:0},
+            renderGameLibrary:()=>{throw Error('must not switch during a write');}};
+        vm.createContext(context);vm.runInContext(source('inspectGame'),context);
+        context.inspectGame(1);
+        assert.equal(context.gameLibrary.activeIndex,0);
+    });
+}
+
+for (const launchFolder of ['', '/storage/CARD/Roms/MD']) {
+    test(`import ${launchFolder ? 'recovers the launch folder and enables confirmation' : 'keeps confirmation visible and explains a missing launch folder'}`, async () => {
+        let focused=false, submitted;
+        const fields={apply:{},destination:{value:'mtp://device/00020001/Roms/MD'},system:{value:'MD'},
+            android:{value:'',parentElement:{hidden:true},setAttribute(){},removeAttribute(){},scrollIntoView(){},focus(){focused=true;}},
+            playlist:{value:'MD.lpl'},'destination-fields':{},'playlist-path':{}};
+        const context={gameManagement:{sources:['Game.md'],setup:{android:true},generation:1,analysisToken:0},
+            gmField:id=>fields[id],gmStatus:()=>{},workbenchText:zh=>zh,gmError:error=>error.message,
+            document:{getElementById:()=>({setAttribute(){}})},
+            desktopRequest:async()=>({android_directory:launchFolder}),
+            gmJob:async(url,payload)=>{submitted=payload;return {id:'preview',result:{files:[],playlist:'MD.lpl',can_apply:true,required_bytes:10,free_bytes:100,added:[{}]}};},
+            gmRenderFiles:()=>{},gameSize:String};
+        vm.createContext(context);vm.runInContext(source('previewGameImport'),context);
+        await context.previewGameImport();
+        assert.equal(fields.apply.hidden,false);
+        assert.equal(fields.apply.disabled,!launchFolder);
+        assert.equal(focused,!launchFolder);
+        if (launchFolder) assert.equal(submitted.android_directory,launchFolder);
+        else {assert.equal(submitted,undefined);assert.equal(fields['destination-fields'].hidden,false);}
+    });
+}
+
+test('import uses the decoded filename of an existing MTP playlist', () => {
+    const system='Sega - Mega Drive - Genesis';
+    const fields={system:{value:system},destination:{},android:{},playlist:{}};
+    const context={gmField:id=>fields[id],gameManagement:{setup:{profiles:[]},root:'mtp://device/00020001/RetroArch'},
+        currentDeviceScan:{playlists:[{valid:true,system,path:'mtp://device/00020001/RetroArch/playlists/Sega%20-%20Mega%20Drive%20-%20Genesis.lpl'}]},
+        getSystemAbbreviation:()=> 'MD',gmInvalidate:()=>{},gmRenderDestinationSummary:()=>{},gmAutoAnalyze:()=>{}};
+    vm.createContext(context);vm.runInContext(source('gmChangeSystem'),context);context.gmChangeSystem();
+    assert.equal(fields.playlist.value,system+'.lpl');
+});
+
+test('new handheld system requires an explicit copy directory instead of using the library storage', () => {
+    const fields={system:{value:'MD'},destination:{},android:{},playlist:{}};
+    const context={gmField:id=>fields[id],gameManagement:{setup:{android:true,profiles:[]},root:'mtp://device/00010001/RetroArch'},
+        currentDeviceScan:{playlists:[]},getSystemAbbreviation:()=> 'MD',gmInvalidate:()=>{},gmRenderDestinationSummary:()=>{},gmAutoAnalyze:()=>{}};
+    vm.createContext(context);vm.runInContext(source('gmChangeSystem'),context);context.gmChangeSystem();
+    assert.equal(fields.destination.value,'');
+    assert.equal(fields.android.value,'');
+});
+
+test('an expired local session is renewed once before repeating a rejected request', async () => {
+    const calls=[];
+    const json={ok:true,status:200,headers:{get:()=> 'application/json'},json:async()=>({job_id:'one-job'})};
+    const context={fetch:async(url,options)=>{calls.push({url,options});return calls.length===1?{status:403}:calls.length===2?{ok:true}:json;},desktopText:zh=>zh};
+    vm.createContext(context);vm.runInContext(source('desktopRequest'),context);
+    const result=await context.desktopRequest('/api/games/apply',{preview_job_id:'preview'});
+    assert.equal(result.job_id,'one-job');
+    assert.deepEqual(calls.map(c=>c.url),['/api/games/apply','/','/api/games/apply']);
+    assert.equal(calls[0].options.body,calls[2].options.body);
+});
+
+test('a network failure never automatically repeats a possible write', async () => {
+    let calls=0;
+    const context={fetch:async()=>{calls++;throw Error('offline');},desktopText:zh=>zh};
+    vm.createContext(context);vm.runInContext(source('desktopRequest'),context);
+    await assert.rejects(context.desktopRequest('/api/games/apply',{}),/offline/);
+    assert.equal(calls,1);
+});
+
+test('an HTML error response produces a readable connection error instead of parsing HTML as JSON', async () => {
+    const context={fetch:async()=>({status:500,headers:{get:()=> 'text/html'},json:()=>{throw Error('must not parse HTML');}}),desktopText:zh=>zh};
+    vm.createContext(context);vm.runInContext(source('desktopRequest'),context);
+    await assert.rejects(context.desktopRequest('/api/content/setup'),/连接已失效/);
+});
+
+test('reconnecting keeps the selected source and destination while preparing a fresh analysis', async () => {
+    const fields={reconnect:{disabled:false}};
+    const context={gameManagement:{setup:{android:true},sources:['selected.md']},gmField:id=>fields[id],
+        fetch:async()=>({ok:true}),desktopRequest:async()=>({}),gmInvalidate:()=>{},
+        previewGameImport:async()=>{context.analyzed=true;},gmStatus:()=>{},gmError:error=>error.message};
+    vm.createContext(context);vm.runInContext(source('reconnectGameImport'),context);
+    await context.reconnectGameImport();
+    assert.deepEqual(context.gameManagement.sources,['selected.md']);
+    assert.equal(context.analyzed,true);assert.equal(fields.reconnect.disabled,false);
+});
+
+test('an unverified import mapping keeps selected sources visible and blocks confirmation', async () => {
+    const fields={apply:{},android:{value:'/storage/CARD/Roms/MD'},destination:{value:'mtp://device/00010001/Roms/MD'},system:{value:'MD'},playlist:{value:'MD.lpl'},'playlist-path':{},'mapping-status':{}};
+    const context={gameManagement:{sources:['Selected.md'],generation:1,analysisToken:0,setup:{android:true}},
+        gmField:id=>fields[id],workbenchText:zh=>zh,gmStatus:()=>{},gmRenderFiles:()=>{},
+        gmJob:async()=>({id:'preview',result:{mapping_state:'unverified',files:[],playlist:'MD.lpl',can_apply:false}})};
+    vm.createContext(context);vm.runInContext(source('previewGameImport'),context);
+    await context.previewGameImport();
+    assert.equal(context.gameManagement.analysisFiles,null);
+    assert.deepEqual(context.gameManagement.sources,['Selected.md']);
+    assert.equal(fields.apply.hidden,false);assert.equal(fields.apply.disabled,true);
+    assert.match(fields['mapping-status'].textContent,/待核对/);
+});
+
+for (const confirmed of [false,true]) {
+    test(`inline mapping ${confirmed ? 'saves explicit manual configuration and retains sources' : 'requires the handheld confirmation before saving'}`, async () => {
+        let saved=false, analyzed=false;
+        const fields={'mapping-confirm':{checked:confirmed},destination:{value:'mtp://device/00020001/Roms/MD'},system:{value:'MD'},android:{value:'/storage/CARD/Roms/MD'},playlist:{value:'MD.lpl'}};
+        const context={matchMedia:()=>({matches:false,addEventListener(){}}),gameManagement:{root:'mtp://device/00010001/RetroArch',sources:['Chosen.md'],setup:{profiles:[]}},gmField:id=>fields[id],gmStatus:()=>{},workbenchText:zh=>zh,
+            gmJob:async(route,payload)=>{assert.equal(payload.confirmed,true);saved=true;return {result:{profiles:[{mapping_source:'manual'}]}};},
+            gmInvalidate:()=>{},previewGameImport:async()=>{analyzed=true;},gmError:error=>error.message};
+        vm.createContext(context);vm.runInContext(source('saveGameImportMapping'),context);
+        await context.saveGameImportMapping();
+        assert.equal(saved,confirmed);assert.equal(analyzed,confirmed);
+        assert.deepEqual(context.gameManagement.sources,['Chosen.md']);
+    });
+}
+
+test('selecting identical ROM content clears a previously prepared replacement', async()=>{
+    const context={gameInspector:{romPlan:{id:'older-version'},status:'old status'},
+        inspectorJob:async()=>({result:{can_apply:false}}),workbenchText:zh=>zh,renderGameInspector:()=>{}};
+    vm.createContext(context);vm.runInContext(source('prepareRomUpdate'),context);
+    await context.prepareRomUpdate({source:'same-content.gba'});
+    assert.equal(context.gameInspector.romPlan,null);
+    assert.match(context.gameInspector.status,/无需更新/);
+});
+
+test('updating an import conflict waits for the selected library before preparing its ROM',async()=>{
+    let prepared=false, loaded=false;
+    const candidate={playlist:'GBA.lpl',expected:'snapshot',index:2,source:'new.gba'};
+    const context={workbench:{operation:null},closeGameManagement:()=>{},currentDeviceScan:{playlists:[{path:'GBA.lpl'}]},
+        selectScannedPlaylist:async()=>{},gameLibrary:{loading:true,data:null},gameLibraryInput:()=>['GBA.lpl','GBA','images'],
+        loadGameLibrary:async()=>{loaded=true;context.gameLibrary.data={expected:'snapshot'};},inspectGame:()=>{},
+        prepareRomUpdate:async payload=>{assert.equal(loaded,true);assert.equal(payload.source,'new.gba');prepared=true;},
+        showGameLibraryToast:message=>{throw Error(message);},gmError:error=>error.message,workbenchText:zh=>zh};
+    vm.createContext(context);vm.runInContext(source('updateImportedRom'),context);await context.updateImportedRom(candidate);
+    assert.equal(prepared,true);
+});
+for (const errors of [[], ['NES: playlist changed']]) {
+    test(`all-systems completion reports ${errors.length} failed playlists and retains undo`, () => {
+        let toast;
+        const context = {
+            invalidateWorkbenchPreview: () => {}, workbenchText: zh => zh,
+            showActionToast: value => { toast = value; }, openOperationHistory: () => 'completion',
+            batchRunCreatedArtworkDir: false
+        };
+        vm.createContext(context);
+        vm.runInContext(source('finishBatchRun'), context);
+        context.finishBatchRun('completed', {rows: []}, {
+            applied_count: 2, receipt_id: 'partial-receipt', errors, playlists: [], download_summary: {types: {}}
+        });
+        assert.equal(toast.message, errors.length ? '已补全 2 个游戏，1 个列表处理失败' : '已补全 2 个游戏');
+        assert.equal(toast.receiptId, 'partial-receipt');
+        assert.equal(toast.details(), 'completion');
+    });
+}

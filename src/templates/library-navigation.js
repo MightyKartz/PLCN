@@ -1,6 +1,7 @@
 /* Library discovery results and system/playlist navigation. */
 let currentDeviceScan = null;
 let selectedLibrarySystem = '';
+let overviewReturn = null;
 
 async function scanDevice(useDefault = false) {
     const rootInput = document.getElementById('retroarch_root');
@@ -187,11 +188,38 @@ function findPreferredLibrarySystem(groups) {
 
 function selectAllLibrarySystems() {
     if (workbench.operation) return;
+    const returning = Boolean(document.getElementById('playlist_path').value);
     selectedLibrarySystem = '';
     invalidateWorkbenchPreview();
     for (const id of ['playlist_path', 'system_name']) document.getElementById(id).value = '';
     renderDeviceScan(currentDeviceScan);
     renderWorkbench();
+    if (!returning) return;
+
+    const saved = overviewReturn?.root === currentDeviceScan?.root_path ? overviewReturn : null;
+    overviewReturn = null;
+    const panel = document.querySelector('.main-panel');
+    panel.scrollTop = saved?.scrollTop ?? 0;
+    const card = [...document.querySelectorAll('#library-overview .overview-system-card')]
+        .find(button => !button.hidden && button.dataset.system === saved?.system);
+    const search = document.getElementById('overview-system-search');
+    (card || (search.getClientRects().length ? search : document.getElementById('library-all-systems')))
+        ?.focus({preventScroll: true});
+}
+
+async function browseLibrarySystem(systemName) {
+    if (workbench.operation) return;
+    const panel = document.querySelector('.main-panel');
+    const overview = document.getElementById('library-overview');
+    if (!overview.hidden) {
+        overviewReturn = {root: currentDeviceScan.root_path, scrollTop: panel.scrollTop, system: systemName};
+    }
+    selectedLibrarySystem = systemName;
+    renderDeviceScan(currentDeviceScan);
+    await selectFirstPlaylistForSystem(systemName);
+    if (!overview.hidden) return;
+    panel.scrollTop = 0;
+    document.getElementById('back-to-systems').focus({preventScroll: true});
 }
 
 function renderLibrarySystemTabs(container, groups) {
@@ -200,15 +228,14 @@ function renderLibrarySystemTabs(container, groups) {
 
     const allButton = document.createElement('button');
     allButton.type = 'button';
+    allButton.disabled = Boolean(workbench.operation);
     allButton.id = 'library-all-systems';
     allButton.className = `playlist-system-tab${selectedLibrarySystem === '' ? ' active' : ''}`;
     const allIcon = wbIcon('layout-grid');
     const allName = document.createElement('span'); allName.className = 'system-display-name';
-    allName.textContent = workbenchText('全部游戏', 'All games');
+    allName.textContent = workbenchText('全部主机', 'All systems');
     const allCount = document.createElement('span'); allCount.className = 'system-game-count';
-    allCount.textContent = currentDeviceScan?.totals?.items
-        ?? [...groups.values()].reduce((total, items) => total
-            + items.reduce((sum, item) => sum + (Number(item.playlist.item_count) || 0), 0), 0);
+    allCount.textContent = groups.size;
     allButton.append(allIcon, allName, allCount);
     allButton.title = workbenchText('全部主机', 'All systems');
     allButton.setAttribute('aria-label', workbenchText('全部主机', 'All systems'));
@@ -219,10 +246,11 @@ function renderLibrarySystemTabs(container, groups) {
     groups.forEach((items, groupName) => {
         const tabButton = document.createElement('button');
         tabButton.type = 'button';
+        tabButton.disabled = Boolean(workbench.operation);
         tabButton.className = `playlist-system-tab${groupName === selectedLibrarySystem ? ' active' : ''}`;
         const group = document.createElement('div');
         group.className = 'library-system-group';
-        group.dataset.search = (groupName + ' ' + getSystemAbbreviation(groupName)).toLowerCase();
+        group.dataset.search = `${groupName} ${wbSystemName(groupName)} ${getSystemAbbreviation(groupName)}`.toLowerCase();
         const icon = wbIcon(wbSystemIcon(groupName));
         const name = document.createElement('span'); name.className = 'system-display-name';
         name.textContent = getSystemAbbreviation(groupName);
@@ -232,11 +260,7 @@ function renderLibrarySystemTabs(container, groups) {
         tabButton.title = groupName;
         tabButton.setAttribute('aria-label', groupName);
         tabButton.setAttribute('aria-pressed', String(groupName === selectedLibrarySystem));
-        tabButton.onclick = () => {
-            selectedLibrarySystem = groupName;
-            renderDeviceScan(currentDeviceScan);
-            selectFirstPlaylistForSystem(groupName);
-        };
+        tabButton.onclick = () => browseLibrarySystem(groupName);
         group.appendChild(tabButton);
         if (groupName === selectedLibrarySystem && (items.length > 1 || !items[0].playlist.valid)) renderSelectedLibraryList(group, groups);
         tabs.appendChild(group);
@@ -245,11 +269,15 @@ function renderLibrarySystemTabs(container, groups) {
     container.appendChild(tabs);
 }
 
-function filterLibrarySystems() {
+function filterLibrarySystems(value = document.getElementById('library-system-search').value) {
     const search = document.getElementById('library-system-search');
-    const query = search.value.trim().toLowerCase();
-    search.placeholder = currentUILanguage === 'en' ? 'Search systems' : '搜索主机';
-    search.setAttribute('aria-label', search.placeholder);
+    const overviewSearch = document.getElementById('overview-system-search');
+    for (const input of [search, overviewSearch]) {
+        if (input.value !== value) input.value = value;
+        input.placeholder = workbenchText('搜索主机', 'Search systems');
+        input.setAttribute('aria-label', input.placeholder);
+    }
+    const query = value.trim().toLowerCase();
     let count = 0;
     document.querySelectorAll('.library-system-group').forEach(group => {
         group.hidden = !group.dataset.search.includes(query);
@@ -258,6 +286,12 @@ function filterLibrarySystems() {
     const empty = document.getElementById('library-system-empty');
     empty.hidden = count > 0 || !query;
     empty.textContent = currentUILanguage === 'en' ? 'No matching systems' : '没有匹配的主机';
+    const overviewEmpty = document.getElementById('overview-system-empty');
+    if (overviewEmpty) {
+        const cards = [...document.querySelectorAll('#library-overview .overview-system-card')];
+        for (const card of cards) card.hidden = !card.dataset.search.includes(query);
+        overviewEmpty.hidden = !query || cards.some(card => !card.hidden);
+    }
 }
 
 function renderSelectedLibraryList(container, groups) {

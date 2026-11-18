@@ -125,7 +125,10 @@ def details(payload):
     if core_path == 'DETECT':
         core_path = data.get('default_core_path') or 'DETECT'
         core_name = data.get('default_core_name') or 'DETECT'
-    return {'index': index, 'label': item.get('label', ''), 'core_path': core_path, 'core_name': core_name,
+    import rom_updates
+    recovery = rom_updates.latest(path, location)
+    supported = rom_updates.supports(payload.get('system'), physical, member, probe)
+    return {'rom_update_supported':supported, 'rom_update':recovery, 'index': index, 'label': item.get('label', ''), 'core_path': core_path, 'core_name': core_name,
             'size': probe.get('size'), 'file_status': probe['status'], 'file_path': location, 'archive_member': member}
 
 
@@ -139,11 +142,30 @@ def validate_import(payload):
     if not isinstance(android, str):
         raise ValueError('掌机启动目录无效')
     remote = mtp.is_mtp(root)
+    mapping_state = 'local' if not remote else 'unverified'
     if remote:
         if not mtp.is_mtp(destination) or mtp.parse(root)[0] != mtp.parse(destination)[0]:
             raise ValueError('目标目录必须属于当前掌机')
         if not android.startswith(('/storage/', '/sdcard/')) or any(p in {'.', '..'} for p in android.split('/')):
             raise ValueError('请填写掌机实际游戏目录，例如 /storage/卡号/Roms/GBA')
+        # Infer storage roots only from saved mappings whose relative folders agree.
+        # A library on internal storage does not imply that ROMs belong there.
+        for profile in scan.profiles().get(root, []):
+            source = profile['directory']
+            logical = profile['android_directory'].rstrip('/')
+            if not mtp.is_mtp(source) or mtp.parse(source)[0] != mtp.parse(root)[0]:
+                continue
+            if not logical.startswith(('/storage/', '/sdcard/')):
+                continue
+            size = 4 if logical.startswith('/storage/emulated/') else 3 if logical.startswith('/storage/') else 2
+            mount = '/'.join(logical.split('/')[:size])
+            if mtp.parse(source)[2] != logical[len(mount):].strip('/').split('/'):
+                continue
+            if android == mount or android.startswith(mount + '/'):
+                expected = mtp.uri(mtp.parse(source)[0], mtp.parse(source)[1], android[len(mount):].lstrip('/'))
+                if mtp.parse(destination) != mtp.parse(expected):
+                    raise ValueError('路径冲突：复制目录与掌机启动目录不一致，请重新选择目标存储和目录')
+                mapping_state = 'manual' if profile.get('mapping_source') == 'manual' else 'matched'
     else:
         if '://' in root or '://' in destination:
             raise ValueError('导入请使用本地目录或 MTP 连接')
@@ -162,11 +184,47 @@ def validate_import(payload):
             raise ValueError('目标目录不能位于来源目录内部')
     filename = scan.playlist_name(system, payload.get('playlist_name'))
     return {'root': root, 'destination': destination, 'system': system, 'sources': list(dict.fromkeys(selected)),
-            'android_directory': android.rstrip('/'), 'playlist_name': filename, 'playlist': scan.join(root, 'playlists', filename)}
+            'android_directory': android.rstrip('/'), 'mapping_state': mapping_state, 'playlist_name': filename, 'playlist': scan.join(root, 'playlists', filename)}
+
+
+def save_import_mapping(payload):
+    from safe_io import atomic_write_json, file_lock
+    if payload.get('confirmed') is not True:
+        raise ValueError('请先在掌机核对存储和启动目录')
+    config = validate_import(payload)
+    if not mtp.is_mtp(config['root']):
+        raise ValueError('本地目录无需配置掌机启动路径')
+    logical = config['android_directory']
+    size = 4 if logical.startswith('/storage/emulated/') else 3 if logical.startswith('/storage/') else 2
+    if mtp.parse(config['destination'])[2] != logical.split('/')[size:]:
+        raise ValueError('启动目录的相对路径必须与所选复制目录一致')
+    # Listing validates that the chosen physical directory is readable; it does
+    # not prove the Android mount point or game startup.
+    scan.folders(config['destination'])
+    path = scan.profiles_path()
+    with file_lock(path):
+        saved = scan.profiles()
+        rows = saved.setdefault(config['root'], [])
+        entry = next((row for row in rows if row['system'] == config['system'] and row['directory'] == config['destination']), None)
+        if entry is None:
+            entry = {'root':config['root'], 'system':config['system'], 'directory':config['destination'],
+                     'core_id':scan.SYSTEMS[config['system']][0], 'core_path':'DETECT',
+                     'extensions':scan.SYSTEMS[config['system']][2], 'recursive':True,
+                     'dat_path':'', 'dat_filter':False, 'abi':'', 'playlist_name':config['playlist_name']}
+            rows.append(entry)
+        entry.update(android_directory=config['android_directory'], mapping_source='manual')
+        if path.exists():
+            backup = path.with_name(path.name + '.bak-' + uuid.uuid4().hex)
+            backup.write_bytes(path.read_bytes())
+        atomic_write_json(path, saved)
+    return {'mapping_state':'manual', 'profiles':rows}
 
 
 def import_preview(config, progress=lambda *args: None, cancelled=lambda: None):
     from disc_inspection import parse_references
+    if config['mapping_state'] == 'unverified':
+        return {'config':config, 'copies':[], 'added':[], 'duplicates':0, 'resources':0, 'skipped':0,
+                'conflicts':[], 'required_bytes':0, 'free_bytes':0, 'can_apply':False}
     raw, data = document(config['playlist'])
     extensions = set(scan.SYSTEMS[config['system']][2].split())
     optical = config['system'] in {'Sony - PlayStation', 'Sega - Saturn'}
@@ -253,29 +311,50 @@ def import_preview(config, progress=lambda *args: None, cancelled=lambda: None):
     write = transaction(config['playlist'], raw, after, 'game_import', '导入游戏')
     saved = scan.profiles()
     profiles = list(saved.get(config['root'], []))
-    if not any(profile['directory'] == config['destination'] and profile['system'] == config['system'] for profile in profiles):
+    chosen = next((profile for profile in profiles if profile['directory'] == config['destination'] and profile['system'] == config['system']), None)
+    if chosen:
+        profiles.remove(chosen)
+        profiles.append(chosen)
+    else:
         profiles.append({'root': config['root'], 'directory': config['destination'], 'system': config['system'],
             'core_id': scan.SYSTEMS[config['system']][0], 'core_path': data.get('default_core_path') or 'DETECT',
             'extensions': ' '.join(sorted(extensions)), 'recursive': True, 'dat_path': '', 'dat_filter': False,
             'android_directory': config['android_directory'], 'abi': '', 'playlist_name': config['playlist_name']})
+    if profiles != saved.get(config['root'], []):
         write['patches'].append(tx.patch(str(scan.profiles_path()), saved, [config['root']], profiles))
-    return {'config': config, 'copies': copies, 'added': additions, 'duplicates': duplicate, 'resources': len(resources),
+    update_candidate = None
+    if len(copies) == 1 and copies[0]['state'] == 'conflict':
+        logical = posixpath.join(config['android_directory'], copies[0]['relative']) if mtp.is_mtp(config['destination']) else copies[0]['target']
+        existing_index = next((i for i, entry in enumerate(data['items']) if entry['path'] == logical), None)
+        if existing_index is not None:
+            update_candidate = {'playlist':config['playlist'],'expected':mtp.digest(raw),'index':existing_index,
+                                'system':config['system'],'source':copies[0]['source']}
+    return {'update_candidate':update_candidate, 'config': config, 'copies': copies, 'added': additions, 'duplicates': duplicate, 'resources': len(resources),
             'skipped': skipped, 'conflicts': conflicts, 'required_bytes': required, 'free_bytes': free,
             'can_apply': bool(additions or required) and not conflicts and required <= free,
             'transaction': write}
 
 
 def public_preview(plan):
+    if plan.get('rom_update'):
+        return {key:plan[key] for key in ('can_apply','source_name','old_size','new_size')}
     if 'edited' in plan:
         return {key: plan[key] for key in ('before', 'after', 'edited', 'artwork_copies', 'can_apply')}
     if 'removed' in plan:
         return {key: plan[key] for key in ('removed', 'count', 'can_apply')}
     return {**{key: plan[key] for key in ('added', 'duplicates', 'resources', 'skipped', 'conflicts', 'required_bytes', 'free_bytes', 'can_apply')},
             'files': [{'name': f['relative'], 'size': f['size'], 'state': f['state']} for f in plan['copies']],
-            'playlist': plan['config']['playlist']}
+            'playlist': plan['config']['playlist'], 'mapping_state':plan['config']['mapping_state'],
+            'copy_count':sum(f['state']=='new' for f in plan['copies']), 'update_candidate':plan.get('update_candidate')}
 
 
 def apply(plan, progress=lambda *args: None, cancelled=lambda: None):
+    if plan.get('rom_update'):
+        import rom_updates
+        cancelled(); progress(0,1,'正在备份并安全更新 ROM…')
+        return rom_updates.apply(plan)
+    if 'config' in plan and plan['config']['mapping_state'] == 'unverified':
+        raise ValueError('目标与启动路径的对应关系待核对，不能导入')
     change = next(change for change in plan['transaction']['writes'] if change['kind'] == 'playlist')
     if mtp.digest(scan.read(change['path'])) != change['expected']:
         raise ValueError('列表已变化，请重新预览')
@@ -302,4 +381,5 @@ def apply(plan, progress=lambda *args: None, cancelled=lambda: None):
     if not mtp.is_mtp(change['path']): Path(change['path']).parent.mkdir(parents=True, exist_ok=True)
     result = tx.start(plan['transaction'])
     return {**result, 'added': len(plan.get('added', [])), 'removed': plan.get('count', 0), 'edited': plan.get('edited', 0),
-            'copied': sum(f['state'] == 'new' for f in plan.get('copies', []))}
+            'copied': sum(f['state'] == 'new' for f in plan.get('copies', [])),
+            'reused':plan.get('duplicates',0), 'skipped':plan.get('skipped',0), 'failed':0}

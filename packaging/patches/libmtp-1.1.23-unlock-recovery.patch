@@ -1,0 +1,132 @@
+--- a/src/libusb1-glue.c
++++ b/src/libusb1-glue.c
+@@ -1959,6 +1959,7 @@
+     ret = libusb_get_active_config_descriptor(dev, &config);
+     if (ret != LIBUSB_SUCCESS) {
+       perror("libusb_get_active_config_descriptor(2) failed");
++      libusb_close(device_handle);
+       return -1;
+     }
+   }
+@@ -1972,6 +1973,7 @@
+     ret = libusb_get_active_config_descriptor(dev, &config);
+     if (ret != LIBUSB_SUCCESS) {
+       perror("libusb_get_active_config_descriptor(2) failed");
++      libusb_close(device_handle);
+       return -1;
+     }
+   }
+@@ -1982,6 +1984,8 @@
+       fprintf(stderr, "libusb_claim_interface() reports device is busy, likely in use by GVFS or KDE MTP device handling already");
+     else
+       fprintf(stderr, "error returned by libusb_claim_interface() = %d", usbresult);
++    libusb_free_config_descriptor(config);
++    libusb_close(device_handle);
+     return -1;
+   }
+ 
+@@ -2116,6 +2120,15 @@
+ /**
+  * Self-explanatory?
+  */
++/* Backport of upstream session-open failure cleanup: no status requests or reset. */
++static void close_usb_after_failure(PTP_USB* ptp_usb)
++{
++  if (!FLAG_NO_RELEASE_INTERFACE(ptp_usb)) {
++    libusb_release_interface(ptp_usb->handle, (int) ptp_usb->interface);
++  }
++  libusb_close(ptp_usb->handle);
++}
++
+ static int find_interface_and_endpoints(libusb_device *dev,
+ 					uint8_t *conf,
+ 					uint8_t *interface,
+@@ -2307,26 +2320,11 @@
+    * have not used LIBMTP_Release_Device on exit
+    */
+   if ((ret = ptp_opensession(params, 1)) == PTP_ERROR_IO) {
+-    LIBMTP_ERROR("PTP_ERROR_IO: failed to open session, trying again after resetting USB interface\n");
+-    LIBMTP_ERROR("LIBMTP libusb: Attempt to reset device\n");
+-    libusb_reset_device (ptp_usb->handle);
+-    close_usb(ptp_usb);
+-
+-    if(init_ptp_usb(params, ptp_usb, ldevice) <0) {
+-      LIBMTP_ERROR("LIBMTP PANIC: Could not init USB on second attempt\n");
+-      libusb_free_device_list (devs, 0);
+-      free (ptp_usb);
+-      return LIBMTP_ERROR_CONNECTING;
+-    }
+-
+-    /* Normal timeout will have been restored by init_ptp_usb */
+-    /* Device has been reset, try again */
+-    if ((ret = ptp_opensession(params, 1)) == PTP_ERROR_IO) {
+-      LIBMTP_ERROR("LIBMTP PANIC: failed to open session on second attempt\n");
+-      libusb_free_device_list (devs, 0);
+-      free (ptp_usb);
+-      return LIBMTP_ERROR_CONNECTING;
+-    }
++    LIBMTP_ERROR("PTP session unavailable; release USB so a later unlock can retry\n");
++    close_usb_after_failure(ptp_usb);
++    libusb_free_device_list(devs, 0);
++    free(ptp_usb);
++    return LIBMTP_ERROR_CONNECTING;
+   }
+ 
+   /* Was the transaction id invalid? Try again */
+@@ -2340,7 +2338,7 @@
+     LIBMTP_ERROR("LIBMTP PANIC: Could not open session! "
+ 	    "(Return code %d)\n  Try to reset the device.\n",
+ 	    ret);
+-    libusb_release_interface(ptp_usb->handle, ptp_usb->interface);
++    close_usb_after_failure(ptp_usb);
+     libusb_free_device_list (devs, 0);
+     free (ptp_usb);
+     return LIBMTP_ERROR_CONNECTING;
+@@ -2358,6 +2356,14 @@
+ 
+ void close_device (PTP_USB *ptp_usb, PTPParams *params)
+ {
++#ifdef __APPLE__
++  /* The connected Qualcomm handheld uses Google's generic MTP identity.
++   * A reset on release stalls its MTP endpoints until the cable is unplugged. */
++  if (ptp_usb->rawdevice.device_entry.vendor_id == 0x18d1 &&
++      ptp_usb->rawdevice.device_entry.product_id == 0x4ee1) {
++    ptp_usb->rawdevice.device_entry.device_flags &= ~DEVICE_FLAG_FORCE_RESET_ON_CLOSE;
++  }
++#endif
+   if (ptp_closesession(params)!=PTP_RC_OK)
+     LIBMTP_ERROR("ERROR: Could not close session!\n");
+   close_usb(ptp_usb);
+--- a/src/libmtp.c
++++ b/src/libmtp.c
+@@ -2515,6 +2515,7 @@
+   PTPParams *params = (PTPParams *) device->params;
+   PTP_USB *ptp_usb = (PTP_USB*) device->usbinfo;
+ 
++  set_usb_device_timeout(ptp_usb, 1000);
+   close_device(ptp_usb, params);
+   // Clear error stack
+   LIBMTP_Clear_Errorstack(device);
+@@ -9473,3 +9474,15 @@
+ {
+   free (mem);
+ }
++
++/* Read-only discovery uses a short control timeout; transfers keep their own timeout. */
++int LIBMTP_Probe_Storage(LIBMTP_mtpdevice_t *device, int const sortby)
++{
++  PTP_USB *usb = (PTP_USB *) device->usbinfo;
++  int previous, result;
++  get_usb_device_timeout(usb, &previous);
++  set_usb_device_timeout(usb, 3000);
++  result = LIBMTP_Get_Storage(device, sortby);
++  set_usb_device_timeout(usb, previous);
++  return result;
++}
+--- a/src/libmtp.sym
++++ b/src/libmtp.sym
+@@ -118,3 +118,4 @@
+ LIBMTP_Check_Capability
+ LIBMTP_Custom_Operation
+ LIBMTP_FreeMemory
++LIBMTP_Probe_Storage

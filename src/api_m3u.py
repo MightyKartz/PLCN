@@ -39,10 +39,11 @@ def recover(handler,context,payload):
     ident=payload.get('id');restore=payload.get('action')=='restore'
     if payload.get('action') not in {'restore','resume'}: raise ValueError('请选择恢复或继续操作')
     manifest=transaction.receipt_path(ident)
-    if json.loads(manifest.read_text(encoding='utf-8'))['mode'] in {'chd_references','rom_references'}:
+    mode = json.loads(manifest.read_text(encoding='utf-8'))['mode']
+    if mode in {'chd_references','rom_references'}:
         raise ValueError('请从原文件操作记录恢复；必须先还原原镜像／ROM，再还原引用')
     def work(jid):
         result=transaction.run(ident,restore=restore)
         if result['status'] not in {'applied','restored'}: raise RuntimeError(str(result['error'])+'；记录：'+ident)
         return result
-    reply(handler,{'job_id':background(context.job_manager,'恢复多盘修改' if restore else '继续多盘操作',work)})
+    reply(handler,{'job_id':background(context.job_manager,('恢复旧版 ROM' if restore else '继续 ROM 更新') if mode=='game_rom_update' else '恢复多盘修改' if restore else '继续多盘操作',work)})

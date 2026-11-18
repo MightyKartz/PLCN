@@ -1,0 +1,72 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'com.chaquo.python'
+}
+
+android {
+    namespace 'io.github.mightykartz.retroarchassistant.probe'
+    compileSdk 36
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    defaultConfig {
+        applicationId 'io.github.mightykartz.retroarchassistant.probe'
+        minSdk 24
+        targetSdk 35
+        versionCode 1
+        versionName '0.1'
+        ndk {
+            abiFilters 'arm64-v8a'
+        }
+    }
+}
+
+def sharedPythonDir = layout.buildDirectory.dir('shared-python')
+def sharedPython = tasks.register('syncPlaylistPython', Sync) {
+    from(rootProject.file('../src')) {
+        include 'playlist_manager.py', 'safe_io.py'
+    }
+    into(sharedPythonDir)
+}
+
+// RapidFuzz does not publish a compatible native ARM64 Android wheel.
+// Build its upstream pure-Python implementation on the host for this probe.
+def rapidfuzzVersion = '3.14.6'
+def wheels = layout.buildDirectory.dir('wheels').get().asFile
+def rapidfuzzWheel = new File(wheels, "rapidfuzz-${rapidfuzzVersion}-py3-none-any.whl")
+def buildRapidfuzz = tasks.register('buildRapidfuzzWheel', Exec) {
+    inputs.property('rapidfuzzVersion', rapidfuzzVersion)
+    outputs.file(rapidfuzzWheel)
+    commandLine 'python3.13', '-m', 'pip', 'wheel', '--no-deps', '--no-binary', 'rapidfuzz',
+        '--config-settings', 'wheel.cmake=false', '--wheel-dir', wheels, "rapidfuzz==${rapidfuzzVersion}"
+}
+
+chaquopy {
+    defaultConfig {
+        version = '3.13'
+        pip {
+            install 'requests'
+            install 'Pillow==11.0.0'
+            install rapidfuzzWheel.path
+        }
+    }
+    sourceSets {
+        main {
+            srcDir(sharedPythonDir.get().asFile)
+        }
+    }
+}
+
+tasks.matching { it.name.startsWith('install') && it.name.endsWith('PythonRequirements') }.configureEach {
+    dependsOn(buildRapidfuzz)
+}
+
+tasks.matching { it.name.startsWith('merge') && it.name.endsWith('PythonSources') }.configureEach {
+    dependsOn(sharedPython)
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.12.1'
+}

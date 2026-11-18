@@ -124,7 +124,7 @@ def test_primary_labels_are_clear():
     assert "border: 0;" in html
     assert "vector-effect: non-scaling-stroke" in html
     assert "getSystemAbbreviation(groupName)" in html
-    assert "selectFirstPlaylistForSystem(groupName)" in html
+    assert "browseLibrarySystem(groupName)" in html
     assert "'N64'" in html
     assert "'NDS'" in html
     assert "'Wii'" in html
@@ -195,7 +195,7 @@ def test_primary_labels_are_clear():
     assert "Select a game before searching." not in html
 
 
-def test_legacy_overlays_removed_and_task_details_live_in_settings():
+def test_legacy_overlays_removed_and_recovery_is_contextual():
     html = read_template()
 
     assert 'id="inspector-panel"' not in html
@@ -213,7 +213,10 @@ def test_legacy_overlays_removed_and_task_details_live_in_settings():
     assert 'class="bottom-dock"' not in html
     assert 'renderTaskDetails' in html
     assert 'task-result-table' in html
-    assert 'data-i18n="查看任务"' in html
+    assert 'id="completion-history-link"' in html
+    assert 'id="playlist-history-link"' in html
+    assert 'id="task-center-button"' not in html
+    assert 'data-desktop-view="tasks"' not in html
     assert 'id="artwork-preview"' not in html
     assert "toggleDetailsDrawer" not in html
     assert "toggleTheme" in html
@@ -308,10 +311,9 @@ def test_home_overview_uses_minimal_concept():
     assert 'filterOverviewCards' not in html
     assert 'platform-badge' not in html
     assert "getSystemAbbreviation(group.system)" in html
-    assert '从哪里添加' in html
-    assert 'gm-source-scan' in html
-    assert 'gm-source-import' in html
-    assert "'aria-pressed', 'true'" in html
+    assert 'manual-scan-button' in html
+    assert 'gm-source-cards' not in Path('src/templates/game-management.js').read_text(encoding='utf-8')
+    assert 'gm-mapping-config' in html
     assert 'gm-manual-scan' not in html
     assert 'openAutoScan()' in html
     assert '还没有游戏。点击「添加游戏」开始。' in html
@@ -333,9 +335,9 @@ def test_add_games_workspace_is_single_column_with_auto_analysis():
     assert 'gm-file-list' in html
     assert 'gm-mode-import' in html
     assert 'gm-mode-remove' in html
-    assert '选择要导入的游戏' in html
+    assert '选择游戏' in html
     assert '已选 ' in html
-    assert '放到' in html
+    assert '确认位置' in html
     assert '正在分析' in html
     assert '已导入 ' in html
     assert 'Imported ' in html

@@ -10,6 +10,10 @@ const pending = new Map();
 const socket = new WebSocket(websocketUrl);
 let sequence = 0;
 let holdOverview = false;
+let holdSources = true;
+let heldSources = null;
+let holdRecent = false;
+let heldRecent = null;
 let heldOverview = null;
 let expectedOverviewFailure = false;
 
@@ -43,6 +47,16 @@ socket.addEventListener('message', event => {
         const {url, status} = message.params.response;
         if (url.startsWith(baseUrl + '/') && status >= 400 && !(expectedOverviewFailure && url.includes('/api/library/overview') && status === 503)) errors.push(`HTTP ${status}: ${url}`);
     } else if (message.method === 'Fetch.requestPaused') {
+        if (message.params.request.url.includes('/api/library/recent')) {
+            if (holdRecent) heldRecent = message.params.requestId;
+            else send('Fetch.continueRequest', {requestId:message.params.requestId}).catch(error=>errors.push(error.message));
+            return;
+        }
+        if (message.params.request.url.includes('/api/library/sources')) {
+            if (holdSources) heldSources = message.params.requestId;
+            else send('Fetch.continueRequest', {requestId:message.params.requestId}).catch(error=>errors.push(error.message));
+            return;
+        }
         if (message.params.request.url.includes('/api/library/overview')) {
             if (holdOverview) heldOverview = message.params.requestId;
             else send('Fetch.continueRequest', {requestId:message.params.requestId}).catch(error=>errors.push(error.message));
@@ -124,6 +138,7 @@ async function screenshot(name) {
     await delay(200); // Let theme transitions settle before capturing visual evidence.
     const {data} = await send('Page.captureScreenshot', {format: 'png'});
     fs.writeFileSync(path.join(output, name + '.png'), Buffer.from(data, 'base64'));
+    if (name !== 'failure') assert.deepEqual(await evaluate(() => [...document.querySelectorAll('.dialog-icon-button')].filter(button => button.checkVisibility() && (!button.querySelector('svg use') || !button.getAttribute('aria-label') || !button.title)).map(button => button.id || button.outerHTML)), [], 'Visible icon actions retain their SVG, name and tooltip');
 }
 
 async function main() {
@@ -134,54 +149,57 @@ async function main() {
     await send('Runtime.enable');
     await send('Page.enable');
     await send('Network.enable');
-    await send('Fetch.enable', {patterns: [{urlPattern: 'https://thumbnails.libretro.com/*'}, {urlPattern: '*api/library/overview*'}]});
+    await send('Fetch.enable', {patterns: [{urlPattern: 'https://thumbnails.libretro.com/*'}, {urlPattern: '*api/library/overview*'}, {urlPattern: '*api/library/sources*'}, {urlPattern: '*api/library/recent*'}]});
     await send('Emulation.setDeviceMetricsOverride', {width: Number(width), height: Number(height), deviceScaleFactor: 1, mobile: false});
     await send('Page.navigate', {url: baseUrl});
+    await waitFor(() => document.readyState === 'complete' && !document.querySelector('#library-onboarding').hidden && !document.querySelector('#library-read-dialog').open, 'home is visible while device discovery is pending');
+    await screenshot('00-home-discovery');
+    assert.ok(heldSources, 'Device discovery is still pending while home is visible');
+    holdSources = false;
+    await send('Fetch.continueRequest', {requestId:heldSources});
     await waitFor(() => document.readyState === 'complete'
         && document.querySelector('#library-onboarding')?.getAttribute('aria-busy') === 'false', 'home discovery');
     assert.equal(await evaluate(() => document.querySelector('#home-manual-open, #home-scan-open')), null);
     assert.equal(await evaluate(visible, '.sidebar'), false);
     assert.equal(await evaluate(visible, '#preview-area'), false);
-    assert.equal(await evaluate(() => document.querySelector('#home-devices [data-status="usb_only"]')?.textContent.includes('文件传输未就绪')), true);
-    assert.equal(await evaluate(() => document.querySelector('#home-devices [data-status="usb_only"] button')?.textContent), '等待文件传输');
+    assert.equal(await evaluate(() => document.querySelector('#home-devices [data-status="usb_only"]')?.textContent.includes('解锁掌机并选择 USB 文件传输')), true);
+    assert.equal(await evaluate(() => document.querySelector('#home-devices [data-status="usb_only"] button')), null);
     assert.equal(await evaluate(()=>document.title),'RetroArch 助手');
+    assert.equal(await evaluate(()=>document.getElementById('scan-default-btn').textContent.trim()),'');
+    assert.equal(await evaluate(()=>document.getElementById('scan-default-btn').getAttribute('aria-label')),'重新检测');
+    assert.equal(await evaluate(visible,'#home-library-folder'),true);
     await screenshot('01-home');
     assert.equal(await evaluate(()=>document.querySelector('.workbench-nav, #workbench-task')),null);
-    await waitFor(()=>document.getElementById('task-center-badge').textContent==='1','task badge from active jobs');
-    await click('#task-center-button');
-    await waitFor(()=>document.querySelector('#desktop-content').textContent.includes('等待取消的测试任务'),'top task entry');
-    await click('#desktop-close');
+    assert.equal(await evaluate(()=>document.querySelector('#task-center-button,#task-popover,[data-desktop-view="tasks"]')),null);
     assert.equal(await evaluate(() => document.querySelector('#usb-debug-help, #home-local-open')), null);
-    await click('#workbench-device');
+    await click('#settings-button');
     assert.equal(await evaluate(() => document.querySelectorAll('dialog[open]').length), 1);
-    assert.equal(await evaluate(() => document.querySelectorAll('[data-desktop-view]').length), 4);
-    await click('[data-desktop-view="preferences"]');
+    assert.equal(await evaluate(() => document.querySelectorAll('[data-desktop-view],#data-source-settings').length), 0);
+    assert.equal(await evaluate(visible, '#path-settings'), false);
+    assert.equal(await evaluate(() => [...document.querySelectorAll('#desktop-dialog button')].filter(button => button.checkVisibility()).every(button => button.querySelector('svg') && button.getAttribute('aria-label'))), true);
     await waitFor(visible,'preferences settings','#preference-settings');
-    await evaluate(()=>{const select=document.getElementById('preference-language');select.value='en';select.dispatchEvent(new Event('change',{bubbles:true}));});
+    assert.equal(await evaluate(() => document.activeElement.id), 'desktop-title', 'Opening settings focuses the heading instead of an action');
+    await click('#preference-language input[value="en"]');
     assert.equal(await evaluate(()=>document.title),'RetroArch Assistant');
-    assert.equal(await evaluate(()=>document.getElementById('desktop-close').textContent),'Close');
+    assert.equal(await evaluate(()=>document.getElementById('desktop-close').getAttribute('aria-label')),'Close');
     assert.equal(await evaluate(()=>localStorage.getItem('plcn-ui-language')),'en');
-    await evaluate(()=>{const select=document.getElementById('preference-language');select.value='zh';select.dispatchEvent(new Event('change',{bubbles:true}));});
+    await click('#preference-language input[value="zh"]');
+    await click('#preference-theme input[value="system"]');
+    await send('Emulation.setEmulatedMedia', {features:[{name:'prefers-color-scheme',value:'dark'}]});
+    await waitFor(()=>document.body.dataset.theme==='dark','system theme changes while preferences are open');
+    await screenshot('01-preferences-dark');
+    await click('#preference-theme input[value="light"]');
+    assert.equal(await evaluate(()=>document.body.dataset.theme),'light');
+    assert.equal(await evaluate(()=>localStorage.getItem('plcn-theme')),'light');
+    await send('Emulation.setEmulatedMedia', {features:[]});
     await screenshot('01-preferences');
-    await click('[data-desktop-view="data"]');
-    await waitFor(() => document.querySelector('#desktop-content h3')?.textContent === '名称数据库', 'name database settings');
-    await screenshot('01-name-settings');
-    await click('[data-desktop-view="tasks"]');
-    await waitFor(() => document.querySelector('#desktop-content')?.textContent.includes('本地列表恢复'), 'tasks and restore settings');
-    assert.equal(await evaluate(() => document.querySelector('#desktop-content').textContent.includes('本次运行的任务')), true);
-    assert.equal(await evaluate(() => document.querySelector('.bottom-dock, #details-drawer')), null);
-    await click('#desktop-content .desktop-entry:nth-of-type(2) details > summary');
-    await waitFor(() => document.querySelector('#desktop-content details[open]')?.textContent.includes('测试图片网络失败'), 'task logs and failed image receipts');
-    assert.equal(await evaluate(() => document.querySelector('#desktop-content details[open]').textContent.includes('开始补图')), true);
-    assert.equal(await evaluate(visible, '#desktop-close'), true);
-    await screenshot('01-task-settings');
-    await click('#desktop-content button');
-    await waitFor(() => document.querySelector('#desktop-content').textContent.includes('测试任务已取消'), 'task cancellation');
-    assert.equal(await evaluate(() => document.querySelector('#desktop-content details[open]')?.textContent.includes('测试图片网络失败')), true);
-    await click('#desktop-content button');
-    await waitFor(() => document.querySelectorAll('#desktop-content [data-job-id]').length === 3
-        && !Array.from(document.querySelectorAll('#desktop-content [data-job-id] strong')).some(node => /处理中|等待中/.test(node.textContent)), 'image retry without changing playlists');
-    await screenshot('01-tasks-after-retry');
+    assert.equal(await evaluate(() => [...document.querySelectorAll('#preference-settings .preference-row')].every(row => {
+        const label = row.firstElementChild.getBoundingClientRect();
+        const control = row.lastElementChild.getBoundingClientRect();
+        return Math.abs((label.top + label.bottom) / 2 - (control.top + control.bottom) / 2) < 2
+            && control.left > label.right && control.right <= row.getBoundingClientRect().right + 1;
+    })), true, 'Preference labels and controls share a row without overlap');
+    assert.equal(await evaluate(() => getComputedStyle(document.querySelector('#desktop-dialog')).backgroundColor === getComputedStyle(document.querySelector('.sidebar')).backgroundColor), true);
     await click('#desktop-close');
 
     await click('#workbench-device');
@@ -217,10 +235,10 @@ async function main() {
     assert.equal(await evaluate(()=>document.querySelector('#automatic-scan-button')),null);
     assert.equal(await evaluate(()=>document.querySelector('.completion-entry').hidden),true);
     await waitFor(()=>document.querySelector('#overview-status'),'artwork status bar after overview load');
-    assert.match(await evaluate(()=>document.querySelector('.overview-status-text').textContent),/^\d+ 个游戏缺少封面$/);
+    assert.match(await evaluate(()=>document.querySelector('.overview-status-text').textContent),/^\d+ 个游戏缺少封面 · 1 个游戏尚未使用中文名$/);
     assert.equal(await evaluate(()=>document.querySelector('#overview-complete-button').textContent),'一键补全');
-    assert.deepEqual(await evaluate(()=>Array.from(document.querySelectorAll('.platform-heading strong'),el=>el.textContent).sort()),['GBA','SNES']);
-    assert.equal(await evaluate(()=>Array.from(document.querySelectorAll('.overview-system-card')).every(el=>el.title.length>0&&el.title!==el.querySelector('.platform-heading strong').textContent)),true);
+    assert.deepEqual(await evaluate(()=>Array.from(document.querySelectorAll('.platform-heading strong'),el=>el.textContent).sort()),['Game Boy Advance','超级任天堂']);
+    assert.equal(await evaluate(()=>Array.from(document.querySelectorAll('.platform-fan')).every(fan=>fan.children.length===3)),true);
     await click('#library-all-systems');
 
     const rectOf = sel => evaluate(s => {
@@ -260,16 +278,149 @@ async function main() {
         && !document.querySelector('#library-all-systems').disabled
         && document.querySelector('#overview-complete-button')?.disabled === false, 'all-systems row and scan completion');
     assert.equal(await evaluate(() => document.querySelector('#library-all-systems').getAttribute('aria-pressed')), 'true');
-    assert.deepEqual(await evaluate(()=>Array.from(document.querySelectorAll('.playlist-system-tab .system-display-name'),el=>el.textContent)),['全部游戏','GBA','SNES']);
+    assert.deepEqual(await evaluate(()=>Array.from(document.querySelectorAll('.playlist-system-tab .system-display-name'),el=>el.textContent)),['全部主机','GBA','SNES']);
+    assert.equal(await evaluate(()=>document.querySelector('#library-all-systems .system-game-count').textContent),String(cardCount));
     assert.equal(await evaluate(()=>Array.from(document.querySelectorAll('.playlist-system-tab')).every(row=>row.firstElementChild.tagName.toLowerCase()==='svg'&&row.children.length===3)),true);
     await click('#settings-button');
-    await waitFor(()=>document.querySelector('#desktop-dialog').open,'settings dialog from topbar');
+    await waitFor(visible,'preferences from topbar','#preference-settings');
+    await click('#desktop-close');
+    await click('#workbench-device');
+    await waitFor(visible,'detected library settings','#path-settings');
+    assert.equal(await evaluate(visible,'#artwork-directory-settings'),false);
+    await click('#desktop-close');
+
+    await click('#completion-history-link');
+    await waitFor(()=>document.querySelector('#desktop-content [data-job-id] details'),'completion history from library');
+    await click('#desktop-content [data-job-id] details > summary');
+    await waitFor(()=>document.querySelector('#desktop-content details[open]')?.textContent.includes('测试图片网络失败'),'failed image details');
+    assert.equal(await evaluate(() => document.querySelector('#desktop-dialog .desktop-toolbar')),null);
+    assert.equal(await evaluate(()=>document.querySelector('#desktop-content [data-chd-operation],[data-rom-storage-operation]')),null);
+    await click('#desktop-content [data-job-id] > button');
+    await waitFor(()=>document.querySelectorAll('#desktop-content [data-job-id]').length===2
+        && !workbench.operation,'artwork retry without editing any playlists');
+    await screenshot('01-completion-history');
     await click('#desktop-close');
 
     assert.equal(await evaluate(() => document.querySelector('#overview-complete-button').disabled), false);
     assert.equal(await evaluate(() => document.querySelector('#preview-button').disabled), false);
     assert.equal(await evaluate(visible, '#game-library'), false);
     assert.equal(await evaluate(() => document.querySelector('#workspace-title').textContent), '游戏库');
+    const gbaCard = '.overview-system-card[data-system="Nintendo - Game Boy Advance"]';
+    const originalCovers = await evaluate(() => {
+        const {covers} = workbenchOverview.data.playlists
+            .find(playlist => playlist.system === 'Nintendo - Game Boy Advance').locations.local;
+        const makeCover = (width, height, color, label) => {
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const context = canvas.getContext('2d');
+            context.fillStyle = color;
+            context.fillRect(0, 0, width, height);
+            return {url: canvas.toDataURL(), label};
+        };
+        return covers.splice(0, covers.length,
+            makeCover(48, 30, '#2461a6', 'First landscape'),
+            makeCover(30, 48, '#b7562a', 'Portrait outlier'),
+            {url: 'data:image/png,broken', label: 'Unreadable cover'},
+            makeCover(48, 30, '#749268', 'Middle landscape'),
+            makeCover(48, 30, '#c79a45', 'Last landscape'),
+        );
+    });
+    await evaluate(()=>renderWorkbenchOverview(true));
+    await waitFor(selector=>document.querySelectorAll(selector+' .platform-fan img').length===3,
+        'three landscape covers selected from five candidates', gbaCard);
+    const fan = await evaluate(selector => {
+        const card = document.querySelector(selector);
+        const art = card.querySelector('.platform-art');
+        renderWorkbenchOverview(true);
+        const currentArt = document.querySelector(selector +' .platform-art');
+        const covers = [...currentArt.querySelectorAll('.platform-cover')];
+        return {
+            titles: covers.map(slot=>slot.title),
+            ratios: covers.map(slot=>slot.offsetWidth / slot.offsetHeight),
+            front: getComputedStyle(covers[1]).zIndex,
+            reused: art===currentArt,
+        };
+    }, gbaCard);
+    assert.deepEqual(fan.titles, ['First landscape', 'Middle landscape', 'Last landscape']);
+    assert.ok(fan.ratios.every(ratio=>Math.abs(ratio-1.6)<0.03));
+    assert.equal(fan.front,'1');
+    assert.equal(fan.reused,true);
+
+    await send('Emulation.setDeviceMetricsOverride', {width:390,height:530,deviceScaleFactor:1,mobile:false});
+    await send('Emulation.setEmulatedMedia', {features:[{name:'prefers-reduced-motion',value:'reduce'}]});
+    assert.ok(await evaluate(selector=>{
+        const card = document.querySelector(selector);
+        const bounds = card.getBoundingClientRect();
+        return [...card.querySelectorAll('.platform-cover')].every(slot=>{
+            const rect = slot.getBoundingClientRect();
+            return rect.left>=bounds.left && rect.right<=bounds.right &&
+                getComputedStyle(slot).transitionDuration==='0s';
+        });
+    }, gbaCard));
+    await screenshot('01-cover-fan-narrow');
+    await send('Emulation.setEmulatedMedia', {features:[]});
+    await send('Emulation.setDeviceMetricsOverride', {width:Number(width),height:Number(height),deviceScaleFactor:1,mobile:false});
+    await evaluate(covers => {
+        const location = workbenchOverview.data.playlists
+            .find(playlist => playlist.system === 'Nintendo - Game Boy Advance').locations.local;
+        location.covers = covers;
+        renderWorkbenchOverview(true);
+    }, originalCovers);
+    assert.equal(await evaluate(()=>document.getElementById('manual-scan-button').textContent),'扫描新增游戏');
+    await screenshot('01-system-covers');
+
+    const overviewSearch = '#overview-system-search';
+    await evaluate(selector => {
+        const input = document.querySelector(selector);
+        input.value = '超级任天堂';
+        input.dispatchEvent(new Event('input'));
+    }, overviewSearch);
+    const filteredCard = '#library-overview .overview-system-card:not([hidden])';
+    assert.equal(await evaluate(selector=>document.querySelectorAll(selector).length,filteredCard),1);
+    await send('Emulation.setDeviceMetricsOverride', {width:390,height:400,deviceScaleFactor:1,mobile:false});
+    const overviewScrollTop = await evaluate(()=>{
+        const panel = document.querySelector('.main-panel');
+        panel.scrollTop = 90;
+        return panel.scrollTop;
+    });
+    assert.ok(overviewScrollTop>0);
+    await evaluate(selector=>document.querySelector(selector).click(),filteredCard);
+    assert.equal(await evaluate(()=>document.querySelector('.main-panel').scrollTop),0);
+    await click('#back-to-systems');
+    assert.equal(await evaluate(()=>document.querySelector('.main-panel').scrollTop),overviewScrollTop);
+    assert.equal(await evaluate(selector=>document.querySelector(selector).value,overviewSearch),'超级任天堂');
+    assert.equal(await evaluate(selector=>document.activeElement.matches(selector),filteredCard),true);
+    await screenshot('01-system-covers-narrow');
+    await send('Emulation.setDeviceMetricsOverride', {width:Number(width),height:Number(height),deviceScaleFactor:1,mobile:false});
+    await evaluate(()=>filterLibrarySystems(''));
+
+    await click('.playlist-system-tab[aria-label="Nintendo - Game Boy Advance"]');
+    await waitFor(()=>gameLibrary.data?.items.length===1,'GBA cover grid');
+    const wideFrame = await evaluate(async () => {
+        const grid = document.getElementById('game-library-grid');
+        const entry = gameLibrary.data.items[0];
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 321;
+        const imageURL = entry.image_url;
+        entry.image_url = canvas.toDataURL();
+        renderGameLibrary();
+        const image = grid.querySelector('.game-card-art img');
+        image.loading = 'eager';
+        await image.decode();
+        const {width, height} = image.parentElement.getBoundingClientRect();
+        const fit = getComputedStyle(image).objectFit;
+        entry.image_url = imageURL;
+        renderGameLibrary();
+        setGameLibraryFilter('missing');
+        const card = grid.querySelector('.game-card-art').getBoundingClientRect();
+        setGameLibraryFilter('all');
+        return {frame: width / height, fit, filteredFrame: card.width / card.height};
+    });
+    assert.ok(Math.abs(wideFrame.frame-1.6)<0.01);
+    assert.equal(wideFrame.fit,'contain');
+    assert.equal(wideFrame.filteredFrame,wideFrame.frame);
 
     const system = '.playlist-system-tab[aria-label="Nintendo - Super Nintendo Entertainment System"]';
     await click(system);
@@ -283,6 +434,10 @@ async function main() {
     assert.equal(await evaluate(() => document.querySelector('#game-library-filter-problem').textContent), '需检查 0');
     assert.equal(await evaluate(() => document.querySelector('#game-library-rows .game-image-placeholder').textContent), '缺图');
     assert.equal(await evaluate(visible, '#game-library-grid'), true);
+    assert.ok(await evaluate(()=>{
+        const card = document.querySelector('#game-library-grid .game-card-art').getBoundingClientRect();
+        return Math.abs(card.width / card.height - 2/3)<0.01;
+    }));
     assert.equal(await evaluate(()=>document.querySelectorAll('#game-library-grid .game-cover-card').length),1);
     assert.equal(await evaluate(()=>document.querySelector('#game-library-grid .game-card-art').textContent),'缺封面');
     assert.equal(await evaluate(()=>document.querySelector('#workspace-title .workspace-count').textContent),'1 个游戏');
@@ -296,6 +451,35 @@ async function main() {
     assert.equal(await evaluate(() => document.querySelector('#game-library-note')), null);
     assert.equal(await evaluate(() => document.querySelector('#game-selection-toolbar').hidden), true);
     await screenshot('02-games');
+    await send('Emulation.setDeviceMetricsOverride', {width:390,height:460,deviceScaleFactor:1,mobile:false});
+    await send('Emulation.setEmulatedMedia', {features:[{name:'prefers-reduced-motion',value:'reduce'}]});
+    const gameScrollTop = await evaluate(()=>{
+        const search = document.getElementById('game-library-search');
+        search.value = 'Shadowrun';
+        search.dispatchEvent(new Event('input'));
+        setGameLibraryFilter('missing');
+        const panel = document.querySelector('.main-panel');
+        panel.scrollTop = 115;
+        const previousTop = panel.scrollTop;
+        document.querySelector('.game-card-open').click();
+        return previousTop;
+    });
+    assert.ok(gameScrollTop>0);
+    await waitFor(()=>Boolean(gameInspector.details),'narrow game details');
+    assert.equal(await evaluate(visible,'.game-library-main'),false);
+    assert.equal(await evaluate(()=>document.querySelector('.main-panel').scrollTop),0);
+    assert.equal(await evaluate(()=>getComputedStyle(document.getElementById('game-inspector')).animationName),'none');
+    assert.equal(await evaluate(()=>document.getElementById('inspector-close').textContent),'返回游戏列表');
+    assert.equal(await evaluate(()=>document.getElementById('inspector-artwork').textContent),'补封面');
+    await screenshot('02-game-details-narrow');
+    await click('#inspector-close');
+    assert.equal(await evaluate(()=>document.querySelector('.main-panel').scrollTop),gameScrollTop);
+    assert.equal(await evaluate(()=>document.getElementById('game-library-search').value),'Shadowrun');
+    assert.equal(await evaluate(()=>gameLibrary.filter),'missing');
+    assert.equal(await evaluate(()=>document.activeElement.matches('.game-card-open')),true);
+    await send('Emulation.setDeviceMetricsOverride', {width:Number(width),height:Number(height),deviceScaleFactor:1,mobile:false});
+    await send('Emulation.setEmulatedMedia', {features:[]});
+
     await click('#game-library-grid .game-card-open');
     await waitFor(()=>gameInspector.details,'inspector metadata loaded');
     assert.equal(await evaluate(visible,'#game-inspector'),true);
@@ -303,12 +487,31 @@ async function main() {
     assert.equal(await evaluate(()=>Boolean(document.querySelector('#inspector-more'))&&!document.querySelector('#inspector-more').open),true);
     assert.equal(await evaluate(()=>document.querySelector('#inspector-remove').title),'保留游戏文件、封面和存档');
     await screenshot('02-game-inspector');
+    await click('#inspector-artwork');
+    await waitFor(()=>document.querySelector('#game-inspector #artwork-dialog')?.open,'docked artwork editor');
+    assert.equal(await evaluate(()=>document.querySelector('#artwork-dialog').matches(':modal')),false);
+    await waitFor(()=>document.querySelectorAll('#artwork-results .artwork-option').length>0,'docked artwork candidates');
+    await click('#artwork-results .artwork-option');
+    await waitFor(()=>!document.querySelector('#artwork-confirm').disabled,'docked comparison');
+    await evaluate(()=>renderGameInspector());
+    assert.equal(await evaluate(()=>Boolean(artworkDialogState.candidate)),true);
+    await screenshot('02-inline-artwork-comparison');
+    await evaluate(()=>{document.querySelector('#game-inspector').scrollTop=0;});
+    await screenshot('02-inline-artwork');
+    assert.equal(await evaluate(()=>document.querySelector('#game-inspector').scrollWidth<=document.querySelector('#game-inspector').clientWidth),true);
+    await evaluate(()=>inspectGame(0));
+    assert.equal(await evaluate(()=>artworkDialogState),null);
+    assert.equal(await evaluate(()=>workbench.operation),null);
+    assert.equal(await evaluate(()=>document.querySelector('#artwork-dialog').open),false);
+
     await click('#inspector-edit-name');
     await evaluate(()=>{const input=document.querySelector('#inspector-name');input.value='My Shadowrun';input.dispatchEvent(new Event('input',{bubbles:true}));});
     assert.equal(await evaluate(()=>document.querySelector('#inspector-preview-name')),null);
     await click('#inspector-save');
     await waitFor(()=>gameLibrary.data?.items[0]?.label==='My Shadowrun','name saved in playlist');
     await waitFor(()=>gameLibrary.activeIndex===0&&Boolean(gameInspector.details),'inspector retained after name edit');
+    assert.equal(await evaluate(()=>gameLibrary.filter),'missing');
+    assert.equal(await evaluate(()=>document.getElementById('game-library-search').value),'Shadowrun');
     await evaluate(async()=>{
         const state=await desktopRequest('/api/desktop');
         const edit=state.m3u_operations.find(record=>record.mode==='game_edit');
@@ -329,11 +532,7 @@ async function main() {
     await click('.tools-menu > summary');
     assert.doesNotMatch(await evaluate(()=>document.querySelector('.tools-menu').innerText),/\p{Script=Han}/u);
     await evaluate(()=>document.querySelector('.tools-menu').open=false);
-    await click('#manual-add-button');
-    await waitFor(()=>document.querySelector('#gm-source-scan')&&document.querySelector('#gm-source-import'),'add-games source choices');
-    assert.equal(await evaluate(()=>document.querySelector('#gm-source-import').getAttribute('aria-pressed')),'true');
-    assert.doesNotMatch(await evaluate(()=>document.querySelector('#gm-source-scan').innerText),/\p{Script=Han}/u);
-    await click('#gm-source-scan');
+    await click('#manual-scan-button');
     await waitFor(()=>document.querySelector('#auto-scan-dialog').open,'scan entry from add-games workspace');
     await waitFor(()=>!document.querySelector('#auto-scan-start').disabled,'English scan storage loaded');
     assert.doesNotMatch(await evaluate(()=>document.querySelector('#auto-scan-dialog').innerText),/\p{Script=Han}/u);
@@ -347,7 +546,7 @@ async function main() {
     await waitFor(()=>document.querySelector('#gm-pick-files'),'game import loaded');
     assert.equal(await evaluate(()=>document.querySelector('#gm-preview')),null);
     assert.equal(await evaluate(()=>document.querySelector('#gm-destination-fields').hidden),true);
-    assert.equal(await evaluate(()=>document.querySelector('#gm-dialog header button.btn-text').textContent),'Cancel');
+    assert.equal(await evaluate(()=>document.querySelector('#gm-dialog header button').getAttribute('aria-label')),'Cancel');
     await screenshot('02-game-import-empty');
     await click('#gm-pick-files');
     await waitFor(()=>document.querySelector('#gm-sources')?.textContent.includes('Imported demo.sfc'),'game files selected');
@@ -357,17 +556,55 @@ async function main() {
     assert.equal(await evaluate(()=>document.querySelector('#gm-destination-fields').hidden),false);
     await screenshot('02-game-import-destination');
     await evaluate(libraryPath=>{const input=document.querySelector('#gm-destination');input.value=libraryPath+'/Roms/SNES';input.dispatchEvent(new Event('input',{bubbles:true}));},libraryPath);
-    await waitFor(()=>document.querySelector('#gm-apply').hidden,'destination change invalidates analysis');
+    await waitFor(()=>document.querySelector('#gm-apply').disabled,'destination change invalidates analysis');
     await waitFor(()=>!gameManagement.busy&&!document.querySelector('#gm-apply').hidden
         && document.querySelector('#gm-apply').textContent==='Import 1 game','destination re-analysis ready');
     assert.equal(await evaluate(()=>document.querySelectorAll('dialog[open]').length),0);
+    await evaluate(()=>{gameManagement.setup.android=true;document.querySelector('#gm-android').value='';gmInvalidate();gmAutoAnalyze();});
+    await waitFor(()=>document.querySelector('#gm-android').getAttribute('aria-invalid')==='true','missing Android launch directory guidance');
+    assert.equal(await evaluate(()=>document.querySelector('#gm-apply').hidden),false);
+    assert.equal(await evaluate(()=>document.querySelector('#gm-apply').disabled),true);
+    assert.equal(await evaluate(()=>document.activeElement.id),'gm-android');
+    await screenshot('02-game-import-missing-launch-folder');
+    await evaluate(()=>{const input=document.querySelector('#gm-android');input.value='/storage/CARD/Roms/SNES';input.dispatchEvent(new Event('input',{bubbles:true}));});
+    await waitFor(()=>!gameManagement.busy&&!document.querySelector('#gm-apply').disabled,'launch directory restores import action');
     await screenshot('02-game-import-preview');
     await click('#gm-apply');
-    await waitFor(()=>document.querySelector('#gm-status').textContent.startsWith('Imported 1 game')&&!workbench.operation,'import completed');
+    await waitFor(()=>document.querySelector('#gm-status').textContent.startsWith('Added 1 entries')&&!workbench.operation,'import completed');
     await waitFor(()=>gameLibrary.data?.items.length===2,'new game visible');
+    assert.equal(await evaluate(()=>document.querySelector('#gm-fields').hidden),true);
+    assert.equal(await evaluate(visible,'#gm-view-games'),true);
+    assert.equal(await evaluate(visible,'#gm-add-more'),true);
+    assert.equal(await evaluate(visible,'#gm-complete-metadata'),true);
+    await screenshot('02-game-import-complete');
     assert.equal(fs.readFileSync(path.join(libraryPath,'Roms/SNES/Imported demo.sfc'),'utf8'),'game import fixture');
     await click('#gm-dialog header button');
     await click('#game-view-grid');
+    await click('#game-library-grid [data-game-card="1"] .game-card-open');
+    await waitFor(()=>gameInspector.details,'imported game details');
+    const beforeRomUpdate=fs.readFileSync(path.join(libraryPath,'playlists/Nintendo - Super Nintendo Entertainment System.lpl'));
+    await click('#inspector-update-rom');
+    await waitFor(()=>Boolean(gameInspector.romPlan),'ROM update prepared');
+    await screenshot('02-rom-update-preview');
+    await click('#inspector-rom-confirm');
+    await waitFor(()=>!workbench.operation&&Boolean(document.querySelector('#inspector-restore-rom')),'ROM updated with restore entry');
+    assert.equal(fs.readFileSync(path.join(libraryPath,'Roms/SNES/Imported demo.sfc'),'utf8'),'new version fixture');
+    assert.deepEqual(fs.readFileSync(path.join(libraryPath,'playlists/Nintendo - Super Nintendo Entertainment System.lpl')),beforeRomUpdate);
+    await screenshot('02-rom-updated');
+    const previousPage = await evaluate(()=>performance.timeOrigin);
+    await send('Page.reload');
+    await waitFor(previous=>performance.timeOrigin!==previous && document.querySelector('#library-onboarding')?.getAttribute('aria-busy')==='false','app reload before ROM recovery',previousPage);
+    await click('#workbench-device');
+    await click('#scan-device-btn');
+    await click(system);
+    await waitFor(()=>gameLibrary.data?.items.some(item=>item.label.includes('Imported demo')),'reopened imported game');
+    const importedIndex = await evaluate(()=>gameLibrary.data.items.find(item=>item.label.includes('Imported demo')).index);
+    await click(`[data-game-card="${importedIndex}"] .game-card-open`);
+    await waitFor(()=>document.querySelector('#inspector-restore-rom'),'durable ROM recovery entry');
+    await click('#inspector-restore-rom');
+    await waitFor(()=>!workbench.operation&&gameInspector.details&&!document.querySelector('#inspector-restore-rom'),'previous ROM restored');
+    assert.equal(fs.readFileSync(path.join(libraryPath,'Roms/SNES/Imported demo.sfc'),'utf8'),'game import fixture');
+    await click('#game-inspector .inspector-close');
     assert.equal(await evaluate(()=>document.querySelector('#game-selection-toolbar').hidden),true);
     await click('#game-library-grid [data-game-card="1"] .game-card-select');
     await waitFor(()=>!document.querySelector('#game-selection-toolbar').hidden,'selection toolbar shown after select');
@@ -406,9 +643,7 @@ async function main() {
     });
     await click('#gm-dialog header button');
     await waitFor(()=>gameLibrary.data?.items.length===1,'original games restored');
-    await click('#manual-add-button');
-    await waitFor(()=>document.querySelector('#gm-source-scan'),'add-games source choices');
-    await click('#gm-source-scan');
+    await click('#manual-scan-button');
     await waitFor(()=>document.querySelector('#auto-scan-dialog').open,'auto-scan from add-games workspace');
     await click('#auto-scan-dialog footer button[onclick="openContentScan()"]');
     await waitFor(()=>!document.querySelector('#content-scan-fields').disabled,'English manual setup loaded');
@@ -435,6 +670,9 @@ async function main() {
         .filter(name => name.endsWith('.lpl'))
         .map(name => [name, fs.readFileSync(libraryPath + '/playlists/' + name)]));
     const beforeRun = playlistFiles();
+    // The overview response replaces its action button. Start this cancellation
+    // scenario after that read settles, rather than clicking a retiring node.
+    await waitFor(() => !workbenchOverview.loading && !workbench.operation, 'settled overview before completion');
     await click('#overview-complete-button');
     await waitFor(() => batchRunJobId, 'all-systems run started');
     assert.equal(await evaluate(visible, '#completion-cancel'), true);
@@ -457,7 +695,7 @@ async function main() {
     assert.deepEqual(playlistFiles(), beforeRun);
     await click('#action-toast-details');
     await waitFor(() => document.querySelector('#desktop-dialog').open
-        && document.querySelector('#desktop-content').textContent.includes('最近补全'), 'details opens task center with recent completions');
+        && document.querySelector('#desktop-content').textContent.includes('最近补全'), 'details opens recent completion history');
     await evaluate(() => [...document.querySelectorAll('#desktop-content h3')]
         .find(h => h.textContent === '最近补全')?.scrollIntoView({block: 'center'}));
     await screenshot('02-tasks-recent-completions');
@@ -680,7 +918,7 @@ async function main() {
     await click('#disc-inspection-groups > details summary');
     await waitFor(()=>document.querySelectorAll('#disc-inspection-groups .disc-members li').length===2,'disc details expanded');
     await screenshot('07-disc-inspection');
-    await click('#disc-inspection-dialog .disc-inspection-header button');
+    await click('#disc-inspection-close');
     assert.deepEqual(fs.readFileSync(discPath),discBefore,'inspection must not write the playlist');
     await evaluate(()=>toggleTheme());
     await click('#game-library-discs');
@@ -709,12 +947,21 @@ async function main() {
     assert.equal(JSON.parse(fs.readFileSync(discPath,'utf8')).items.length,2);
     assert.equal(fs.readFileSync(path.join(discRoms,m3uName),'utf8'),'GulliverBoy Disc2.chd\nGulliverBoy Disc1.chd\n');
     await screenshot('08-m3u-applied');
+    holdRecent = true;
     await click('#m3u-close');
+    for(let attempt=0;!heldRecent&&attempt<150;attempt++)await delay(100);
+    assert.ok(heldRecent, 'scan is waiting to save the opened library');
+    assert.equal(await evaluate(() => workbench.operation), 'scan');
+    assert.equal(await evaluate(() => [...document.querySelectorAll('#scanned-playlists button')].every(button => button.disabled)), true,
+        'Rebuilt navigation stays disabled until the scan finishes');
+    holdRecent = false;
+    await send('Fetch.continueRequest', {requestId:heldRecent});
+    heldRecent = null;
     await waitFor(()=>!document.querySelector('#m3u-dialog').open && !document.querySelector('#disc-inspection-dialog').open && !document.querySelector('#library-all-systems').disabled,'library refreshed after M3U');
     await click('.playlist-system-tab[aria-label="Sega - Saturn"]');
     await waitFor(()=>gameLibrary.data?.items.length===2,'two launch entries after grouping');
     assert.equal(await evaluate(()=>gameLibrary.data.items[0].game_id),originalGameId);
-    await click('#workbench-device');await click('[data-desktop-view="tasks"]');
+    await click('#game-library-discs');await click('#disc-inspection-close-history');
     await waitFor(()=>document.querySelector('[data-m3u-operation] button'),'durable M3U history');
     await click('[data-m3u-operation] button');
     await click('.desktop-confirm button:last-of-type');
@@ -724,6 +971,7 @@ async function main() {
     await waitFor(()=>gameLibrary.data?.items.length===3,'restored library cache refreshed');
     await screenshot('08-m3u-restored');
     await click('#desktop-close');
+    await click('#disc-inspection-close');
     await evaluate(()=>toggleTheme());
     await click('#game-library-discs');
     await waitFor(()=>document.querySelectorAll('#disc-inspection-groups > details').length===2,'restored groups inspected');
@@ -732,7 +980,7 @@ async function main() {
     await click('#disc-inspection-groups > details:last-child .disc-group-body > button');
     await screenshot('08-m3u-editor-light');
     await click('#m3u-close');
-    await click('#disc-inspection-dialog .disc-inspection-header button');
+    await click('#disc-inspection-close');
 
 
     assert.deepEqual(fs.readFileSync(discPath),discBefore);
@@ -766,12 +1014,14 @@ async function main() {
     await click('#storage-close');await evaluate(()=>toggleTheme());if (!await evaluate(() => document.querySelector('.tools-menu').open)) await click('.tools-menu > summary');
     await click('#storage-entry');await click('#storage-analyze');
     await waitFor(()=>!storageTask.busy&&!document.querySelector('#storage-analysis').hidden,'dark CHD analysis');
-    await screenshot('09-chd-analysis-dark');await click('#storage-close');
-    if(canConvert){await click('#workbench-device');await click('[data-desktop-view="tasks"]');await waitFor(()=>document.querySelector('[data-chd-operation]'),'CHD durable task history');await screenshot('09-chd-tasks');await click('#desktop-close');}
+    await screenshot('09-chd-analysis-dark');
+    if(!canConvert) await click('#storage-close');
 
     if(canConvert){
         const originalM3u=fs.readFileSync(path.join(discRoms,'Game.m3u'));
-        await click('#workbench-device');await click('[data-desktop-view="tasks"]');
+        await click('#storage-close-history');
+        await waitFor(()=>document.querySelector('[data-chd-operation]'),'CHD durable history');
+        await screenshot('09-chd-history');
         await click('[data-chd-operation] button');
         await waitFor(()=>document.querySelector('#deploy-dialog').open,'deployment dialog');
         assert.equal(await evaluate(()=>document.querySelector('#deploy-mode').value),'copy');
@@ -788,14 +1038,14 @@ async function main() {
         assert.equal(fs.existsSync(rawCue),false);assert.equal(fs.existsSync(rawTrack),false);
         assert.equal(fs.existsSync(path.join(discRoms,'Game (Disc 1).chd')),true);
         assert.equal(fs.readFileSync(path.join(discRoms,'Game.m3u'),'utf8').includes('Game (Disc 1).chd'),true);
-        await screenshot('10-chd-deployed');await click('#deploy-close');
-        await click('#workbench-device');await click('[data-desktop-view="tasks"]');await waitFor(()=>document.querySelector('[data-chd-deployment]'),'deployment receipt displayed');
+        await screenshot('10-chd-deployed');
+        await click('#deploy-close-history');await waitFor(()=>document.querySelector('[data-chd-deployment]'),'deployment receipt displayed');
         await click('[data-chd-deployment] button');await click('.desktop-confirm button:last-of-type');
         await waitFor(()=>document.querySelector('[data-chd-deployment] strong').textContent.includes('已恢复'),'deployment restored');
         assert.deepEqual(fs.readFileSync(rawCue),cueBefore);assert.deepEqual(fs.readFileSync(rawTrack),rawBefore);
         assert.deepEqual(fs.readFileSync(path.join(discRoms,'Game.m3u')),originalM3u);
         assert.equal(fs.existsSync(path.join(discRoms,'Game (Disc 1).chd')),false);
-        await screenshot('10-chd-restored');await click('#desktop-close');
+        await screenshot('10-chd-restored');await click('#desktop-close');await click('#deploy-close');
     }
 
     // Cartridge directory analysis and real ZIP generation: separate synthetic library.
@@ -838,9 +1088,9 @@ async function main() {
     await click('#rom-storage-fields > label:first-of-type button');
     await waitFor(()=>document.querySelector('#rom-storage-source').value.length>0,'source reopened');
     await click('#rom-storage-analyze');await waitFor(()=>!romStorage.busy&&!document.querySelector('#rom-storage-analysis').hidden,'dark directory analysis');
-    await evaluate(()=>document.querySelector('#rom-storage-dialog').scrollTop=0);await screenshot('11-rom-layout-dark');await click('#rom-storage-close');
-    await click('#workbench-device');await click('[data-desktop-view="tasks"]');await waitFor(()=>document.querySelector('[data-rom-storage-operation]'),'ZIP durable history');
-    await screenshot('11-rom-zip-tasks');await click('#desktop-close');
+    await evaluate(()=>document.querySelector('#rom-storage-dialog').scrollTop=0);await screenshot('11-rom-layout-dark');
+    await click('#rom-storage-close-history');await waitFor(()=>document.querySelector('[data-rom-storage-operation]'),'ZIP durable history');
+    await screenshot('11-rom-zip-history');await click('#desktop-close');await click('#rom-storage-close');
 
     // Stage 4B: move a synthetic CHD-only multi-disc set, then restore both operations.
     const layoutRoot=path.join(libraryPath,'layout-samples','RetroArch'),layoutLists=path.join(layoutRoot,'playlists'),layoutRoms=path.join(layoutRoot,'Roms'),layoutNested=path.join(layoutRoms,'多盘游戏');
@@ -885,8 +1135,8 @@ async function main() {
     for(const file of [layoutM3u,...layoutDiscs])assert.equal(fs.existsSync(file),false);
     assert.equal(fs.readFileSync(path.join(layoutRoms,'多盘.m3u'),'utf8'),layoutDiscs.map(file=>path.basename(file)).join('\n')+'\n');
     assert.equal(JSON.parse(fs.readFileSync(layoutPlaylist,'utf8')).items[0].path.replaceAll('\\','/'),path.join(layoutRoms,'多盘.m3u').replaceAll('\\','/'));
-    await screenshot('12-layout-moved');await click('#relocate-close');
-    await click('#workbench-device');await click('[data-desktop-view="tasks"]');
+    await screenshot('12-layout-moved');
+    await click('#relocate-close-history');
     await waitFor(id=>document.querySelector('[data-rom-relocation="'+id+'"]'),'layout move receipt',moveId);
     if(await evaluate(()=>workbench.operation))await waitFor(()=>!workbench.operation,'background scan finished');
     await evaluate(()=>beginWorkbenchOperation('scan'));
@@ -899,7 +1149,7 @@ async function main() {
     await waitFor(id=>document.querySelector('[data-rom-relocation="'+id+'"] strong').textContent.includes('已恢复'),'copy restored',copyId);
     for(const [file,bytes] of layoutBefore)assert.deepEqual(fs.readFileSync(file),bytes);
     for(const file of [layoutM3u,...layoutDiscs])assert.equal(fs.existsSync(path.join(layoutRoms,path.basename(file))),false);
-    await screenshot('12-layout-restored');await click('#desktop-close');
+    await screenshot('12-layout-restored');await click('#desktop-close');await click('#relocate-close');
 
     assert.deepEqual(errors, [], 'Page errors');
     console.log(`Browser smoke OK (${width}×${height}): home → local library → SNES → translated preview`);

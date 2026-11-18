@@ -1,9 +1,12 @@
 /* Discovery updates the home screen only; opening a library is always explicit. */
 const libraryHome = {generation: 0, loading: true, data: null, error: '', openError: '', opening: '', device: null};
+let libraryDiscoveryRetry = null;
 const homeText = (zh, en) => workbenchText(zh, en);
 function homeStatus(source) {
     const labels = {
-        usb_only: ['USB 已连接 · 文件传输未就绪', 'USB connected · File transfer unavailable'],
+        usb_only: source.error
+            ? ['USB 已连接，掌机存储暂不可用；请解锁掌机，稍后自动重试。', 'USB is connected, but storage is unavailable. Unlock the handheld; detection will retry automatically.']
+            : ['解锁掌机并选择 USB 文件传输。', 'Unlock the handheld and select USB file transfer.'],
         ready: source.transport !== 'local' ? ['设备已连接', 'Device connected'] : ['目录可用', 'Available'],
         unauthorized: ['等待设备授权 · 请在设备上允许 USB 调试', 'Authorization required · Allow USB debugging on the device'],
         offline: ['设备离线 · 请重新连接 USB', 'Device offline · Reconnect USB'],
@@ -22,13 +25,17 @@ function renderLibraryHome() {
     const text = (id, zh, en) => { document.getElementById(id).textContent = homeText(zh, en); };
     text('home-title', '选择设备', 'Choose a device');
     text('home-back', '切换设备', 'Switch device');
-    text('home-description', '选择要管理的掌机，进入后查看游戏库、扫描新增游戏和补全图片。', 'Choose your handheld, then browse, scan new games and complete artwork.');
-    text('home-devices-title', '已连接掌机', 'Connected handhelds');
+    text('home-description', '打开掌机或本地游戏库。', 'Open a handheld or local game library.');
+    text('home-devices-title', '可用设备与目录', 'Devices and folders');
     text('home-recent-title', '最近使用', 'Recent libraries');
     const refresh = document.getElementById('scan-default-btn');
-    refresh.textContent = libraryHome.loading ? homeText('检测中…', 'Detecting…') : homeText('重新检测', 'Refresh');
+    refresh.title = libraryHome.loading ? homeText('检测中…', 'Detecting…') : homeText('重新检测', 'Refresh devices');
+    refresh.setAttribute('aria-label', refresh.title);
     refresh.disabled = busy || libraryHome.loading;
     panel.setAttribute('aria-busy', String(libraryHome.loading || Boolean(libraryHome.opening)));
+    const manualFolder = document.getElementById('home-library-folder');
+    manualFolder.hidden = libraryHome.loading || Boolean(libraryHome.data?.sources.some(source => source.status === 'ready'));
+    manualFolder.disabled = busy;
     const message = document.getElementById('home-message');
     message.textContent = libraryHome.openError || libraryHome.error;
     message.hidden = !message.textContent;
@@ -43,7 +50,7 @@ function renderLibraryHome() {
                     ? homeText('已连接的游戏库已在上方显示。', 'Connected libraries are shown above.')
                     : homeText('打开游戏库后，会在这里保留最近使用记录。', 'Libraries you open will appear here.'))
                 : libraryHome.error ? homeText('检测未完成，请重新检测。', 'Discovery failed. Please retry.')
-                : homeText('未检测到可用掌机连接，请确认设备连接后重新检测。', 'No handheld found. Select USB file transfer, unlock the device, then refresh.');
+                : homeText('请通过 USB 连接掌机，再重新检测。', 'Connect your handheld via USB, then refresh.');
             list.appendChild(empty);
         }
         for (const source of entries) {
@@ -52,27 +59,32 @@ function renderLibraryHome() {
             const body = document.createElement('div'); body.className = 'home-source-body';
             const title = document.createElement('strong'); title.textContent = source.label;
             const path = document.createElement('p'); path.className = 'home-source-path';
-            path.textContent = source.status === 'usb_only' ? source.error || homeText('请在掌机上选择文件传输并解锁', 'Select file transfer and unlock your handheld') : source.transport !== 'local' ? decodeURIComponent(source.path.replace(/^mtp:\/\/[^/]+\/[^/]+|^adb:\/\/[^/]+/, '')) || homeText('设备存储', 'Device storage') : source.path;
+            path.textContent = source.transport !== 'local' ? decodeURIComponent(source.path.replace(/^mtp:\/\/[^/]+\/[^/]+|^adb:\/\/[^/]+/, '')) || homeText('设备存储', 'Device storage') : source.path;
             if (source.storages) path.textContent = homeText(`${source.storages.length} 个存储空间`, `${source.storages.length} storage locations`);
             path.title = source.path;
             const state = document.createElement('p'); state.className = 'home-source-state'; state.textContent = homeStatus(source);
             if (source.storages) state.textContent = homeText('设备已连接', 'Device connected');
-            body.append(title, path, state);
+            body.append(title);
+            const canOpen = ['ready', 'no_library'].includes(source.status);
+            if (canOpen) body.append(path);
+            body.append(state);
+            row.append(icon, body);
+            list.append(row);
+            if (!canOpen) continue;
             const button = document.createElement('button'); button.type = 'button';
             button.className = 'btn' + (source.status !== 'ready' ? ' btn-muted' : '');
             button.textContent = libraryHome.opening && libraryHome.opening === source.path ? homeText('正在打开…', 'Opening…')
-                : source.status === 'usb_only' ? homeText('等待文件传输', 'Waiting for file transfer')
-                : ['ready', 'no_library'].includes(source.status) ? (source.storages ? homeText('进入设备', 'Open device') : homeText('打开游戏库', 'Open library'))
-                : homeText('等待连接', 'Waiting for connection');
+                : source.storages ? homeText('进入设备', 'Open device') : homeText('打开游戏库', 'Open library');
             button.setAttribute('aria-label', button.textContent + ' · ' + source.label);
-            button.disabled = busy || libraryHome.loading || !['ready', 'no_library'].includes(source.status);
+            button.disabled = busy || libraryHome.loading;
             button.onclick = () => openLibrarySource(source);
-            row.append(icon, body, button); list.appendChild(row);
+            row.append(button);
         }
     }
 }
 async function refreshLibrarySources() {
     if (workbench.operation) return;
+    clearTimeout(libraryDiscoveryRetry);
     const generation = ++libraryHome.generation;
     libraryHome.loading = true; libraryHome.error = ''; libraryHome.openError = '';
     renderLibraryHome();
@@ -87,9 +99,20 @@ async function refreshLibrarySources() {
             libraryHome.error = homeText('检测失败：', 'Discovery failed: ') + error.message;
         }
     } finally {
-        if (generation === libraryHome.generation) { libraryHome.loading = false; renderLibraryHome(); }
+        if (generation === libraryHome.generation) {
+            libraryHome.loading = false; renderLibraryHome();
+            if (libraryHome.data?.sources.some(source => source.status === 'usb_only' && source.error)) {
+                libraryDiscoveryRetry = setTimeout(() => {
+                    if (!document.getElementById('library-onboarding').hidden && !workbench.operation) refreshLibrarySources();
+                }, 5000);
+            }
+        }
     }
 }
+window.addEventListener('focus', () => {
+    if (!document.getElementById('library-onboarding').hidden && !desktopDialog.open
+        && !libraryHome.loading && !libraryHome.opening) refreshLibrarySources();
+});
 async function openLibrarySource(source) {
     if (workbench.operation || libraryHome.loading) return;
     libraryHome.device = source.storages ? source : null;
@@ -114,6 +137,8 @@ async function rememberOpenedLibrary(scan) {
 }
 function showLibraryHome() {
     if (workbench.operation) return;
+    overviewReturn = null;
+    filterLibrarySystems('');
     libraryHome.device = null;
     currentDeviceScan = null;
     renderDeviceScan(null);
@@ -130,7 +155,7 @@ function homeDeviceSources(sources) {
         const key = source.serial || source.path.split('/')[2];
         let device = grouped.get(key);
         if (!device) {
-            device = {...source, label: homeText('Android 掌机', 'Android handheld'), storages: []};
+            device = {...source, label: source.device_name || homeText('Android 掌机', 'Android handheld'), storages: []};
             grouped.set(key, device); devices.push(device);
         }
         device.storages.push(source);

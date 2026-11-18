@@ -9,6 +9,8 @@ import pytest
 
 import mtp_runtime as mtp
 
+runtime_devices = mtp.devices
+
 
 def test_uri_round_trip_and_traversal():
     root = mtp.uri('device #1', 65537, 'RetroArch')
@@ -242,9 +244,13 @@ def test_service_releases_mtp_before_retiring_http_instance(monkeypatch):
         def serve_forever(self):events.append('served')
     monkeypatch.setattr(server, 'LocalHTTPServer', lambda *args:FakeServer())
     monkeypatch.setattr(mtp, 'close', lambda:events.append('mtp_closed'))
-    instance = SimpleNamespace(publish=lambda *args:events.append('published'))
-    server._serve_instance(instance, False)
-    assert events == ['published','served','mtp_closed','http_closed']
+    import app_runtime
+    instance = SimpleNamespace(acquire=lambda: True,
+                               publish=lambda *args: events.append('published'),
+                               close=lambda: events.append('unlocked'))
+    monkeypatch.setattr(app_runtime, 'InstanceLock', lambda directory: instance)
+    server.run_server()
+    assert events == ['published', 'served', 'mtp_closed', 'http_closed', 'unlocked']
 
 
 def test_import_on_windows_does_not_load_native_mtp_or_libc(monkeypatch):
@@ -331,3 +337,38 @@ def test_mtp_replaces_only_reviewed_old_artwork_hashes_and_keeps_playlist(tmp_pa
     assert all(files[mtp.join(images, 'MAME', kind, '游戏.png')] == new for kind in THUMBNAIL_TYPES)
     assert result['download_summary']['total']['success'] == 3
     assert (app_paths.user_data_dir() / 'artwork-backups' / (digest + '.png')).read_bytes() == old
+
+
+def test_locked_cached_session_is_released_and_unlock_can_open_a_new_session(monkeypatch):
+    locked = [True]
+    released = []
+    name = ctypes.create_string_buffer(b'Retroid Pocket Nova')
+    storage = mtp.Storage(id=65537, name=b'Internal')
+    device = mtp.Device(storage=ctypes.pointer(storage))
+    handle = ctypes.pointer(device)
+    raw_devices = (mtp.Raw * 1)()
+    raw_devices[0].bus, raw_devices[0].number = 1, 2
+    def detect(raw, count):
+        ctypes.cast(raw, ctypes.POINTER(ctypes.POINTER(mtp.Raw)))[0] = ctypes.cast(raw_devices, ctypes.POINTER(mtp.Raw))
+        count._obj.value = 1
+        return 0
+    lib = SimpleNamespace(probe_storage=lambda *args: -1 if locked[0] else 0,
+                          LIBMTP_Release_Device=lambda value: released.append(value),
+                          LIBMTP_Detect_Raw_Devices=detect,
+                          LIBMTP_Open_Raw_Device_Uncached=lambda raw: handle,
+                          LIBMTP_Get_Friendlyname=lambda handle: ctypes.addressof(name),
+                          LIBMTP_Get_Modelname=lambda handle: None,
+                          LIBMTP_Get_Serialnumber=lambda value: None)
+    sessions = {'1-2': handle}
+    monkeypatch.setattr(mtp, '_sessions', sessions)
+    monkeypatch.setattr(mtp, '_device_list', [{'serial': '1-2'}])
+    monkeypatch.setattr(mtp, '_libc', SimpleNamespace(free=lambda value: None))
+    monkeypatch.setattr(mtp, 'library', lambda: lib)
+    with pytest.raises(RuntimeError, match='解锁'):
+        runtime_devices()
+    assert sessions == {} and len(released) == 1
+    locked[0] = False
+    found = runtime_devices()
+    assert found[0]['path'] == 'mtp://1-2/00010001/'
+    assert found[0]['label'] == 'Internal'
+    assert found[0]['device_name'] == 'Retroid Pocket Nova'

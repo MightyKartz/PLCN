@@ -1,8 +1,20 @@
 /* Display preferences, translations and shared presentation helpers. */
 let currentUILanguage = 'zh';
 let currentTheme = 'light';
+let themePreference = 'system';
+const systemAppearance = matchMedia('(prefers-color-scheme: dark)');
 
 const UI_EN = {
+    '简体中文': 'Simplified Chinese',
+    '补全记录': 'Completion history',
+    '列表修改记录': 'Playlist history',
+    '操作记录': 'History',
+    '系统': 'System',
+    '选择本地游戏库': 'Choose local library',
+    '扫描掌机游戏': 'Scan handheld games',
+    '请先在掌机核对存储和启动目录': 'Check the storage and launch folder on your handheld first',
+    '本地目录无需配置掌机启动路径': 'Local folders do not need a handheld launch path',
+    '启动目录的相对路径必须与所选复制目录一致': 'The launch folder must have the same relative path as the copy destination',
     '图片目录或主机无效': 'Invalid artwork folder or system',
     '名称编辑请使用本地或 MTP 图片目录': 'Use a local or MTP artwork folder to edit names',
     '图片目录必须属于当前掌机': 'The artwork folder must belong to the current handheld',
@@ -659,20 +671,29 @@ function formatItemCount(count) {
 }
 
 function toggleTheme() {
-    applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
-    localStorage.setItem('plcn-theme', currentTheme);
+    saveThemePreference(currentTheme === 'dark' ? 'light' : 'dark');
     showStatus(uiText(currentTheme === 'dark' ? '深色模式已开启' : '浅色模式已开启'), 'info');
 }
 
 function applyTheme(theme) {
-    currentTheme = theme === 'dark' ? 'dark' : 'light';
+    themePreference = theme === 'dark' || theme === 'light' ? theme : 'system';
+    currentTheme = themePreference === 'system' ? (systemAppearance.matches ? 'dark' : 'light') : themePreference;
     document.body.dataset.theme = currentTheme;
     renderThemeButton();
 }
 
+systemAppearance.addEventListener('change', () => {
+    if (themePreference === 'system') applyTheme('system');
+});
+
+function saveThemePreference(theme) {
+    applyTheme(theme);
+    localStorage.setItem('plcn-theme', themePreference);
+}
+
 function initializeDisplayPreferences() {
     applyUILanguage(localStorage.getItem('plcn-ui-language') || 'zh');
-    applyTheme(localStorage.getItem('plcn-theme') || 'light');
+    applyTheme(localStorage.getItem('plcn-theme'));
 }
 
 function shortPath(path) {
