@@ -33,7 +33,7 @@ jobs:
         if: matrix.os == 'ubuntu-24.04' && matrix.python == '3.13'
         run: |
           sudo apt-get update
-          sudo apt-get install -y mame-tools
+          sudo apt-get install -y --no-install-recommends mame-tools
       - run: python -m pytest -q -rs
       - uses: actions/upload-artifact@v4
         if: failure()
