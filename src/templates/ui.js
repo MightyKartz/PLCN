@@ -5,6 +5,7 @@ let themePreference = 'system';
 const systemAppearance = matchMedia('(prefers-color-scheme: dark)');
 
 const UI_EN = {
+    '简体中文': 'Simplified Chinese',
     '补全记录': 'Completion history',
     '列表修改记录': 'Playlist history',
     '操作记录': 'History',
