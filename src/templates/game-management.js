@@ -376,7 +376,7 @@ function appendGameSelection(cell, item) {
     checkbox.setAttribute('aria-label', workbenchText('选择 ', 'Select ') + (item.label || item.rom_name));
     checkbox.disabled = Boolean(workbench.operation);
     checkbox.onchange = () => toggleGameSelection(item.index, checkbox.checked);
-    const name = wbElement('button', 'game-name-button', cell.textContent); name.type = 'button'; name.onclick = () => inspectGame(item.index); cell.replaceChildren(); label.append(checkbox, name); cell.append(label);
+    const name = wbElement('button', 'game-name-button', cell.textContent); name.type = 'button'; name.dataset.gameDetails = item.index; name.onclick = () => inspectGame(item.index); cell.replaceChildren(); label.append(checkbox, name); cell.append(label);
 }
 function appendGameManagementActions(actions, item) {
     const menu = wbElement('details', 'game-row-menu');

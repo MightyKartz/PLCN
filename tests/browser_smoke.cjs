@@ -367,6 +367,35 @@ async function main() {
     assert.equal(await evaluate(() => document.querySelector('#game-library-note')), null);
     assert.equal(await evaluate(() => document.querySelector('#game-selection-toolbar').hidden), true);
     await screenshot('02-games');
+    await send('Emulation.setDeviceMetricsOverride', {width:390,height:460,deviceScaleFactor:1,mobile:false});
+    await send('Emulation.setEmulatedMedia', {features:[{name:'prefers-reduced-motion',value:'reduce'}]});
+    const gameScrollTop = await evaluate(()=>{
+        const search = document.getElementById('game-library-search');
+        search.value = 'Shadowrun';
+        search.dispatchEvent(new Event('input'));
+        setGameLibraryFilter('missing');
+        const panel = document.querySelector('.main-panel');
+        panel.scrollTop = 115;
+        const previousTop = panel.scrollTop;
+        document.querySelector('.game-card-open').click();
+        return previousTop;
+    });
+    assert.ok(gameScrollTop>0);
+    await waitFor(()=>Boolean(gameInspector.details),'narrow game details');
+    assert.equal(await evaluate(visible,'.game-library-main'),false);
+    assert.equal(await evaluate(()=>document.querySelector('.main-panel').scrollTop),0);
+    assert.equal(await evaluate(()=>getComputedStyle(document.getElementById('game-inspector')).animationName),'none');
+    assert.equal(await evaluate(()=>document.getElementById('inspector-close').textContent),'返回游戏列表');
+    assert.equal(await evaluate(()=>document.getElementById('inspector-artwork').textContent),'补封面');
+    await screenshot('02-game-details-narrow');
+    await click('#inspector-close');
+    assert.equal(await evaluate(()=>document.querySelector('.main-panel').scrollTop),gameScrollTop);
+    assert.equal(await evaluate(()=>document.getElementById('game-library-search').value),'Shadowrun');
+    assert.equal(await evaluate(()=>gameLibrary.filter),'missing');
+    assert.equal(await evaluate(()=>document.activeElement.matches('.game-card-open')),true);
+    await send('Emulation.setDeviceMetricsOverride', {width:Number(width),height:Number(height),deviceScaleFactor:1,mobile:false});
+    await send('Emulation.setEmulatedMedia', {features:[]});
+
     await click('#game-library-grid .game-card-open');
     await waitFor(()=>gameInspector.details,'inspector metadata loaded');
     assert.equal(await evaluate(visible,'#game-inspector'),true);
@@ -397,6 +426,8 @@ async function main() {
     await click('#inspector-save');
     await waitFor(()=>gameLibrary.data?.items[0]?.label==='My Shadowrun','name saved in playlist');
     await waitFor(()=>gameLibrary.activeIndex===0&&Boolean(gameInspector.details),'inspector retained after name edit');
+    assert.equal(await evaluate(()=>gameLibrary.filter),'missing');
+    assert.equal(await evaluate(()=>document.getElementById('game-library-search').value),'Shadowrun');
     await evaluate(async()=>{
         const state=await desktopRequest('/api/desktop');
         const edit=state.m3u_operations.find(record=>record.mode==='game_edit');

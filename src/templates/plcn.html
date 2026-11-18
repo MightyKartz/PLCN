@@ -96,6 +96,7 @@
                 <p id="workspace-empty" class="workspace-note" data-i18n="选择左侧列表，然后预览名称与图片变更。">选择左侧列表，然后预览名称与图片变更。</p>
                 <input id="overview-system-search" class="library-system-search" type="search" aria-label="搜索主机" placeholder="搜索主机" oninput="filterLibrarySystems(this.value)" hidden data-i18n-placeholder="搜索主机" data-i18n-aria-label="搜索主机">
                 <section id="library-overview" class="library-overview" aria-label="游戏库概览" hidden data-i18n-aria-label="游戏库概览"></section>
+                <p id="game-library-toast" role="status" aria-live="polite" hidden></p>
                 <section id="game-library" class="game-library" aria-label="当前游戏列表" hidden data-i18n-aria-label="当前游戏列表">
                     <div class="game-library-main">
                     <div class="game-library-toolbar">
@@ -113,7 +114,6 @@
                         <p id="image-directory-message"></p>
                         <button id="choose-image-directory" class="btn btn-muted" type="button" onclick="openPathSettings('thumbnails_override')" data-i18n="指定图片目录">指定图片目录</button>
                     </div>
-                    <p id="game-library-toast" role="status" aria-live="polite" hidden></p>
                     <div id="game-selection-toolbar" class="game-selection-toolbar" hidden></div>
                     <div id="games-status" class="overview-status" hidden></div>
                     <div class="game-library-scroll">

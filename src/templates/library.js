@@ -39,7 +39,12 @@ function syncGameLibrary(state) {
     const visible = Boolean(input[0]) && !state.previewValid
         && !['scan', 'preview', 'apply'].includes(workbench.operation);
     panel.hidden = !visible;
-    if (!visible) { panel.setAttribute('aria-busy', 'false'); resetGameLibrary(); return; }
+    if (!visible) {
+        panel.setAttribute('aria-busy', 'false');
+        panel.closest('.main-panel').classList.remove('game-details-page');
+        resetGameLibrary();
+        return;
+    }
     const key = JSON.stringify(input);
     if (key !== gameLibrary.key) {
         resetGameLibrary();
@@ -279,8 +284,10 @@ function renderGameLibrary() {
 function retryGameLibrary(activeIndex = null) {
     const input = gameLibraryInput();
     const key = JSON.stringify(input);
+    const filter = key === gameLibrary.key ? gameLibrary.filter : 'all';
+    const limit = key === gameLibrary.key ? gameLibrary.limit : 100;
     resetGameLibrary();
-    Object.assign(gameLibrary, {key, loading:true, activeIndex});
+    Object.assign(gameLibrary, {key, loading:true, activeIndex, filter, limit});
     loadGameLibrary(input, key);
     renderWorkbench();
 }
