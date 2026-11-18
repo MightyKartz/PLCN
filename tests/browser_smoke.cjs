@@ -223,8 +223,8 @@ async function main() {
     await waitFor(()=>document.querySelector('#overview-status'),'artwork status bar after overview load');
     assert.match(await evaluate(()=>document.querySelector('.overview-status-text').textContent),/^\d+ 个游戏缺少封面 · 1 个游戏尚未使用中文名$/);
     assert.equal(await evaluate(()=>document.querySelector('#overview-complete-button').textContent),'一键补全');
-    assert.deepEqual(await evaluate(()=>Array.from(document.querySelectorAll('.platform-heading strong'),el=>el.textContent).sort()),['GBA','SNES']);
-    assert.equal(await evaluate(()=>Array.from(document.querySelectorAll('.overview-system-card')).every(el=>el.title.length>0&&el.title!==el.querySelector('.platform-heading strong').textContent)),true);
+    assert.deepEqual(await evaluate(()=>Array.from(document.querySelectorAll('.platform-heading strong'),el=>el.textContent).sort()),['Game Boy Advance','超级任天堂']);
+    assert.equal(await evaluate(()=>Array.from(document.querySelectorAll('.platform-art')).every(art=>art.children.length===3)),true);
     await click('#library-all-systems');
 
     const rectOf = sel => evaluate(s => {
@@ -264,7 +264,8 @@ async function main() {
         && !document.querySelector('#library-all-systems').disabled
         && document.querySelector('#overview-complete-button')?.disabled === false, 'all-systems row and scan completion');
     assert.equal(await evaluate(() => document.querySelector('#library-all-systems').getAttribute('aria-pressed')), 'true');
-    assert.deepEqual(await evaluate(()=>Array.from(document.querySelectorAll('.playlist-system-tab .system-display-name'),el=>el.textContent)),['全部游戏','GBA','SNES']);
+    assert.deepEqual(await evaluate(()=>Array.from(document.querySelectorAll('.playlist-system-tab .system-display-name'),el=>el.textContent)),['全部主机','GBA','SNES']);
+    assert.equal(await evaluate(()=>document.querySelector('#library-all-systems .system-game-count').textContent),String(cardCount));
     assert.equal(await evaluate(()=>Array.from(document.querySelectorAll('.playlist-system-tab')).every(row=>row.firstElementChild.tagName.toLowerCase()==='svg'&&row.children.length===3)),true);
     await click('#settings-button');
     await waitFor(()=>document.querySelector('#desktop-dialog').open,'settings dialog from topbar');
@@ -274,6 +275,69 @@ async function main() {
     assert.equal(await evaluate(() => document.querySelector('#preview-button').disabled), false);
     assert.equal(await evaluate(visible, '#game-library'), false);
     assert.equal(await evaluate(() => document.querySelector('#workspace-title').textContent), '游戏库');
+    const slots = await evaluate(async () => {
+        const playlist = workbenchOverview.data.playlists[0];
+        const {covers} = playlist.locations.local;
+        const canvas = document.createElement('canvas');
+        canvas.width = 32;
+        canvas.height = 16;
+        const context = canvas.getContext('2d');
+        context.fillStyle = '#2461a6';
+        context.fillRect(0, 0, 32, 16);
+        covers.push(
+            {url: canvas.toDataURL(), label: 'Landscape cover'},
+            {url: 'data:image/png,broken', label: 'Unreadable cover'},
+        );
+        renderWorkbenchOverview(true);
+        const frames = [...document.querySelector('.platform-art').children];
+        const image = frames[0].querySelector('img');
+        image.loading = 'eager';
+        await image.decode();
+        const broken = frames[1].querySelector('img');
+        if (broken) {
+            broken.loading = 'eager';
+            await new Promise(resolve => broken.addEventListener('error', resolve, {once:true}));
+        }
+        const result = {
+            title: frames[0].title,
+            fit: getComputedStyle(image).objectFit,
+            sizes: frames.map(frame=>[frame.offsetWidth,frame.offsetHeight]),
+            empty: frames.map(frame=>frame.classList.contains('is-empty')),
+        };
+        covers.splice(-2);
+        renderWorkbenchOverview(true);
+        return result;
+    });
+    assert.equal(slots.title, 'Landscape cover');
+    assert.equal(slots.fit, 'contain');
+    assert.deepEqual(slots.empty, [false,true,true]);
+    assert.ok(slots.sizes.every(([w,h])=>Math.abs(w-slots.sizes[0][0])<=1 && Math.abs(h-slots.sizes[0][1])<=1));
+    await screenshot('01-system-covers');
+
+    const overviewSearch = '#overview-system-search';
+    await evaluate(selector => {
+        const input = document.querySelector(selector);
+        input.value = '超级任天堂';
+        input.dispatchEvent(new Event('input'));
+    }, overviewSearch);
+    const filteredCard = '#library-overview .overview-system-card:not([hidden])';
+    assert.equal(await evaluate(selector=>document.querySelectorAll(selector).length,filteredCard),1);
+    await send('Emulation.setDeviceMetricsOverride', {width:390,height:470,deviceScaleFactor:1,mobile:false});
+    const overviewScrollTop = await evaluate(()=>{
+        const panel = document.querySelector('.main-panel');
+        panel.scrollTop = 90;
+        return panel.scrollTop;
+    });
+    assert.ok(overviewScrollTop>0);
+    await evaluate(selector=>document.querySelector(selector).click(),filteredCard);
+    assert.equal(await evaluate(()=>document.querySelector('.main-panel').scrollTop),0);
+    await click('#back-to-systems');
+    assert.equal(await evaluate(()=>document.querySelector('.main-panel').scrollTop),overviewScrollTop);
+    assert.equal(await evaluate(selector=>document.querySelector(selector).value,overviewSearch),'超级任天堂');
+    assert.equal(await evaluate(selector=>document.activeElement.matches(selector),filteredCard),true);
+    await screenshot('01-system-covers-narrow');
+    await send('Emulation.setDeviceMetricsOverride', {width:Number(width),height:Number(height),deviceScaleFactor:1,mobile:false});
+    await evaluate(()=>filterLibrarySystems(''));
 
     const system = '.playlist-system-tab[aria-label="Nintendo - Super Nintendo Entertainment System"]';
     await click(system);

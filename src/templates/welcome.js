@@ -114,6 +114,8 @@ async function rememberOpenedLibrary(scan) {
 }
 function showLibraryHome() {
     if (workbench.operation) return;
+    overviewReturn = null;
+    filterLibrarySystems('');
     libraryHome.device = null;
     currentDeviceScan = null;
     renderDeviceScan(null);

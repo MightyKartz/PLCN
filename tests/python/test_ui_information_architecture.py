@@ -124,7 +124,7 @@ def test_primary_labels_are_clear():
     assert "border: 0;" in html
     assert "vector-effect: non-scaling-stroke" in html
     assert "getSystemAbbreviation(groupName)" in html
-    assert "selectFirstPlaylistForSystem(groupName)" in html
+    assert "browseLibrarySystem(groupName)" in html
     assert "'N64'" in html
     assert "'NDS'" in html
     assert "'Wii'" in html

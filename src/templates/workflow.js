@@ -171,6 +171,12 @@ function renderWorkbench() {
             buildApplySummary(getIncludedChanges(), getProcessingOptions()));
     }
     const showOverview = allSystems && Boolean(currentDeviceScan?.connected) && !state.previewValid;
+    shell.classList.toggle('system-overview', showOverview);
+    const backToSystems = document.getElementById('back-to-systems');
+    backToSystems.hidden = !playlistPath || !state.hasLibrary || state.previewValid;
+    backToSystems.disabled = state.busy;
+    backToSystems.textContent = workbenchText('全部主机', 'All systems');
+    document.getElementById('overview-system-search').hidden = !showOverview || !currentDeviceScan.playlists.length;
     renderLibraryOverview(showOverview);
     document.getElementById('workspace-empty').hidden = showOverview || state.previewValid
         || Boolean(playlistPath && workbench.operation !== 'preview');

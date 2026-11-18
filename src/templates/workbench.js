@@ -133,27 +133,66 @@ function renderWorkbenchOverview(visible) {
         bar.append(wbIcon('photo'),wbElement('span','overview-status-text',[missing ? workbenchText(`${missing} 个游戏缺少封面`,`${missing} games missing artwork`) : '', nonChineseNames ? workbenchText(`${nonChineseNames} 个游戏尚未使用中文名`,`${nonChineseNames} games without Chinese names`) : ''].filter(Boolean).join(' · ')),complete);
         panel.append(bar);
     }
-    const toolbar = wbElement('div','overview-toolbar'); toolbar.append(wbElement('h2','',workbenchText('主机','Systems')));
-    panel.append(toolbar);
     const grid = wbElement('div','overview-system-grid workbench-cards');
     const showLocations=workbenchOverview.scope==='all'&&new Set(groups.flatMap(group=>[...group.locations])).size>1;
     for (const group of groups) {
-        const card = wbElement('button','overview-system-card'); card.type = 'button';
-        card.title = group.system;
-        card.setAttribute('aria-label',workbenchText('浏览 ','Browse ') + group.system);
-        const art = wbElement('div','platform-art');
-        for (const cover of group.covers.slice(0,3)) {
-            const image = document.createElement('img'); image.src = cover.url; image.alt = cover.label; image.loading='lazy'; image.onerror=()=>image.remove(); art.append(image);
+        const displayName = wbSystemName(group.system);
+        const abbreviation = getSystemAbbreviation(group.system);
+        const count = formatGameCount(group.count);
+        const card = wbElement('button', 'overview-system-card');
+        card.type = 'button';
+        card.disabled = Boolean(workbench.operation);
+        card.dataset.system = group.system;
+        card.dataset.search = `${group.system} ${displayName} ${abbreviation}`.toLowerCase();
+        card.setAttribute('aria-label', `${displayName} · ${count}`);
+        const badge = wbElement('span', 'overview-system-badge', abbreviation);
+        badge.setAttribute('aria-hidden', 'true');
+        const heading = wbElement('div', 'platform-heading');
+        const details = wbElement('div', 'overview-system-details');
+        details.append(wbElement('strong', '', displayName), wbElement('span', '', count));
+        if (showLocations) {
+            const locations = wbElement('div', 'platform-locations');
+            for (const location of group.locations) locations.append(wbElement('span', '', workbenchText(
+                ({internal:'内部存储',card:'存储卡',local:'本地目录'})[location],
+                ({internal:'Internal',card:'SD card',local:'Local'})[location])));
+            details.append(locations);
         }
-        if (!group.covers.length) {art.classList.add('art-empty'); art.append(wbIcon('device-gamepad'),wbElement('span','',workbenchOverview.loading ? workbenchText('正在读取封面','Loading covers') : workbenchText('暂无封面','No artwork yet')));}
-        const details=wbElement('div','overview-system-details'); const heading=wbElement('div','platform-heading'); heading.append(wbElement('strong','',getSystemAbbreviation(group.system)));
-        details.append(heading,wbElement('span','',formatGameCount(group.count)));
-        const locations=wbElement('div','platform-locations');
-        for (const location of group.locations) locations.append(wbElement('span','',workbenchText(({internal:'内部存储',card:'存储卡',local:'本地目录'})[location],({internal:'Internal',card:'SD card',local:'Local'})[location])));
-        if(showLocations)details.append(locations);card.append(art,details);
-        card.onclick=async()=>{selectedLibrarySystem=group.system;renderDeviceScan(currentDeviceScan);await selectFirstPlaylistForSystem(group.system);};grid.append(card);
+        const arrow = wbElement('span', 'overview-system-arrow', '›');
+        arrow.setAttribute('aria-hidden', 'true');
+        heading.append(badge, details, arrow);
+        const art = wbElement('div', 'platform-art');
+        art.setAttribute('aria-hidden', 'true');
+        for (let index = 0; index < 3; index++) {
+            const slot = wbElement('span', 'platform-cover');
+            const cover = group.covers[index];
+            if (cover) {
+                const image = document.createElement('img');
+                image.alt = '';
+                image.loading = 'lazy';
+                slot.title = cover.label;
+                image.onerror = () => {
+                    image.remove();
+                    slot.removeAttribute('title');
+                    slot.classList.add('is-empty');
+                };
+                image.src = cover.url;
+                slot.append(image);
+            } else {
+                slot.classList.add('is-empty');
+            }
+            art.append(slot);
+        }
+        card.append(heading, art);
+        card.onclick = () => browseLibrarySystem(group.system);
+        grid.append(card);
     }
-    panel.append(grid);
+    if (groups.length) {
+        const empty = wbElement('p', 'overview-note', workbenchText('没有匹配的主机', 'No matching systems'));
+        empty.id = 'overview-system-empty';
+        empty.setAttribute('role', 'status');
+        panel.append(grid, empty);
+        filterLibrarySystems();
+    }
     if (workbenchOverview.error || !groups.length) {
         const note=wbElement('p','overview-note');note.id='overview-note';
         note.textContent=workbenchOverview.error ? workbenchText('资料读取失败：','Could not read artwork: ')+workbenchOverview.error : workbenchText('还没有游戏。点击「添加游戏」开始。','No games yet. Choose Add games to start.');
@@ -189,7 +228,7 @@ function renderWorkbenchChrome(state) {
         const groups=workbenchGroups(workbenchOverview.data,workbenchOverview.scope);
         document.querySelectorAll('.playlist-system-tab').forEach(button=>{
             const count=button.querySelector('.system-game-count');
-            if(count)count.textContent=button.id==='library-all-systems'?groups.reduce((n,g)=>n+g.count,0):groups.find(g=>g.system===button.title)?.count||0;
+            if(count)count.textContent=button.id==='library-all-systems'?groups.length:groups.find(g=>g.system===button.title)?.count||0;
         });
     }
 }
