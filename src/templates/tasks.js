@@ -270,6 +270,8 @@ function finishBatchRun(outcome, analysis, applyResult, errorMessage = '') {
     } else if (applyResult) {
         let text = workbenchText(`已补全 ${completed} 个游戏`,
             `Completed ${completed} ${completed === 1 ? 'game' : 'games'}`);
+        const failedPlaylists = applyResult.errors?.length || 0;
+        if (failedPlaylists) text += workbenchText(`，${failedPlaylists} 个列表处理失败`, `, ${failedPlaylists} playlists failed`);
         if (failedImages) text += workbenchText(`，${failedImages} 张封面下载失败`, `, ${failedImages} images failed`);
         if (manual) text += workbenchText(`，${manual} 个游戏需手动处理`, `, ${manual} games need manual work`);
         showActionToast({message: text, receiptId: applyResult.receipt_id || '', details: openHistory});
