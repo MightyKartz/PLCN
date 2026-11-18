@@ -9,6 +9,7 @@ from contextlib import ExitStack, contextmanager
 import json
 import os
 import re
+import socket
 from pathlib import Path
 import subprocess
 import sys
@@ -30,9 +31,10 @@ def process_options():
 
 
 @contextmanager
-def service(binary, profile, mode='--no-browser'):
+def service(binary, profile, mode='--no-browser', *, extra_env=None):
     profile.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ, RETROARCH_ASSISTANT_HOME=str(profile))
+    env.update(extra_env or {})
     process = subprocess.Popen([str(binary), mode], cwd=profile, env=env, **process_options())
     client = requests.Session()
     client.trust_env = False
@@ -84,6 +86,36 @@ def service(binary, profile, mode='--no-browser'):
         client.close()
 
 
+@contextmanager
+def isolated_adb(binary):
+    # The launcher discovers Android devices on startup. Keep its ADB server
+    # separate and reap it before the installer tries to remove adb.exe.
+    with socket.socket() as listener:
+        listener.bind(('127.0.0.1', 0))
+        port = listener.getsockname()[1]
+    address = f'tcp:localhost:{port}'
+    adb = binary.parent / '_internal' / 'platform-tools' / 'adb.exe'
+    process = subprocess.Popen(
+        [str(adb), '-L', address, 'server', 'nodaemon'], **process_options(),
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+    try:
+        deadline = time.monotonic() + 10
+        while True:
+            if process.poll() is not None or time.monotonic() >= deadline:
+                raise RuntimeError('Isolated ADB server did not start')
+            try:
+                with socket.create_connection(('127.0.0.1', port), timeout=.5):
+                    break
+            except OSError:
+                time.sleep(.1)
+        yield {'ADB_SERVER_SOCKET': address}
+    finally:
+        if process.poll() is None:
+            process.terminate()
+        process.wait(timeout=10)
+
+
 def check_binary(binary, workspace, window_preview=False):
     binary = binary.resolve()
     profile = workspace / 'user data 中文'
@@ -102,14 +134,16 @@ def check_binary(binary, workspace, window_preview=False):
         assert first_url != second_url, 'Two profiles shared one server port'
     if window_preview:
         preview = workspace / 'window profile'
-        with service(binary, preview, '--window'):
+        with ExitStack() as stack:
+            adb_env = stack.enter_context(isolated_adb(binary)) if sys.platform == 'win32' else {}
+            stack.enter_context(service(binary, preview, '--window', extra_env=adb_env))
             log = preview / 'logs' / 'desktop.log'
             deadline = time.monotonic() + 30
             while 'GET /api/jobs/status HTTP/' not in log.read_text(encoding='utf-8'):
                 if time.monotonic() >= deadline:
                     raise TimeoutError('The WebView did not start the workbench')
                 time.sleep(.2)
-            env = dict(os.environ, RETROARCH_ASSISTANT_HOME=str(preview))
+            env = dict(os.environ, RETROARCH_ASSISTANT_HOME=str(preview), **adb_env)
             run([str(binary), '--window'], cwd=preview, env=env, **process_options())
             activation = '"POST /api/desktop/activate HTTP/1.1" 200'
             assert activation in log.read_text(encoding='utf-8'), 'Second launch did not activate the window'
