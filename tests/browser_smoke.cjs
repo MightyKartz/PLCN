@@ -670,6 +670,9 @@ async function main() {
         .filter(name => name.endsWith('.lpl'))
         .map(name => [name, fs.readFileSync(libraryPath + '/playlists/' + name)]));
     const beforeRun = playlistFiles();
+    // The overview response replaces its action button. Start this cancellation
+    // scenario after that read settles, rather than clicking a retiring node.
+    await waitFor(() => !workbenchOverview.loading && !workbench.operation, 'settled overview before completion');
     await click('#overview-complete-button');
     await waitFor(() => batchRunJobId, 'all-systems run started');
     assert.equal(await evaluate(visible, '#completion-cancel'), true);
