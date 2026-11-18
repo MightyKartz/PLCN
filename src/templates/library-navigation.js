@@ -129,6 +129,7 @@ async function selectFirstPlaylistForSystem(systemName) {
 
 function renderDeviceScan(scan) {
     const summary = document.getElementById('device-summary');
+    summary.hidden = !scan;
     const list = document.getElementById('scanned-playlists');
     const librarySummary = document.getElementById('library-browser-summary');
     const previewIsActive = !document.getElementById('preview-area')?.hidden;
@@ -137,7 +138,7 @@ function renderDeviceScan(scan) {
     if (!previewIsActive) setLibraryBrowserVisible(true);
 
     if (!scan) {
-        summary.textContent = uiText('等待扫描 RetroArch 目录');
+        summary.textContent = '';
         summary.classList.remove('ready');
         list.innerHTML = `<div class="playlist-empty">${uiText('扫描后显示 .lpl 游戏列表')}</div>`;
         if (librarySummary) librarySummary.textContent = uiText('扫描后按主机名称显示 .lpl 游戏列表');
@@ -322,6 +323,7 @@ function setPreviewAreaVisible(visible) {
 }
 
 function updateDeviceDirectoryRows(scan) {
+    document.getElementById('settings-detected-directories').hidden = !scan;
     const dirs = scan?.directories || {};
     setPathText('device-playlists-dir', dirs.playlists || uiText('未检测'));
     setPathText('device-thumbnails-dir', dirs.thumbnails || uiText('未检测'));

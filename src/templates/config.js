@@ -65,10 +65,13 @@ async function saveConfig(mode = 'single') {
     }
 }
 
-async function applyPathSettings() {
+async function applyPathSettings(initialPaths) {
     if (workbench.operation) return;
     const root = document.getElementById('retroarch_root').value.trim();
-    if (root && root !== currentDeviceScan?.root_path) {
+    const artwork = document.getElementById('thumbnails_override').value.trim();
+    if (root === initialPaths.root && artwork === initialPaths.artwork) {
+        desktopDialog.close();
+    } else if (root && root !== initialPaths.root && root !== currentDeviceScan?.root_path) {
         await scanDevice(false);
     } else if (await saveConfig()) {
         desktopDialog.close();

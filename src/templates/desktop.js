@@ -2,6 +2,7 @@
 const desktopDialog = document.getElementById('desktop-dialog');
 let desktopPoll = null;
 let desktopView = 'library';
+let settingsPathsAtOpen;
 let desktopDataJobId = null;
 let desktopDataPending = false;
 let desktopRenderVersion = 0;
@@ -105,9 +106,30 @@ async function openDesktop(view = 'library') {
     });
     document.getElementById('data-source-settings').hidden = view !== 'data';
     document.getElementById('path-settings').hidden = view !== 'library';
-    document.getElementById('preference-settings').hidden = view !== 'preferences';
-    document.getElementById('desktop-content').hidden = ['library','preferences'].includes(view);
-    document.getElementById('desktop-close').textContent = desktopText(view === 'library' ? '完成' : '关闭', view === 'library' ? 'Done' : 'Close');
+    document.getElementById('desktop-content').hidden = view === 'library';
+    const close = document.getElementById('desktop-close');
+    close.dataset.i18n = view === 'library' ? '完成' : '关闭';
+    close.textContent = uiText(close.dataset.i18n);
+    if (!desktopDialog.open) {
+        settingsPathsAtOpen = {
+            root: document.getElementById('retroarch_root').value.trim(),
+            artwork: document.getElementById('thumbnails_override').value.trim(),
+        };
+        document.getElementById('settings-directory-options').open = false;
+    }
+    if (view === 'library') {
+        const root = document.getElementById('retroarch_root').value.trim();
+        const remote = /^(mtp|adb):\/\//.test(root);
+        document.getElementById('settings-remote-root').hidden = !remote;
+        document.getElementById('settings-root-fields').hidden = remote;
+        if (remote) {
+            const folder = root.replace(/^mtp:\/\/[^/]+\/[^/]+\/?|^adb:\/\/[^/]+\/?/, '');
+            const location = document.getElementById('settings-remote-location');
+            if (folder) delete location.dataset.i18n;
+            else location.dataset.i18n = '设备存储';
+            location.textContent = folder || uiText('设备存储');
+        }
+    }
     if (!desktopDialog.open) desktopDialog.showModal();
     clearTimeout(desktopPoll);
     await refreshDesktop();
@@ -124,11 +146,6 @@ async function refreshDesktop() {
     const version = ++desktopRenderVersion;
     const body = document.getElementById('desktop-content');
     try {
-        if (desktopView === 'preferences') {
-            document.getElementById('preference-language').value = currentUILanguage;
-            document.getElementById('preference-theme').value = currentTheme;
-            return;
-        }
         if (desktopView === 'library') {
             body.replaceChildren();
             renderWorkbench();
@@ -388,13 +405,24 @@ openFilePicker = async function(inputId, directoryMode) {
     if (selected.path) { currentTargetInputId = inputId; selectFile(selected.path); }
 };
 
+function editSettingsRoot() {
+    document.getElementById('settings-remote-root').hidden = true;
+    document.getElementById('settings-root-fields').hidden = false;
+    document.getElementById('retroarch_root').focus();
+}
+
 async function openPathSettings(focusId = 'retroarch_root') {
     await openDesktop('library');
-    document.getElementById(focusId).focus();
+    if (focusId === 'retroarch_root') {
+        editSettingsRoot();
+    } else {
+        document.getElementById('settings-directory-options').open = true;
+        document.getElementById(focusId).focus();
+    }
 }
 
 async function closeDesktopSettings() {
-    if (desktopView === 'library' && !workbench.operation) await applyPathSettings();
+    if (desktopView === 'library' && !workbench.operation) await applyPathSettings(settingsPathsAtOpen);
     else desktopDialog.close();
 }
 

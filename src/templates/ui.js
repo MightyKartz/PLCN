@@ -63,7 +63,10 @@ const UI_EN = {
     "外观": "Appearance",
     "浅色": "Light",
     "深色": "Dark",
-    "语言与外观偏好会自动保存。": "Language and appearance preferences are saved automatically.",
+    "常规": "General",
+    "高级目录设置": "Advanced folders",
+    "编辑路径": "Edit path",
+    "自动跟随游戏库": "Use the library default",
     "游戏库": "Library",
     "退出 RetroArch 助手": "Quit RetroArch Assistant",
     "助手": "Assistant",
@@ -579,8 +582,8 @@ function showStatus(message, type = 'info') {
     }, 3000);
 }
 
-function toggleUILanguage() {
-    applyUILanguage(currentUILanguage === 'zh' ? 'en' : 'zh');
+function toggleUILanguage(language = currentUILanguage === 'zh' ? 'en' : 'zh') {
+    applyUILanguage(language);
     localStorage.setItem('plcn-ui-language', currentUILanguage);
     showStatus(uiText('已切换界面语言'), 'info');
 }
@@ -628,6 +631,7 @@ function applyUILanguage(language) {
     document.title=currentUILanguage==='en'?'RetroArch Assistant':'RetroArch 助手';
     document.documentElement.lang = currentUILanguage === 'en' ? 'en' : 'zh-CN';
     document.body.dataset.uiLanguage = currentUILanguage;
+    document.querySelector(`[name="settings-language"][value="${currentUILanguage}"]`).checked = true;
 
     document.querySelectorAll('[data-i18n]').forEach((el) => {
         el.textContent = uiText(el.dataset.i18n);
@@ -662,8 +666,8 @@ function formatItemCount(count) {
     return currentUILanguage === 'en' ? `${count} ${count === 1 ? 'item' : 'items'}` : `${count} 项`;
 }
 
-function toggleTheme() {
-    applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
+function toggleTheme(theme = currentTheme === 'dark' ? 'light' : 'dark') {
+    applyTheme(theme);
     localStorage.setItem('plcn-theme', currentTheme);
     showStatus(uiText(currentTheme === 'dark' ? '深色模式已开启' : '浅色模式已开启'), 'info');
 }
@@ -671,6 +675,7 @@ function toggleTheme() {
 function applyTheme(theme) {
     currentTheme = theme === 'dark' ? 'dark' : 'light';
     document.body.dataset.theme = currentTheme;
+    document.querySelector(`[name="settings-theme"][value="${currentTheme}"]`).checked = true;
     renderThemeButton();
 }
 

@@ -228,70 +228,62 @@
     <dialog id="desktop-dialog" aria-labelledby="desktop-title">
         <header><h2 id="desktop-title" data-i18n="设置">设置</h2><button id="desktop-close" class="btn btn-muted" onclick="closeDesktopSettings()" type="button" data-i18n="关闭">关闭</button></header>
         <nav class="desktop-toolbar" aria-label="设置页面" data-i18n-aria-label="设置页面">
-            <button id="settings-library-tab" data-desktop-view="library" class="btn" onclick="openDesktop('library')" data-i18n="设备与游戏库">设备与游戏库</button>
+            <button id="settings-library-tab" data-desktop-view="library" class="btn" onclick="openDesktop('library')" data-i18n="常规">常规</button>
             <button data-desktop-view="data" class="btn" onclick="openDesktop('data')" data-i18n="资料来源">资料来源</button>
-            <button id="settings-preferences-tab" data-desktop-view="preferences" class="btn" onclick="openDesktop('preferences')" data-i18n="偏好设置">偏好设置</button>
             <button data-desktop-view="tasks" class="btn" onclick="openDesktop('tasks')" data-i18n="任务与恢复">任务与恢复</button>
         </nav>
         <section id="path-settings" aria-labelledby="settings-library-tab" hidden>
-
-                    <section class="device-panel">
-                        <div class="form-group">
-                            <label for="retroarch_root" data-i18n="游戏库目录">游戏库目录</label>
-                            <div class="input-group">
-                                <input type="text" id="retroarch_root" data-input-control placeholder="/path/to/RetroArch">
-                                <button class="btn btn-small btn-muted" onclick="openFilePicker('retroarch_root', true)" title="选择 RetroArch 目录" data-input-control type="button" data-i18n="浏览" data-i18n-title="选择 RetroArch 目录">浏览</button>
-                            </div>
-                        </div>
-                        <div class="device-actions"><button class="btn btn-muted" id="device-switch-button" type="button" onclick="desktopDialog.close(); showLibraryHome()" data-i18n="切换设备">切换设备</button>
-
-                            <button class="btn" id="scan-device-btn" onclick="scanDevice(false)" data-i18n="扫描目录" type="button">扫描目录</button>
-                        </div>
-                        <div class="device-summary" id="device-summary" data-i18n="等待扫描 RetroArch 目录">等待扫描 RetroArch 目录</div>
-
-                        <details class="directory-details">
-                            <summary data-i18n="目录详情">目录详情</summary>
-                            <div class="detected-list">
-                                <div class="detected-row">
-                                    <div class="detected-icon">PL</div>
-                                    <div>
-                                        <div class="detected-label" data-i18n="游戏列表目录">游戏列表目录</div>
-                                        <div class="detected-path" id="device-playlists-dir" data-i18n="未检测">未检测</div>
-                                    </div>
-                                </div>
-                                <div class="detected-row">
-                                    <div class="detected-icon">IMG</div>
-                                    <div>
-                                        <div class="detected-label" data-i18n="封面缩略图目录">封面缩略图目录</div>
-                                        <div class="detected-path" id="device-thumbnails-dir" data-i18n="未检测">未检测</div>
-                                    </div>
-                                </div>
-                                <div class="detected-row">
-                                    <div class="detected-icon">CFG</div>
-                                    <div>
-                                        <div class="detected-label" data-i18n="配置文件">配置文件</div>
-                                        <div class="detected-path" id="device-config-file" data-i18n="未检测">未检测</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </details>
-
-                    </section>
-
-                    <div class="form-group">
-                        <label for="thumbnails_override" data-i18n="图片目录（可选覆盖）">图片目录（可选覆盖）</label>
-                        <div class="input-group">
-                            <input type="text" id="thumbnails_override" data-input-control data-i18n-placeholder="留空使用游戏库自动检测的目录" placeholder="留空使用游戏库自动检测的目录">
-                            <button class="btn btn-small btn-muted" onclick="openFilePicker('thumbnails_override', true)" data-input-control type="button" data-i18n="浏览">浏览</button>
-                        </div>
-                        <p class="artwork-help" data-i18n="留空时跟随游戏库；手动覆盖会用于当前库的所有主机。">留空时跟随游戏库；手动覆盖会用于当前库的所有主机。</p>
-                        <p id="effective-image-directory" class="artwork-help"></p>
+            <section id="preference-settings" class="settings-preferences">
+                <fieldset class="preference-row">
+                    <legend data-i18n="界面语言">界面语言</legend>
+                    <div class="preference-choices">
+                        <label><input type="radio" name="settings-language" value="zh" onchange="toggleUILanguage(this.value)" checked><span lang="zh-CN">简体中文</span></label>
+                        <label><input type="radio" name="settings-language" value="en" onchange="toggleUILanguage(this.value)"><span lang="en">English</span></label>
                     </div>
-    </section>
-        <section id="preference-settings" aria-labelledby="settings-preferences-tab" hidden>
-            <div class="form-group"><label for="preference-language" data-i18n="界面语言">界面语言</label><select id="preference-language" onchange="applyUILanguage(this.value);localStorage.setItem('plcn-ui-language',currentUILanguage);openDesktop('preferences')"><option value="zh" lang="zh">简体中文</option><option value="en">English</option></select></div>
-            <div class="form-group"><label for="preference-theme" data-i18n="外观">外观</label><select id="preference-theme" onchange="applyTheme(this.value);localStorage.setItem('plcn-theme',currentTheme)"><option value="light" data-i18n="浅色">浅色</option><option value="dark" data-i18n="深色">深色</option></select></div>
-            <p class="artwork-help" data-i18n="语言与外观偏好会自动保存。">语言与外观偏好会自动保存。</p>
+                </fieldset>
+                <fieldset class="preference-row">
+                    <legend data-i18n="外观">外观</legend>
+                    <div class="preference-choices">
+                        <label><input type="radio" name="settings-theme" value="light" onchange="toggleTheme(this.value)" checked><span data-i18n="浅色">浅色</span></label>
+                        <label><input type="radio" name="settings-theme" value="dark" onchange="toggleTheme(this.value)"><span data-i18n="深色">深色</span></label>
+                    </div>
+                </fieldset>
+            </section>
+            <section class="device-panel">
+                <label for="retroarch_root" data-i18n="游戏库目录">游戏库目录</label>
+                <div id="settings-remote-root" class="input-group" hidden>
+                    <div id="settings-remote-location" class="settings-remote-location"></div>
+                    <button class="btn btn-small btn-muted" type="button" onclick="editSettingsRoot()" data-input-control data-i18n="编辑路径">编辑路径</button>
+                </div>
+                <div id="settings-root-fields" class="input-group">
+                    <input type="text" id="retroarch_root" data-input-control placeholder="/path/to/RetroArch">
+                    <button class="btn btn-small btn-muted" onclick="openFilePicker('retroarch_root', true)" title="选择 RetroArch 目录" data-input-control type="button" data-i18n="浏览" data-i18n-title="选择 RetroArch 目录">浏览</button>
+                </div>
+                <div class="device-actions">
+                    <button class="btn btn-muted" id="device-switch-button" type="button" onclick="desktopDialog.close(); showLibraryHome()" data-i18n="切换设备">切换设备</button>
+                    <button class="btn" id="scan-device-btn" onclick="scanDevice(false)" data-i18n="扫描目录" type="button">扫描目录</button>
+                </div>
+                <p class="device-summary" id="device-summary" role="status" hidden></p>
+            </section>
+            <details id="settings-directory-options" class="directory-details">
+                <summary data-i18n="高级目录设置">高级目录设置</summary>
+                <div class="form-group">
+                    <label for="thumbnails_override" data-i18n="图片目录（可选覆盖）">图片目录（可选覆盖）</label>
+                    <div class="input-group">
+                        <input type="text" id="thumbnails_override" data-input-control data-i18n-placeholder="自动跟随游戏库" placeholder="自动跟随游戏库" aria-describedby="effective-image-directory">
+                        <button class="btn btn-small btn-muted" onclick="openFilePicker('thumbnails_override', true)" data-input-control type="button" data-i18n="浏览">浏览</button>
+                    </div>
+                    <p id="effective-image-directory" class="artwork-help"></p>
+                </div>
+                <section id="settings-detected-directories" hidden>
+                    <h3 data-i18n="目录详情">目录详情</h3>
+                    <dl class="detected-list">
+                        <div><dt data-i18n="游戏列表目录">游戏列表目录</dt><dd class="detected-path" id="device-playlists-dir"></dd></div>
+                        <div><dt data-i18n="封面缩略图目录">封面缩略图目录</dt><dd class="detected-path" id="device-thumbnails-dir"></dd></div>
+                        <div><dt data-i18n="配置文件">配置文件</dt><dd class="detected-path" id="device-config-file"></dd></div>
+                    </dl>
+                </section>
+            </details>
         </section>
         <p id="desktop-message" role="status"></p><div id="desktop-content"></div><details id="data-source-settings"><summary data-i18n="自定义数据路径">自定义数据路径</summary>
 
