@@ -24,10 +24,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
+        with:
+          packages: 'platforms;android-36 build-tools;35.0.0'
+          log-accepted-android-sdk-licenses: 'false'
       - name: Build ARM64 storage probe
-        run: |
-          sdkmanager "platforms;android-36" "build-tools;35.0.0"
-          ./android/gradlew -p android :app:assembleDebug
+        run: ./android/gradlew -p android :app:assembleDebug
       - uses: actions/upload-artifact@v4
         with:
           name: RetroArchAssistant-Android-arm64-storage-probe
