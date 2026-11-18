@@ -101,7 +101,7 @@ async function convertStorage(){
             '通过 CHD verify 与解压后的逐轨扇区比对；尚未验证核心加载、换盘或存档。列表和原文件未修改。']){
             const line=document.createElement('p');line.textContent=text;panel.appendChild(line);
         }
-        const deploy=document.createElement('button');deploy.type='button';deploy.className='btn btn-muted';deploy.textContent='预览回传／替换方案';deploy.onclick=()=>{closeStorageOptimization();openChdDeployment(result);};panel.appendChild(deploy);
+        const deploy=document.createElement('button');deploy.type='button';deploy.className='btn btn-muted';wbIconButton(deploy,'upload',workbenchText('预览回传／替换方案','Preview transfer or replacement'));deploy.onclick=()=>{closeStorageOptimization();openChdDeployment(result);};panel.appendChild(deploy);
         storageField('status').textContent='已完成。原文件保留；任务记录已保存，可在操作记录查看。';
     }catch(error){storageField('status').textContent=error.message+'；已验证输出与错误记录见操作记录。';}
 }

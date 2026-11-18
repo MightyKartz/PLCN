@@ -10,6 +10,8 @@ const pending = new Map();
 const socket = new WebSocket(websocketUrl);
 let sequence = 0;
 let holdOverview = false;
+let holdSources = true;
+let heldSources = null;
 let heldOverview = null;
 let expectedOverviewFailure = false;
 
@@ -43,6 +45,11 @@ socket.addEventListener('message', event => {
         const {url, status} = message.params.response;
         if (url.startsWith(baseUrl + '/') && status >= 400 && !(expectedOverviewFailure && url.includes('/api/library/overview') && status === 503)) errors.push(`HTTP ${status}: ${url}`);
     } else if (message.method === 'Fetch.requestPaused') {
+        if (message.params.request.url.includes('/api/library/sources')) {
+            if (holdSources) heldSources = message.params.requestId;
+            else send('Fetch.continueRequest', {requestId:message.params.requestId}).catch(error=>errors.push(error.message));
+            return;
+        }
         if (message.params.request.url.includes('/api/library/overview')) {
             if (holdOverview) heldOverview = message.params.requestId;
             else send('Fetch.continueRequest', {requestId:message.params.requestId}).catch(error=>errors.push(error.message));
@@ -124,6 +131,7 @@ async function screenshot(name) {
     await delay(200); // Let theme transitions settle before capturing visual evidence.
     const {data} = await send('Page.captureScreenshot', {format: 'png'});
     fs.writeFileSync(path.join(output, name + '.png'), Buffer.from(data, 'base64'));
+    if (name !== 'failure') assert.deepEqual(await evaluate(() => [...document.querySelectorAll('.dialog-icon-button')].filter(button => button.checkVisibility() && (!button.querySelector('svg use') || !button.getAttribute('aria-label') || !button.title)).map(button => button.id || button.outerHTML)), [], 'Visible icon actions retain their SVG, name and tooltip');
 }
 
 async function main() {
@@ -134,9 +142,14 @@ async function main() {
     await send('Runtime.enable');
     await send('Page.enable');
     await send('Network.enable');
-    await send('Fetch.enable', {patterns: [{urlPattern: 'https://thumbnails.libretro.com/*'}, {urlPattern: '*api/library/overview*'}]});
+    await send('Fetch.enable', {patterns: [{urlPattern: 'https://thumbnails.libretro.com/*'}, {urlPattern: '*api/library/overview*'}, {urlPattern: '*api/library/sources*'}]});
     await send('Emulation.setDeviceMetricsOverride', {width: Number(width), height: Number(height), deviceScaleFactor: 1, mobile: false});
     await send('Page.navigate', {url: baseUrl});
+    await waitFor(() => document.readyState === 'complete' && !document.querySelector('#library-onboarding').hidden && !document.querySelector('#library-read-dialog').open, 'home is visible while device discovery is pending');
+    await screenshot('00-home-discovery');
+    assert.ok(heldSources, 'Device discovery is still pending while home is visible');
+    holdSources = false;
+    await send('Fetch.continueRequest', {requestId:heldSources});
     await waitFor(() => document.readyState === 'complete'
         && document.querySelector('#library-onboarding')?.getAttribute('aria-busy') === 'false', 'home discovery');
     assert.equal(await evaluate(() => document.querySelector('#home-manual-open, #home-scan-open')), null);
@@ -147,20 +160,23 @@ async function main() {
     assert.equal(await evaluate(()=>document.title),'RetroArch 助手');
     assert.equal(await evaluate(()=>document.getElementById('scan-default-btn').textContent.trim()),'');
     assert.equal(await evaluate(()=>document.getElementById('scan-default-btn').getAttribute('aria-label')),'重新检测');
+    assert.equal(await evaluate(visible,'#home-library-folder'),true);
     await screenshot('01-home');
     assert.equal(await evaluate(()=>document.querySelector('.workbench-nav, #workbench-task')),null);
     assert.equal(await evaluate(()=>document.querySelector('#task-center-button,#task-popover,[data-desktop-view="tasks"]')),null);
     assert.equal(await evaluate(() => document.querySelector('#usb-debug-help, #home-local-open')), null);
-    await click('#workbench-device');
+    await click('#settings-button');
     assert.equal(await evaluate(() => document.querySelectorAll('dialog[open]').length), 1);
-    assert.equal(await evaluate(() => document.querySelectorAll('[data-desktop-view]').length), 3);
-    await click('[data-desktop-view="preferences"]');
+    assert.equal(await evaluate(() => document.querySelectorAll('[data-desktop-view],#data-source-settings').length), 0);
+    assert.equal(await evaluate(visible, '#path-settings'), false);
+    assert.equal(await evaluate(() => [...document.querySelectorAll('#desktop-dialog button')].filter(button => button.checkVisibility()).every(button => button.querySelector('svg') && button.getAttribute('aria-label'))), true);
     await waitFor(visible,'preferences settings','#preference-settings');
-    await evaluate(()=>{const select=document.getElementById('preference-language');select.value='en';select.dispatchEvent(new Event('change',{bubbles:true}));});
+    assert.equal(await evaluate(() => document.activeElement.id), 'desktop-title', 'Opening settings focuses the heading instead of an action');
+    await click('#preference-language input[value="en"]');
     assert.equal(await evaluate(()=>document.title),'RetroArch Assistant');
-    assert.equal(await evaluate(()=>document.getElementById('desktop-close').textContent),'Close');
+    assert.equal(await evaluate(()=>document.getElementById('desktop-close').getAttribute('aria-label')),'Close');
     assert.equal(await evaluate(()=>localStorage.getItem('plcn-ui-language')),'en');
-    await evaluate(()=>{const select=document.getElementById('preference-language');select.value='zh';select.dispatchEvent(new Event('change',{bubbles:true}));});
+    await click('#preference-language input[value="zh"]');
     await click('#preference-theme input[value="system"]');
     await send('Emulation.setEmulatedMedia', {features:[{name:'prefers-color-scheme',value:'dark'}]});
     await waitFor(()=>document.body.dataset.theme==='dark','system theme changes while preferences are open');
@@ -170,9 +186,13 @@ async function main() {
     assert.equal(await evaluate(()=>localStorage.getItem('plcn-theme')),'light');
     await send('Emulation.setEmulatedMedia', {features:[]});
     await screenshot('01-preferences');
-    await click('[data-desktop-view="data"]');
-    await waitFor(() => document.querySelector('#desktop-content h3')?.textContent === '名称数据库', 'name database settings');
-    await screenshot('01-name-settings');
+    assert.equal(await evaluate(() => [...document.querySelectorAll('#preference-settings .preference-row')].every(row => {
+        const label = row.firstElementChild.getBoundingClientRect();
+        const control = row.lastElementChild.getBoundingClientRect();
+        return Math.abs((label.top + label.bottom) / 2 - (control.top + control.bottom) / 2) < 2
+            && control.left > label.right && control.right <= row.getBoundingClientRect().right + 1;
+    })), true, 'Preference labels and controls share a row without overlap');
+    assert.equal(await evaluate(() => getComputedStyle(document.querySelector('#desktop-dialog')).backgroundColor === getComputedStyle(document.querySelector('.sidebar')).backgroundColor), true);
     await click('#desktop-close');
 
     await click('#workbench-device');
@@ -211,7 +231,7 @@ async function main() {
     assert.match(await evaluate(()=>document.querySelector('.overview-status-text').textContent),/^\d+ 个游戏缺少封面 · 1 个游戏尚未使用中文名$/);
     assert.equal(await evaluate(()=>document.querySelector('#overview-complete-button').textContent),'一键补全');
     assert.deepEqual(await evaluate(()=>Array.from(document.querySelectorAll('.platform-heading strong'),el=>el.textContent).sort()),['Game Boy Advance','超级任天堂']);
-    assert.equal(await evaluate(()=>Array.from(document.querySelectorAll('.platform-art')).every(art=>art.children.length===3)),true);
+    assert.equal(await evaluate(()=>Array.from(document.querySelectorAll('.platform-fan')).every(fan=>fan.children.length===3)),true);
     await click('#library-all-systems');
 
     const rectOf = sel => evaluate(s => {
@@ -256,7 +276,8 @@ async function main() {
     assert.equal(await evaluate(()=>Array.from(document.querySelectorAll('.playlist-system-tab')).every(row=>row.firstElementChild.tagName.toLowerCase()==='svg'&&row.children.length===3)),true);
     await click('#settings-button');
     await waitFor(visible,'preferences from topbar','#preference-settings');
-    await click('#settings-library-tab');
+    await click('#desktop-close');
+    await click('#workbench-device');
     await waitFor(visible,'detected library settings','#path-settings');
     assert.equal(await evaluate(visible,'#artwork-directory-settings'),false);
     await click('#desktop-close');
@@ -265,7 +286,7 @@ async function main() {
     await waitFor(()=>document.querySelector('#desktop-content [data-job-id] details'),'completion history from library');
     await click('#desktop-content [data-job-id] details > summary');
     await waitFor(()=>document.querySelector('#desktop-content details[open]')?.textContent.includes('测试图片网络失败'),'failed image details');
-    assert.equal(await evaluate(visible, '#desktop-dialog .desktop-toolbar'),false);
+    assert.equal(await evaluate(() => document.querySelector('#desktop-dialog .desktop-toolbar')),null);
     assert.equal(await evaluate(()=>document.querySelector('#desktop-content [data-chd-operation],[data-rom-storage-operation]')),null);
     await click('#desktop-content [data-job-id] > button');
     await waitFor(()=>document.querySelectorAll('#desktop-content [data-job-id]').length===2
@@ -277,43 +298,68 @@ async function main() {
     assert.equal(await evaluate(() => document.querySelector('#preview-button').disabled), false);
     assert.equal(await evaluate(visible, '#game-library'), false);
     assert.equal(await evaluate(() => document.querySelector('#workspace-title').textContent), '游戏库');
-    const slots = await evaluate(async () => {
-        const playlist = workbenchOverview.data.playlists[0];
-        const {covers} = playlist.locations.local;
-        const canvas = document.createElement('canvas');
-        canvas.width = 32;
-        canvas.height = 16;
-        const context = canvas.getContext('2d');
-        context.fillStyle = '#2461a6';
-        context.fillRect(0, 0, 32, 16);
-        covers.push(
-            {url: canvas.toDataURL(), label: 'Landscape cover'},
-            {url: 'data:image/png,broken', label: 'Unreadable cover'},
-        );
-        renderWorkbenchOverview(true);
-        const frames = [...document.querySelector('.platform-art').children];
-        const image = frames[0].querySelector('img');
-        image.loading = 'eager';
-        await image.decode();
-        const broken = frames[1].querySelector('img');
-        if (broken) {
-            broken.loading = 'eager';
-            await new Promise(resolve => broken.addEventListener('error', resolve, {once:true}));
-        }
-        const result = {
-            title: frames[0].title,
-            fit: getComputedStyle(image).objectFit,
-            sizes: frames.map(frame=>[frame.offsetWidth,frame.offsetHeight]),
-            empty: frames.map(frame=>frame.classList.contains('is-empty')),
+    const gbaCard = '.overview-system-card[data-system="Nintendo - Game Boy Advance"]';
+    const originalCovers = await evaluate(() => {
+        const {covers} = workbenchOverview.data.playlists
+            .find(playlist => playlist.system === 'Nintendo - Game Boy Advance').locations.local;
+        const makeCover = (width, height, color, label) => {
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const context = canvas.getContext('2d');
+            context.fillStyle = color;
+            context.fillRect(0, 0, width, height);
+            return {url: canvas.toDataURL(), label};
         };
-        covers.splice(-2);
-        renderWorkbenchOverview(true);
-        return result;
+        return covers.splice(0, covers.length,
+            makeCover(48, 30, '#2461a6', 'First landscape'),
+            makeCover(30, 48, '#b7562a', 'Portrait outlier'),
+            {url: 'data:image/png,broken', label: 'Unreadable cover'},
+            makeCover(48, 30, '#749268', 'Middle landscape'),
+            makeCover(48, 30, '#c79a45', 'Last landscape'),
+        );
     });
-    assert.equal(slots.title, 'Landscape cover');
-    assert.equal(slots.fit, 'contain');
-    assert.deepEqual(slots.empty, [false,true,true]);
-    assert.ok(slots.sizes.every(([w,h])=>Math.abs(w-slots.sizes[0][0])<=1 && Math.abs(h-slots.sizes[0][1])<=1));
+    await evaluate(()=>renderWorkbenchOverview(true));
+    await waitFor(selector=>document.querySelectorAll(selector+' .platform-fan img').length===3,
+        'three landscape covers selected from five candidates', gbaCard);
+    const fan = await evaluate(selector => {
+        const card = document.querySelector(selector);
+        const art = card.querySelector('.platform-art');
+        renderWorkbenchOverview(true);
+        const currentArt = document.querySelector(selector +' .platform-art');
+        const covers = [...currentArt.querySelectorAll('.platform-cover')];
+        return {
+            titles: covers.map(slot=>slot.title),
+            ratios: covers.map(slot=>slot.offsetWidth / slot.offsetHeight),
+            front: getComputedStyle(covers[1]).zIndex,
+            reused: art===currentArt,
+        };
+    }, gbaCard);
+    assert.deepEqual(fan.titles, ['First landscape', 'Middle landscape', 'Last landscape']);
+    assert.ok(fan.ratios.every(ratio=>Math.abs(ratio-1.6)<0.03));
+    assert.equal(fan.front,'1');
+    assert.equal(fan.reused,true);
+
+    await send('Emulation.setDeviceMetricsOverride', {width:390,height:530,deviceScaleFactor:1,mobile:false});
+    await send('Emulation.setEmulatedMedia', {features:[{name:'prefers-reduced-motion',value:'reduce'}]});
+    assert.ok(await evaluate(selector=>{
+        const card = document.querySelector(selector);
+        const bounds = card.getBoundingClientRect();
+        return [...card.querySelectorAll('.platform-cover')].every(slot=>{
+            const rect = slot.getBoundingClientRect();
+            return rect.left>=bounds.left && rect.right<=bounds.right &&
+                getComputedStyle(slot).transitionDuration==='0s';
+        });
+    }, gbaCard));
+    await screenshot('01-cover-fan-narrow');
+    await send('Emulation.setEmulatedMedia', {features:[]});
+    await send('Emulation.setDeviceMetricsOverride', {width:Number(width),height:Number(height),deviceScaleFactor:1,mobile:false});
+    await evaluate(covers => {
+        const location = workbenchOverview.data.playlists
+            .find(playlist => playlist.system === 'Nintendo - Game Boy Advance').locations.local;
+        location.covers = covers;
+        renderWorkbenchOverview(true);
+    }, originalCovers);
     assert.equal(await evaluate(()=>document.getElementById('manual-scan-button').textContent),'扫描新增游戏');
     await screenshot('01-system-covers');
 
@@ -325,7 +371,7 @@ async function main() {
     }, overviewSearch);
     const filteredCard = '#library-overview .overview-system-card:not([hidden])';
     assert.equal(await evaluate(selector=>document.querySelectorAll(selector).length,filteredCard),1);
-    await send('Emulation.setDeviceMetricsOverride', {width:390,height:470,deviceScaleFactor:1,mobile:false});
+    await send('Emulation.setDeviceMetricsOverride', {width:390,height:400,deviceScaleFactor:1,mobile:false});
     const overviewScrollTop = await evaluate(()=>{
         const panel = document.querySelector('.main-panel');
         panel.scrollTop = 90;
@@ -342,6 +388,33 @@ async function main() {
     await send('Emulation.setDeviceMetricsOverride', {width:Number(width),height:Number(height),deviceScaleFactor:1,mobile:false});
     await evaluate(()=>filterLibrarySystems(''));
 
+    await click('.playlist-system-tab[aria-label="Nintendo - Game Boy Advance"]');
+    await waitFor(()=>gameLibrary.data?.items.length===1,'GBA cover grid');
+    const wideFrame = await evaluate(async () => {
+        const grid = document.getElementById('game-library-grid');
+        const entry = gameLibrary.data.items[0];
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 321;
+        const imageURL = entry.image_url;
+        entry.image_url = canvas.toDataURL();
+        renderGameLibrary();
+        const image = grid.querySelector('.game-card-art img');
+        image.loading = 'eager';
+        await image.decode();
+        const {width, height} = image.parentElement.getBoundingClientRect();
+        const fit = getComputedStyle(image).objectFit;
+        entry.image_url = imageURL;
+        renderGameLibrary();
+        setGameLibraryFilter('missing');
+        const card = grid.querySelector('.game-card-art').getBoundingClientRect();
+        setGameLibraryFilter('all');
+        return {frame: width / height, fit, filteredFrame: card.width / card.height};
+    });
+    assert.ok(Math.abs(wideFrame.frame-1.6)<0.01);
+    assert.equal(wideFrame.fit,'contain');
+    assert.equal(wideFrame.filteredFrame,wideFrame.frame);
+
     const system = '.playlist-system-tab[aria-label="Nintendo - Super Nintendo Entertainment System"]';
     await click(system);
     await waitFor(() => document.querySelector('#workspace-title')?.textContent.includes('SNES')
@@ -354,6 +427,10 @@ async function main() {
     assert.equal(await evaluate(() => document.querySelector('#game-library-filter-problem').textContent), '需检查 0');
     assert.equal(await evaluate(() => document.querySelector('#game-library-rows .game-image-placeholder').textContent), '缺图');
     assert.equal(await evaluate(visible, '#game-library-grid'), true);
+    assert.ok(await evaluate(()=>{
+        const card = document.querySelector('#game-library-grid .game-card-art').getBoundingClientRect();
+        return Math.abs(card.width / card.height - 2/3)<0.01;
+    }));
     assert.equal(await evaluate(()=>document.querySelectorAll('#game-library-grid .game-cover-card').length),1);
     assert.equal(await evaluate(()=>document.querySelector('#game-library-grid .game-card-art').textContent),'缺封面');
     assert.equal(await evaluate(()=>document.querySelector('#workspace-title .workspace-count').textContent),'1 个游戏');
@@ -367,6 +444,35 @@ async function main() {
     assert.equal(await evaluate(() => document.querySelector('#game-library-note')), null);
     assert.equal(await evaluate(() => document.querySelector('#game-selection-toolbar').hidden), true);
     await screenshot('02-games');
+    await send('Emulation.setDeviceMetricsOverride', {width:390,height:460,deviceScaleFactor:1,mobile:false});
+    await send('Emulation.setEmulatedMedia', {features:[{name:'prefers-reduced-motion',value:'reduce'}]});
+    const gameScrollTop = await evaluate(()=>{
+        const search = document.getElementById('game-library-search');
+        search.value = 'Shadowrun';
+        search.dispatchEvent(new Event('input'));
+        setGameLibraryFilter('missing');
+        const panel = document.querySelector('.main-panel');
+        panel.scrollTop = 115;
+        const previousTop = panel.scrollTop;
+        document.querySelector('.game-card-open').click();
+        return previousTop;
+    });
+    assert.ok(gameScrollTop>0);
+    await waitFor(()=>Boolean(gameInspector.details),'narrow game details');
+    assert.equal(await evaluate(visible,'.game-library-main'),false);
+    assert.equal(await evaluate(()=>document.querySelector('.main-panel').scrollTop),0);
+    assert.equal(await evaluate(()=>getComputedStyle(document.getElementById('game-inspector')).animationName),'none');
+    assert.equal(await evaluate(()=>document.getElementById('inspector-close').textContent),'返回游戏列表');
+    assert.equal(await evaluate(()=>document.getElementById('inspector-artwork').textContent),'补封面');
+    await screenshot('02-game-details-narrow');
+    await click('#inspector-close');
+    assert.equal(await evaluate(()=>document.querySelector('.main-panel').scrollTop),gameScrollTop);
+    assert.equal(await evaluate(()=>document.getElementById('game-library-search').value),'Shadowrun');
+    assert.equal(await evaluate(()=>gameLibrary.filter),'missing');
+    assert.equal(await evaluate(()=>document.activeElement.matches('.game-card-open')),true);
+    await send('Emulation.setDeviceMetricsOverride', {width:Number(width),height:Number(height),deviceScaleFactor:1,mobile:false});
+    await send('Emulation.setEmulatedMedia', {features:[]});
+
     await click('#game-library-grid .game-card-open');
     await waitFor(()=>gameInspector.details,'inspector metadata loaded');
     assert.equal(await evaluate(visible,'#game-inspector'),true);
@@ -397,6 +503,8 @@ async function main() {
     await click('#inspector-save');
     await waitFor(()=>gameLibrary.data?.items[0]?.label==='My Shadowrun','name saved in playlist');
     await waitFor(()=>gameLibrary.activeIndex===0&&Boolean(gameInspector.details),'inspector retained after name edit');
+    assert.equal(await evaluate(()=>gameLibrary.filter),'missing');
+    assert.equal(await evaluate(()=>document.getElementById('game-library-search').value),'Shadowrun');
     await evaluate(async()=>{
         const state=await desktopRequest('/api/desktop');
         const edit=state.m3u_operations.find(record=>record.mode==='game_edit');
@@ -431,7 +539,7 @@ async function main() {
     await waitFor(()=>document.querySelector('#gm-pick-files'),'game import loaded');
     assert.equal(await evaluate(()=>document.querySelector('#gm-preview')),null);
     assert.equal(await evaluate(()=>document.querySelector('#gm-destination-fields').hidden),true);
-    assert.equal(await evaluate(()=>document.querySelector('#gm-dialog header button.btn-text').textContent),'Cancel');
+    assert.equal(await evaluate(()=>document.querySelector('#gm-dialog header button').getAttribute('aria-label')),'Cancel');
     await screenshot('02-game-import-empty');
     await click('#gm-pick-files');
     await waitFor(()=>document.querySelector('#gm-sources')?.textContent.includes('Imported demo.sfc'),'game files selected');

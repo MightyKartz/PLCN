@@ -26,8 +26,10 @@ def overview(root):
             location['count'] += 1
             if not re.search(r'[\u3400-\u4dbf\u4e00-\u9fff\U00020000-\U000323af]', item['label']):
                 location['non_chinese_names'] += 1
-            if item['image_url'] and len(location['covers']) < 3:
-                location['covers'].append({'url': item['image_url'], 'label': item['label']})
+            if item['image_url'] and item['artwork_status'].get('Named_Boxarts') == 'exists':
+                covers = location['covers']
+                if len(covers) < 5 and not any(cover['url'] == item['image_url'] for cover in covers):
+                    covers.append({'url': item['image_url'], 'label': item['label']})
             if any(state != 'exists' for state in item['artwork_status'].values()):
                 location['missing'] += 1
         result.append({'system': playlist['system'], 'path': playlist['path'], 'locations': locations})

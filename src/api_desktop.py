@@ -23,17 +23,28 @@ def desktop(handler, context, payload):
 
 
 def pick(handler, context, payload):
-    from native_dialog import pick
-    selected = pick(payload.get('kind', 'directory'), payload.get('initial', ''))
+    from native_dialog import PICK_KINDS, pick as pick_native
+    kind = payload.get('kind', 'directory')
+    initial = payload.get('initial', '')
+    if kind not in PICK_KINDS or not isinstance(initial, str):
+        raise ValueError('无效的文件选择参数')
+    picker = getattr(handler.server, 'pick_file', pick_native)
+    selected = picker(kind, initial)
     reply(handler, {'paths': selected} if isinstance(selected, list) else {'path': selected})
 
 
+def activate(handler, context, payload):
+    activate_window = getattr(handler.server, 'activate_window', None)
+    if activate_window is None:
+        reply(handler, {'error': '当前实例使用浏览器界面'}, 409)
+        return
+    activate_window()
+    reply(handler, {'activated': True})
+
+
 def shutdown(handler, context, payload):
-    jobs = context.job_manager
-    with jobs.lock:
-        if any(job['status'] in ('pending', 'running') for job in jobs.jobs.values()):
-            reply(handler, {'error': '仍有任务运行，请取消或等待完成后再退出'}, 409)
-            return
-        jobs.stopping = True
+    if not context.job_manager.prepare_shutdown():
+        reply(handler, {'error': '仍有任务运行，请取消或等待完成后再退出'}, 409)
+        return
     reply(handler, {'stopped': True})
     threading.Thread(target=handler.server.shutdown, daemon=True).start()

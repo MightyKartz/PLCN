@@ -1,9 +1,12 @@
 /* Discovery updates the home screen only; opening a library is always explicit. */
 const libraryHome = {generation: 0, loading: true, data: null, error: '', openError: '', opening: '', device: null};
+let libraryDiscoveryRetry = null;
 const homeText = (zh, en) => workbenchText(zh, en);
 function homeStatus(source) {
     const labels = {
-        usb_only: ['解锁掌机并选择 USB 文件传输。', 'Unlock the handheld and select USB file transfer.'],
+        usb_only: source.error
+            ? ['USB 已连接，掌机存储暂不可用；请解锁掌机，稍后自动重试。', 'USB is connected, but storage is unavailable. Unlock the handheld; detection will retry automatically.']
+            : ['解锁掌机并选择 USB 文件传输。', 'Unlock the handheld and select USB file transfer.'],
         ready: source.transport !== 'local' ? ['设备已连接', 'Device connected'] : ['目录可用', 'Available'],
         unauthorized: ['等待设备授权 · 请在设备上允许 USB 调试', 'Authorization required · Allow USB debugging on the device'],
         offline: ['设备离线 · 请重新连接 USB', 'Device offline · Reconnect USB'],
@@ -81,6 +84,7 @@ function renderLibraryHome() {
 }
 async function refreshLibrarySources() {
     if (workbench.operation) return;
+    clearTimeout(libraryDiscoveryRetry);
     const generation = ++libraryHome.generation;
     libraryHome.loading = true; libraryHome.error = ''; libraryHome.openError = '';
     renderLibraryHome();
@@ -95,7 +99,14 @@ async function refreshLibrarySources() {
             libraryHome.error = homeText('检测失败：', 'Discovery failed: ') + error.message;
         }
     } finally {
-        if (generation === libraryHome.generation) { libraryHome.loading = false; renderLibraryHome(); }
+        if (generation === libraryHome.generation) {
+            libraryHome.loading = false; renderLibraryHome();
+            if (libraryHome.data?.sources.some(source => source.status === 'usb_only' && source.error)) {
+                libraryDiscoveryRetry = setTimeout(() => {
+                    if (!document.getElementById('library-onboarding').hidden && !workbench.operation) refreshLibrarySources();
+                }, 5000);
+            }
+        }
     }
 }
 window.addEventListener('focus', () => {
@@ -144,7 +155,7 @@ function homeDeviceSources(sources) {
         const key = source.serial || source.path.split('/')[2];
         let device = grouped.get(key);
         if (!device) {
-            device = {...source, label: homeText('Android 掌机', 'Android handheld'), storages: []};
+            device = {...source, label: source.device_name || homeText('Android 掌机', 'Android handheld'), storages: []};
             grouped.set(key, device); devices.push(device);
         }
         device.storages.push(source);

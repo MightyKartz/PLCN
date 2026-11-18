@@ -53,6 +53,7 @@ def test_history_is_bounded_and_discovery_deduplicates_local_layout(tmp_path, mo
 def test_usb_connected_without_adb_is_visible_and_local_paths_are_not_probed(tmp_path, monkeypatch):
     monkeypatch.setattr(sources, 'history_path', lambda: tmp_path / 'recent.json')
     sources.remember({'path': str(tmp_path / 'Desktop/lpl')})
+    monkeypatch.setattr(sources, 'mtp_sources', lambda: ([], None))
     monkeypatch.setattr(sources.scanner, 'list_adb_devices', lambda **kwargs: [])
     monkeypatch.setattr(sources, 'usb_android_devices', lambda: [{'serial':'usb-device','label':'Moorechip'}])
     def unexpected():

@@ -59,6 +59,8 @@ def library():
     _libc.strdup.argtypes = [C.c_char_p]
     _libc.strdup.restype = C.c_void_p
     path = app_paths.resource_root() / 'libmtp.dylib'
+    if not path.exists():
+        path = app_paths.resource_root() / 'build/libmtp/lib/libmtp.dylib'
     name = str(path) if path.exists() else ctypes.util.find_library('mtp')
     if not name:
         for candidate in ['/opt/homebrew/lib/libmtp.dylib', '/usr/local/lib/libmtp.dylib']:
@@ -75,6 +77,8 @@ def library():
         'Open_Raw_Device_Uncached': (C.POINTER(Device), [C.POINTER(Raw)]),
         'Release_Device': (None, [C.POINTER(Device)]), 'Get_Storage': (C.c_int, [C.POINTER(Device), C.c_int]),
         'Get_Serialnumber': (C.c_void_p, [C.POINTER(Device)]),
+        'Get_Friendlyname': (C.c_void_p, [C.POINTER(Device)]),
+        'Get_Modelname': (C.c_void_p, [C.POINTER(Device)]),
         'Get_Files_And_Folders': (C.POINTER(File), [C.POINTER(Device), C.c_uint32, C.c_uint32]),
         'destroy_file_t': (None, [C.POINTER(File)]), 'new_file_t': (C.POINTER(File), []),
         'Get_File_To_File': (C.c_int, [C.POINTER(Device), C.c_uint32, C.c_char_p, C.c_void_p, C.c_void_p]),
@@ -86,6 +90,9 @@ def library():
     for key, (result, args) in signatures.items():
         fn = getattr(lib, 'LIBMTP_' + key)
         fn.restype, fn.argtypes = result, args
+    probe = getattr(lib, 'LIBMTP_Probe_Storage', lib.LIBMTP_Get_Storage)
+    probe.restype, probe.argtypes = C.c_int, [C.POINTER(Device), C.c_int]
+    lib.probe_storage = probe
     lib.LIBMTP_Init()
     _lib = lib
     return lib
@@ -129,9 +136,9 @@ def devices():
     with _lock:
         if _sessions:
             for handle in list(_sessions.values()):
-                if library().LIBMTP_Get_Storage(handle, 0):
+                if library().probe_storage(handle, 0):
                     close()
-                    break
+                    raise RuntimeError('掌机存储暂不可用，请解锁掌机后重试')
             else:
                 return list(_device_list)
         lib = library()
@@ -156,13 +163,21 @@ def devices():
                     handle = _sessions[serial]
                 else:
                     _sessions[serial] = handle
-                if lib.LIBMTP_Get_Storage(handle, 0):
+                if lib.probe_storage(handle, 0):
                     close()
                     raise RuntimeError('无法读取掌机存储，请解锁并允许文件传输')
+                device_name = ''
+                for getter in (lib.LIBMTP_Get_Friendlyname, lib.LIBMTP_Get_Modelname):
+                    name_ptr = getter(handle)
+                    if name_ptr:
+                        device_name = C.string_at(name_ptr).decode('utf-8', errors='replace').strip()
+                        _libc.free(name_ptr)
+                    if device_name:
+                        break
                 storage = handle.contents.storage
                 while storage:
                     info = storage.contents
-                    found.append({'serial': serial, 'storage': info.id, 'label': (info.name or b'Android').decode(),
+                    found.append({'serial': serial, 'device_name': device_name, 'storage': info.id, 'label': (info.name or b'Android').decode(),
                                   'path': uri(serial, info.id), 'transport': 'mtp'})
                     storage = info.next
         finally:
@@ -334,7 +349,8 @@ def scan(value):
                 playlists.append({'name': entry['name'], 'path': path, 'system': entry['name'][:-4], 'valid': False, 'item_count': 0, 'error': str(error), 'transport': 'mtp'})
     return {'connected': True, 'root_path': value, 'target_path': value, 'transport': 'mtp',
             'status': 'ready' if playlists else 'no_playlists', 'message': '已通过文件传输读取掌机游戏库',
-            'device': {'serial': parse(value)[0], 'model': 'Android MTP'},
+            'device': {'serial': parse(value)[0], 'model': next((device['device_name'] for device in _device_list
+                       if device['serial'] == parse(value)[0] and device.get('device_name')), 'Android MTP')},
             'directories': {'playlists': playlist_dir, 'thumbnails': join(value, names.get('thumbnails', 'thumbnails')),
                             'thumbnails_exists': 'thumbnails' in names, 'config': None},
             'playlists': playlists, 'totals': {'playlists': len(playlists), 'items': sum(p['item_count'] for p in playlists)}}

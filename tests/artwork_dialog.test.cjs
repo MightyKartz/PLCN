@@ -14,7 +14,7 @@ function harness(request) {
     const input = ['test.lpl', 'GBA', 'images'];
     const selectedRepairs = [{enabled:true}, {enabled:true}];
     const context = {document: {getElementById: get, createElement: () => get('created')}, setTimeout,
-        workbenchText: (zh, en) => en, gameLibraryInput: () => input,
+        workbenchText: (zh, en) => en, wbIconButton(button, icon, label) {button.title=label;button.setAttribute('aria-label',label);}, gameLibraryInput: () => input,
         gameLibrary: {key: JSON.stringify(input), data: {items: [item]}},
         loadGameLibrary: async () => {context.reloadedLibrary = true;},
         currentChanges: selectedRepairs, workbench: {operation: null},
@@ -166,11 +166,11 @@ test('polling failure preserves the original job and locks source edits until re
 
 test('failed writes stay open for retry; successful close events cannot dismiss a new dialog', async () => {
     const {context,elements,item}=harness(async url=>url.endsWith('/apply') ? {job_id:'one'} : {jobs:[{id:'one',status:'failed',error:'device disconnected'}]});
-    assert.equal(elements['artwork-confirm'].textContent,'Confirm');
+    assert.equal(elements['artwork-confirm'].title,'Confirm');
     context.state().candidate={token:'candidate'};
     await context.confirmArtwork();
     assert.equal(elements['artwork-dialog'].open,true);
-    assert.equal(elements['artwork-confirm'].textContent,'Confirm');
+    assert.equal(elements['artwork-confirm'].title,'Confirm');
     assert.equal(elements['artwork-message'].textContent,'device disconnected');
     context.closeArtworkDialog();
     context.openArtworkDialog(item,false);

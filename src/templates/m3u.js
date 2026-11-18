@@ -22,7 +22,7 @@ function renderM3uDiscs(){
         check.onchange=()=>{if(check.checked)m3uEditor.selected.add(id);else m3uEditor.selected.delete(id);invalidateM3uPreview();};row.appendChild(check);
         const text=document.createElement('span');text.textContent=(index+1)+'. '+file.path;row.appendChild(text);
         for(const [offset,label] of [[-1,'上移'],[1,'下移']]){
-            const button=document.createElement('button');button.type='button';button.className='btn btn-muted';button.textContent=label;
+            const button=document.createElement('button');button.type='button';button.className='btn btn-muted';wbIconButton(button,offset<0?'arrow-up':'arrow-down',workbenchText(label,offset<0?'Move up':'Move down'));
             button.disabled=index+offset<0||index+offset>=m3uEditor.order.length;
             button.onclick=()=>{[m3uEditor.order[index],m3uEditor.order[index+offset]]=[m3uEditor.order[index+offset],m3uEditor.order[index]];invalidateM3uPreview();renderM3uDiscs();};row.appendChild(button);
         }

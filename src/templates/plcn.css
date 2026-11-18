@@ -1522,7 +1522,8 @@ body[data-theme="dark"] .badge.ready {
     border-radius: 14px;
     padding: 24px;
     color: var(--text);
-    background: var(--bg);
+    background: var(--surface);
+    box-shadow: var(--shadow-float);
 }
 
 #desktop-dialog::backdrop {
@@ -1762,29 +1763,6 @@ body[data-theme="dark"] .desktop-confirm {
 
 #path-settings input {
     text-overflow: ellipsis;
-}
-
-#data-source-settings {
-    margin-top: 20px;
-}
-
-#desktop-dialog .desktop-toolbar {
-    margin-top: 20px;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 12px;
-}
-
-#desktop-dialog [data-desktop-view] {
-    background: transparent;
-    color: var(--muted);
-    border: 1px solid transparent;
-    box-shadow: none;
-}
-
-#desktop-dialog [data-desktop-view].active {
-    background: var(--primary-soft);
-    color: var(--primary);
-    border-color: var(--primary);
 }
 
 #desktop-dialog #desktop-message:empty {

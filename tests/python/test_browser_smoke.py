@@ -83,6 +83,22 @@ def test_home_to_library_to_preview(tmp_path, monkeypatch, chrome_binary, viewpo
         time.sleep(0.3)
         return original_analyze(*args, **kwargs)
     monkeypatch.setattr(playlist_service, 'analyze_playlist', slow_analyze)
+    # Hold the first batch preview until the UI cancels it. A fixed sleep lets
+    # faster runners finish the job before the real pointer reaches Cancel.
+    import batch_review
+    original_review = batch_review.prepare_review
+    first_review = [True]
+    def cancellable_review(*args, **kwargs):
+        if first_review[0]:
+            first_review[0] = False
+            cancel_check = kwargs.get('cancel_check') or args[6]
+            deadline = time.monotonic() + 30
+            while not cancel_check() and time.monotonic() < deadline:
+                time.sleep(0.05)
+            assert cancel_check(), 'Browser did not cancel its first batch preview'
+        return original_review(*args, **kwargs)
+    monkeypatch.setattr(batch_review, 'prepare_review', cancellable_review)
+
     import native_dialog
     incoming = tmp_path / 'incoming'; incoming.mkdir()
     (incoming / 'Imported demo.sfc').write_bytes(b'game import fixture')

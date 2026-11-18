@@ -312,7 +312,7 @@ def test_home_overview_uses_minimal_concept():
     assert 'platform-badge' not in html
     assert "getSystemAbbreviation(group.system)" in html
     assert 'manual-scan-button' in html
-    assert 'gm-source-cards' not in Path('src/templates/game-management.js').read_text()
+    assert 'gm-source-cards' not in Path('src/templates/game-management.js').read_text(encoding='utf-8')
     assert 'gm-mapping-config' in html
     assert 'gm-manual-scan' not in html
     assert 'openAutoScan()' in html

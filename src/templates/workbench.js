@@ -22,7 +22,8 @@ function renderLibraryRead() {
     document.getElementById('library-read-spinner').hidden = failed;
     document.getElementById('library-read-actions').hidden = !failed;
     document.getElementById('library-read-note').textContent = workbenchText(failed ? '检查掌机连接后重试，或选择其他游戏库。' : '首次读取掌机可能需要一些时间，请保持连接。', failed ? 'Check the connection and retry, or choose another library.' : 'The first read may take a moment. Keep your device connected.');
-    for (const [id,zh,en] of [['library-read-retry','重新读取','Retry'],['library-read-switch','切换设备','Switch device'],['library-read-banner-retry','重试','Retry']]) document.getElementById(id).textContent = workbenchText(zh,en);
+    for (const [id,zh,en,icon] of [['library-read-retry','重新读取','Retry','refresh'],['library-read-switch','切换设备','Switch device','device-gamepad']]) wbIconButton(document.getElementById(id), icon, workbenchText(zh,en));
+    document.getElementById('library-read-banner-retry').textContent = workbenchText('重试','Retry');
     if (active && libraryRead.blocking) {
         if (!dialog.open) {libraryRead.focus = document.activeElement; dialog.showModal();}
         if (failed) document.getElementById('library-read-retry').focus();
@@ -50,6 +51,12 @@ function wbIcon(name) {
     const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
     use.setAttribute('href', '/assets/workbench-icons.svg#' + name); icon.append(use); return icon;
 }
+function wbIconButton(button, name, label) {
+    button.classList.add('dialog-icon-button');
+    button.title = label;
+    button.setAttribute('aria-label', label);
+    button.replaceChildren(wbIcon(name));
+}
 function wbSystemIcon(system) {
     return ({NES:'console-nes',SNES:'console-snes',GB:'console-gameboy',GBC:'console-gameboy',GBA:'console-gba',SS:'console-saturn',MD:'console-megadrive',PS1:'console-playstation',MAME:'console-arcade',FBNeo:'console-arcade'})[getSystemAbbreviation(system)] || 'device-gamepad';
 }
@@ -62,6 +69,13 @@ function wbSystemName(system) {
     const abbr = getSystemAbbreviation(system);
     return currentUILanguage === 'en' ? system.replace(/^[^-]+ - /, '') : names[abbr] || system.replace(/^[^-]+ - /, '');
 }
+// Box art in these libraries spans portrait boxes, square cases and wide GBA packaging.
+function wbCoverFrameRatio(system) {
+    const ratios = {GBA: 8 / 5, NES: 3 / 4, MD: 3 / 4, FBNEO: 3 / 4,
+        GB: 4 / 5, GBC: 4 / 5, SNES: 2 / 3, MAME: 4 / 3};
+    return ratios[getSystemAbbreviation(system).toUpperCase()] ?? 1;
+}
+
 function wbStorageKind(path) {
     return /^\/(?:storage\/(?:emulated|self)|sdcard)\//.test(path) ? 'internal' : path.startsWith('/storage/') ? 'card' : 'local';
 }
@@ -106,6 +120,89 @@ function refreshWorkbenchOverview() {
     workbenchOverview.key = '';
     renderWorkbench();
 }
+// Reuse decoded images when the surrounding overview is redrawn for the same library read.
+const overviewFans = new WeakMap();
+
+function renderPlatformFan(group, data) {
+    const candidates = new Map();
+    for (const cover of group.covers) {
+        const path = cover.url.split('&v=')[0];
+        if (!candidates.has(path)) candidates.set(path, cover);
+        if (candidates.size === 5) break;
+    }
+    const covers = [...candidates.values()];
+    const key = JSON.stringify([group.system, covers.map(cover => cover.url)]);
+    if (data && !overviewFans.has(data)) overviewFans.set(data, new Map());
+    const cache = data && overviewFans.get(data);
+    if (cache?.has(key)) return cache.get(key);
+
+    const art = wbElement('div', 'platform-art');
+    art.setAttribute('aria-hidden', 'true');
+    const fan = wbElement('div', 'platform-fan');
+    art.append(fan);
+    cache?.set(key, art);
+
+    const preferredRatio = wbCoverFrameRatio(group.system);
+    const height = Math.min(160, 146 / Math.sqrt(preferredRatio));
+    function showCovers(selected) {
+        const arranged = selected.length === 1 ? [null, selected[0], null] : [selected[0], selected[1], selected[2]];
+        const widths = arranged.map(cover => height * (cover?.ratio ?? preferredRatio));
+        const [left, center, right] = widths;
+        const offsets = [
+            -(left + center) / 2 + Math.min(left, center) * 0.2,
+            0,
+            (right + center) / 2 - Math.min(right, center) * 0.2,
+        ];
+        const width = 2 * (Math.max(...widths.map((value, index) => Math.abs(offsets[index]) + value / 2)) + 20);
+        const fanHeight = height + 30;
+        fan.style.setProperty('--fan-width', width + 'px');
+        fan.style.setProperty('--fan-ratio', width / fanHeight);
+        fan.style.setProperty('--cover-height', height / fanHeight * 100 + '%');
+        fan.replaceChildren(...arranged.map((cover, index) => {
+            const slot = wbElement('span', 'platform-cover');
+            slot.style.setProperty('--cover-width', widths[index] / width * 100 + '%');
+            slot.style.setProperty('--cover-center', (0.5 + offsets[index] / width) * 100 + '%');
+            if (cover) {
+                slot.title = cover.label;
+                slot.append(cover.image);
+            } else {
+                slot.classList.add('is-empty');
+            }
+            return slot;
+        }));
+    }
+
+    showCovers([]);
+    if (covers.length) {
+        const images = covers.map((cover, index) => new Promise(resolve => {
+            const image = document.createElement('img');
+            image.alt = '';
+            image.loading = 'lazy';
+            image.className = 'platform-cover-probe';
+            image.onload = () => {
+                image.remove();
+                image.classList.remove('platform-cover-probe');
+                resolve({label: cover.label, image, ratio: image.naturalWidth / image.naturalHeight, index});
+            };
+            image.onerror = () => {
+                image.remove();
+                resolve(null);
+            };
+            image.src = cover.url;
+            art.append(image);
+        }));
+        Promise.all(images).then(loaded => {
+            const distance = cover => Math.abs(Math.log(cover.ratio / preferredRatio));
+            const chosen = loaded.filter(Boolean)
+                .sort((a, b) => distance(a) - distance(b))
+                .slice(0, 3)
+                .sort((a, b) => a.index - b.index);
+            showCovers(chosen);
+        });
+    }
+    return art;
+}
+
 function renderWorkbenchOverview(visible) {
     const panel = document.getElementById('library-overview'); panel.hidden = !visible;
     if (!visible) return;
@@ -160,29 +257,7 @@ function renderWorkbenchOverview(visible) {
         const arrow = wbElement('span', 'overview-system-arrow', '›');
         arrow.setAttribute('aria-hidden', 'true');
         heading.append(badge, details, arrow);
-        const art = wbElement('div', 'platform-art');
-        art.setAttribute('aria-hidden', 'true');
-        for (let index = 0; index < 3; index++) {
-            const slot = wbElement('span', 'platform-cover');
-            const cover = group.covers[index];
-            if (cover) {
-                const image = document.createElement('img');
-                image.alt = '';
-                image.loading = 'lazy';
-                slot.title = cover.label;
-                image.onerror = () => {
-                    image.remove();
-                    slot.removeAttribute('title');
-                    slot.classList.add('is-empty');
-                };
-                image.src = cover.url;
-                slot.append(image);
-            } else {
-                slot.classList.add('is-empty');
-            }
-            art.append(slot);
-        }
-        card.append(heading, art);
+        card.append(heading, renderPlatformFan(group, actual));
         card.onclick = () => browseLibrarySystem(group.system);
         grid.append(card);
     }
@@ -211,7 +286,7 @@ function renderWorkbenchChrome(state) {
     }
     document.getElementById('workbench-device').setAttribute('aria-label',workbenchText('设备详情','Device details'));
     document.getElementById('workbench-device').title=workbenchText('查看设备详情与切换游戏库','Device details and switch library');
-    document.getElementById('workbench-device').textContent=!currentDeviceScan?.connected ? workbenchText('设备与游戏库','Device & library') : currentDeviceScan.transport==='local' ? workbenchText('本地游戏库','Local library') : workbenchText('当前掌机','Handheld');
+    document.getElementById('workbench-device').textContent=!currentDeviceScan?.connected ? workbenchText('设备与游戏库','Device & library') : currentDeviceScan.transport==='local' ? workbenchText('本地游戏库','Local library') : currentDeviceScan.device?.model?.replaceAll('_',' ') || workbenchText('当前掌机','Handheld');
     const connection=document.getElementById('workbench-connection');connection.textContent=currentDeviceScan?.connected ? workbenchText('已连接','Connected') : workbenchText('未连接','Disconnected');connection.classList.toggle('connected',Boolean(currentDeviceScan?.connected));
     const hasDevicePaths=workbenchOverview.data?.playlists.some(p=>p.locations.internal||p.locations.card);
     document.getElementById('storage-scope').hidden=!currentDeviceScan?.connected || (currentDeviceScan.transport==='local'&&!hasDevicePaths);

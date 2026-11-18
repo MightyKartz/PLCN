@@ -17,13 +17,13 @@ adb_notices = [(str(adb_root / name), "platform-tools") for name in ("NOTICE.txt
 mtp_binaries = []
 mtp_notices = []
 if sys.platform == 'darwin':
-    mtp_library = ctypes.util.find_library('mtp')
-    if not mtp_library:
-        mtp_library = next((str(p) for p in (Path('/opt/homebrew/lib/libmtp.dylib'), Path('/usr/local/lib/libmtp.dylib')) if p.is_file()), None)
-    if not mtp_library:
-        raise RuntimeError('Install libmtp with brew install libmtp before packaging')
-    mtp_binaries = [(mtp_library, '.')]
-    for dependency in ('libmtp', 'libusb'):
+    mtp_library = Path('build/libmtp/lib/libmtp.dylib')
+    if not mtp_library.is_file():
+        raise RuntimeError('Run scripts/prepare_mtp.py before packaging on macOS')
+    mtp_binaries = [(str(mtp_library), '.')]
+    mtp_notices = [('build/libmtp/COPYING', 'licenses/libmtp'),
+                   ('packaging/patches/libmtp-1.1.23-unlock-recovery.patch', 'licenses/libmtp')]
+    for dependency in ('libusb',):
         for prefix in ('/opt/homebrew/opt', '/usr/local/opt'):
             license_file = Path(prefix) / dependency / 'COPYING'
             if license_file.exists():

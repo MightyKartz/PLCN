@@ -2,7 +2,7 @@
 
 [English](README_EN.md) · [下载安装包](https://github.com/MightyKartz/retroarch-assistant/releases/latest)
 
-RetroArch 游戏库与掌机管理工具。扫描游戏、整理列表、补全资料，管理你的掌机游戏库。双击启动，在浏览器中管理本地、SD 卡或 USB Android 掌机上的游戏库，无需安装 Python、Node.js 或 Xcode。
+RetroArch 游戏库与掌机管理工具。扫描游戏、整理列表、补全资料，管理你的掌机游戏库。双击启动，在独立应用窗口中管理本地、SD 卡或 USB Android 掌机上的游戏库，无需安装 Python、Node.js 或 Xcode。
 
 ## 主要功能
 
@@ -40,7 +40,7 @@ RetroArch 游戏库与掌机管理工具。扫描游戏、整理列表、补全�
 4. 点击游戏卡片查看详情、编辑显示名称或更换封面；多选后可只补全所选游戏，或预览后移出列表。名称编辑保留 ROM 文件名和核心，并保留原图片。
 5. 点击 **补全名称与封面** 处理整个现有列表。
 6. 在“工具”中检查多盘引用、转换 CHD、整理目录或创建 ROM ZIP 副本。写入前退出 RetroArch。
-7. 右上角任务图标可查看进度、失败重试、取消与恢复记录；点击设备名称查看详情或切换游戏库，设置中可管理资料来源、语言与外观。
+7. 右上角任务图标可查看进度、失败重试、取消与恢复记录；点击设备名称查看详情或切换游戏库，设置中可调整语言与外观。
 
 图片优先搜索 Libretro 官方图库；无结果时可选择备用来源或本地图片。备用图片显示来源和版本提示，预览确认后才写入。
 
@@ -55,8 +55,8 @@ RetroArch 游戏库与掌机管理工具。扫描游戏、整理列表、补全�
 ## 开发
 
 ```sh
-pip install -r requirements.txt
-python3 src/retroarch_assistant.py
+pip install -r requirements-desktop.txt
+python3 src/desktop.py
 ```
 
 ```sh

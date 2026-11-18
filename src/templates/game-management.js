@@ -103,7 +103,7 @@ function gmWorkspace(mode) {
     const header = wbElement('header', 'gm-workspace-header');
     const title = wbElement('h2', '', mode === 'import' ? workbenchText('添加游戏', 'Add games') : workbenchText('移出列表', 'Remove from playlist'));
     title.id = 'gm-title';
-    if (mode === 'import') { const cancel = wbElement('button', 'btn btn-text', workbenchText('取消', 'Cancel')); cancel.type = 'button'; cancel.onclick = closeGameManagement; header.append(title, cancel); }
+    if (mode === 'import') { const cancel = wbElement('button', 'btn btn-muted'); wbIconButton(cancel, 'x', workbenchText('取消', 'Cancel')); cancel.type = 'button'; cancel.onclick = closeGameManagement; header.append(title, cancel); }
     else header.append(title, gmButton('返回游戏库', 'Back to library', closeGameManagement));
     const body = wbElement('div', 'gm-workspace-body');
     const form = wbElement('fieldset', 'gm-fields'); form.id = 'gm-fields';
@@ -376,7 +376,7 @@ function appendGameSelection(cell, item) {
     checkbox.setAttribute('aria-label', workbenchText('选择 ', 'Select ') + (item.label || item.rom_name));
     checkbox.disabled = Boolean(workbench.operation);
     checkbox.onchange = () => toggleGameSelection(item.index, checkbox.checked);
-    const name = wbElement('button', 'game-name-button', cell.textContent); name.type = 'button'; name.onclick = () => inspectGame(item.index); cell.replaceChildren(); label.append(checkbox, name); cell.append(label);
+    const name = wbElement('button', 'game-name-button', cell.textContent); name.type = 'button'; name.dataset.gameDetails = item.index; name.onclick = () => inspectGame(item.index); cell.replaceChildren(); label.append(checkbox, name); cell.append(label);
 }
 function appendGameManagementActions(actions, item) {
     const menu = wbElement('details', 'game-row-menu');

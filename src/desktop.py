@@ -7,15 +7,35 @@ import traceback
 
 import app_paths
 from app_brand import NAME
+from native_dialog import PICK_KINDS
+
+
+def webview2_available():
+    import winreg
+
+    key_path = r'Software\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
+    for hive, access in ((winreg.HKEY_LOCAL_MACHINE, winreg.KEY_WOW64_32KEY),
+                         (winreg.HKEY_CURRENT_USER, 0)):
+        try:
+            with winreg.OpenKey(hive, key_path, 0, winreg.KEY_READ | access) as key:
+                version, _ = winreg.QueryValueEx(key, 'pv')
+        except FileNotFoundError:
+            continue
+        if version and version != '0.0.0.0':
+            return True
+    return False
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--pick', choices=['file', 'files', 'rom', 'directory', 'executable'])
+    parser.add_argument('--pick', choices=PICK_KINDS)
     parser.add_argument('--initial', default='')
     parser.add_argument('--result')
     parser.add_argument('--self-check', action='store_true')
-    parser.add_argument('--no-browser', action='store_true', help='Start the local service without opening a browser')
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument('--no-browser', action='store_true', help='Start the local service without opening a browser')
+    mode.add_argument('--browser', action='store_true', help='Open the workbench in the default browser')
+    mode.add_argument('--window', action='store_true', help='Require the standalone desktop window')
     args = parser.parse_args()
     if args.pick:
         from native_dialog import helper_pick
@@ -30,6 +50,8 @@ def main():
         import tkinter
         import server
         import data_pack
+        if sys.platform in ('darwin', 'win32') and getattr(sys, 'frozen', False):
+            import webview
         assert (app_paths.resource_root() / 'src/templates/plcn.html').is_file()
         assert all((app_paths.resource_root() / 'src/templates' / name).is_file()
                    for name in server.UI_ASSETS)
@@ -58,8 +80,18 @@ def main():
     with log_path.open('a', encoding='utf-8', buffering=1) as log:
         sys.stdout = sys.stderr = log
         try:
-            import server
-            server.run_server(open_browser=not args.no_browser)
+            use_window = args.window or (not (args.browser or args.no_browser) and sys.platform in ('darwin', 'win32'))
+            if use_window and sys.platform == 'win32' and not webview2_available():
+                if args.window:
+                    raise RuntimeError('请安装 Microsoft Edge WebView2 Runtime，或使用 --browser 启动。')
+                print('WebView2 Runtime unavailable; opening the default browser')
+                use_window = False
+            if use_window:
+                from desktop_window import run_window
+                run_window()
+            else:
+                import server
+                server.run_server(open_browser=not args.no_browser)
         except Exception:
             traceback.print_exc()
             try:

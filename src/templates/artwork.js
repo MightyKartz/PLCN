@@ -120,7 +120,7 @@ function openArtworkDialog(item, autoSearch = true) {
     artworkElement('shared').hidden = true;
     artworkElement('new-label').value = '';
     artworkElement('scope').textContent = text('选择候选后确认写入；旧图会备份，未勾选类型保持不变。', 'Select a candidate, then confirm. Replaced images are backed up; unchecked types stay unchanged.');
-    artworkElement('close').textContent = text('关闭', 'Close');
+    wbIconButton(artworkElement('close'), 'x', text('关闭', 'Close'));
     artworkElement('kind-label').textContent = text('图片类型（可多选）', 'Image types (multiple allowed)');
     artworkKindLabels();
     setArtworkKinds(['Named_Boxarts']);
@@ -132,14 +132,14 @@ function openArtworkDialog(item, autoSearch = true) {
     artworkElement('names-wrap').hidden = true;
     artworkElement('names').replaceChildren();
     artworkElement('secondary').hidden = true;
-    artworkElement('secondary').textContent = text('搜索备用来源', 'Search alternate source');
-    artworkElement('search').textContent = text('搜索图库', 'Search library');
+    wbIconButton(artworkElement('secondary'), 'search', text('搜索备用来源', 'Search alternate source'));
+    wbIconButton(artworkElement('search'), 'search', text('搜索图库', 'Search library'));
     artworkElement('upload-label').textContent = text('导入本地图片', 'Import local image');
     artworkElement('upload').title = text('PNG / JPEG / WebP，最多 12 MiB', 'PNG / JPEG / WebP, up to 12 MiB');
     artworkElement('upload').value = '';
     artworkElement('message').textContent = '';
     artworkElement('results').replaceChildren();
-    artworkElement('confirm').textContent = text('确认', 'Confirm');
+    wbIconButton(artworkElement('confirm'), 'circle-check', text('确认', 'Confirm'));
     invalidateArtworkCandidate();
     if (docked) {
         const pane = document.getElementById('game-inspector');
@@ -191,8 +191,8 @@ function artworkBusy(busy) {
     artworkElement('results').inert = busy || Boolean(state.jobId);
     artworkElement('close').disabled = state.applying || Boolean(state.jobId);
     artworkElement('confirm').disabled = busy || !state.candidate;
-    artworkElement('confirm').textContent = state.applying ? workbenchText('更新中…', 'Updating…')
-        : state.jobId ? workbenchText('查询更新结果', 'Check update result') : workbenchText('确认', 'Confirm');
+    wbIconButton(artworkElement('confirm'), state.applying || state.jobId ? 'refresh' : 'circle-check', state.applying ? workbenchText('更新中…', 'Updating…')
+        : state.jobId ? workbenchText('查询更新结果', 'Check update result') : workbenchText('确认', 'Confirm'));
 }
 
 function artworkKindChanged() {
