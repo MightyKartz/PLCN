@@ -56,8 +56,10 @@ def prepare_review(directory, thumbnails, source, overrides, options, progress, 
                     artwork_missing = options['download_thumbnails'] and (
                         change.get('artwork_gallery_status') in {'unavailable', 'not_found'}
                         or not change.get('thumbnail_source'))
+                    # A name the catalogue cannot translate is still manual work.
+                    row['review'] += int((needs_name and not HAN.search(label))
+                                         or (artwork_missing and needs_artwork))
                     if artwork_missing:
-                        row['review'] += int(needs_artwork)
                         # The gallery could not verify this source; stripping it keeps
                         # the apply step from downloading artwork for the rename below.
                         change['thumbnail_source'] = None

@@ -68,6 +68,11 @@ def load_server_config():
         data = json.load(f)
     if not isinstance(data, dict):
         return {}
+    source = data.get('rom_name_cn_path')
+    if isinstance(source, str) and os.path.isabs(source) and not os.path.isdir(source):
+        # A moved or unmounted checkout must not silently pin jobs to a stale
+        # cached catalogue; the bundled names are the safe fallback.
+        data.pop('rom_name_cn_path')
     legacy = {old: new for old, new in LEGACY_CONFIG_KEYS.items() if old in data}
     if not legacy:
         return data

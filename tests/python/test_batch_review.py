@@ -112,6 +112,15 @@ def test_complete_games_are_not_counted_as_manual_work(library, monkeypatch, cha
     assert review(library, images=True)['rows'][0]['review'] == 0
 
 
+def test_untranslatable_english_name_is_manual_work(library, monkeypatch):
+    """A name the catalogue cannot translate must not vanish from the summary."""
+    import playlist_service
+    change = {'original_item_label': 'Ketsui', 'new_label': 'Ketsui', 'path': '/roms/ket.zip',
+              'system': 'NES', 'identity': {}, 'thumbnail_source': 'Ketsui', 'cover_exists': True}
+    monkeypatch.setattr(playlist_service, 'analyze_playlist', lambda *args, **kwargs: [change])
+    assert review(library, images=True)['rows'][0]['review'] == 1
+
+
 def test_invalid_playlist_is_visible_in_summary_and_stop_option_refuses_writes(library):
     lists, _, _, path = library
     (lists / 'Broken.lpl').write_text('{', encoding='utf-8')

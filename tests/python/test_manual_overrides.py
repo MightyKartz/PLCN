@@ -326,3 +326,11 @@ def test_build_override_entry_from_payload():
         "thumbnail_source": "Snatcher (Japan)",
         "updated_at": "2026-06-17T00:00:00Z",
     }
+
+
+def test_missing_name_source_falls_back_to_bundled_data(tmp_path, monkeypatch):
+    config_path = tmp_path / "config.json"
+    config_path.write_text(json.dumps({"rom_name_cn_path": str(tmp_path / "moved")}), encoding="utf-8")
+    monkeypatch.setattr(server, "CONFIG_FILE", str(config_path))
+
+    assert "rom_name_cn_path" not in server.load_server_config()
