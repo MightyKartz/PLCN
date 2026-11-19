@@ -154,17 +154,7 @@ function renderGameLibrary() {
     const items = (gameLibrary.data?.items || []).filter(item => typeof workbenchOverview === 'undefined'
         || workbenchOverview.scope === 'all' || wbStorageKind(item.rom_path) === workbenchOverview.scope);
     renderGameLibraryFilters(items);
-    const gamesStatus = document.getElementById('games-status');
-    const missingCount = gameLibrary.data ? items.filter(item => gameMatchesImageFilter(item, 'missing')).length : 0;
-    gamesStatus.hidden = !missingCount;
-    if (missingCount) {
-        const complete = wbElement('button', 'btn btn-muted', text('一键补全', 'Complete all'));
-        complete.type = 'button'; complete.id = 'games-complete-button'; complete.onclick = () => startCompletion();
-        complete.disabled = document.getElementById('preview-button').disabled;
-        gamesStatus.replaceChildren(wbIcon('photo'),
-            wbElement('span', 'overview-status-text', text(`${missingCount} 个游戏图片待补全`, `${missingCount} ${missingCount === 1 ? 'game' : 'games'} missing artwork`)),
-            complete);
-    } else gamesStatus.replaceChildren();
+
     const query = search.value.trim().toLowerCase();
     const filtered = items.filter(item => gameMatchesImageFilter(item, gameLibrary.filter)
         && [item.label, item.rom_name].some(value => value.toLowerCase().includes(query)));

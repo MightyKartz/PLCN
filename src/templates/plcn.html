@@ -86,7 +86,7 @@
                             <span id="completion-entry-note" data-i18n="自动匹配中文名与图片，预览后确认应用。">自动匹配中文名与图片，预览后确认应用。</span>
                             <button id="preview-button" class="btn btn-muted" onclick="previewTask()" disabled type="button" aria-describedby="completion-entry-note" data-i18n="一键补全">一键补全</button>
                         </div>
-                        <button id="manual-scan-button" class="btn btn-muted" type="button" data-input-control onclick="openAutoScan()" title="扫描掌机游戏" aria-label="扫描掌机游戏" data-i18n-title="扫描掌机游戏" data-i18n-aria-label="扫描掌机游戏"><span class="icon" data-ui-icon="scan"></span></button><button id="game-files-button" class="btn" type="button" data-input-control onclick="openGameFiles(this)" title="游戏文件" aria-label="游戏文件" data-i18n-title="游戏文件" data-i18n-aria-label="游戏文件"><span class="icon" data-ui-icon="folder"></span></button><button id="apply-button" class="btn btn-success" onclick="applyChanges()" disabled type="button" data-i18n="确认应用">确认应用</button>
+                        <button id="manual-scan-button" class="btn btn-muted" type="button" data-input-control onclick="openAutoScan()" title="扫描掌机游戏" aria-label="扫描掌机游戏" data-i18n-title="扫描掌机游戏" data-i18n-aria-label="扫描掌机游戏"><span class="icon" data-ui-icon="scan"></span></button><button id="game-files-button" class="btn btn-muted" type="button" data-input-control onclick="openGameFiles(this)" title="游戏文件" aria-label="游戏文件" data-i18n-title="游戏文件" data-i18n-aria-label="游戏文件"><span class="icon" data-ui-icon="folder"></span></button><button id="apply-button" class="btn btn-success" onclick="applyChanges()" disabled type="button" data-i18n="确认应用">确认应用</button>
                     </div>
                 </div>
                 <section id="game-management-workspace" hidden></section>
@@ -103,7 +103,7 @@
                             <button id="game-library-filter-problem" type="button" onclick="setGameLibraryFilter('problem')"></button>
                         </div>
                         <button id="game-library-discs" class="btn btn-muted" type="button" onclick="openDiscInspection()" hidden data-i18n="多盘与引用检查">多盘与引用检查</button>
-                        <div id="game-view-switch" class="game-view-switch"></div>
+                        <div id="game-view-switch" class="game-view-switch" role="group" aria-label="视图切换" data-i18n-aria-label="视图切换"></div>
                         <p id="game-library-status" role="status"></p>
                     </div>
                     <div id="image-directory-notice" class="image-directory-notice" hidden>
@@ -111,12 +111,11 @@
                         <button id="choose-image-directory" class="btn btn-muted" type="button" onclick="openPathSettings('thumbnails_override')" data-i18n="指定图片目录">指定图片目录</button>
                     </div>
                     <div id="game-selection-toolbar" class="game-selection-toolbar" hidden></div>
-                    <div id="games-status" class="overview-status" hidden></div>
                     <div class="game-library-scroll">
                         <button id="game-library-retry" class="btn btn-muted" type="button" onclick="retryGameLibrary()" hidden></button>
                         <div id="game-library-grid" class="game-cover-grid"></div>
                         <table id="game-library-table" class="game-library-table" hidden>
-                            <thead><tr><th scope="col" class="game-select-cell"><input id="game-library-select-all" class="game-row-select" type="checkbox" aria-label="全选" data-i18n-aria-label="全选"></th><th id="game-library-heading-0" scope="col"></th><th id="game-library-heading-1" scope="col"></th></tr></thead>
+                            <thead><tr><th scope="col" class="game-select-cell"><input id="game-library-select-all" class="game-row-select" type="checkbox" aria-label="选择当前显示的游戏" data-i18n-aria-label="选择当前显示的游戏" title="选择当前显示的游戏" data-i18n-title="选择当前显示的游戏"></th><th id="game-library-heading-0" scope="col"></th><th id="game-library-heading-1" scope="col"></th></tr></thead>
                             <tbody id="game-library-rows"></tbody>
                         </table>
                         <button id="game-library-more" class="btn btn-muted" type="button" onclick="gameLibrary.limit += 100; renderGameLibrary()" hidden></button>
@@ -147,7 +146,7 @@
                         </button>
                         <div class="search-field">
                             <input aria-label="搜索游戏名或 ROM 名称" type="text" id="preview-search" data-i18n-placeholder="搜索游戏名 / rom 名称" placeholder="搜索游戏名 / rom 名称" oninput="renderPreviewTable(currentChanges)" data-i18n-aria-label="搜索游戏名或 ROM 名称">
-                            <span class="search-symbol">⌕</span>
+                            <span class="search-symbol" aria-hidden="true"><span class="icon" data-ui-icon="search"></span></span>
                         </div>
                     </div>
                 </div>

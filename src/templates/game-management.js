@@ -378,25 +378,49 @@ async function applyGameManagement() {
     }
 }
 function renderGameSelection(visible) {
-    const toolbar = document.getElementById('game-selection-toolbar'); toolbar.classList.remove('has-selection'); toolbar.replaceChildren();
+    const toolbar = document.getElementById('game-selection-toolbar'); toolbar.classList.remove('has-selection', 'has-status'); toolbar.replaceChildren();
     const headAll = document.getElementById('game-library-select-all');
     const allChecked = Boolean(visible.length) && visible.every(item => gameLibrary.selection.has(item.index));
     headAll.checked = allChecked;
     headAll.indeterminate = !allChecked && visible.some(item => gameLibrary.selection.has(item.index));
     headAll.disabled = Boolean(workbench.operation) || !visible.length;
+    const selectVisible = workbenchText('选择当前显示的游戏', 'Select visible games');
+    headAll.title = selectVisible; headAll.setAttribute('aria-label', selectVisible);
     headAll.onchange = () => {for (const item of visible) {if (headAll.checked) gameLibrary.selection.add(item.index); else gameLibrary.selection.delete(item.index);} renderGameLibrary();};
-    toolbar.hidden = !gameLibrary.selection.size || !gameLibrary.data?.items.length;
+    const hasSelection = Boolean(gameLibrary.selection.size) && Boolean(gameLibrary.data?.items.length);
+    const items = (gameLibrary.data?.items || []).filter(item => typeof workbenchOverview === 'undefined'
+        || workbenchOverview.scope === 'all' || wbStorageKind(item.rom_path) === workbenchOverview.scope);
+    const missingCount = hasSelection ? 0 : items.filter(item => gameMatchesImageFilter(item, 'missing')).length;
+    toolbar.hidden = !hasSelection && !missingCount;
     if (toolbar.hidden) return;
+    if (!hasSelection) {
+        toolbar.classList.add('has-status');
+        const complete = gmButton('补全当前列表', 'Complete this list', () => startCompletion());
+        complete.id = 'games-complete-button'; complete.disabled = document.getElementById('preview-button').disabled;
+        toolbar.append(wbIcon('photo'),
+            wbElement('span', 'overview-status-text', workbenchText(`${missingCount} 款游戏的图片待补全`, `${missingCount} ${missingCount === 1 ? 'game' : 'games'} missing artwork`)),
+            complete);
+        return;
+    }
+    toolbar.classList.add('has-selection');
     const all = wbElement('label', 'game-select-label');
     const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.checked = allChecked;
     checkbox.indeterminate = headAll.indeterminate; checkbox.disabled = Boolean(workbench.operation);
+    checkbox.title = selectVisible; checkbox.setAttribute('aria-label', selectVisible);
     checkbox.onchange = () => {for (const item of visible) {if (checkbox.checked) gameLibrary.selection.add(item.index); else gameLibrary.selection.delete(item.index);} renderGameLibrary();};
     all.append(checkbox, wbElement('span', '', workbenchText('全选', 'Select all'))); toolbar.append(all);
-    toolbar.classList.add('has-selection');
-    toolbar.append(wbElement('span', '', workbenchText(`已选 ${gameLibrary.selection.size} 项`, `${gameLibrary.selection.size} selected`)));
-    const complete = gmButton('补全', 'Complete', () => runDirectCompletion({entries:gameLibrary.data.items.filter(item => gameLibrary.selection.has(item.index)).map(item => [item.index, item.rom_path])})); complete.id = 'game-selection-complete'; complete.disabled = Boolean(workbench.operation); toolbar.append(complete);
+    const count = gameLibrary.selection.size;
+    toolbar.append(wbElement('span', '', workbenchText(`已选 ${count} 项`, `${count} selected`)));
+    const complete = gmButton(`补全所选 ${count} 项`, `Complete ${count} selected`, () => runDirectCompletion({entries:gameLibrary.data.items.filter(item => gameLibrary.selection.has(item.index)).map(item => [item.index, item.rom_path])}), false); complete.id = 'game-selection-complete'; complete.disabled = Boolean(workbench.operation); toolbar.append(complete);
     toolbar.append(wbElement('span', 'selection-spacer'));
-    const remove = gmButton('移出列表…', 'Remove from playlist…', () => openGameRemoval([...gameLibrary.selection])); remove.id = 'game-selection-remove'; remove.disabled = Boolean(workbench.operation); toolbar.append(remove);
+    const menu = wbElement('details', 'action-menu'); menu.id = 'game-selection-actions';
+    const summary = wbElement('summary', 'btn btn-muted action-menu-trigger', workbenchText('更多操作', 'More actions'));
+    summary.append(wbIcon('chevron-down'));
+    const drop = wbElement('div', 'action-menu-list');
+    const remove = wbElement('button', 'action-menu-item', workbenchText('移出列表…', 'Remove from playlist…'));
+    remove.type = 'button'; remove.id = 'game-selection-remove'; remove.disabled = Boolean(workbench.operation);
+    remove.onclick = () => {menu.open = false; openGameRemoval([...gameLibrary.selection]);};
+    drop.append(remove); menu.append(summary, drop); toolbar.append(menu);
     const clear = wbElement('button', 'btn btn-muted dialog-icon-button');
     wbIconButton(clear, 'x', workbenchText('取消选择', 'Clear selection'));
     clear.id = 'game-selection-clear'; clear.type = 'button';
@@ -406,6 +430,7 @@ function renderGameSelection(visible) {
 
 document.addEventListener('click', event => {
     if (gameManagement.open && !gameManagement.busy && event.target.closest('#scanned-playlists button, #library-all-systems')) closeGameManagement();
+    document.querySelectorAll('.action-menu[open]').forEach(menu => {if (!menu.contains(event.target)) menu.open = false;});
 });
 document.addEventListener('keydown', event => {
     if (event.key !== 'Escape' || !gameLibrary.selection.size || workbench.operation) return;

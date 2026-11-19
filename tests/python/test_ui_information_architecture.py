@@ -295,7 +295,7 @@ def test_home_overview_uses_minimal_concept():
 
     assert 'id="automatic-scan-button"' not in html
     assert 'automatic-scan-button' not in html
-    assert 'id="game-files-button" class="btn"' in html
+    assert 'id="game-files-button" class="btn btn-muted"' in html
     assert 'id="manual-add-button"' not in html
     assert "completion-entry').hidden = !state.previewValid" in html
     assert "'overview-status'" in html
@@ -352,9 +352,10 @@ def test_system_page_uses_minimal_concept():
     html = read_template()
 
     assert 'id="game-library-note"' not in html
-    assert 'id="games-status"' in html
+    assert 'id="games-status"' not in html
     assert 'games-complete-button' in html
     assert 'overview-status-text' in html
+    assert '补全当前列表' in html
     assert '缺封面' in html
     assert 'Missing artwork' in html
     assert 'workspace-count' in html
@@ -373,8 +374,9 @@ def test_system_page_uses_minimal_concept():
     assert 'inspector-preview-name' not in html
     assert 'previewGameName' not in html
     assert 'inspector-edit-review' not in html
-    assert 'inspector-actions' in html
+    assert 'inspector-actions-menu' in html
     assert 'inspector-artwork-folder' in html
+    assert 'inspector-copy-path' in html
     assert 'inspector-footer' in html
     assert '在游戏文件中查看' in html
     assert 'preview_job_id:preview.id' in html

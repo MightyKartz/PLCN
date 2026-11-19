@@ -775,7 +775,14 @@ body[data-theme="dark"] .filter-btn.active {
     top: 50%;
     transform: translateY(-50%);
     color: var(--quiet);
-    font-weight: 600;
+    display: flex;
+    pointer-events: none;
+}
+
+.search-symbol .icon {
+    width: 16px;
+    height: 16px;
+    display: block;
 }
 
 .toolbar-tools {
