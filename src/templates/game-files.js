@@ -52,10 +52,10 @@ function openGameFiles(opener, target = null) {
     const location = wbElement('nav', 'game-files-location', tr('选择要浏览的存储或电脑目录', 'Choose a storage or computer folder'));
     location.setAttribute('aria-label', tr('当前路径', 'Current path'));
     const add = gmButton('添加文件', 'Add files', () => {
-        openGameImport(current?.path || '');
+        openGameImport(current?.path || '', {autoPick: 'files'});
     }, false);
     add.id = 'game-files-import';
-    wbIconButton(add, 'file-plus', add.textContent);
+    wbIconButton(add, 'plus', add.textContent);
     const rename = gmButton('重命名', 'Rename', renameFile);
     const remove = gmButton('删除文件', 'Delete file', deleteFile);
     wbIconButton(rename, 'pencil', rename.textContent);

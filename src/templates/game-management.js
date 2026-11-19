@@ -136,7 +136,7 @@ function gmInput(form, id, zh, en, value = '') {
     const input = wbElement('input', ''); input.id = 'gm-' + id; input.type = 'text'; input.value = value;
     input.oninput = () => {input.removeAttribute('aria-invalid'); gmInvalidate(); if (id === 'destination') {gmField('android').value = ''; gmRenderDestinationSummary();} gmScheduleAnalyze();}; label.append(input); form.append(label); return input;
 }
-async function openGameImport(destination = '') {
+async function openGameImport(destination = '', {autoPick = ''} = {}) {
     if (workbench.operation) return;
     const root = document.getElementById('retroarch_root').value;
     if (!root || root.startsWith('adb://')) { showStatus(workbenchText('请先打开 RetroArch 游戏库。', 'Open a RetroArch library first.'), 'error'); return; }
@@ -181,6 +181,7 @@ async function openGameImport(destination = '') {
         const playlistPath = wbElement('p', 'gm-path'); playlistPath.id = 'gm-playlist-path'; advanced.append(playlistPath);
         targetPane.append(fields); form.append(targetPane);
         form.disabled = false; gmField('status').textContent = workbenchText('选择文件或目录后开始分析。', 'Choose files or a folder to start the analysis.'); gmChangeSystem();
+        if (autoPick) gmPickSource(autoPick);
     } catch (error) { if (generation === gameManagement.generation) gmField('status').textContent = gmError(error); }
 }
 function gmChangeSystem() {
@@ -368,7 +369,7 @@ async function applyGameManagement() {
         if (selected >= 0) await selectScannedPlaylist(selected);
         const footer = gmField('dialog').querySelector('footer');
         if (gameManagement.mode === 'import') {
-            const more = gmButton('继续添加', 'Add more', () => openGameImport(gameManagement.destinationHint)); more.id = 'gm-add-more';
+            const more = gmButton('继续添加', 'Add more', () => openGameImport(gameManagement.destinationHint, {autoPick: 'files'})); more.id = 'gm-add-more';
             const complete = gmButton('补全名称与封面', 'Complete names and artwork', () => {closeGameManagement({returnToLibrary:true}); startCompletion();}); complete.id = 'gm-complete-metadata';
             footer.append(more, complete);
         }

@@ -556,7 +556,7 @@ async function main() {
     assert.equal(await evaluate(visible,'#library-browser'),false);
     await click('#game-files-import');
     await waitFor(()=>document.querySelector('#gm-pick-files'),'game import loaded');
-    assert.equal(await evaluate(()=>document.querySelector('#gm-preview')),null);
+    await waitFor(()=>document.querySelector('#gm-sources')?.textContent.includes('Imported demo.sfc'),'files auto-picked on open');
     assert.equal(await evaluate(()=>document.querySelector('#gm-destination-fields').hidden),true);
     assert.equal(await evaluate(()=>document.querySelector('#gm-dialog header button').getAttribute('aria-label')),'Cancel');
     await screenshot('02-game-import-empty');
