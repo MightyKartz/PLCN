@@ -167,7 +167,7 @@ async function main() {
     assert.equal(await evaluate(()=>document.title),'RetroArch 助手');
     assert.equal(await evaluate(()=>document.getElementById('scan-default-btn').textContent.trim()),'');
     assert.equal(await evaluate(()=>document.getElementById('scan-default-btn').getAttribute('aria-label')),'重新检测');
-    assert.equal(await evaluate(visible,'#home-library-folder'),true);
+    assert.equal(await evaluate(()=>document.getElementById('home-library-folder')),null);
     await screenshot('01-home');
     assert.equal(await evaluate(()=>document.querySelector('.workbench-nav, #workbench-task')),null);
     assert.equal(await evaluate(()=>document.querySelector('#task-center-button,#task-popover,[data-desktop-view="tasks"]')),null);
