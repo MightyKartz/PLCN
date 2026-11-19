@@ -77,7 +77,7 @@ async function applyChdDeployment(){
 }
 async function recoverChdDeployment(id,action){
     assertWorkbenchIdle();
-    if(!await desktopConfirm(action==='restore'?'恢复此 CHD 操作？先还原原镜像，再还原引用，最后移除本次新建且未变化的 CHD。':'核对电脑备份、目标与引用后继续原方案？'))return;
+    if(!await desktopConfirm(action==='restore'?'恢复此 CHD 操作？先还原原镜像，再还原引用，最后移除本次新建且未变化的 CHD。':'核对电脑备份、目标与引用后继续原方案？', workbenchText(action==='restore'?'恢复':'继续', action==='restore'?'Restore':'Continue')))return;
     try{
         await deploymentJob('/api/chd/deployment/recover',{id,action});resetGameLibrary();desktopClearPreview();await refreshDesktop();
     }catch(error){await refreshDesktop();showStatus(error.message,'error');}

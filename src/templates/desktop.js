@@ -5,7 +5,7 @@ let desktopView = 'preferences';
 let desktopRenderVersion = 0;
 const desktopText = (zh, en) => currentUILanguage === 'en' ? en : zh;
 
-function desktopConfirm(message) {
+function desktopConfirm(message, confirmLabel = desktopText('确认', 'Confirm')) {
     return new Promise(resolve => {
         const dialog = document.createElement('dialog');
         dialog.className = 'desktop-confirm app-dialog';
@@ -17,8 +17,9 @@ function desktopConfirm(message) {
             if (settled) return;
             settled = true; dialog.close(); dialog.remove(); resolve(value);
         };
-        desktopButton(dialog, desktopText('取消', 'Cancel'), () => finish(false), {icon:'x'});
-        desktopButton(dialog, desktopText('确认', 'Confirm'), () => finish(true), {icon:'circle-check'}).classList.remove('btn-muted');
+        const actions = desktopElement('div', undefined, dialog); actions.className = 'desktop-confirm-actions';
+        desktopButton(actions, desktopText('取消', 'Cancel'), () => finish(false));
+        desktopButton(actions, confirmLabel, () => finish(true)).classList.remove('btn-muted');
         dialog.addEventListener('cancel', event => { event.preventDefault(); finish(false); });
         document.body.appendChild(dialog); dialog.showModal();
     });
@@ -66,10 +67,11 @@ function desktopElement(tag, text, parent) {
     return element;
 }
 
-function desktopButton(parent, text, action, {requiresIdle = false, icon = 'history'} = {}) {
+function desktopButton(parent, text, action, {requiresIdle = false, icon = null} = {}) {
     const button = desktopElement('button', text, parent);
     button.type = 'button'; button.className = 'btn btn-muted';
-    wbIconButton(button, icon, text);
+    button.setAttribute('aria-label', text);
+    if (icon) button.prepend(wbIcon(icon));
     if (requiresIdle) {
         button.dataset.requiresIdle = 'true';
         button.disabled = Boolean(workbench.operation);
@@ -221,7 +223,7 @@ async function refreshDesktop() {
                 if (record.restored_at) desktopElement('span', desktopText('已恢复', 'Restored'), entry);
                 else desktopButton(entry, desktopText('恢复此次修改', 'Restore this change'), async () => {
                     assertWorkbenchIdle();
-                    if (!await desktopConfirm(desktopText('恢复此列表到修复前状态？当前文件也会先备份。', 'Restore the playlist to its previous state? The current file will be backed up.'))) return;
+                    if (!await desktopConfirm(desktopText('恢复此列表到修复前状态？当前文件也会先备份。', 'Restore the playlist to its previous state? The current file will be backed up.'), desktopText('恢复', 'Restore'))) return;
                     await desktopRequest('/api/history/restore', { id: record.id });
                     desktopClearPreview(); await refreshDesktop();
                 }, {requiresIdle: true});
@@ -308,7 +310,7 @@ function desktopClearPreview() {
 }
 
 async function quitDesktop() {
-    if (!await desktopConfirm(desktopText('退出 RetroArch 助手本地服务？正在运行的任务会阻止退出。', 'Stop the RetroArch Assistant service? Active tasks will prevent shutdown.'))) return;
+    if (!await desktopConfirm(desktopText('退出 RetroArch 助手本地服务？正在运行的任务会阻止退出。', 'Stop the RetroArch Assistant service? Active tasks will prevent shutdown.'), desktopText('退出', 'Quit'))) return;
     try {
         await desktopRequest('/api/desktop/shutdown', {});
         document.body.replaceChildren(desktopElement('p', desktopText('RetroArch 助手已退出，可以关闭此页面。', 'RetroArch Assistant has stopped. You may close this page.')));

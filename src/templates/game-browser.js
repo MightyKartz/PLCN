@@ -241,7 +241,7 @@ function renderGameInspector() {
         preview.append(wbElement('p','',workbenchText('新版文件：','New file: ')+gameInspector.romPlan.source_name),
             wbElement('p','',gameSize(gameInspector.romPlan.old_size)+' → '+gameSize(gameInspector.romPlan.new_size)),
             wbElement('p','',workbenchText('自动备份旧 ROM，保留路径、名称、图片与存档文件。更新前请退出 RetroArch。', 'Back up the old ROM; keep its path, title, artwork and saves. Quit RetroArch before updating.')));
-        const apply = gmButton('更新', 'Update', applyRomUpdate, false); apply.id = 'inspector-rom-confirm'; apply.disabled = busy;
+        const apply = gmButton('替换 ROM', 'Replace ROM', applyRomUpdate, false); apply.id = 'inspector-rom-confirm'; apply.disabled = busy;
         const cancel = gmButton('取消', 'Cancel', () => {gameInspector.romPlan=null; renderGameInspector();}); cancel.disabled = busy;
         preview.append(apply,cancel); info.append(preview);
     }
@@ -267,7 +267,7 @@ function renderGameInspector() {
     const menuSummary = wbElement('summary', 'btn btn-muted action-menu-trigger', workbenchText('更多操作', 'More actions'));
     menuSummary.append(wbIcon('chevron-down'));
     const menuList = wbElement('div', 'action-menu-list');
-    if (!gameInspector.editing) {
+    if (!gameInspector.editing && !gameInspector.romPlan) {
         const update = wbElement('button', 'action-menu-item', workbenchText('更新 ROM…', 'Update ROM…'));
         update.type = 'button'; update.id = 'inspector-update-rom';
         update.disabled = busy || !gameInspector.details?.rom_update_supported;

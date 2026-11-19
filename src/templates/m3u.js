@@ -90,7 +90,7 @@ async function closeM3uEditor(){
 async function recoverM3u(id,action,mode=''){
     assertWorkbenchIdle();
     const text=mode==='game_rom_update' ? workbenchText(action==='restore'?'恢复旧版 ROM？存档文件保持不变。':'继续此次 ROM 更新？请先退出 RetroArch。',action==='restore'?'Restore the previous ROM? Save files are kept.':'Resume this ROM update? Quit RetroArch first.') : mode.startsWith('game_') ? workbenchText(action==='restore'?'恢复此次列表修改？已复制的游戏文件会保留。':'核对当前列表后继续此次修改？',action==='restore'?'Restore this playlist change? Copied game files will be kept.':'Check the current playlist and continue this change?') : action==='restore'?'恢复此多盘操作？仅移除本次新建且未变化的文件，原光盘与存档不会删除。':'核对当前文件后继续这次未完成操作？';
-    if(!await desktopConfirm(text))return;
+    if(!await desktopConfirm(text, workbenchText(action==='restore'?'恢复':'继续', action==='restore'?'Restore':'Continue')))return;
     const {result}=await m3uJob('/api/m3u/recover',{id,action});
     desktopClearPreview();reflectM3uResult(result);await refreshDesktop();return result;
 }

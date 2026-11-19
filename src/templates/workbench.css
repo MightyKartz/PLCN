@@ -323,7 +323,7 @@ body > :is(#fileModal,#content-scan-dialog) {padding:0;}
 .desktop-entry .dialog-icon-button.btn {margin:8px 8px 0 0;}
 body > .desktop-confirm {width:min(420px,calc(100vw - 32px));}
 body > .desktop-confirm p {margin:0 0 24px;font-size:14px;line-height:1.7;}
-body > .desktop-confirm .dialog-icon-button {float:none;margin:0 8px 0 0;}
+body > .desktop-confirm .desktop-confirm-actions {display:flex;justify-content:flex-end;gap:8px;}
 #m3u-discs li {gap:8px;}
 #artwork-dialog .artwork-source-controls {grid-template-columns:minmax(0,1fr) 36px;}
 @media (max-width:640px) {

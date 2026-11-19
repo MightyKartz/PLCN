@@ -71,7 +71,7 @@ async function applyRomRelocation(){
     }catch(error){romRelocation.changed=true;relocateField('status').textContent=error.message+'；请从操作记录查看整理记录。';}
 }
 async function recoverRomRelocation(id,action){
-    assertWorkbenchIdle();if(!await desktopConfirm(action==='restore'?'恢复原目录与引用？先还原源文件，再还原引用和关联；仍有新引用的输出会保留。':'核对备份、目标、引用和存档设置后继续此方案？'))return;
+    assertWorkbenchIdle();if(!await desktopConfirm(action==='restore'?'恢复原目录与引用？先还原源文件，再还原引用和关联；仍有新引用的输出会保留。':'核对备份、目标、引用和存档设置后继续此方案？', workbenchText(action==='restore'?'恢复':'继续', action==='restore'?'Restore':'Continue')))return;
     try{await relocationJob('/api/rom-storage/relocation/recover',{id,action});resetGameLibrary();desktopClearPreview();await refreshDesktop();}
     catch(error){await refreshDesktop();showStatus(error.message,'error');}
 }
