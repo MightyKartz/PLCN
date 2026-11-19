@@ -22,9 +22,18 @@ def managed_pack(value):
     return path
 
 
-def compare_active(pack, config_path):
-    config = json.loads(Path(config_path).read_text(encoding='utf-8')) if Path(config_path).exists() else {}
+def effective_name_source(context):
+    """The name source every boundary must agree on: config loading already
+    drops a moved absolute directory, so the bundled names win here too."""
+    config = context.load_server_config()
     source = config.get('rom_name_cn_path') or str(app_paths.default_source())
+    if getattr(sys, 'frozen', False) and not os.path.isabs(source):
+        source = os.path.join(sys._MEIPASS, source)
+    return Path(source)
+
+
+def compare_active(pack, source):
+    source = str(source)
     if data_pack.catalog_path(source):
         before = Path(source).parent
     else:
@@ -37,9 +46,8 @@ def compare_active(pack, config_path):
 
 
 def data(handler, context, payload):
-    config_path = context.CONFIG_FILE
-    config = json.loads(Path(config_path).read_text(encoding='utf-8')) if Path(config_path).exists() else {}
-    source = Path(config.get('rom_name_cn_path') or app_paths.default_source())
+    config = context.load_server_config()
+    source = effective_name_source(context)
     packs = []
     for manifest in sorted((app_paths.user_data_dir() / 'packs').glob('*/manifest.json')):
         try:
@@ -70,13 +78,12 @@ def check(handler, context, payload):
 
 def fetch(handler, context, payload):
     jobs = context.job_manager
-    config_path = context.CONFIG_FILE
     def fetch(jid):
         root = app_paths.user_data_dir() / 'packs'
         output = root / ('upstream-' + uuid.uuid4().hex[:12])
         info = data_pack.fetch_pack(output)
         checkpoint(lambda: jobs.cancelled(jid))
-        comparison = compare_active(output, config_path)
+        comparison = compare_active(output, effective_name_source(context))
         return {'pack': str(output), 'revision': info['revision'], 'comparison': comparison,
                 'message': '下载与校验完成，查看差异后手动启用；记录变化不代表准确率变化'}
     reply(handler, {'job_id': background(jobs, '下载和校验名称数据库（不会自动启用）', fetch)})
@@ -84,11 +91,10 @@ def fetch(handler, context, payload):
 
 def compare(handler, context, payload):
     jobs = context.job_manager
-    config_path = context.CONFIG_FILE
     pack = managed_pack(payload['pack'])
     def compare(jid):
         checkpoint(lambda: jobs.cancelled(jid))
-        return {'pack': str(pack), 'comparison': compare_active(pack, config_path)}
+        return {'pack': str(pack), 'comparison': compare_active(pack, effective_name_source(context))}
     reply(handler, {'job_id': background(jobs, '比较所选包与当前数据源', compare)})
 
 
