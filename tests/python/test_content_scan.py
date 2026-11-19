@@ -153,6 +153,31 @@ def test_existing_android_mapping_and_core_are_recovered_without_guessing(monkey
     assert scan.hints('mtp://device/00010001/RetroArch','Sega - Saturn','mtp://device/00010001/Roms/SS')['android_directory']==''
 
 
+def test_cross_storage_launch_path_is_learned_from_saved_mappings(tmp_path,monkeypatch):
+    monkeypatch.setenv('RETROARCH_ASSISTANT_HOME',str(tmp_path))
+    root='mtp://device/00010001/RetroArch';directory='mtp://device/00020001/Roms/GBA'
+    profiles=[{'directory':'mtp://device/00020001/Roms/SS','system':'Sega - Saturn','android_directory':'/storage/4A21-0000/Roms/SS'},
+              {'directory':'mtp://device/00020001/Roms/MD','system':'Sega - Mega Drive - Genesis','android_directory':'/storage/4A21-0000/Roms/MD'}]
+    monkeypatch.setattr(scan,'read',lambda path:None)
+    scan.profiles_path().write_text(json.dumps({root:profiles}),encoding='utf-8')
+    assert scan.hints(root,'Nintendo - Game Boy Advance',directory)['android_directory']=='/storage/4A21-0000/Roms/GBA'
+    profiles[1]={**profiles[1],'android_directory':'/storage/OTHER/Roms/MD'}
+    scan.profiles_path().write_text(json.dumps({root:profiles}),encoding='utf-8')
+    assert scan.hints(root,'Nintendo - Game Boy Advance',directory)['android_directory']==''
+
+
+def test_cross_storage_launch_path_uses_items_only_under_known_mounts(tmp_path,monkeypatch):
+    monkeypatch.setenv('RETROARCH_ASSISTANT_HOME',str(tmp_path))
+    root='mtp://device/00010001/RetroArch';directory='mtp://device/00020001/Roms/GBA'
+    profiles=[{'directory':'mtp://device/00020001/Roms/SS','system':'Sega - Saturn','android_directory':'/storage/4A21-0000/Roms/SS'}]
+    scan.profiles_path().write_text(json.dumps({root:profiles}),encoding='utf-8')
+    document={'items':[{'path':'/storage/4A21-0000/Roms/GBA/game.gba'}]}
+    monkeypatch.setattr(scan,'read',lambda path:json.dumps(document).encode())
+    assert scan.hints(root,'Nintendo - Game Boy Advance',directory)['android_directory']=='/storage/4A21-0000/Roms/GBA'
+    scan.profiles_path().write_text(json.dumps({root:[]}),encoding='utf-8')
+    assert scan.hints(root,'Nintendo - Game Boy Advance',directory)['android_directory']==''
+
+
 def test_server_applies_only_its_stored_scan_plan_and_rejects_replay(library,monkeypatch):
     import api_content
     from job_manager import JobManager

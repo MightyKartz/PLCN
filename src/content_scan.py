@@ -298,7 +298,34 @@ def hints(root, system, directory, filename=None):
         if mtp.parse(root)[1] != mtp.parse(directory)[1]:
             saved = next((profile for profile in profiles().get(root, [])
                           if profile['directory'] == directory and profile['system'] == system), None)
-            result['android_directory'] = saved['android_directory'] if saved else ''
+            if saved and saved.get('android_directory'):
+                result['android_directory'] = saved['android_directory']
+                return result
+            storage, parts = mtp.parse(directory)[1], mtp.parse(directory)[2]
+            mounts = set()
+            for profile in profiles().get(root, []):
+                android = str(profile.get('android_directory') or '').strip('/')
+                try:
+                    profile_storage, profile_parts = mtp.parse(profile['directory'])[1:]
+                except (KeyError, TypeError, ValueError):
+                    continue
+                if profile_storage != storage or not android or not profile_parts:
+                    continue
+                segments = android.split('/')
+                if len(segments) > len(profile_parts) and segments[-len(profile_parts):] == profile_parts:
+                    mounts.add('/' + '/'.join(segments[:-len(profile_parts)]))
+            paths = [str(item.get('path', '')).replace('\\', '/') for item in document.get('items', [])]
+            for size in range(len(parts), 0, -1):
+                suffix = '/' + '/'.join(parts[-size:]) + '/'
+                candidates = {path for path in
+                              (path.split(suffix, 1)[0] + suffix[:-1] for path in paths
+                               if path.startswith(('/storage/', '/sdcard/')) and path.count(suffix) == 1)
+                              if any(path == mount or path.startswith(mount + '/') for mount in mounts)}
+                if len(candidates) == 1:
+                    result['android_directory'] = candidates.pop()
+                    break
+            if not result['android_directory'] and len(mounts) == 1:
+                result['android_directory'] = mounts.pop() + '/' + '/'.join(parts)
             return result
         parts = mtp.parse(directory)[2]
         paths = [str(item.get('path', '')).replace('\\', '/') for item in document.get('items', [])]
