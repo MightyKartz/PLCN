@@ -35,11 +35,12 @@ def test_delete_syncs_two_lists_preserves_shared_track_and_saves(tmp_path):
     covers.mkdir(parents=True)
     cover = covers / 'Game.png'
     cover.write_bytes(b'cover')
-    plan = preview(str(cue), str(root))
-    assert set(plan['public']['files']) == {str(cue), str(unique)}
-    assert plan['public']['shared'] == [str(shared)]
+    path, library = validate({'path': str(cue), 'root': str(root)})
+    plan = preview(path, library)
+    assert set(plan['public']['files']) == {cue.as_posix(), unique.as_posix()}
+    assert plan['public']['shared'] == [shared.as_posix()]
     assert plan['public']['covers'] == [str(cover)]
-    result = apply(str(cue), str(root), '', plan['signature'], False, lambda *_: None, lambda: None)
+    result = apply(path, library, '', plan['signature'], False, lambda *_: None, lambda: None)
     assert set(result['playlists']) == {str(first), str(second)}
     assert json.loads(first.read_text())['items'] == [survivor]
     assert json.loads(second.read_text()) == {'items': [], 'default_core_name': 'Beetle Saturn'}
@@ -47,7 +48,7 @@ def test_delete_syncs_two_lists_preserves_shared_track_and_saves(tmp_path):
     assert all(path.exists() for path in (other, shared, save, cover))
     cue.write_text('FILE "Game.srm" BINARY\n')
     with pytest.raises(ValueError, match='不是可确认的光盘或音轨'):
-        preview(str(cue), str(root))
+        preview(path, library)
     assert save.read_bytes() == b'save'
 
 
