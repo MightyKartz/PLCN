@@ -114,7 +114,7 @@ function showGameLibraryToast(message) {
 }
 
 function renderGameLibraryFilters(items) {
-    for (const [filter, zh, en] of [['all', '全部', 'All'], ['missing', '缺封面', 'Missing artwork'], ['problem', '需检查', 'Check']]) {
+    for (const [filter, zh, en] of [['all', '全部', 'All'], ['missing', '图片待补全', 'Missing artwork'], ['problem', '需检查', 'Check']]) {
         const button = document.getElementById('game-library-filter-' + filter);
         const count = items.filter(item => gameMatchesImageFilter(item, filter)).length;
         button.textContent = workbenchText(zh, en) + ' ' + count;
@@ -162,7 +162,7 @@ function renderGameLibrary() {
         complete.type = 'button'; complete.id = 'games-complete-button'; complete.onclick = () => startCompletion();
         complete.disabled = document.getElementById('preview-button').disabled;
         gamesStatus.replaceChildren(wbIcon('photo'),
-            wbElement('span', 'overview-status-text', text(`${missingCount} 个游戏缺少封面`, `${missingCount} ${missingCount === 1 ? 'game' : 'games'} missing artwork`)),
+            wbElement('span', 'overview-status-text', text(`${missingCount} 个游戏图片待补全`, `${missingCount} ${missingCount === 1 ? 'game' : 'games'} missing artwork`)),
             complete);
     } else gamesStatus.replaceChildren();
     const query = search.value.trim().toLowerCase();

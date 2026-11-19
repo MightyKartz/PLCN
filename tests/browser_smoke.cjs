@@ -436,10 +436,10 @@ async function main() {
     assert.equal(await evaluate(()=>document.querySelector('#workspace-title .workspace-count').textContent),'1 个游戏');
     assert.equal(await evaluate(() => document.querySelector('.completion-entry').hidden), true);
     assert.equal(await evaluate(() => document.querySelector('#games-status').hidden), false);
-    assert.equal(await evaluate(() => document.querySelector('#games-status .overview-status-text').textContent), '1 个游戏缺少封面');
+    assert.equal(await evaluate(() => document.querySelector('#games-status .overview-status-text').textContent), '1 个游戏图片待补全');
     assert.equal(await evaluate(() => document.querySelector('#games-complete-button').textContent), '一键补全');
     assert.equal(await evaluate(() => document.querySelector('#games-complete-button').disabled), false);
-    assert.equal(await evaluate(() => document.querySelector('#game-library-filter-missing').textContent), '缺封面 1');
+    assert.equal(await evaluate(() => document.querySelector('#game-library-filter-missing').textContent), '图片待补全 1');
     assert.equal(await evaluate(() => document.querySelector('#game-library-search').placeholder), '搜索 SNES 游戏');
     assert.equal(await evaluate(() => document.querySelector('#game-library-note')), null);
     assert.equal(await evaluate(() => document.querySelector('#game-selection-toolbar').hidden), true);
