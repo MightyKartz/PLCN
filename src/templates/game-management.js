@@ -377,14 +377,6 @@ async function applyGameManagement() {
         gmStatus(gmError(error) + workbenchText('；已复制文件会保留。请点击“重新分析”核对后继续；无法取得结果时先查看任务，避免重复写入。', '; copied files are kept. Use Analyze again to continue; if the result is unknown, check Tasks before writing again.'), true);
     }
 }
-function appendGameSelection(cell, item) {
-    const label = wbElement('label', 'game-select-label');
-    const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.dataset.gameSelect = item.index; checkbox.checked = gameLibrary.selection.has(item.index);
-    checkbox.setAttribute('aria-label', workbenchText('选择 ', 'Select ') + (item.label || item.rom_name));
-    checkbox.disabled = Boolean(workbench.operation);
-    checkbox.onchange = () => toggleGameSelection(item.index, checkbox.checked);
-    const name = wbElement('button', 'game-name-button', cell.textContent); name.type = 'button'; name.dataset.gameDetails = item.index; name.onclick = () => inspectGame(item.index); cell.replaceChildren(); label.append(checkbox, name); cell.append(label);
-}
 function appendGameManagementActions(actions, item) {
     const menu = wbElement('details', 'game-row-menu');
     const summary = wbElement('summary', '', '⋯'); summary.setAttribute('aria-label', workbenchText('管理 ', 'Manage ') + (item.label || item.rom_name));

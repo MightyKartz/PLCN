@@ -65,9 +65,12 @@ function wbElement(tag, className, text) {
     if (text !== undefined) el.textContent = text; return el;
 }
 function wbSystemName(system) {
-    const names = {NES:'红白机',SS:'土星',SNES:'超级任天堂',MD:'Mega Drive',GBA:'Game Boy Advance',GBC:'Game Boy Color',GB:'Game Boy',PS1:'PlayStation',FBNeo:'FBNeo',MAME:'MAME'};
-    const abbr = getSystemAbbreviation(system);
-    return currentUILanguage === 'en' ? system.replace(/^[^-]+ - /, '') : names[abbr] || system.replace(/^[^-]+ - /, '');
+    const names = {
+        NES:'Nintendo Entertainment System', SNES:'Super Nintendo Entertainment System',
+        SS:'Sega Saturn', MD:'Mega Drive', GBA:'Game Boy Advance', GBC:'Game Boy Color',
+        GB:'Game Boy', PS1:'PlayStation', FBNeo:'FBNeo', MAME:'MAME'
+    };
+    return names[getSystemAbbreviation(system)] || system.replace(/^[^-]+ - /, '');
 }
 // Box art in these libraries spans portrait boxes, square cases and wide GBA packaging.
 function wbCoverFrameRatio(system) {

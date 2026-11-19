@@ -176,7 +176,6 @@ function renderWorkbench() {
     backToSystems.hidden = !playlistPath || !state.hasLibrary || state.previewValid;
     backToSystems.disabled = state.busy;
     backToSystems.textContent = workbenchText('全部主机', 'All systems');
-    document.getElementById('playlist-history-link').hidden = !playlistPath || state.previewValid;
     renderLibraryOverview(showOverview);
     document.getElementById('workspace-empty').hidden = showOverview || state.previewValid
         || Boolean(playlistPath && workbench.operation !== 'preview');

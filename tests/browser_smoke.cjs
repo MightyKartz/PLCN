@@ -237,7 +237,7 @@ async function main() {
     await waitFor(()=>document.querySelector('#overview-status'),'artwork status bar after overview load');
     assert.match(await evaluate(()=>document.querySelector('.overview-status-text').textContent),/^\d+ 个游戏缺少封面 · 1 个游戏尚未使用中文名$/);
     assert.equal(await evaluate(()=>document.querySelector('#overview-complete-button').title),'一键补全');
-    assert.deepEqual(await evaluate(()=>Array.from(document.querySelectorAll('.platform-heading strong'),el=>el.textContent).sort()),['Game Boy Advance','超级任天堂']);
+    assert.deepEqual(await evaluate(()=>Array.from(document.querySelectorAll('.platform-heading strong'),el=>el.textContent).sort()),['Game Boy Advance','Super Nintendo Entertainment System']);
     assert.equal(await evaluate(()=>Array.from(document.querySelectorAll('.platform-fan')).every(fan=>fan.children.length===3)),true);
     await click('#library-all-systems');
 
@@ -425,7 +425,7 @@ async function main() {
     assert.equal(await evaluate(visible, '#preview-area'), false);
     assert.equal(await evaluate(visible, '#image-directory-notice'), false);
     assert.equal(await evaluate(() => document.querySelector('#game-library-filter-problem').textContent), '需检查 0');
-    assert.equal(await evaluate(() => document.querySelector('#game-library-rows .game-image-placeholder').textContent), '缺图');
+    assert.equal(await evaluate(() => document.querySelector('#game-library-rows .game-image-placeholder').getAttribute('aria-label')), '缺封面');
     assert.equal(await evaluate(visible, '#game-library-grid'), true);
     assert.ok(await evaluate(()=>{
         const card = document.querySelector('#game-library-grid .game-card-art').getBoundingClientRect();
@@ -518,6 +518,15 @@ async function main() {
     });
     await waitFor(()=>gameLibrary.data?.items[0]?.label==='Shadowrun (USA)','name restored');
     await click('#game-view-list');
+    assert.ok(await evaluate(visible, '#game-library-table'));
+    assert.deepEqual(await evaluate(() => Array.from(document.querySelectorAll('#game-library-table th'), th => th.textContent)), ['封面', '游戏名称']);
+    assert.deepEqual(await evaluate(() => Array.from(document.querySelector('#game-library-rows tr').cells, td => td.textContent)), ['', 'Shadowrun (USA)']);
+    assert.equal(await evaluate(() => document.querySelectorAll('#game-library-rows :is(button, input, summary)').length), 1);
+    await screenshot('02-compact-game-list');
+    await click('#game-library-rows [data-game-details="0"]');
+    await waitFor(visible, 'game details opened from list', '#game-inspector');
+    await click('#inspector-close');
+    assert.equal(await evaluate(() => document.activeElement.dataset.gameDetails), '0');
 
     await evaluate(()=>toggleTheme());
     await evaluate(()=>toggleUILanguage());
@@ -632,8 +641,8 @@ async function main() {
     await waitFor(()=>Boolean(workbench.previewKey)&&!workbench.operation,'selected name completion restored');
     await evaluate(()=>invalidateWorkbenchPreview());
     await waitFor(()=>gameLibrary.data?.items.length===2,'return to graphical library');
-    await click('#game-view-list');
-    await click('#game-library-rows tr:nth-child(2) input[type=checkbox]');
+    await click('#game-view-grid');
+    await click('#game-library-grid [data-game-card="1"] .game-card-select');
     await click('#game-selection-remove');
     await waitFor(()=>!gameManagement.busy&&!document.querySelector('#gm-apply').hidden,'remove preview');
     assert.equal(await evaluate(()=>document.querySelector('#gm-results').querySelectorAll('strong').length),1);
@@ -820,8 +829,9 @@ async function main() {
         && document.querySelector('#game-library').getAttribute('aria-busy') === 'false'
         && document.querySelector('.game-library-table tbody tr'), 'SNES with artwork directory');
     assert.equal(await evaluate(visible, '#image-directory-notice'), false);
-    assert.equal(await evaluate(() => document.querySelector('#game-library-rows .game-image-placeholder').textContent), '缺图');
+    assert.equal(await evaluate(() => document.querySelector('#game-library-rows .game-image-placeholder').getAttribute('aria-label')), '缺封面');
     assert.equal(await evaluate(() => document.querySelectorAll('#game-library-rows .artwork-chip').length), 0);
+    await click('#game-view-list');
     await screenshot('04-auto-artwork');
     const boxFile = path.join(detected, 'Nintendo - Super Nintendo Entertainment System', 'Named_Boxarts', 'Shadowrun (USA).png');
     const boxBytes = Buffer.from(await evaluate(async () => Array.from(new Uint8Array(await (await fetch('/api/artwork/thumbnail?system=SNES&kind=Named_Boxarts&name=Game.png')).arrayBuffer()))));
@@ -830,7 +840,7 @@ async function main() {
     await click(gba);
     await waitFor(() => document.querySelector('#game-library').getAttribute('aria-busy') === 'false', 'GBA before artwork reread');
     await click(system);
-    await waitFor(() => document.querySelectorAll('#game-library-rows .artwork-chip').length === 3, 'partial artwork expands type markers');
+    await waitFor(() => document.querySelector('#game-library-rows img')?.naturalWidth > 0, 'list shows the available cover thumbnail');
     await screenshot('04-partial-artwork');
     const brokenFile = path.join(detected, 'Nintendo - Super Nintendo Entertainment System', 'Named_Snaps', 'Shadowrun (USA).png');
     fs.mkdirSync(path.dirname(brokenFile), {recursive:true});
@@ -838,7 +848,7 @@ async function main() {
     await click(gba);
     await waitFor(() => document.querySelector('#game-library').getAttribute('aria-busy') === 'false', 'GBA before damaged artwork reread');
     await click(system);
-    await waitFor(() => document.querySelectorAll('#game-library-rows .artwork-chip-invalid').length === 1, 'damaged artwork keeps individual markers');
+    await waitFor(() => gameLibrary.data?.items[0]?.artwork_status?.Named_Snaps === 'invalid', 'damaged artwork is detected');
     assert.equal(await evaluate(() => document.querySelector('#game-library-filter-problem').textContent.endsWith('1')), true);
     await screenshot('04-damaged-artwork');
     const snesPlaylistPath = libraryPath + '/playlists/Nintendo - Super Nintendo Entertainment System.lpl';
