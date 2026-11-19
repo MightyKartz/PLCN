@@ -116,6 +116,33 @@ def preview(root, sources, progress=lambda *args: None, cancel_check=None):
     return {'plans': plans, 'unclassified': unclassified}
 
 
+def infer(root, directory):
+    """Best-effort import context for a browsed folder: console, playlist filename, launch directory."""
+    if not isinstance(root, str) or not isinstance(directory, str) or not root or not directory:
+        return {}
+    profile = next((p for p in reversed(scan.profiles().get(root, []))
+                    if p['directory'] == directory and p['system'] in scan.SYSTEMS), None)
+    system = profile['system'] if profile else None
+    if not system:
+        try:
+            parts = mtp.parse(directory)[2] if mtp.is_mtp(directory) else [Path(directory).name]
+            name = parts[-1].casefold() if parts else ''
+        except ValueError:
+            name = ''
+        system = ALIASES.get(name) or next((s for s in scan.SYSTEMS if s.casefold() == name), None)
+    if not system:
+        return {}
+    result = {'system': system, 'playlist_name': (profile or {}).get('playlist_name') or scan.playlist_name(system)}
+    if profile and profile.get('android_directory'):
+        result['android_directory'] = profile['android_directory']
+    else:
+        try:
+            result.update(scan.hints(root, system, directory, result['playlist_name']))
+        except ValueError:
+            pass
+    return result
+
+
 def public_result(result):
     return {'rows': [{'system': plan['config']['system'], 'added': len(plan['added']),
                       'retained': plan['retained'], 'skipped': plan['skipped'], 'target': target}

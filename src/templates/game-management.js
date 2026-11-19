@@ -147,8 +147,12 @@ async function openGameImport(destination = '', {autoPick = ''} = {}) {
     gmField('status').textContent = workbenchText('正在读取目标游戏库…', 'Loading the destination library…');
     try {
         const setup = await desktopRequest('/api/content/setup?root=' + encodeURIComponent(root));
+        const inferred = gameManagement.destinationHint
+            ? await desktopRequest('/api/content/infer', {root, directory:gameManagement.destinationHint}).catch(() => ({}))
+            : {};
         if (generation !== gameManagement.generation) return;
         gameManagement.setup = setup;
+        const compact = Boolean(inferred.system && setup.systems.some(system => system.name === inferred.system));
         const sourcePane = wbElement('section', 'gm-source-pane'); sourcePane.id = 'gm-files'; form.append(sourcePane); gmRenderFiles();
         const targetPane = wbElement('section', 'gm-target-pane');
         const destHead = wbElement('div', 'gm-section-head'); destHead.append(wbElement('h3', '', workbenchText('2 · 确认位置', '2 · Confirm location')));
@@ -162,9 +166,10 @@ async function openGameImport(destination = '', {autoPick = ''} = {}) {
         const label = wbElement('label', 'gm-field', workbenchText('主机', 'System'));
         const select = wbElement('select', ''); select.id = 'gm-system';
         select.append(...setup.systems.map(system => new Option(getSystemAbbreviation(system.name) + ' · ' + wbSystemName(system.name), system.name)));
-        const selected = document.getElementById('system_name').value;
+        const selected = compact ? inferred.system : document.getElementById('system_name').value;
         if (setup.systems.some(system => system.name === selected)) select.value = selected;
-        select.onchange = gmChangeSystem; label.append(select); targetPane.append(label);
+        select.onchange = gmChangeSystem; label.append(select);
+        if (compact) fields.append(label); else targetPane.append(label);
         const destination = gmInput(fields, 'destination', '复制到目录', 'Copy to folder');
         if (setup.android) destination.type = 'hidden';
         const browse = gmButton('选择目标目录', 'Choose destination', gmBrowseDestination); browse.id = 'gm-pick-destination'; destination.parentElement.append(browse);
@@ -181,6 +186,7 @@ async function openGameImport(destination = '', {autoPick = ''} = {}) {
         const playlistPath = wbElement('p', 'gm-path'); playlistPath.id = 'gm-playlist-path'; advanced.append(playlistPath);
         targetPane.append(fields); form.append(targetPane);
         form.disabled = false; gmField('status').textContent = workbenchText('选择文件或目录后开始分析。', 'Choose files or a folder to start the analysis.'); gmChangeSystem();
+        if (inferred.android_directory) gmField('android').value = inferred.android_directory;
         if (autoPick) gmPickSource(autoPick);
     } catch (error) { if (generation === gameManagement.generation) gmField('status').textContent = gmError(error); }
 }

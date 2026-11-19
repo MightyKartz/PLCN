@@ -76,6 +76,10 @@ def hints(handler, context, payload):
     reply(handler, scan.hints(payload.get('root'), payload.get('system'), payload.get('directory'), payload.get('playlist_name')))
 
 
+def infer(handler, context, payload):
+    reply(handler, automatic_scan.infer(payload.get('root'), payload.get('directory')))
+
+
 def core_info(handler, context, query):
     reply(handler, core_catalog.info(query.get('core_id', [''])[0]))
 

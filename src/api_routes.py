@@ -70,6 +70,7 @@ POST_ROUTES = {
     '/api/m3u/recover': api_m3u.recover,
     '/api/content/core-status': api_content.core_status,
     '/api/content/hints': api_content.hints,
+    '/api/content/infer': api_content.infer,
     '/api/content/preview': api_content.preview,
     '/api/content/apply': api_content.apply,
     '/api/cores/download': api_content.core_download,
