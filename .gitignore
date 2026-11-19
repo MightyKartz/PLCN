@@ -39,3 +39,6 @@ dist/
 
 # Local browser automation sessions
 .playwright-cli/
+
+# macOS AppleDouble files created on ExFAT volumes
+._*

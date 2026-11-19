@@ -98,6 +98,20 @@ def test_rename_still_applies_when_artwork_has_no_source(library, monkeypatch):
     assert json.loads(path.read_text(encoding='utf-8'))['items'][0]['label'] == '游戏'
 
 
+@pytest.mark.parametrize('change', [
+    {'identity': {'requires_review': True}, 'new_label': '游戏'},
+    {'identity': {}, 'new_label': ''},
+    {'identity': {}, 'new_label': '游戏', 'artwork_gallery_status': 'not_found', 'thumbnail_source': None},
+], ids=['unverified-identity', 'no-translation', 'no-gallery'])
+def test_complete_games_are_not_counted_as_manual_work(library, monkeypatch, change):
+    """A game with a Chinese name and all artwork needs nothing, verified or not."""
+    import playlist_service
+    change = {'original_item_label': '游戏', 'path': '/roms/Game.nes', 'system': 'NES',
+              'cover_exists': True, **change}
+    monkeypatch.setattr(playlist_service, 'analyze_playlist', lambda *args, **kwargs: [change])
+    assert review(library, images=True)['rows'][0]['review'] == 0
+
+
 def test_invalid_playlist_is_visible_in_summary_and_stop_option_refuses_writes(library):
     lists, _, _, path = library
     (lists / 'Broken.lpl').write_text('{', encoding='utf-8')

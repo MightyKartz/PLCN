@@ -1,4 +1,6 @@
 """Read-only whole-library review and application of exactly that reviewed plan."""
+import re
+
 import mtp_runtime as mtp
 from tempfile import TemporaryDirectory
 
@@ -9,6 +11,8 @@ from retroarch_scanner import is_adb_uri, materialize_adb_file, scan_retroarch_t
 from safe_io import file_digest
 from task_control import TaskCancelled, checkpoint
 from thumbnail_downloader import ThumbnailDownloader
+
+HAN = re.compile(r'[\u3400-\u4dbf\u4e00-\u9fff\U00020000-\U000323af]')
 
 
 def prepare_review(directory, thumbnails, source, overrides, options, progress, cancel_check):
@@ -40,21 +44,25 @@ def prepare_review(directory, thumbnails, source, overrides, options, progress, 
                             raise RuntimeError(image_error)
                         change['artwork'] = artwork_statuses(current, change.get('path'), resolver, lookups, thumbnails, item_system)
                     label = (change.get('new_label') or '').strip()
+                    artwork = change.get('artwork') or {}
+                    missing = any(image['status'] != 'exists' for image in artwork.values()) if artwork else not change.get('cover_exists')
+                    # Only games that still lack something count as manual work;
+                    # complete games the matcher cannot verify are left alone.
+                    needs_name = options['write_names'] and not HAN.search(current)
+                    needs_artwork = options['download_thumbnails'] and missing
                     if change.get('identity', {}).get('requires_review') or not label:
-                        row['review'] += 1
+                        row['review'] += int(needs_name or needs_artwork)
                         continue
                     artwork_missing = options['download_thumbnails'] and (
                         change.get('artwork_gallery_status') in {'unavailable', 'not_found'}
                         or not change.get('thumbnail_source'))
                     if artwork_missing:
-                        row['review'] += 1
+                        row['review'] += int(needs_artwork)
                         # The gallery could not verify this source; stripping it keeps
                         # the apply step from downloading artwork for the rename below.
                         change['thumbnail_source'] = None
                     rename = options['write_names'] and label != current.strip()
-                    artwork = change.get('artwork') or {}
-                    missing = any(image['status'] != 'exists' for image in artwork.values()) if artwork else not change.get('cover_exists')
-                    images = options['download_thumbnails'] and missing and not artwork_missing
+                    images = needs_artwork and not artwork_missing
                     if rename or images:
                         selected.append(change)
                         row['names'] += int(rename)
