@@ -285,44 +285,44 @@ class DatabaseManager:
         return result
 
     def search_by_normalized_alias(self, normalized_name, system=None):
-        cursor = self.get_connection().cursor()
         # Join to get chinese name directly
         if system:
             systems = self.expand_system_mapping(system)
             if len(systems) > 1:
-                # Multiple systems: use OR condition
-                placeholders = ' OR '.join(['system_base(t.system) = ?' for _ in systems])
-                query = f'''
-                    SELECT t.chinese_name, t.english_name 
-                    FROM aliases a
-                    JOIN translations t ON a.english_name = t.english_name
-                    AND (a.system = t.system OR (a.system IS NULL AND (SELECT COUNT(*) FROM translations u WHERE u.english_name=a.english_name)=1))
-                    WHERE a.normalized_alias = ? AND ({placeholders})
-                '''
-                params = [normalized_name] + [s for s in systems]
-                cursor.execute(query, params)
-            else:
-                query = '''
-                    SELECT t.chinese_name, t.english_name 
-                    FROM aliases a
-                    JOIN translations t ON a.english_name = t.english_name
-                    AND (a.system = t.system OR (a.system IS NULL AND (SELECT COUNT(*) FROM translations u WHERE u.english_name=a.english_name)=1))
-                    WHERE a.normalized_alias = ? AND system_base(t.system) = ?
-                '''
-                cursor.execute(query, (normalized_name, systems[0]))
+                # Mapped systems are listed by priority: an arcade set that
+                # exists in several catalogs (e.g. NEOGEO and MAME) resolves
+                # through the earlier one, and an ambiguous single system
+                # still yields nothing.
+                for single in systems:
+                    matches = self._lookup_normalized_alias(normalized_name, single)
+                    if len(matches) == 1:
+                        return next(iter(matches))
+                    if matches:
+                        return None, None
+                return None, None
+            systems = systems or [None]
         else:
-            query = '''
-                SELECT t.chinese_name, t.english_name 
-                FROM aliases a
-                JOIN translations t ON a.english_name = t.english_name
-                    AND (a.system = t.system OR (a.system IS NULL AND (SELECT COUNT(*) FROM translations u WHERE u.english_name=a.english_name)=1))
-                WHERE a.normalized_alias = ?
-            '''
+            systems = [None]
+        matches = self._lookup_normalized_alias(normalized_name, systems[0])
+        return next(iter(matches)) if len(matches) == 1 else (None, None)
+
+    def _lookup_normalized_alias(self, normalized_name, system):
+        cursor = self.get_connection().cursor()
+        query = '''
+            SELECT t.chinese_name, t.english_name
+            FROM aliases a
+            JOIN translations t ON a.english_name = t.english_name
+            AND (a.system = t.system OR (a.system IS NULL AND (SELECT COUNT(*) FROM translations u WHERE u.english_name=a.english_name)=1))
+            WHERE a.normalized_alias = ?
+        '''
+        if system:
+            query += ' AND system_base(t.system) = ?'
+            cursor.execute(query, (normalized_name, system))
+        else:
             cursor.execute(query, (normalized_name,))
-        matches = {(row['chinese_name'], row['english_name']) for row in cursor.fetchall()}
         # Removing region/version tags can collapse distinct releases. Such a
         # match is a candidate, never a deterministic identity lookup.
-        return next(iter(matches)) if len(matches) == 1 else (None, None)
+        return {(row['chinese_name'], row['english_name']) for row in cursor.fetchall()}
 
     def fuzzy_search_by_english(self, query, threshold=50, system=None):
         """

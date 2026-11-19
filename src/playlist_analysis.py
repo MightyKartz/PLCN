@@ -524,15 +524,12 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
                         break
 
             if standard_english_name:
-                translated_cn, _ = translator.translate(standard_english_name)
-                if getattr(translator, 'last_match_source', '') in {'fuzzy_candidate', 'cross_system_candidate'} \
-                        or not has_chinese(translated_cn):
-                    # The DAT title may differ from the name database's canonical
-                    # English, but arcade CSVs index sets by zip short name too —
-                    # an exact zip-stem alias is more precise than a fuzzy title.
-                    short_cn, _short_en = translate_arcade_label_candidate(matched_candidate)
-                    if has_chinese(short_cn):
-                        translated_cn = short_cn
+                # An exact zip-stem alias identifies the romset precisely; title
+                # lookups can silently collapse releases whose names differ only
+                # inside stripped parentheses (e.g. kov vs kov114).
+                translated_cn, _ = translate_arcade_label_candidate(matched_candidate)
+                if not has_chinese(translated_cn):
+                    translated_cn, _ = translator.translate(standard_english_name)
                 new_label = translated_cn if has_chinese(translated_cn) else standard_english_name
                 thumbnail_source = standard_english_name
                 print(f"  [{i}] Libretro DAT ROM match: '{matched_candidate}' -> '{standard_english_name}'")
