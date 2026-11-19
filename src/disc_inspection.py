@@ -136,7 +136,8 @@ def reference_path(parent, value):
         if relative == '..' or relative.startswith('../'):
             raise ValueError('引用超出存储空间')
         return mtp.uri(serial, storage, relative)
-    return posixpath.normpath(posixpath.join(parent.rsplit('/', 1)[0], value))
+    directory = parent.replace('\\', '/').rsplit('/', 1)[0]
+    return posixpath.normpath(posixpath.join(directory, value))
 
 
 def inspect_discs(playlist, system):

@@ -229,3 +229,9 @@ def test_nested_m3u_order_and_relative_cue_references(library):
 def test_encoded_mtp_filenames_have_the_same_disc_evidence_as_android_paths():
     uri='mtp://device/00020001/Roms/Game%20%28Japan%29%20Disc2.chd'
     assert discs.disc_evidence(uri,SYSTEM) == discs.disc_evidence('/storage/CARD/Roms/Game (Japan) Disc2.chd',SYSTEM)
+
+
+def test_relative_reference_uses_windows_descriptor_parent():
+    from disc_inspection import reference_path
+
+    assert reference_path(r'C:\Games\Disc.cue', 'Track.bin') == 'C:/Games/Track.bin'
