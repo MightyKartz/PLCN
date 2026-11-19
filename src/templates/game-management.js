@@ -377,30 +377,41 @@ async function applyGameManagement() {
         gmStatus(gmError(error) + workbenchText('；已复制文件会保留。请点击“重新分析”核对后继续；无法取得结果时先查看任务，避免重复写入。', '; copied files are kept. Use Analyze again to continue; if the result is unknown, check Tasks before writing again.'), true);
     }
 }
-function appendGameManagementActions(actions, item) {
-    const menu = wbElement('details', 'game-row-menu');
-    const summary = wbElement('summary', '', '⋯'); summary.setAttribute('aria-label', workbenchText('管理 ', 'Manage ') + (item.label || item.rom_name));
-    const remove = gmButton('移出列表…', 'Remove from playlist…', () => {menu.open = false; openGameRemoval([item.index]);});
-    remove.disabled = Boolean(workbench.operation); menu.append(summary, remove); actions.append(menu);
-}
 function renderGameSelection(visible) {
     const toolbar = document.getElementById('game-selection-toolbar'); toolbar.classList.remove('has-selection'); toolbar.replaceChildren();
+    const headAll = document.getElementById('game-library-select-all');
+    const allChecked = Boolean(visible.length) && visible.every(item => gameLibrary.selection.has(item.index));
+    headAll.checked = allChecked;
+    headAll.indeterminate = !allChecked && visible.some(item => gameLibrary.selection.has(item.index));
+    headAll.disabled = Boolean(workbench.operation) || !visible.length;
+    headAll.onchange = () => {for (const item of visible) {if (headAll.checked) gameLibrary.selection.add(item.index); else gameLibrary.selection.delete(item.index);} renderGameLibrary();};
     toolbar.hidden = !gameLibrary.selection.size || !gameLibrary.data?.items.length;
     if (toolbar.hidden) return;
     const all = wbElement('label', 'game-select-label');
-    const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.checked = Boolean(visible.length) && visible.every(item => gameLibrary.selection.has(item.index));
-    checkbox.indeterminate = !checkbox.checked && visible.some(item => gameLibrary.selection.has(item.index)); checkbox.disabled = Boolean(workbench.operation);
+    const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.checked = allChecked;
+    checkbox.indeterminate = headAll.indeterminate; checkbox.disabled = Boolean(workbench.operation);
     checkbox.onchange = () => {for (const item of visible) {if (checkbox.checked) gameLibrary.selection.add(item.index); else gameLibrary.selection.delete(item.index);} renderGameLibrary();};
-    all.append(checkbox, wbElement('span', '', workbenchText('选择当前页', 'Select visible'))); toolbar.append(all);
+    all.append(checkbox, wbElement('span', '', workbenchText('全选', 'Select all'))); toolbar.append(all);
     toolbar.classList.add('has-selection');
     toolbar.append(wbElement('span', '', workbenchText(`已选 ${gameLibrary.selection.size} 项`, `${gameLibrary.selection.size} selected`)));
-    const complete = gmButton('补全资料', 'Complete metadata', () => runDirectCompletion({entries:gameLibrary.data.items.filter(item => gameLibrary.selection.has(item.index)).map(item => [item.index, item.rom_path])})); complete.id = 'game-selection-complete'; complete.disabled = Boolean(workbench.operation); toolbar.append(complete);
+    const complete = gmButton('补全', 'Complete', () => runDirectCompletion({entries:gameLibrary.data.items.filter(item => gameLibrary.selection.has(item.index)).map(item => [item.index, item.rom_path])})); complete.id = 'game-selection-complete'; complete.disabled = Boolean(workbench.operation); toolbar.append(complete);
+    toolbar.append(wbElement('span', 'selection-spacer'));
     const remove = gmButton('移出列表…', 'Remove from playlist…', () => openGameRemoval([...gameLibrary.selection])); remove.id = 'game-selection-remove'; remove.disabled = Boolean(workbench.operation); toolbar.append(remove);
-    toolbar.append(gmButton('取消选择', 'Clear selection', () => {gameLibrary.selection.clear(); renderGameLibrary();}));
+    const clear = wbElement('button', 'btn btn-muted dialog-icon-button');
+    wbIconButton(clear, 'x', workbenchText('取消选择', 'Clear selection'));
+    clear.id = 'game-selection-clear'; clear.type = 'button';
+    clear.onclick = () => {gameLibrary.selection.clear(); renderGameLibrary();};
+    toolbar.append(clear);
 }
 
 document.addEventListener('click', event => {
     if (gameManagement.open && !gameManagement.busy && event.target.closest('#scanned-playlists button, #library-all-systems')) closeGameManagement();
+});
+document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape' || !gameLibrary.selection.size || workbench.operation) return;
+    if (document.querySelector('dialog[open]') || event.target.closest?.('input, textarea, select')) return;
+    gameLibrary.selection.clear();
+    renderGameLibrary();
 });
 
 async function saveGameImportMapping() {

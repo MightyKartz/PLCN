@@ -32,6 +32,7 @@ function toggleGameSelection(index, checked) {
     if (checked) gameLibrary.selection.add(index); else gameLibrary.selection.delete(index);
     document.querySelectorAll('[data-game-select="' + index + '"]').forEach(input => {input.checked = checked;});
     document.querySelector('[data-game-card="' + index + '"]')?.classList.toggle('selected', checked);
+    document.querySelector('[data-game-row="' + index + '"]')?.classList.toggle('selected', checked);
     renderGameSelection(visibleGameItems);
 }
 function renderGameBrowser(items) {
@@ -64,7 +65,7 @@ function renderGameBrowser(items) {
         checkbox.dataset.gameSelect = item.index; checkbox.checked = gameLibrary.selection.has(item.index); checkbox.disabled = Boolean(workbench.operation);
         checkbox.setAttribute('aria-label', workbenchText('选择 ', 'Select ') + (item.label || item.rom_name));
         checkbox.onchange = () => toggleGameSelection(item.index, checkbox.checked); card.append(checkbox);
-        const menu = wbElement('div', 'game-card-menu'); appendGameManagementActions(menu, item); card.append(menu); grid.append(card);
+        grid.append(card);
     }
     renderGameInspector();
 }
@@ -255,6 +256,10 @@ function renderGameInspector() {
     locate.disabled = busy || details?.file_status !== 'present' || !details.file_directory;
     if (locate.disabled && !busy) locate.title = workbenchText('需要可读取的文件和有效的存储映射。', 'Requires a readable file and a valid storage mapping.');
     footer.append(locate);
+    const remove = gmButton('移出列表…', 'Remove from playlist…', () => openGameRemoval([item.index]));
+    remove.id = 'inspector-remove-game';
+    remove.disabled = busy;
+    footer.append(remove);
     info.append(footer);
     const status = wbElement('p', 'inspector-status', gameInspector.error || gameInspector.status); status.id = 'inspector-status'; status.setAttribute('role', 'status'); pane.append(status);
     if (artworkEditor) pane.append(artworkEditor);

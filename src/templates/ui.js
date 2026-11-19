@@ -363,6 +363,7 @@ Object.assign(UI_EN, {
     "取消": "Cancel",
     "取消任务": "Cancel task",
     "取消选择": "Cancel selection",
+    "全选": "Select all",
     "只读检查，不改写列表、核心或游戏文件。候选组仍需核对。": "Read-only inspection; playlists, cores and game files are unchanged. Review candidate groups.",
     "回传、更新引用并清理可移除原文件（保留电脑备份）": "Transfer, update references and remove eligible originals; keep a computer backup",
     "回传并更新引用，保留原文件": "Transfer and update references; keep originals",

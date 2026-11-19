@@ -182,6 +182,19 @@ function renderGameLibrary() {
     tbody.replaceChildren();
     for (const item of filtered.slice(0, gameLibrary.limit)) {
         const row = document.createElement('tr');
+        row.dataset.gameRow = item.index;
+        row.classList.toggle('selected', gameLibrary.selection.has(item.index));
+        const selectCell = document.createElement('td');
+        selectCell.className = 'game-select-cell';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'game-row-select';
+        checkbox.dataset.gameSelect = item.index;
+        checkbox.checked = gameLibrary.selection.has(item.index);
+        checkbox.disabled = Boolean(workbench.operation);
+        checkbox.setAttribute('aria-label', text('选择 ', 'Select ') + (item.label || item.rom_name));
+        checkbox.onchange = () => toggleGameSelection(item.index, checkbox.checked);
+        selectCell.appendChild(checkbox);
         const cover = document.createElement('td');
         const placeholder = document.createElement('span');
         placeholder.className = 'game-image-placeholder';
@@ -222,7 +235,7 @@ function renderGameLibrary() {
         titleButton.dataset.gameDetails = item.index;
         titleButton.onclick = () => inspectGame(item.index);
         titleCell.appendChild(titleButton);
-        row.append(cover, titleCell);
+        row.append(selectCell, cover, titleCell);
         tbody.appendChild(row);
     }
     document.getElementById('game-library-table').hidden = !filtered.length || gameLibrary.view !== 'list';

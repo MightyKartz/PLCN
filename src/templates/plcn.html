@@ -118,7 +118,7 @@
                         <button id="game-library-retry" class="btn btn-muted" type="button" onclick="retryGameLibrary()" hidden></button>
                         <div id="game-library-grid" class="game-cover-grid"></div>
                         <table id="game-library-table" class="game-library-table" hidden>
-                            <thead><tr><th id="game-library-heading-0" scope="col"></th><th id="game-library-heading-1" scope="col"></th></tr></thead>
+                            <thead><tr><th scope="col" class="game-select-cell"><input id="game-library-select-all" class="game-row-select" type="checkbox" aria-label="全选" data-i18n-aria-label="全选"></th><th id="game-library-heading-0" scope="col"></th><th id="game-library-heading-1" scope="col"></th></tr></thead>
                             <tbody id="game-library-rows"></tbody>
                         </table>
                         <button id="game-library-more" class="btn btn-muted" type="button" onclick="gameLibrary.limit += 100; renderGameLibrary()" hidden></button>
