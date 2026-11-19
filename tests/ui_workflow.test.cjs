@@ -512,9 +512,9 @@ test('direct completion reports applied games and counts only review items as ma
     const toasts=[]; let previewed;
     const elements={'playlist_path':{value:'/lib/SNES.lpl'},'system_name':{value:'SNES'}};
     const changes=[
-        {index:0,new_label:'暗影狂奔',thumbnail_source:'Shadowrun (USA)',actionable:true},
-        {index:1,new_label:'极速传说',thumbnail_source:'F-Zero',actionable:false},
-        {index:2,new_label:'存疑游戏',thumbnail_source:'Dubious',identity:{requires_review:true},actionable:false},
+        {index:0,new_label:'暗影狂奔',thumbnail_source:'Shadowrun (USA)',completion:{rename:true,artwork:true,manual:false}},
+        {index:1,new_label:'F-Zero - Maximum Velocity',thumbnail_source:null,completion:{rename:false,artwork:false,manual:true}},
+        {index:2,new_label:'存疑游戏',thumbnail_source:'Dubious',identity:{requires_review:true},completion:{rename:false,artwork:false,manual:true}},
     ];
     const context={workbench:{operation:null},completionJobIds:new Set(),
         document:{getElementById:id=>elements[id]||{value:'',disabled:false}},
@@ -524,20 +524,55 @@ test('direct completion reports applied games and counts only review items as ma
         invalidateWorkbenchPreview:()=>{},renderWorkbench:()=>{},refreshAfterCompletion:()=>{},
         workbenchInputKey:()=>'k',saveConfig:async()=>true,
         desktopRequest:async(url)=>url==='/api/playlist/preview'?{changes}:{job_id:'apply-1'},
-        preparePreviewChanges:list=>list,isActionableChange:c=>c.actionable===true,
+        preparePreviewChanges:list=>list,
         currentMatchesWriteName:()=>false,
         watchCompletionJob:async()=>({applied_count:1,receipt_id:'r1',download_summary:{types:{}}}),
         showActionToast:toast=>toasts.push(toast),
         workbenchText:zh=>zh,uiText:x=>x,previewTask:scope=>{previewed=scope;},
         openDesktop:()=>{}};
     vm.createContext(context);
-    vm.runInContext(source('needsManualReview')+source('runDirectCompletion'),context);
+    vm.runInContext(source('runDirectCompletion'),context);
     await context.runDirectCompletion();
     assert.equal(toasts.length,1);
-    assert.equal(toasts[0].message,'已补全 1 个游戏，1 个游戏需手动处理');
+    assert.equal(toasts[0].message,'已补全 1 个游戏，2 个游戏需手动处理');
     assert.equal(toasts[0].receiptId,'r1');
     toasts[0].details();
     assert.notEqual(previewed,undefined);
+});
+
+test('direct completion renames a game with a failed gallery and strips its stale source', async () => {
+    const toasts=[]; let applied;
+    const elements={'playlist_path':{value:'/lib/SNES.lpl'},'system_name':{value:'SNES'}};
+    const changes=[
+        {index:0,new_label:'游戏',path:'/roms/Game.nes',thumbnail_source:'Unverified source',artwork_gallery_status:'not_found',
+            original_item_label:'Game',cover_exists:false,completion:{rename:true,artwork:false,manual:true}},
+        {index:1,new_label:'另一游戏',path:'/roms/Other.nes',thumbnail_source:'Other',original_item_label:'Other',
+            completion:{rename:true,artwork:true,manual:false}},
+        {index:2,new_label:'未选游戏',path:'/roms/Skipped.nes',thumbnail_source:'Skipped',original_item_label:'Skipped',
+            completion:{rename:true,artwork:true,manual:false}},
+    ];
+    const context={workbench:{operation:null},completionJobIds:new Set(),
+        document:{getElementById:id=>elements[id]||{value:'',disabled:false}},
+        getProcessingOptions:()=>({download_thumbnails:true,write_names:true}),
+        getThumbnailsDirectory:()=>'/thumbs',
+        beginWorkbenchOperation:()=>true,endWorkbenchOperation:()=>{},
+        invalidateWorkbenchPreview:()=>{},renderWorkbench:()=>{},refreshAfterCompletion:()=>{},
+        workbenchInputKey:()=>'k',saveConfig:async()=>true,
+        desktopRequest:async(url,payload)=>{ if(url==='/api/playlist/preview')return{changes}; applied=payload; return{job_id:'apply-1'};},
+        preparePreviewChanges:list=>list,
+        currentMatchesWriteName:()=>false,
+        watchCompletionJob:async()=>({applied_count:1,receipt_id:'r1',download_summary:{types:{}}}),
+        showActionToast:toast=>toasts.push(toast),
+        workbenchText:zh=>zh,uiText:x=>x,previewTask:()=>{},openDesktop:()=>{}};
+    vm.createContext(context);
+    vm.runInContext(source('runDirectCompletion'),context);
+    await context.runDirectCompletion({entries:[[0,'/roms/Game.nes'],[1,'/roms/Other.nes']]});
+    assert.equal(applied.changes.length,2);
+    assert.deepEqual(applied.changes.map(c=>c.index),[0,1]);
+    assert.equal(applied.changes[0].new_label,'游戏');
+    assert.equal(applied.changes[0].thumbnail_source,null);
+    assert.equal(applied.changes[1].thumbnail_source,'Other');
+    assert.equal(toasts[0].message,'已补全 1 个游戏，1 个游戏需手动处理');
 });
 
 for (const closed of [true, false]) {
@@ -711,3 +746,26 @@ for (const errors of [[], ['NES: playlist changed']]) {
         assert.equal(toast.details(), 'completion');
     });
 }
+
+test('all-systems completion without apply reports analysis failures separately from manual work', () => {
+    const toasts = [];
+    const context = {
+        invalidateWorkbenchPreview: () => {}, workbenchText: zh => zh,
+        showActionToast: value => toasts.push(value), openOperationHistory: () => {},
+        batchRunCreatedArtworkDir: false
+    };
+    vm.createContext(context);
+    vm.runInContext(source('finishBatchRun'), context);
+    context.finishBatchRun('completed', {rows: [
+        {system: 'NES', error: 'Expecting value: line 1', review: 0, names: 0, artwork: 0},
+        {system: 'SNES', error: null, review: 3, names: 0, artwork: 0},
+    ]}, null);
+    assert.equal(toasts[0].message, '没有需要自动补全的内容，3 个游戏需手动处理，1 个列表分析失败：NES：Expecting value: line 1');
+    context.finishBatchRun('completed', {rows: [{system: 'NES', error: null, review: 0, names: 0, artwork: 0}]}, null);
+    assert.equal(toasts[1].message, '没有需要自动补全的内容');
+    context.finishBatchRun('completed', {rows: [
+        {system: 'NES', error: 'bad file', review: 0, names: 0, artwork: 0},
+        {system: 'MAME', error: 'bad file', review: 0, names: 0, artwork: 0},
+    ]}, null);
+    assert.equal(toasts[2].message, '没有需要自动补全的内容，2 个列表分析失败：NES：bad file；MAME：bad file');
+});

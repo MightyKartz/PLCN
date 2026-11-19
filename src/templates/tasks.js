@@ -118,13 +118,6 @@ async function retryCompletionArtwork(jobId) {
     }
 }
 
-function needsManualReview(change, options) {
-    return Boolean(change.identity?.requires_review)
-        || (options.download_thumbnails && ['unavailable', 'not_found'].includes(change.artwork_gallery_status))
-        || !(change.new_label || '').trim()
-        || (options.download_thumbnails && !change.thumbnail_source);
-}
-
 async function runDirectCompletion(scope = null) {
     const selected = scope ? new Map(scope.entries) : null;
     const playlistPath = document.getElementById('playlist_path').value;
@@ -157,9 +150,12 @@ async function runDirectCompletion(scope = null) {
         if (selected && changes.length !== selected.size)
             throw new Error(workbenchText('列表已变化，请重新读取后选择游戏', 'The playlist changed. Reload it before selecting games'));
         const prepared = preparePreviewChanges(changes);
-        const included = prepared.filter(change => change.enabled !== false && isActionableChange(change));
-        const needsManual = prepared.filter(change => !(change.enabled !== false && isActionableChange(change))
-            && needsManualReview(change, options)).length;
+        const verdict = change => change.completion || {};
+        // enabled follows the interactive-preview rules; direct completion
+        // applies every game the server verdict marks executable.
+        const included = prepared.filter(change => verdict(change).rename || verdict(change).artwork);
+        // One game counts once, even when a rename applies while its artwork gap stays manual.
+        const needsManual = prepared.filter(change => verdict(change).manual).length;
         const openHistory = () => openOperationHistory('completion');
         if (!included.length) {
             showActionToast({message: workbenchText('没有可自动补全的内容', 'Nothing can be completed automatically')
@@ -170,7 +166,10 @@ async function runDirectCompletion(scope = null) {
         const applyOptions = {...options};
         if (included.every(change => currentMatchesWriteName(change))) applyOptions.write_names = false;
         const started = await desktopRequest('/api/playlist/apply', {
-            playlist_path: playlistPath, changes: included.map(change => ({...change})),
+            playlist_path: playlistPath, changes: included.map(change => {
+                // A source the gallery could not verify must not reach the downloader.
+                return {...change, thumbnail_source: verdict(change).artwork ? change.thumbnail_source : null};
+            }),
             thumbnails_dir: thumbnailsDir, options: applyOptions
         });
         workbench.jobId = started.job_id;
@@ -276,8 +275,15 @@ function finishBatchRun(outcome, analysis, applyResult, errorMessage = '') {
         if (manual) text += workbenchText(`，${manual} 个游戏需手动处理`, `, ${manual} games need manual work`);
         showActionToast({message: text, receiptId: applyResult.receipt_id || '', details: openHistory});
     } else {
-        showActionToast({message: workbenchText('没有需要自动补全的内容', 'Nothing needed auto-completion')
-            + (manual ? workbenchText(`，${manual} 个游戏需手动处理`, `, ${manual} games need manual work`) : '')});
+        const failedRows = (analysis?.rows || []).filter(row => row.error);
+        let message = workbenchText('没有需要自动补全的内容', 'Nothing needed auto-completion')
+            + (manual ? workbenchText(`，${manual} 个游戏需手动处理`, `, ${manual} games need manual work`) : '');
+        if (failedRows.length) {
+            const failures = failedRows.map(row => `${row.system}：${row.error}`).join('；');
+            message += workbenchText(`，${failedRows.length} 个列表分析失败：${failures}`,
+                `, ${failedRows.length} ${failedRows.length === 1 ? 'playlist' : 'playlists'} failed to analyze: ${failures}`);
+        }
+        showActionToast({message});
     }
     if (batchRunCreatedArtworkDir && filledArtwork && currentDeviceScan?.directories) {
         currentDeviceScan.directories.thumbnails_exists = true;

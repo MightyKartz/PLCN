@@ -157,6 +157,10 @@ def test_playlist_routes_preview_write_and_report_progress(service, tmp_path, mo
         preview.raise_for_status()
         changes = preview.json()['changes']
         assert changes[0]['new_label'] == '游戏'
+        # The direct-completion entries consume this verdict; it must exist
+        # even before the frontend decides anything.
+        assert set(changes[0]['completion']) == {'rename', 'artwork', 'manual'}
+        assert changes[0]['completion']['rename'] is True
         assert json.loads(playlist.read_text(encoding='utf-8')) == original
         payload = {'thumbnails_dir': str(tmp_path / 'images'), 'options': {'download_thumbnails': False}}
         if batch:

@@ -65,13 +65,22 @@ def preview(handler, context, payload):
         effective_playlist_path = mtp.materialize(playlist_path) if mtp.is_mtp(playlist_path) else materialize_adb_file(playlist_path) if is_adb_uri(playlist_path) else playlist_path
 
         import playlist_service as plcn
+        options = {key: bool((data.get('options') or {}).get(key, True))
+                   for key in ('write_names', 'download_thumbnails')}
         changes = plcn.analyze_playlist(
             effective_playlist_path,
             system_name,
             rom_name_cn_path,
             thumbnails_dir,
-            manual_overrides_path=manual_overrides_path, verify_artwork=(data.get('options') or {}).get('download_thumbnails', True), source_playlist_path=playlist_path,
+            manual_overrides_path=manual_overrides_path, verify_artwork=options['download_thumbnails'], source_playlist_path=playlist_path,
         )
+        # The direct-completion entries reuse the same per-game verdict as the
+        # whole-library review: executable rename, executable artwork download
+        # and remaining manual gaps.
+        from batch_review import classify_change
+        readers = {}
+        for change in changes:
+            change['completion'] = classify_change(change, options, thumbnails_dir, system_name, readers)
 
         handler.send_response(200)
         handler.send_header("Content-type", "application/json")
