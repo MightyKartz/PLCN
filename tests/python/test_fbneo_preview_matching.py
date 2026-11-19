@@ -44,6 +44,31 @@ def test_fbneo_preview_uses_rom_path_stem_before_wrong_playlist_label(tmp_path):
     assert changes[0]["match_source"] == "libretro-dat-rom"
 
 
+def test_fbneo_preview_finds_chinese_by_zip_short_name(tmp_path):
+    """MAME.csv indexes arcade sets by zip short name even when the DAT title differs."""
+    playlist_path = tmp_path / "FBNeo - Arcade Games.lpl"
+    playlist_path.write_text(
+        json.dumps(
+            {
+                "items": [
+                    {
+                        "path": "/storage/roms/fbneo/kov.zip",
+                        "label": "kov",
+                        "db_name": "FBNeo - Arcade Games.lpl",
+                    }
+                ],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    changes = analyze_playlist(str(playlist_path), "FBNeo - Arcade Games", "data/rom-name-cn")
+
+    assert changes[0]["new_label"] == "三国战纪"
+    assert changes[0]["translation_match_source"] == "exact_alias"
+
+
 def test_fbneo_preview_uses_retroarch_crc_field_before_wrong_names(tmp_path):
     playlist_path = tmp_path / "FBNeo - Arcade Games.lpl"
     playlist_path.write_text(

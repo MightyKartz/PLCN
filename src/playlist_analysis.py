@@ -256,6 +256,7 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
         normalized = translator.normalize_name(candidate)
         chinese, english = translator.db.search_by_normalized_alias(normalized, system=translator.system_name)
         if chinese and english:
+            translator.last_match_source = 'exact_alias'
             return chinese, english
 
         if translator.libretro_db:
@@ -524,6 +525,14 @@ def analyze_playlist(playlist_path, system_name, rom_name_cn_path, thumbnails_di
 
             if standard_english_name:
                 translated_cn, _ = translator.translate(standard_english_name)
+                if getattr(translator, 'last_match_source', '') in {'fuzzy_candidate', 'cross_system_candidate'} \
+                        or not has_chinese(translated_cn):
+                    # The DAT title may differ from the name database's canonical
+                    # English, but arcade CSVs index sets by zip short name too —
+                    # an exact zip-stem alias is more precise than a fuzzy title.
+                    short_cn, _short_en = translate_arcade_label_candidate(matched_candidate)
+                    if has_chinese(short_cn):
+                        translated_cn = short_cn
                 new_label = translated_cn if has_chinese(translated_cn) else standard_english_name
                 thumbnail_source = standard_english_name
                 print(f"  [{i}] Libretro DAT ROM match: '{matched_candidate}' -> '{standard_english_name}'")

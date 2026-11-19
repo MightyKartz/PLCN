@@ -43,7 +43,7 @@ class DatabaseManager:
         
         # Arcade
         "Arcade": ["FBNeo - Arcade Games", "MAME", "Arcade - CPS1", "Arcade - CPS2", "Arcade - CPS3", "Arcade - NEOGEO"],
-        "FBNeo - Arcade Games": ["FBNeo - Arcade Games", "Arcade - CPS1", "Arcade - CPS2", "Arcade - CPS3", "Arcade - NEOGEO"],
+        "FBNeo - Arcade Games": ["FBNeo - Arcade Games", "Arcade - CPS1", "Arcade - CPS2", "Arcade - CPS3", "Arcade - NEOGEO", "MAME"],
         "MAME": ["MAME", "Arcade - CPS1", "Arcade - CPS2", "Arcade - CPS3", "Arcade - NEOGEO"],
         "SNK - Neo Geo": ["Arcade - NEOGEO"]
     }
