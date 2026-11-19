@@ -85,7 +85,6 @@ function gameMatchesImageFilter(item, filter) {
 
 const ARTWORK_KIND_LABELS = {Named_Boxarts: ['封面', 'Box art'], Named_Snaps: ['游戏截图', 'Screenshot'], Named_Titles: ['标题图', 'Title screen']};
 const ARTWORK_KIND_STATES = {exists: ['已有', 'Present'], invalid: ['损坏', 'Damaged']};
-const ARTWORK_KIND_MARKERS = {exists: '✓', invalid: '!', missing: '○'};
 
 function artworkKindLabel(kind) {
     const [zh, en] = ARTWORK_KIND_LABELS[kind] || [kind, kind];
@@ -95,21 +94,6 @@ function artworkKindLabel(kind) {
 function artworkKindState(status) {
     const [zh, en] = ARTWORK_KIND_STATES[status] || ['缺少', 'Missing'];
     return workbenchText(zh, en);
-}
-
-/* Expand per-type states only when a row has some artwork or a damaged image. */
-function renderArtworkKindChips(cell, item) {
-    const chips = document.createElement('div');
-    chips.className = 'artwork-chips';
-    for (const kind of Object.keys(ARTWORK_KIND_LABELS)) {
-        const status = item.artwork_status[kind] || 'missing';
-        const chip = document.createElement('span');
-        chip.className = 'artwork-chip artwork-chip-' + status;
-        chip.textContent = ARTWORK_KIND_MARKERS[status] + ' ' + artworkKindLabel(kind);
-        chip.title = artworkKindLabel(kind) + ' · ' + artworkKindState(status);
-        chips.appendChild(chip);
-    }
-    cell.appendChild(chips);
 }
 
 function setGameLibraryFilter(filter) {
@@ -202,26 +186,29 @@ function renderGameLibrary() {
         const cover = document.createElement('td');
         const placeholder = document.createElement('span');
         placeholder.className = 'game-image-placeholder';
-        const imageStates = {exists: text('加载图片…', 'Loading image…'), missing: text('缺少图片', 'Missing image'), invalid: text('图片损坏', 'Damaged image'), unreadable: text('图片读取失败', 'Image read failed')};
-        const allMissing = item.artwork_status && Object.keys(ARTWORK_KIND_LABELS).every(kind => (item.artwork_status[kind] || 'missing') === 'missing');
-        if (hasImageDirectory && allMissing && item.image_status !== 'unreadable') row.className = 'artwork-empty-row';
-        placeholder.textContent = !hasImageDirectory ? '' : allMissing && item.image_status !== 'unreadable'
-            ? text('缺图', 'Missing') : imageStates[item.image_status] || text('缺少图片', 'Missing image');
-        placeholder.title = item.image_message || '';
+        const imageStates = {exists: text('加载封面…', 'Loading cover…'), missing: text('缺封面', 'Missing cover'), invalid: text('图片损坏', 'Damaged image'), unreadable: text('图片读取失败', 'Image read failed')};
+        placeholder.setAttribute('role', 'img');
+        placeholder.appendChild(wbIcon('photo'));
+        const setPlaceholderLabel = status => {
+            const label = imageStates[status] || imageStates.missing;
+            placeholder.title = label;
+            placeholder.setAttribute('aria-label', label);
+        };
+        setPlaceholderLabel(item.image_status);
         cover.appendChild(placeholder);
         if (item.image_url) {
             const image = document.createElement('img');
-            image.alt = item.label || item.rom_name;
+            image.alt = '';
+            placeholder.hidden = true;
             image.loading = 'lazy';
-            image.onload = () => { placeholder.hidden = true; };
             image.onerror = () => {
                 image.hidden = true; placeholder.hidden = false;
-                placeholder.textContent = text('图片读取失败', 'Image read failed');
+                setPlaceholderLabel('unreadable');
                 item.image_status = 'unreadable';
                 if (item.image_path) desktopRequest('/api/artwork/status', {path: item.image_path}).then(result => {
                     if (!placeholder.isConnected) return;
                     item.image_status = result.status;
-                    placeholder.textContent = imageStates[result.status] || text('图片读取失败', 'Image read failed');
+                    setPlaceholderLabel(result.status);
                     if (result.status !== 'exists') item.image_url = null;
                     renderGameLibraryFilters(gameLibrary.data?.items || []);
                     if (gameLibrary.filter !== 'all') renderGameLibrary();
@@ -230,52 +217,21 @@ function renderGameLibrary() {
             image.src = item.image_url;
             cover.appendChild(image);
         }
-        if (item.artwork_status && !allMissing && !['unconfigured', 'unreadable'].includes(item.image_status)) renderArtworkKindChips(cover, item);
-        row.appendChild(cover);
-        for (const value of [item.label || text('未命名', 'Unnamed'), item.rom_name || '—']) {
-            const cell = document.createElement('td');
-            cell.textContent = value;
-            cell.title = value === item.rom_name ? item.rom_path : value;
-            row.appendChild(cell);
-        }
-        const actions = document.createElement('td');
-        appendGameSelection(row.children[1], item);
-        appendGameManagementActions(actions, item);
-        if (!hasImageDirectory) { row.appendChild(actions); tbody.appendChild(row); continue; }
-        const button = document.createElement('button');
-        button.id = 'game-artwork-action-' + item.index;
-        button.type = 'button'; button.className = 'btn btn-small btn-muted';
-        const missing = missingArtworkKinds(item).map(kind => artworkKindLabel(kind));
-        button.textContent = item.image_url && !missing.length ? text('更换图片', 'Replace image') : text('补图', 'Add image');
-        if (missing.length) button.title = text('缺少：', 'Missing: ') + missing.join(text('、', ', '));
-        button.setAttribute('aria-label', button.textContent + (missing.length ? '（' + missing.join(text('、', ', ')) + '）' : '') + ' · ' + (item.label || item.rom_name));
-        button.disabled = Boolean(workbench.operation) || !item.label;
-        button.onclick = () => openArtworkDialog(item);
-        actions.appendChild(button);
-        if (!item.image_url) {
-            const importButton = document.createElement('button');
-            importButton.type = 'button'; importButton.className = 'btn btn-small btn-muted artwork-import-inline';
-            importButton.textContent = text('导入图片', 'Import image');
-            importButton.setAttribute('aria-label', importButton.textContent + ' · ' + item.label);
-            importButton.disabled = Boolean(workbench.operation) || !item.label;
-            importButton.onclick = () => openArtworkImport(item);
-            actions.appendChild(importButton);
-        }
-        if (item.artwork_result) {
-            const result = document.createElement('p'); result.className = 'artwork-row-result';
-            result.textContent = item.artwork_result; result.setAttribute('role', 'status');
-            if (item.artwork_backup) result.title = text('旧图备份：', 'Previous image backup: ') + item.artwork_backup;
-            actions.appendChild(result);
-        }
-        row.appendChild(actions);
+        const titleCell = document.createElement('td');
+        const titleButton = wbElement('button', 'game-name-button', item.label || item.rom_name || text('未命名', 'Unnamed'));
+        titleButton.type = 'button';
+        titleButton.dataset.gameDetails = item.index;
+        titleButton.onclick = () => inspectGame(item.index);
+        titleCell.appendChild(titleButton);
+        row.append(cover, titleCell);
         tbody.appendChild(row);
     }
     document.getElementById('game-library-table').hidden = !filtered.length || gameLibrary.view !== 'list';
     const more = document.getElementById('game-library-more');
     more.hidden = filtered.length <= gameLibrary.limit;
     more.textContent = text('显示更多游戏', 'Show more games');
-    ['图片', '游戏名称', 'ROM 文件名', ''].forEach((label, index) => {
-        document.getElementById('game-library-heading-' + index).textContent = text(label, ['Artwork', 'Game name', 'ROM filename', ''][index]);
+    ['封面', '游戏名称'].forEach((label, index) => {
+        document.getElementById('game-library-heading-' + index).textContent = text(label, ['Cover', 'Game name'][index]);
     });
     renderGameBrowser(filtered.slice(0, gameLibrary.limit));
     renderGameSelection(filtered.slice(0, gameLibrary.limit));

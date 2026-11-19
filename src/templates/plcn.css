@@ -1941,35 +1941,6 @@ body[data-theme="dark"] .desktop-welcome p {
     overflow-wrap: anywhere;
 }
 
-.game-library-table td:last-child .btn {
-    width: auto;
-    min-width: 0;
-    white-space: nowrap;
-}
-
-.game-library-table tbody td:last-child .btn {
-    opacity: 0;
-    transition: opacity .12s ease;
-}
-
-.game-library-table tbody tr:hover td:last-child .btn,
-.game-library-table tbody tr:focus-within td:last-child .btn {
-    opacity: 1;
-}
-
-@media (hover: none), (pointer: coarse) {
-
-    .game-library-table tbody td:last-child .btn {
-        opacity: 1;
-    }
-}
-
-.artwork-row-result {
-    font-size: 12px;
-    color: var(--muted);
-    margin: 8px 0 0;
-}
-
 .game-library-table td:first-child {
     padding: 6px 8px;
     text-align: center;
@@ -1979,44 +1950,39 @@ body[data-theme="dark"] .desktop-welcome p {
     background: var(--primary-soft);
 }
 
-.game-library-table img {
-    object-fit: contain;
+.game-library-table th:first-child {
+    width: 76px;
+}
+
+.game-library-table img,
+.game-image-placeholder {
+    width: 52px;
+    height: 52px;
     vertical-align: middle;
 }
 
-.game-image-placeholder {
+.game-library-table img {
+    object-fit: contain;
+}
+
+.game-image-placeholder:not([hidden]) {
+    display: inline-grid;
+    place-items: center;
+    border-radius: 6px;
+    background: var(--surface-subtle);
     color: var(--muted);
-    font-size: 11px;
 }
 
-.artwork-chips {
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 2px;
-    justify-content: center;
-    margin-top: 4px;
+.game-image-placeholder svg {
+    width: 18px;
+    height: 18px;
 }
 
-.artwork-chip {
-    padding: 0 4px;
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    color: var(--quiet);
-    font-size: 10px;
-    line-height: 1.6;
-    white-space: nowrap;
-}
-
-.artwork-chip-exists {
-    border-color: var(--green);
-    background: var(--green-soft);
-    color: var(--green);
-}
-
-.artwork-chip-invalid {
-    border-color: var(--amber);
-    background: var(--amber-soft);
-    color: var(--amber);
+.game-library-table .game-name-button {
+    width: 100%;
+    padding: 10px 0;
+    overflow-wrap: anywhere;
+    font-weight: 600;
 }
 
 #game-library-more {
@@ -2151,10 +2117,6 @@ body[data-theme="dark"] .desktop-welcome p {
 .artwork-result-card a {
     font-size: 12px;
     text-decoration: underline;
-}
-
-.artwork-import-inline {
-    margin-top: 6px;
 }
 
 #artwork-secondary {
@@ -2298,10 +2260,6 @@ body[data-theme="dark"] .desktop-welcome p {
     .artwork-source-controls input {
         flex-basis: 100%;
     }
-
-    .game-library-table th:last-child {
-        width: 90px;
-    }
 }
 
 .preview-table tr:focus-visible {
@@ -2326,10 +2284,6 @@ body[data-theme="dark"] .desktop-welcome p {
     .game-library-scroll {
         max-height: 65vh;
         padding: 0 12px 12px;
-    }
-
-    .game-library-table th:first-child {
-        width: 82px;
     }
 
     .game-library-table :is(th, td) {
@@ -2552,33 +2506,6 @@ body[data-theme="dark"] .desktop-welcome p {
     font-weight: 500;
 }
 
-.game-library-table th:first-child {
-    width: 188px;
-}
-
-.game-library-table th:last-child {
-    width: 160px;
-}
-
-.game-library-table td:first-child {
-    height: 70px;
-}
-
-.game-library-table img {
-    width: 52px;
-    height: 52px;
-}
-
-.game-library-table td:last-child .btn {
-    font-size: 12px;
-    padding: 7px 10px;
-}
-
-.game-library-table td:nth-child(3) {
-    color: var(--muted);
-    font-size: 12px;
-}
-
 #artwork-dialog header {
     position: sticky;
     top: -24px;
@@ -2619,10 +2546,6 @@ body[data-theme="dark"] .desktop-welcome p {
 
     .workbench-content .panel-header {
         padding: 12px;
-    }
-
-    .game-library-table {
-        min-width: 600px;
     }
 
     .game-library-scroll {
@@ -2896,8 +2819,6 @@ body[data-ui-screenshot] *:focus {
 .task-log, .task-receipts { max-height: 260px; overflow: auto; padding-left: 24px; font-size: 12px; color: var(--muted); }
 .task-log li, .task-receipts li, .task-errors li { margin: 6px 0; overflow-wrap: anywhere; }
 .task-errors { color: var(--red); padding-left: 24px; font-size: 13px; }
-
-.game-library-table tr.artwork-empty-row td:first-child { height: 48px; }
 
 #desktop-dialog > header { position: sticky; top: -24px; z-index: 3; padding: 12px 0; background: inherit; }
 #artwork-comparison { scroll-margin-top: 72px; }

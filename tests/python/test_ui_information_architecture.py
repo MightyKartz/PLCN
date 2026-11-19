@@ -214,7 +214,7 @@ def test_legacy_overlays_removed_and_recovery_is_contextual():
     assert 'renderTaskDetails' in html
     assert 'task-result-table' in html
     assert 'id="completion-history-link"' not in html
-    assert 'id="playlist-history-link"' in html
+    assert 'id="playlist-history-link"' not in html
     assert 'id="task-center-button"' not in html
     assert 'data-desktop-view="tasks"' not in html
     assert 'id="artwork-preview"' not in html

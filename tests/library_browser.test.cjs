@@ -18,7 +18,7 @@ function harness() {
         fetch: (url, options) => new Promise(resolve => pending.push({url, options, resolve})),
         renderWorkbench: () => context.syncGameLibrary({previewValid: false}, false)};
     vm.createContext(context);
-    vm.runInContext(source + '\nthis.store = gameLibrary; this.markers = ARTWORK_KIND_MARKERS; renderGameLibrary = () => {};', context);
+    vm.runInContext(source + '\nthis.store = gameLibrary; renderGameLibrary = () => {};', context);
     context.select = path => {
         element('playlist_path').value = path;
         element('system_name').value = 'GBA';
@@ -103,7 +103,7 @@ test('image filters distinguish missing files from damage and read errors', () =
     }
 });
 
-test('rows offer to fill every artwork type that is not already present', () => {
+test('missing artwork includes every type that is not already present', () => {
     const {context}=harness();
     assert.deepEqual([...context.missingArtworkKinds({})], []);
     assert.deepEqual([...context.missingArtworkKinds({artwork_status: {Named_Boxarts: 'exists', Named_Snaps: 'exists', Named_Titles: 'exists'}})], []);
@@ -126,7 +126,7 @@ test('a row counts as missing until all three artwork types are present', () => 
     }
 });
 
-test('artwork chips and row buttons share one vocabulary per image type', () => {
+test('artwork details use consistent labels and statuses', () => {
     const {context}=harness();
     assert.equal(context.artworkKindLabel('Named_Boxarts'), '封面');
     assert.equal(context.artworkKindLabel('Named_Snaps'), '游戏截图');
@@ -134,9 +134,6 @@ test('artwork chips and row buttons share one vocabulary per image type', () => 
     assert.equal(context.artworkKindState('exists'), '已有');
     assert.equal(context.artworkKindState('invalid'), '损坏');
     assert.equal(context.artworkKindState('missing'), '缺少');
-    assert.equal(context.markers.exists, '✓');
-    assert.equal(context.markers.invalid, '!');
-    assert.equal(context.markers.missing, '○');
 });
 
 test('a damaged secondary image counts as a problem even when box art loads', () => {

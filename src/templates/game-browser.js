@@ -164,7 +164,6 @@ function renderGameInspector() {
     const candidates = details?.english_candidates || [];
     const english = details?.english_title || (candidates.length ? workbenchText('待确认', 'Unconfirmed') : unknown);
     const platform = details?.system || gameLibraryInput()[1];
-    const platformName = wbSystemName(platform);
     inspectorPair(meta, '文件名称', 'Filename', details?.filename || item.rom_name || '—');
     inspectorPair(meta, '英文名称', 'English title', english);
     const catalogVersion = details?.english_name && details.english_name !== english ? details.english_name : '';
@@ -184,7 +183,7 @@ function renderGameInspector() {
         meta.lastElementChild.lastElementChild.append(disclosure);
     }
     inspectorPair(meta, '中文名称', 'Chinese title', details?.chinese_name || unknown);
-    inspectorPair(meta, '主机平台', 'Platform', platformName && !platform.includes(platformName) ? platform + ' · ' + platformName : platform);
+    inspectorPair(meta, '主机平台', 'Platform', wbSystemName(platform));
     inspectorPair(meta, '当前核心', 'Current core', core);
     inspectorPair(meta, '建议核心', 'Suggested core', details?.recommended_core || (details ? workbenchText('暂无建议', 'No recommendation') : '…'));
     inspectorPair(meta, '格式', 'Format', details?.format?.toUpperCase() || '—');
