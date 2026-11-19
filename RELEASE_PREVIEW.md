@@ -1,12 +1,13 @@
-# RetroArch 助手：更名后桌面预览 / Desktop preview
+# RetroArch 助手 beta2：桌面预览 / Desktop preview
 
 ## 中文更新
 
-- 更名为 RetroArch 助手，使用 `retroarch-assistant` 命令、`RETROARCH_ASSISTANT_HOME` 和 `RetroArchAssistant` 数据目录。
-- 提供按主机浏览、搜索、封面网格与列表、游戏详情、导入预览、增量扫描、批量移出列表和名称编辑。
-- 补全名称与封面会分析后直接处理可自动应用的项；身份存疑的游戏留待人工核对。补全记录支持撤销，补全后被其它操作改动的内容会保留。
-- 桌面包默认在独立窗口打开，首页显示掌机名称。设置仅保留语言、外观和退出入口；macOS MTP 改善锁屏后的会话恢复。
-- 补全记录和各工具的操作记录提供失败明细、重试及恢复入口。高级工具包括多盘引用检查、M3U、CHD 副本、目录整理与恢复。
+- 修复「一键补全」：中文名库里有译名的游戏，即使图库找不到图片也会正常改名；不再因图片缺失整块跳过。
+- 修复中文名库路径失效：设置里指向已删除目录时自动改用应用内置数据，不再静默使用旧缓存。
+- 补全统计与横幅一致：无法翻译的英文名称也计入「需手动处理」；「缺少封面」只统计真正缺封面的游戏。
+- FBNeo/MAME 街机按 ROM 短名查找中文名：三国战纪、西游释厄传、怒首领蜂、彩京等系列共 32 个版本新增官方/惯用译名；同一游戏多版本（如 `kov` 与 `kov114`）各自独立匹配。
+- 列表视图与封面视图选择统一：列表行新增勾选框与表头全选，两个视图共享选择状态；封面卡片移除冗余菜单，单个「移出列表」移入详情页；Esc 清空选择。
+- 前端请求统一走 `desktopRequest`（自动续期与错误提示），图标统一使用 sprite 引用。
 
 升级前退出应用，并在首次启动新版前完成[一次性数据迁移](https://github.com/MightyKartz/retroarch-assistant/blob/main/DOC/MIGRATION.md)。保留配置、人工规则、备份、恢复记录和缓存；迁移不移动设备 ROM，已有新目录不会被自动合并覆盖。
 
@@ -16,11 +17,12 @@
 
 ## English updates
 
-- Rename the application, CLI and profile directories to RetroArch Assistant / `retroarch-assistant` / `RetroArchAssistant`.
-- Browse and search systems, import games with a preview, scan incrementally, remove playlist entries in batches and edit display names.
-- Complete names and artwork directly after analysis. Uncertain identities remain for manual review. Durable undo receipts preserve content changed by other operations after completion.
-- Desktop packages open in their own window and show the handheld name. Settings contain language, appearance and exit controls; macOS MTP improves session recovery after locking.
-- Find errors, retries and recovery in completion history and each tool's operation history. Advanced tools cover disc references, M3U, CHD copies and ROM organization.
+- Fix one-click completion: games with a known translation are renamed even when the artwork gallery has no images; a missing gallery no longer skips the whole entry.
+- Fix the Chinese name source: a configured path that no longer exists now falls back to the bundled data instead of silently reusing a stale cache.
+- Align completion counts with the banner: untranslatable English names count as manual work, and "missing cover" only counts games without box art.
+- Match FBNeo/MAME arcade Chinese names by ROM short name: 32 approved names cover the Knights of Valour, Oriental Legend, DoDonPachi and CAVE sets, and same-game variants (`kov` vs `kov114`) resolve independently.
+- Unify selection across cover and list views: rows gain checkboxes and a select-all header, both views share the selection, single removal moves to the details page, and Escape clears the selection.
+- Route frontend requests through `desktopRequest` and reference icons from the shared sprite.
 
 Quit both versions and [migrate the existing profile](https://github.com/MightyKartz/retroarch-assistant/blob/main/DOC/MIGRATION.md) before first launching this preview. Migration keeps settings, manual rules, backups, recovery records and caches; it does not move device ROMs or merge existing destinations.
 
