@@ -1,8 +1,6 @@
-"""The single place the released version is written.
-
-Packaging may still override it with the RETROARCH_ASSISTANT_VERSION environment variable, so
-CI can build a version without editing the tree.
-"""
+"""Application release label and the numeric macOS bundle version."""
 import os
+import re
 
-VERSION = os.environ.get('RETROARCH_ASSISTANT_VERSION') or '3.3.1'
+VERSION = os.environ.get('RETROARCH_ASSISTANT_VERSION') or 'beta1'
+MACOS_BUNDLE_VERSION = VERSION if re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', VERSION) else '4.0.0'

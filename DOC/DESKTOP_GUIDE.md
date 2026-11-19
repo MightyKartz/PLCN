@@ -2,7 +2,7 @@
 
 本次开发分支已更名为 RetroArch 助手，以下安装包名称对应更名后的构建；历史 Release 仍使用 PLCN 前缀，尚未发布新的更名安装包。
 
-本轮是 v3.3 桌面体验版；当前发行版为 v3.3.1，历史发行版从 v3.2.5 起提供内置 ADB 的 Windows / macOS 安装包。桌面基础 PR：[MightyKartz/retroarch-assistant#5](https://github.com/MightyKartz/retroarch-assistant/pull/5)，UI 精简 PR：[MightyKartz/retroarch-assistant#6](https://github.com/MightyKartz/retroarch-assistant/pull/6)。
+更名后的首个桌面测试版为 beta1。上一发行版为 v3.3.1，历史发行版从 v3.2.5 起提供内置 ADB 的 Windows / macOS 安装包。桌面基础 PR：[MightyKartz/retroarch-assistant#5](https://github.com/MightyKartz/retroarch-assistant/pull/5)，UI 精简 PR：[MightyKartz/retroarch-assistant#6](https://github.com/MightyKartz/retroarch-assistant/pull/6)。
 
 ## 普通用户
 

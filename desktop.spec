@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, 'src')
-from app_version import VERSION as _APP_VERSION
+from app_version import MACOS_BUNDLE_VERSION
 from app_brand import NAME, BINARY_NAME, BUNDLE_NAME
 
 adb_root = Path("build/platform-tools")
@@ -53,8 +53,8 @@ if sys.platform == 'darwin':
         icon='packaging/icons/app-icon.icns',
         info_plist={
             'CFBundleName': NAME, 'CFBundleDisplayName': NAME,
-            'CFBundleShortVersionString': _APP_VERSION,
-            'CFBundleVersion': _APP_VERSION,
+            'CFBundleShortVersionString': MACOS_BUNDLE_VERSION,
+            'CFBundleVersion': MACOS_BUNDLE_VERSION,
             'NSHighResolutionCapable': True,
         },
     )

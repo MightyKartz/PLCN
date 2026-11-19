@@ -115,6 +115,7 @@ window.addEventListener('focus', () => {
 });
 async function openLibrarySource(source) {
     if (workbench.operation || libraryHome.loading) return;
+    closeGameFiles();
     libraryHome.device = source.storages ? source : null;
     libraryHome.opening = source.path; libraryHome.openError = '';
     document.getElementById('retroarch_root').value = source.path;
@@ -123,6 +124,7 @@ async function openLibrarySource(source) {
 }
 function enterLibraryPath(path) {
     if (workbench.operation) return;
+    closeGameFiles();
     if (path) document.getElementById('retroarch_root').value = path;
     openPathSettings();
     document.getElementById('retroarch_root').focus();
@@ -137,8 +139,8 @@ async function rememberOpenedLibrary(scan) {
 }
 function showLibraryHome() {
     if (workbench.operation) return;
+    closeGameFiles();
     overviewReturn = null;
-    filterLibrarySystems('');
     libraryHome.device = null;
     currentDeviceScan = null;
     renderDeviceScan(null);

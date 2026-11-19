@@ -343,3 +343,28 @@ def test_manual_mapping_rejects_different_relative_directory(tmp_path, monkeypat
              'android_directory':'/storage/CARD/Other/GBA','system':SYSTEM,'sources':[str(source)]}
     with pytest.raises(ValueError,match='相对路径'):games.save_import_mapping(payload)
     assert not games.scan.profiles_path().exists()
+
+
+def test_game_detail_sizes_only_selected_discs_and_reports_missing_dependencies(library):
+    root, source, target, playlist, old, config = library
+    track = source / 'track.bin'
+    track.write_bytes(b'disc data')
+    cue = source / 'Disc.cue'
+    cue.write_text('FILE "track.bin" BINARY\n')
+    m3u = source / 'Game.m3u'
+    m3u.write_text('Disc.cue\n')
+    other = source / 'Unrelated.cue'
+    other.write_text('FILE "unrelated.bin" BINARY\n')
+    playlist.write_text(json.dumps({**old, 'items': [
+        {'path': str(m3u), 'label': '光盘游戏'}, {'path': str(other), 'label': 'Other'}
+    ]}))
+    payload = {'playlist': str(playlist), 'index': 0, 'expected': mtp.digest(playlist.read_bytes())}
+    details = games.details(payload)
+    assert details['filename'] == 'Game.m3u'
+    assert details['chinese_name'] == '光盘游戏'
+    assert {file['path'] for file in details['files']} == {str(cue), str(track)}
+    assert details['total_size'] == sum(file.stat().st_size for file in (m3u, cue, track))
+    track.unlink()
+    details = games.details(payload)
+    assert details['total_size'] is None
+    assert any(file['status'] == 'missing' for file in details['files'])

@@ -225,8 +225,9 @@ def _read_playlist_summary(path):
     }
 
     try:
-        with path.open("r", encoding="utf-8") as handle:
-            data = json.load(handle)
+        content = path.read_bytes()
+        base["revision"] = hashlib.sha256(content).hexdigest()
+        data = json.loads(content.decode("utf-8"))
         items = data.get("items", [])
         if not isinstance(items, list):
             raise ValueError("Playlist items must be a list")
@@ -256,6 +257,15 @@ def _read_playlist_summary(path):
         base["error"] = str(exc)
 
     return base
+
+
+def read_playlist_summary(path):
+    if path.startswith('mtp://'):
+        from mtp_runtime import read_playlist_summary as read_mtp_summary
+        return read_mtp_summary(path)
+    if is_adb_uri(path):
+        return _read_adb_playlist_summary(*parse_adb_uri(path))
+    return _read_playlist_summary(Path(path))
 
 
 def _list_playlists(playlists_dir):
@@ -364,6 +374,7 @@ def _read_adb_playlist_summary(serial, remote_path, adb_runner=None):
 
     try:
         content = _adb_cat(serial, remote_path, adb_runner=adb_runner)
+        base["revision"] = hashlib.sha256(content.encode("utf-8")).hexdigest()
         data = json.loads(content)
         items = data.get("items", [])
         if not isinstance(items, list):

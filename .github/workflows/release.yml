@@ -2,7 +2,7 @@ name: Prepare desktop release draft
 
 on:
   push:
-    tags: ['v*']
+    tags: ['v*', 'beta[0-9]*']
   workflow_dispatch:
 
 permissions:

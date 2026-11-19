@@ -15,16 +15,16 @@ def auto_preview(handler, context, payload):
 
 
 def auto_apply(handler, context, payload):
-    ident, systems = payload.get('preview_job_id'), payload.get('systems')
+    ident, targets = payload.get('preview_job_id'), payload.get('targets')
     job = context.job_manager.get_job(ident)
-    if not job or job['status'] != 'completed' or not isinstance(systems, list) or not systems or any(not isinstance(s, str) for s in systems):
-        raise ValueError('请先完成扫描并选择要导入的主机')
+    if not job or job['status'] != 'completed' or not isinstance(targets, list) or not targets or any(not isinstance(target, str) for target in targets):
+        raise ValueError('请先完成扫描并选择要更新的列表')
     with context.job_manager.lock:
         result = context.job_manager.contexts.get(ident, {}).get('automatic_plan')
-        if not result or any(s not in result['plans'] for s in systems) or len(set(systems)) != len(systems):
+        if not result or any(target not in result['plans'] for target in targets) or len(set(targets)) != len(targets):
             raise ValueError('扫描结果无效，请重新分析')
         context.job_manager.contexts[ident].pop('automatic_plan')
-    reply(handler, {'job_id': background(context.job_manager, '导入新增游戏', lambda jid: automatic_scan.apply(result, systems,
+    reply(handler, {'job_id': background(context.job_manager, '导入新增游戏', lambda jid: automatic_scan.apply(result, targets,
         lambda a, b, text: context.job_manager.update_job(jid, a, b, text), lambda: context.job_manager.cancelled(jid)))})
 
 

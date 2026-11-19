@@ -70,6 +70,29 @@ async function scanDevice(useDefault = false) {
     }
 }
 
+async function refreshLibraryPlaylists(paths) {
+    const scan = currentDeviceScan;
+    if (!paths.length) return;
+    if (!scan?.connected) {
+        await scanDevice();
+        return;
+    }
+    const changed = await Promise.all(paths.map(async path => {
+        const query = new URLSearchParams({path});
+        return desktopRequest('/api/library/playlist-summary?' + query);
+    }));
+    if (currentDeviceScan !== scan) return;
+    const playlists = new Map(scan.playlists.map(playlist => [playlist.path, playlist]));
+    for (const {summary} of changed) playlists.set(summary.path, summary);
+    scan.directories.playlists ||= changed[0].directory;
+    scan.playlists = [...playlists.values()];
+    scan.totals = {playlists:scan.playlists.length,
+        items:scan.playlists.reduce((count, playlist) => count + playlist.item_count, 0)};
+    scan.status = 'ready';
+    renderDeviceScan(scan);
+    renderWorkbench();
+}
+
 function getPlaylistSystemName(playlist) {
     return playlist?.system || playlist?.db_name || playlist?.name || uiText('未命名主机');
 }
@@ -173,7 +196,6 @@ function renderDeviceScan(scan) {
     const preferredSystem = findPreferredLibrarySystem(groups);
     selectedLibrarySystem = groups.has(selectedLibrarySystem) ? selectedLibrarySystem : preferredSystem;
     renderLibrarySystemTabs(list, groups);
-    filterLibrarySystems();
 }
 
 function findPreferredLibrarySystem(groups) {
@@ -202,8 +224,7 @@ function selectAllLibrarySystems() {
     panel.scrollTop = saved?.scrollTop ?? 0;
     const card = [...document.querySelectorAll('#library-overview .overview-system-card')]
         .find(button => !button.hidden && button.dataset.system === saved?.system);
-    const search = document.getElementById('overview-system-search');
-    (card || (search.getClientRects().length ? search : document.getElementById('library-all-systems')))
+    (card || document.getElementById('library-all-systems'))
         ?.focus({preventScroll: true});
 }
 
@@ -250,7 +271,6 @@ function renderLibrarySystemTabs(container, groups) {
         tabButton.className = `playlist-system-tab${groupName === selectedLibrarySystem ? ' active' : ''}`;
         const group = document.createElement('div');
         group.className = 'library-system-group';
-        group.dataset.search = `${groupName} ${wbSystemName(groupName)} ${getSystemAbbreviation(groupName)}`.toLowerCase();
         const icon = wbIcon(wbSystemIcon(groupName));
         const name = document.createElement('span'); name.className = 'system-display-name';
         name.textContent = getSystemAbbreviation(groupName);
@@ -267,31 +287,6 @@ function renderLibrarySystemTabs(container, groups) {
     });
 
     container.appendChild(tabs);
-}
-
-function filterLibrarySystems(value = document.getElementById('library-system-search').value) {
-    const search = document.getElementById('library-system-search');
-    const overviewSearch = document.getElementById('overview-system-search');
-    for (const input of [search, overviewSearch]) {
-        if (input.value !== value) input.value = value;
-        input.placeholder = workbenchText('搜索主机', 'Search systems');
-        input.setAttribute('aria-label', input.placeholder);
-    }
-    const query = value.trim().toLowerCase();
-    let count = 0;
-    document.querySelectorAll('.library-system-group').forEach(group => {
-        group.hidden = !group.dataset.search.includes(query);
-        if (!group.hidden) count++;
-    });
-    const empty = document.getElementById('library-system-empty');
-    empty.hidden = count > 0 || !query;
-    empty.textContent = currentUILanguage === 'en' ? 'No matching systems' : '没有匹配的主机';
-    const overviewEmpty = document.getElementById('overview-system-empty');
-    if (overviewEmpty) {
-        const cards = [...document.querySelectorAll('#library-overview .overview-system-card')];
-        for (const card of cards) card.hidden = !card.dataset.search.includes(query);
-        overviewEmpty.hidden = !query || cards.some(card => !card.hidden);
-    }
 }
 
 function renderSelectedLibraryList(container, groups) {

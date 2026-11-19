@@ -324,6 +324,28 @@ def materialize(value, cache_dir=None):
     return str(target)
 
 
+def read_playlist_summary(path):
+    from system_resources import is_system_resource
+
+    name = parse(path)[2][-1]
+    base = {'name': name, 'path': path, 'system': name[:-4], 'valid': False,
+            'item_count': 0, 'transport': 'mtp'}
+    try:
+        content = read(path)
+        if content is None:
+            raise ValueError('设备列表不存在')
+        base['revision'] = digest(content)
+        data = json.loads(content.decode('utf-8-sig'))
+        if not isinstance(data, dict) or not isinstance(data.get('items'), list) or not all(isinstance(item, dict) for item in data['items']):
+            raise ValueError('游戏列表 items 必须为对象数组')
+        items = data['items']
+        system = next((str(item['db_name']).removesuffix('.lpl') for item in items if item.get('db_name')), base['system'])
+        base.update(system=system, valid=True, item_count=sum(not is_system_resource(item, system) for item in items))
+    except ValueError as error:
+        base['error'] = str(error)
+    return base
+
+
 def scan(value):
     entries = listing(value)
     names = {entry['name'].lower(): entry['name'] for entry in entries if entry['folder']}
@@ -335,18 +357,7 @@ def scan(value):
     playlists = []
     for entry in listing(playlist_dir):
         if not entry['folder'] and entry['name'].lower().endswith('.lpl'):
-            path = join(playlist_dir, entry['name'])
-            try:
-                data = json.loads(read(path).decode('utf-8-sig'))
-                if not isinstance(data, dict) or not isinstance(data.get('items'), list) or not all(isinstance(item, dict) for item in data['items']):
-                    raise ValueError('游戏列表 items 必须为对象数组')
-                items = data['items']
-                system = next((str(item['db_name']).removesuffix('.lpl') for item in items if item.get('db_name')), entry['name'][:-4])
-                from system_resources import is_system_resource
-                items = [item for item in items if not is_system_resource(item, system)]
-                playlists.append({'name': entry['name'], 'path': path, 'system': system, 'valid': True, 'item_count': len(items), 'transport': 'mtp'})
-            except (ValueError, UnicodeError) as error:
-                playlists.append({'name': entry['name'], 'path': path, 'system': entry['name'][:-4], 'valid': False, 'item_count': 0, 'error': str(error), 'transport': 'mtp'})
+            playlists.append(read_playlist_summary(join(playlist_dir, entry['name'])))
     return {'connected': True, 'root_path': value, 'target_path': value, 'transport': 'mtp',
             'status': 'ready' if playlists else 'no_playlists', 'message': '已通过文件传输读取掌机游戏库',
             'device': {'serial': parse(value)[0], 'model': next((device['device_name'] for device in _device_list
@@ -466,3 +477,29 @@ def remove_file(value,expected,cancelled=lambda: None):
         if not entry or entry['folder']: raise ValueError('MTP 移除目标不是文件')
         if library().LIBMTP_Delete_Object(handle,entry['id']): raise RuntimeError('MTP 移除失败')
         if resolve(handle,storage,parts) is not None: raise RuntimeError('MTP 移除核对失败')
+
+
+def change_game_file(value, name):
+    """Rename or delete one regular object selected in Game Files."""
+    with session(value) as (handle, storage, parts):
+        entry = resolve(handle, storage, parts)
+        if entry is None or entry['folder']:
+            raise ValueError('游戏文件已移动或不存在')
+        lib = library()
+        if name is None:
+            if lib.LIBMTP_Delete_Object(handle, entry['id']) or resolve(handle, storage, parts) is not None:
+                raise RuntimeError('MTP 删除未通过核对')
+        elif name != parts[-1]:
+            target = parts[:-1] + [name]
+            if resolve(handle, storage, target) is not None:
+                raise ValueError('已有同名文件')
+            metadata = lib.LIBMTP_new_file_t()
+            metadata.contents.id = entry['id']
+            try:
+                if lib.LIBMTP_Set_File_Name(handle, metadata, name.encode()):
+                    raise RuntimeError('MTP 重命名失败')
+            finally:
+                lib.LIBMTP_destroy_file_t(metadata)
+            updated = resolve(handle, storage, target)
+            if not updated or updated['id'] != entry['id']:
+                raise RuntimeError('MTP 重命名未通过核对')

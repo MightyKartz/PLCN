@@ -121,23 +121,27 @@ function gmWorkspace(mode) {
     footer.append(status, retry, reconnect, cancel, apply); section.append(header, body, footer); workspace.append(section);
     title.tabIndex = -1; title.focus(); return form;
 }
-function closeGameManagement() {
+function closeGameManagement({returnToLibrary = false} = {}) {
     if (gameManagement.busy) return;
     ++gameManagement.generation; gameManagement.open = false;
     const workspace = document.getElementById('game-management-workspace'); workspace.hidden = true;
-    workspace.parentElement.classList.remove('managing-games'); document.getElementById('manual-add-button').focus();
+    workspace.parentElement.classList.remove('managing-games');
+    if (returnToLibrary) closeGameFiles();
+    else if (typeof gameFilesView !== 'undefined') gameFilesView?.refresh();
+    (document.getElementById('game-files-workspace')?.hidden === false
+        ? document.getElementById('game-files-import') : document.getElementById('game-files-button'))?.focus();
 }
 function gmInput(form, id, zh, en, value = '') {
     const label = wbElement('label', 'gm-field', workbenchText(zh, en));
     const input = wbElement('input', ''); input.id = 'gm-' + id; input.type = 'text'; input.value = value;
     input.oninput = () => {input.removeAttribute('aria-invalid'); gmInvalidate(); if (id === 'destination') {gmField('android').value = ''; gmRenderDestinationSummary();} gmScheduleAnalyze();}; label.append(input); form.append(label); return input;
 }
-async function openGameImport() {
+async function openGameImport(destination = '') {
     if (workbench.operation) return;
     const root = document.getElementById('retroarch_root').value;
-    if (!root) { showStatus(workbenchText('请先打开 RetroArch 游戏库。', 'Open a RetroArch library first.'), 'error'); return; }
+    if (!root || root.startsWith('adb://')) { showStatus(workbenchText('请先打开 RetroArch 游戏库。', 'Open a RetroArch library first.'), 'error'); return; }
     const generation = ++gameManagement.generation;
-    Object.assign(gameManagement, {mode:'import', root, sources:[], setup:null, preview:null});
+    Object.assign(gameManagement, {mode:'import', root, sources:[], setup:null, preview:null, destinationHint:typeof destination === 'string' ? destination : ''});
     const form = gmWorkspace('import');
     form.disabled = true;
     gmField('status').textContent = workbenchText('正在读取目标游戏库…', 'Loading the destination library…');
@@ -181,12 +185,14 @@ async function openGameImport() {
 }
 function gmChangeSystem() {
     const system = gmField('system').value;
-    const profile = [...gameManagement.setup.profiles].reverse().find(profile => profile.system === system);
+    const destination = gameManagement.destinationHint;
+    const profile = [...gameManagement.setup.profiles].reverse().find(profile => profile.system === system && (!destination || profile.directory === destination));
     const playlist = currentDeviceScan?.playlists?.find(playlist => playlist.valid && playlist.system === system);
-    gmField('destination').value = profile?.directory || (gameManagement.setup.android ? '' : gameManagement.root.replace(/\/$/, '') + '/roms/' + getSystemAbbreviation(system));
+    gmField('destination').value = destination || profile?.directory || (gameManagement.setup.android ? '' : gameManagement.root.replace(/\/$/, '') + '/roms/' + getSystemAbbreviation(system));
     gmField('android').value = profile?.android_directory || '';
     const filename = playlist?.path?.replaceAll('\\', '/').split('/').pop();
     gmField('playlist').value = playlist?.path?.startsWith('mtp://') ? decodeURIComponent(filename) : filename || system + '.lpl';
+    if (profile?.playlist_name) gmField('playlist').value = profile.playlist_name;
     gmInvalidate(); gmRenderDestinationSummary(); gmAutoAnalyze();
 }
 async function gmPickSource(kind) {
@@ -355,17 +361,18 @@ async function applyGameManagement() {
             gmStatus(workbenchText(`完成：新增 ${result.added} 个条目，移出 ${result.removed} 个条目。备份可在列表修改记录中查看。`, `Done: ${result.added} entries added, ${result.removed} removed. The backup is available in Playlist history.`));
             results.replaceChildren(wbElement('p', 'gm-path', result.backup_directory));
         }
-        resetGameLibrary(); await scanDevice();
-        const selected = currentDeviceScan?.playlists.findIndex(playlist => playlist.path === (gameManagement.mode === 'import' ? result.playlist_path : previousPlaylist));
+        const playlistPath = gameManagement.mode === 'import' ? result.playlist_path : previousPlaylist;
+        resetGameLibrary();
+        await refreshLibraryPlaylists([playlistPath]);
+        const selected = currentDeviceScan?.playlists.findIndex(playlist => playlist.path === playlistPath);
         if (selected >= 0) await selectScannedPlaylist(selected);
-        refreshWorkbenchOverview();
         const footer = gmField('dialog').querySelector('footer');
         if (gameManagement.mode === 'import') {
-            const more = gmButton('继续添加', 'Add more', openGameImport); more.id = 'gm-add-more';
-            const complete = gmButton('补全名称与封面', 'Complete names and artwork', () => {closeGameManagement(); startCompletion();}); complete.id = 'gm-complete-metadata';
+            const more = gmButton('继续添加', 'Add more', () => openGameImport(gameManagement.destinationHint)); more.id = 'gm-add-more';
+            const complete = gmButton('补全名称与封面', 'Complete names and artwork', () => {closeGameManagement({returnToLibrary:true}); startCompletion();}); complete.id = 'gm-complete-metadata';
             footer.append(more, complete);
         }
-        const done = gmButton('查看游戏', 'View games', closeGameManagement, false); done.id = 'gm-view-games'; footer.append(done);
+        const done = gmButton('查看游戏', 'View games', () => closeGameManagement({returnToLibrary:true}), false); done.id = 'gm-view-games'; footer.append(done);
     } catch (error) {
         gmStatus(gmError(error) + workbenchText('；已复制文件会保留。请点击“重新分析”核对后继续；无法取得结果时先查看任务，避免重复写入。', '; copied files are kept. Use Analyze again to continue; if the result is unknown, check Tasks before writing again.'), true);
     }
