@@ -24,10 +24,11 @@ function desktopConfirm(message) {
     });
 }
 
-async function desktopRequest(path, payload) {
+async function desktopRequest(path, payload, {signal} = {}) {
     const options = payload === undefined ? {} : {
         method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
     };
+    if (signal) options.signal = signal;
     let response = await fetch(path, options);
     // A 403 is rejected before the handler runs. Renew the local session once;
     // never resubmit a request after a network error or an ambiguous write result.

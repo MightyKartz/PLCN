@@ -24,9 +24,7 @@ function setLibraryRoot(path) {
 
 async function loadConfig() {
     try {
-        const response = await fetch('/api/config');
-        if (!response.ok) throw new Error(uiText('读取失败'));
-        const config = await response.json();
+        const config = await desktopRequest('/api/config');
         pathSettingsRoot = config.retroarch_root || '';
         document.getElementById('retroarch_root').value = pathSettingsRoot;
         legacyThumbnailsSetting = config.thumbnails_override === undefined;
@@ -54,10 +52,7 @@ async function saveConfig(mode = 'single') {
         batch_dir: mode === 'batch' ? currentDeviceScan?.directories?.playlists || '' : '',
     };
     try {
-        const response = await fetch('/api/config', {
-            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(config),
-        });
-        if (!response.ok) throw new Error('保存配置失败');
+        await desktopRequest('/api/config', config);
         return true;
     } catch (error) {
         showStatus('保存出错: ' + error.message, 'error');
@@ -123,8 +118,7 @@ async function loadFileList(path) {
     selectDir.disabled = true;
     listEl.textContent = workbenchText('正在读取目录…', 'Loading folder…');
     try {
-        const response = await fetch(`/api/fs/list?path=${encodeURIComponent(path)}`);
-        const data = await response.json();
+        const data = await desktopRequest(`/api/fs/list?path=${encodeURIComponent(path)}`);
         if (version !== fileListVersion || !document.getElementById('fileModal').open) return;
 
         if (data.error) {

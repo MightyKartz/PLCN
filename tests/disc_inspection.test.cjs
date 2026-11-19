@@ -15,6 +15,7 @@ function harness() {
         gameLibraryInput:()=>[selected,'Sega - Saturn'],workbenchText:zh=>zh,
         beginWorkbenchOperation(op){c.workbench.operation=op;},endWorkbenchOperation(){c.workbench.operation=null;},
         fetch:(url,options)=>new Promise(resolve=>pending.push({url,options,resolve})),
+        desktopRequest:async(url,payload,opts)=>{const res=await c.fetch(url,{...opts});const data=await res.json();if(res.ok===false)throw new Error(data.error||'HTTP error');return data;},
         Map};
     vm.createContext(c);
     vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/templates/discs.js'),'utf8')+'\nglobalThis.store=discInspection;',c);

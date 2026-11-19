@@ -89,9 +89,7 @@ async function refreshLibrarySources() {
     libraryHome.loading = true; libraryHome.error = ''; libraryHome.openError = '';
     renderLibraryHome();
     try {
-        const response = await fetch('/api/library/sources');
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || String(response.status));
+        const data = await desktopRequest('/api/library/sources');
         if (generation === libraryHome.generation) libraryHome.data = data;
     } catch (error) {
         if (generation === libraryHome.generation) {

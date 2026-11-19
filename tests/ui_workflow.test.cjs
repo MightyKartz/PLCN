@@ -159,18 +159,18 @@ test('late folder responses cannot replace a newer directory or enable stale sel
     const elements={fileModal:{open:true},fileList:{textContent:'',innerHTML:'',appendChild:()=>{}},selectDirBtn:{disabled:false},currentPath:{textContent:''}};
     const pending=[];
     const context={fileListVersion:0,currentPath:'.',workbenchText:zh=>zh,console,
-        document:{getElementById:id=>elements[id]},fetch:()=>new Promise(resolve=>pending.push(resolve))};
+        document:{getElementById:id=>elements[id]},desktopRequest:()=>new Promise(resolve=>pending.push(resolve))};
     vm.createContext(context);
     vm.runInContext(source('loadFileList'),context);
     const first=context.loadFileList('old');
     assert.equal(elements.selectDirBtn.disabled,true);
     const second=context.loadFileList('new');
-    pending[1]({json:async()=>({current_path:'new',items:[]})}); await second;
-    pending[0]({json:async()=>({current_path:'old',items:[]})}); await first;
+    pending[1]({current_path:'new',items:[]}); await second;
+    pending[0]({current_path:'old',items:[]}); await first;
     assert.equal(context.currentPath,'new');
     assert.equal(elements.currentPath.textContent,'new');
     const closed=context.loadFileList('closed');elements.fileModal.open=false;
-    pending[2]({json:async()=>({current_path:'closed',items:[]})});await closed;
+    pending[2]({current_path:'closed',items:[]});await closed;
     assert.equal(context.currentPath,'new');
     assert.equal(elements.selectDirBtn.disabled,true);
 });
@@ -178,7 +178,7 @@ test('late folder responses cannot replace a newer directory or enable stale sel
 test('reloading legacy config preserves its image folder as an override while clearing selection', () => {
     const values={playlist_path:'one.lpl',system_name:'GBA',thumbnails_dir:'single-images',batch_thumbnails_dir:'batch-images',rom_name_cn_path:'data/rom-name-cn'};
     const elements={}; const element=id=>elements[id]||={value:'',classList:{add:()=>{},remove:()=>{},toggle:()=>{}},style:{},textContent:'',setAttribute:()=>{},disabled:false,hidden:false};
-    const context={fetch:async()=>({ok:true,json:async()=>values}),document:{getElementById:element},renderWorkbench:()=>{},showStatus:()=>{}, uiText:x=>x};
+    const context={desktopRequest:async()=>values,document:{getElementById:element},renderWorkbench:()=>{},showStatus:()=>{}, uiText:x=>x};
     vm.createContext(context);
     vm.runInContext(source('loadConfig'),context);
     return context.loadConfig().then(()=>{
@@ -192,7 +192,7 @@ test('an explicit empty override follows the detected directory instead of a sto
     const elements={};
     const element=id=>elements[id]||={value:''};
     const context={document:{getElementById:element},currentDeviceScan:{directories:{thumbnails:'detected-images'}},
-        fetch:async()=>({ok:true,json:async()=>({retroarch_root:'library',thumbnails_override:'',thumbnails_dir:'stale-images'})}),
+        desktopRequest:async()=>({retroarch_root:'library',thumbnails_override:'',thumbnails_dir:'stale-images'}),
         renderWorkbench:()=>{},showStatus:()=>{},uiText:x=>x};
     vm.createContext(context);
     vm.runInContext(source('getThumbnailsDirectory')+source('loadConfig'),context);
@@ -290,9 +290,9 @@ test('one confirmation submits once and a stale preview cannot submit', async ()
         workbenchSnapshot:()=>({canApply:context.valid && !context.workbench.operation}),valid:true,
         getIncludedChanges:()=>changes,currentMatchesWriteName:()=>false,getProcessingOptions:()=>({write_names:true,download_thumbnails:true}),
         beginWorkbenchOperation:operation=>{context.workbench.operation=operation;return true},
-        renderWorkbench:()=>{},showStatus:()=>{},endWorkbenchOperation:()=>{context.workbench.operation=null},
+        renderWorkbench:()=>{},showStatus:()=>{},endWorkbenchOperation:()=>{context.workbench.operation=null},workbenchText:zh=>zh,
         rememberAppliedChanges:()=>{},trackProgress:id=>{tracked=id},alert:message=>assert.fail(message),
-        fetch:(url,options)=>{calls.push({url,body:JSON.parse(options.body)});return new Promise(r=>resolve=r)}};
+        desktopRequest:(url,payload)=>{calls.push({url,body:payload});return new Promise(r=>resolve=r)}};
     vm.createContext(context);vm.runInContext(source('applyChanges'),context);
     const pending=context.applyChanges();
     assert.equal(calls.length,1);
@@ -300,7 +300,7 @@ test('one confirmation submits once and a stale preview cannot submit', async ()
     assert.equal(calls[0].body.changes[0].new_label,'游戏');
     await context.applyChanges();
     assert.equal(calls.length,1,'Double click must not submit a second job');
-    resolve({json:async()=>({job_id:'job-1'})});await pending;
+    resolve({job_id:'job-1'});await pending;
     assert.equal(tracked,'job-1');
     context.workbench.operation=null;context.valid=false;
     await context.applyChanges();assert.equal(calls.length,1);
@@ -349,7 +349,7 @@ test('partial image failure preserves verified name snapshot and enables image-o
         getThumbnailsDirectory:()=>'/images',getIncludedChanges:()=>[row],currentMatchesWriteName:()=>true,
         getProcessingOptions:()=>({write_names:true,download_thumbnails:true}),beginWorkbenchOperation:()=>true,
         renderWorkbench:()=>{},showStatus:()=>{},rememberAppliedChanges:()=>{},trackProgress:()=>{},
-        fetch:async(url,options)=>{sent=JSON.parse(options.body);return {json:async()=>({job_id:'retry'})}}});
+        desktopRequest:async(url,payload)=>{sent=payload;return {job_id:'retry'}}});
     vm.runInContext(source('applyChanges'),context);
     await context.applyChanges();assert.equal(sent.options.write_names,false);
     details[1]={...details[1],status:'success',path:'/images/snap.png'};

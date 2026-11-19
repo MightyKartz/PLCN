@@ -6,6 +6,7 @@ const source = fs.readFileSync('src/templates/welcome.js', 'utf8');
 function harness(fetch = async()=>({ok:true,json:async()=>({sources:[],recent:[]})})) {
     const root = {value:''};
     const context = {fetch, setTimeout, clearTimeout, window:{addEventListener(){}}, workbench:{operation:null}, workbenchText:zh=>zh,
+        desktopRequest:async(url)=>{const res=await fetch(url);const data=await res.json();if(res.ok===false)throw new Error(data.error||'HTTP error');return data;},
         document:{getElementById:()=>root}, closeGameFiles(){}, scanDevice:async()=>{context.opened++}, opened:0};
     vm.createContext(context);
     vm.runInContext(source + '\nrenderLibraryHome = () => {}; this.state = libraryHome;', context);

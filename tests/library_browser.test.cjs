@@ -16,6 +16,7 @@ function harness() {
         workbenchText: (zh, en) => zh,
         getSystemAbbreviation: s => s, formatGameCount: n => `${n} games`,
         fetch: (url, options) => new Promise(resolve => pending.push({url, options, resolve})),
+        desktopRequest: async (url, payload, opts) => {const res = await context.fetch(url, {...opts});const data = await res.json();if (res.ok === false) throw new Error(data.error || 'HTTP error');return data;},
         renderWorkbench: () => context.syncGameLibrary({previewValid: false}, false)};
     vm.createContext(context);
     vm.runInContext(source + '\nthis.store = gameLibrary; renderGameLibrary = () => {};', context);

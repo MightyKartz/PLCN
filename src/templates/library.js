@@ -17,9 +17,8 @@ async function loadGameLibrary(input, key) {
     gameLibrary.controller = controller;
     try {
         const params = new URLSearchParams({ path: input[0], system: input[1], thumbnails: input[2] });
-        const response = await fetch('/api/playlist/items?' + params, { signal: controller.signal });
-        const data = await response.json();
-        if (!response.ok || data.error) throw new Error(data.error || String(response.status));
+        const data = await desktopRequest('/api/playlist/items?' + params, undefined, {signal: controller.signal});
+        if (data.error) throw new Error(data.error);
         if (gameLibrary.controller !== controller || key !== JSON.stringify(gameLibraryInput())) return;
         gameLibrary.data = data;
     } catch (error) {

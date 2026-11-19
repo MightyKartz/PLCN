@@ -19,9 +19,8 @@ async function openDiscInspection() {
     dialog.showModal();
     beginWorkbenchOperation('disc-inspection');
     try {
-        const response = await fetch('/api/playlist/discs?' + new URLSearchParams({path,system}), {signal:controller.signal});
-        const data = await response.json();
-        if (!response.ok || data.error) throw new Error(data.error || String(response.status));
+        const data = await desktopRequest('/api/playlist/discs?' + new URLSearchParams({path,system}), undefined, {signal:controller.signal});
+        if (data.error) throw new Error(data.error);
         if (generation !== discInspection.generation || key !== discInspectionKey()) return;
         discInspection.data = data;
         renderDiscInspection();

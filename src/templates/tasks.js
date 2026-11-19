@@ -320,18 +320,12 @@ async function applyChanges() {
     showStatus(applyMessage + '...', 'success');
 
     try {
-        const response = await fetch('/api/playlist/apply', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                playlist_path: playlistPath,
-                changes: includedChanges.map(change => ({ ...change })),
-                thumbnails_dir: thumbnailsDir,
-                options
-            })
+        const data = await desktopRequest('/api/playlist/apply', {
+            playlist_path: playlistPath,
+            changes: includedChanges.map(change => ({ ...change })),
+            thumbnails_dir: thumbnailsDir,
+            options
         });
-
-        const data = await response.json();
         if (data.error) throw new Error(data.error);
 
         if (data.job_id) {
@@ -341,7 +335,7 @@ async function applyChanges() {
             throw new Error(data.error || 'Missing job ID');
         }
     } catch (error) {
-        alert('Error: ' + error.message);
+        showStatus(workbenchText('应用失败：', 'Apply failed: ') + error.message, 'error');
         endWorkbenchOperation();
     }
 }

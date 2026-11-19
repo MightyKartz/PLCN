@@ -607,16 +607,16 @@ function iconOnlyButton(button, svg, label) {
 
 function getLanguageIconSvg(language) {
     if (language === 'en') {
-        return '<svg class="ui-language-icon" data-icon="ui-to-zh" width="20" height="20" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M21.54 15H17a2 2 0 0 0-2 2v4.54"></path><path d="M7 3.34V5a3 3 0 0 0 3 3h.5a2 2 0 0 1 2 2 2 2 0 0 0 2 2 2 2 0 0 1 2 2c0 .83.67 1.5 1.5 1.5H22"></path><path d="M11 21.95V18a2 2 0 0 0-2-2 2 2 0 0 1-2-2v-1a2 2 0 0 0-2-2H2.05"></path></svg>';
+        return '<svg class="ui-language-icon" data-icon="ui-to-zh" width="20" height="20" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><use href="/assets/workbench-icons.svg#world"></use></svg>';
     }
-    return '<svg class="ui-language-icon" data-icon="ui-to-en" width="20" height="20" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 1 0 20"></path><path d="M12 2a14.5 14.5 0 0 0 0 20"></path><path d="M2 12h20"></path></svg>';
+    return '<svg class="ui-language-icon" data-icon="ui-to-en" width="20" height="20" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><use href="/assets/workbench-icons.svg#world"></use></svg>';
 }
 
 function getThemeIconSvg(theme) {
     if (theme === 'dark') {
-        return '<svg class="theme-toggle-icon" data-icon="theme-to-light" width="20" height="20" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m4.93 19.07 1.41-1.41"></path><path d="m17.66 6.34 1.41-1.41"></path></svg>';
+        return '<svg class="theme-toggle-icon" data-icon="theme-to-light" width="20" height="20" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><use href="/assets/workbench-icons.svg#sun"></use></svg>';
     }
-    return '<svg class="theme-toggle-icon" data-icon="theme-to-dark" width="20" height="20" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path d="M20.4 14.4A7.8 7.8 0 0 1 9.6 3.6a8.2 8.2 0 1 0 10.8 10.8Z"></path></svg>';
+    return '<svg class="theme-toggle-icon" data-icon="theme-to-dark" width="20" height="20" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><use href="/assets/workbench-icons.svg#moon"></use></svg>';
 }
 
 function renderLanguageButton() {

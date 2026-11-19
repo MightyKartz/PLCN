@@ -27,9 +27,8 @@ async function scanDevice(useDefault = false) {
 
     try {
         const url = targetPath ? `/api/device/scan?path=${encodeURIComponent(targetPath)}` : '/api/device/scan';
-        const response = await fetch(url);
-        const scan = await response.json();
-        if (!response.ok || scan.error) throw new Error(scan.error || '扫描失败');
+        const scan = await desktopRequest(url);
+        if (scan.error) throw new Error(scan.error);
 
         currentDeviceScan = scan;
         selectedLibrarySystem = '';

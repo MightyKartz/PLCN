@@ -78,7 +78,7 @@ test('a late repair preview cannot populate a different current configuration',a
     const c={currentChanges:[], document:{getElementById:()=>({value:'fixture'})},getThumbnailsDirectory:()=>'/images',
         beginWorkbenchOperation:()=>true,invalidateWorkbenchPreview:()=>{},workbenchInputKey:()=>key,
         showStatus:text=>{message=text;},saveConfig:async()=>{key='new';return true;},getProcessingOptions:()=>({}),
-        fetch:async()=>({json:async()=>({changes:[game]})}),workbenchText:zh=>zh,uiText:x=>x,endWorkbenchOperation:()=>{}};
+        desktopRequest:async()=>({changes:[game]}),workbenchText:zh=>zh,uiText:x=>x,endWorkbenchOperation:()=>{}};
     vm.createContext(c);vm.runInContext(script.slice(start,end),c);await c.previewTask();
     assert.equal(c.currentChanges.length,0);assert.match(message,/配置已变化/);
 });

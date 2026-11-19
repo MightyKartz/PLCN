@@ -20,13 +20,9 @@ async function previewTask(scope = null) {
 
     try {
         if (!await saveConfig('single')) throw new Error(uiText('读取失败'));
-        const response = await fetch('/api/playlist/preview', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ playlist_path: playlistPath, system_name: systemName, thumbnails_dir: thumbnailsDir, options: getProcessingOptions() })
+        const data = await desktopRequest('/api/playlist/preview', {
+            playlist_path: playlistPath, system_name: systemName, thumbnails_dir: thumbnailsDir, options: getProcessingOptions()
         });
-
-        const data = await response.json();
         if (data.error) throw new Error(data.error);
 
         if (previewKey !== workbenchInputKey()) throw new Error(workbenchText('配置已变化，请重新分析', 'Inputs changed; analyze again'));
@@ -437,13 +433,8 @@ async function saveChangeOverride(index) {
     };
 
     try {
-        const response = await fetch('/api/overrides/save', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok || data.error) throw new Error(data.error || '保存本地修正规则失败');
+        const data = await desktopRequest('/api/overrides/save', payload);
+        if (data.error) throw new Error(data.error);
 
         const saved = data.entry || payload.change;
         const savedChange = currentChanges[index];
