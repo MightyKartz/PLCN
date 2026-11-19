@@ -258,6 +258,7 @@ function renderWorkbenchOverview(visible) {
         const complete = wbElement('button','btn btn-muted',workbenchText('一键补全','Complete all'));
         wbIconButton(complete, 'circle-check', complete.textContent);
         complete.type='button'; complete.id='overview-complete-button'; complete.onclick=()=>startCompletion();
+        complete.title = workbenchText('自动补全中文名与封面；补全后仍提示的项目需手动处理','Auto-fills Chinese names and boxart; anything still flagged afterwards needs manual attention');
         complete.disabled=document.getElementById('preview-button').disabled;
         bar.append(wbIcon('photo'),wbElement('span','overview-status-text',[missing ? workbenchText(`${missing} 个游戏缺少封面`,`${missing} games missing artwork`) : '', nonChineseNames ? workbenchText(`${nonChineseNames} 个游戏尚未使用中文名`,`${nonChineseNames} games without Chinese names`) : ''].filter(Boolean).join(' · ')),complete);
         panel.append(bar);

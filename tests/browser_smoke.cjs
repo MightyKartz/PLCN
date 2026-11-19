@@ -236,7 +236,7 @@ async function main() {
     assert.equal(await evaluate(()=>document.querySelector('.completion-entry').hidden),true);
     await waitFor(()=>document.querySelector('#overview-status'),'artwork status bar after overview load');
     assert.match(await evaluate(()=>document.querySelector('.overview-status-text').textContent),/^\d+ 个游戏缺少封面 · 1 个游戏尚未使用中文名$/);
-    assert.equal(await evaluate(()=>document.querySelector('#overview-complete-button').title),'一键补全');
+    assert.equal(await evaluate(()=>document.querySelector('#overview-complete-button').title),'自动补全中文名与封面；补全后仍提示的项目需手动处理');
     assert.deepEqual(await evaluate(()=>Array.from(document.querySelectorAll('.platform-heading strong'),el=>el.textContent).sort()),['Game Boy Advance','Super Nintendo Entertainment System']);
     assert.equal(await evaluate(()=>Array.from(document.querySelectorAll('.platform-fan')).every(fan=>fan.children.length===3)),true);
     await click('#library-all-systems');
@@ -519,9 +519,9 @@ async function main() {
     await waitFor(()=>gameLibrary.data?.items[0]?.label==='Shadowrun (USA)','name restored');
     await click('#game-view-list');
     assert.ok(await evaluate(visible, '#game-library-table'));
-    assert.deepEqual(await evaluate(() => Array.from(document.querySelectorAll('#game-library-table th'), th => th.textContent)), ['封面', '游戏名称']);
-    assert.deepEqual(await evaluate(() => Array.from(document.querySelector('#game-library-rows tr').cells, td => td.textContent)), ['', 'Shadowrun (USA)']);
-    assert.equal(await evaluate(() => document.querySelectorAll('#game-library-rows :is(button, input, summary)').length), 1);
+    assert.deepEqual(await evaluate(() => Array.from(document.querySelectorAll('#game-library-table th'), th => th.textContent)), ['', '封面', '游戏名称']);
+    assert.deepEqual(await evaluate(() => Array.from(document.querySelector('#game-library-rows tr').cells, td => td.textContent)), ['', '', 'Shadowrun (USA)']);
+    assert.equal(await evaluate(() => document.querySelectorAll('#game-library-rows :is(button, input, summary)').length), 2);
     await screenshot('02-compact-game-list');
     await click('#game-library-rows [data-game-details="0"]');
     await waitFor(visible, 'game details opened from list', '#game-inspector');

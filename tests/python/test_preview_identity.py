@@ -88,4 +88,8 @@ def test_batch_gallery_problem_with_stale_source_is_reviewed_instead_of_download
     review = batch_review.prepare_review(str(tmp_path),'','',None,{'write_names':True,'download_thumbnails':True},
                                         lambda *args:None,lambda:False)
     assert review['rows'][0]['review'] == 1
-    assert review['plans'][0]['changes'] == []
+    # The translation still applies, but the unverified source is stripped so
+    # the apply step can never download artwork from it.
+    [change] = review['plans'][0]['changes']
+    assert change['new_label'] == '游戏'
+    assert change['thumbnail_source'] is None

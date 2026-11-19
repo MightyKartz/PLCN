@@ -79,6 +79,25 @@ def test_artwork_only_uses_original_labels_and_preserves_playlist_bytes(library,
     assert result['playlists'][0]['apply']['backup_path'] is None
 
 
+def test_rename_still_applies_when_artwork_has_no_source(library, monkeypatch):
+    """A missing image gallery must not block a known translation."""
+    import playlist_service
+    path = library[-1]
+    change = {'original_item_label': 'Game', 'original_label': 'Game', 'new_label': '游戏',
+              'path': '/roms/Game.nes', 'system': 'NES', 'identity': {},
+              'artwork_gallery_status': 'not_found', 'thumbnail_source': None,
+              'cover_exists': False, 'artwork': {}}
+    monkeypatch.setattr(playlist_service, 'analyze_playlist', lambda *args, **kwargs: [change])
+    plan = review(library, images=True)
+    assert plan['rows'][0]['names'] == 1
+    # The artwork gap remains manual work even though the rename is applied.
+    assert plan['rows'][0]['review'] == 1
+    monkeypatch.setattr(ThumbnailDownloader, 'download_batch', lambda *args, **kwargs: ThumbnailDownloader.empty_summary())
+    result = apply_review(plan, lambda *args: None, lambda: False)
+    assert result['processed_count'] == 1
+    assert json.loads(path.read_text(encoding='utf-8'))['items'][0]['label'] == '游戏'
+
+
 def test_invalid_playlist_is_visible_in_summary_and_stop_option_refuses_writes(library):
     lists, _, _, path = library
     (lists / 'Broken.lpl').write_text('{', encoding='utf-8')

@@ -31,6 +31,6 @@ def playlist_overview(playlist, thumbnails):
             covers = location['covers']
             if len(covers) < 5 and not any(cover['url'] == item['image_url'] for cover in covers):
                 covers.append({'url': item['image_url'], 'label': item['label']})
-        if any(state != 'exists' for state in item['artwork_status'].values()):
+        if item['artwork_status'].get('Named_Boxarts') != 'exists':
             location['missing'] += 1
     return {'system': playlist['system'], 'path': playlist['path'], 'locations': locations}

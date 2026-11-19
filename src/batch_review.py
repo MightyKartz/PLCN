@@ -40,17 +40,21 @@ def prepare_review(directory, thumbnails, source, overrides, options, progress, 
                             raise RuntimeError(image_error)
                         change['artwork'] = artwork_statuses(current, change.get('path'), resolver, lookups, thumbnails, item_system)
                     label = (change.get('new_label') or '').strip()
-                    if change.get('identity', {}).get('requires_review') or (options['download_thumbnails']
-                            and change.get('artwork_gallery_status') in {'unavailable', 'not_found'}):
+                    if change.get('identity', {}).get('requires_review') or not label:
                         row['review'] += 1
                         continue
-                    if not label or (options['download_thumbnails'] and not change.get('thumbnail_source')):
+                    artwork_missing = options['download_thumbnails'] and (
+                        change.get('artwork_gallery_status') in {'unavailable', 'not_found'}
+                        or not change.get('thumbnail_source'))
+                    if artwork_missing:
                         row['review'] += 1
-                        continue
+                        # The gallery could not verify this source; stripping it keeps
+                        # the apply step from downloading artwork for the rename below.
+                        change['thumbnail_source'] = None
                     rename = options['write_names'] and label != current.strip()
                     artwork = change.get('artwork') or {}
                     missing = any(image['status'] != 'exists' for image in artwork.values()) if artwork else not change.get('cover_exists')
-                    images = options['download_thumbnails'] and missing
+                    images = options['download_thumbnails'] and missing and not artwork_missing
                     if rename or images:
                         selected.append(change)
                         row['names'] += int(rename)
