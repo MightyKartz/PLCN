@@ -4,8 +4,10 @@ import json
 from pathlib import Path, PureWindowsPath
 import posixpath
 import shutil
+import sqlite3
 import uuid
 
+import app_paths
 import chd_io
 import content_scan as scan
 import m3u_transaction as tx
@@ -112,8 +114,11 @@ def edit_preview(payload):
 
 
 def details(payload):
-    from disc_inspection import Reader, reference_path
-    from rom_paths import split_archive
+    from disc_inspection import Reader, game_content_files, reference_path
+    from rom_paths import rom_filename, split_archive
+    from playlist_proposals import has_chinese
+    from pathlib import PurePosixPath
+    from urllib.parse import unquote
     path, raw, data, index = selected_item(payload)
     item = data['items'][index]
     reader = Reader(path)
@@ -127,9 +132,52 @@ def details(payload):
         core_name = data.get('default_core_name') or 'DETECT'
     import rom_updates
     recovery = rom_updates.latest(path, location)
-    supported = rom_updates.supports(payload.get('system'), physical, member, probe)
-    return {'rom_update_supported':supported, 'rom_update':recovery, 'index': index, 'label': item.get('label', ''), 'core_path': core_path, 'core_name': core_name,
-            'size': probe.get('size'), 'file_status': probe['status'], 'file_path': location, 'archive_member': member}
+    system = payload.get('system') or (item.get('db_name') or '').removesuffix('.lpl')
+    supported = rom_updates.supports(system, physical, member, probe)
+    filename = rom_filename(unquote(physical) if mtp.is_mtp(physical) else physical)
+    file_format = PurePosixPath(filename).suffix.lstrip('.').lower()
+    compound = file_format in {'cue', 'm3u', 'ccd', 'toc', 'gdi'}
+    files, total_size = game_content_files(reader, location, probe, file_format) if compound and location else ([], None)
+    label = item.get('label', '')
+    chinese = label if has_chinese(label) else ''
+    english, candidates = '', []
+    name_error = ''
+    if system:
+        try:
+            from artwork_identity import resolve
+            from data_pack import open_database
+
+            config = app_paths.config_path()
+            settings = json.loads(config.read_text(encoding='utf-8')) if config.exists() else {}
+            db = open_database(settings.get('rom_name_cn_path') or app_paths.default_source())
+            try:
+                result = resolve({'system': system, 'playlist_path': path, 'rom_path': item['path'], 'label': label},
+                                 database=db)
+                if result['reason'] == 'database' and len(result['names']) == 1:
+                    english = result['names'][0]
+                else:
+                    candidates = result['names']
+                if english and not chinese:
+                    value = db.search_by_english(english, system=system)
+                    chinese = value if value and has_chinese(value) else ''
+            finally:
+                db.close()
+        except (OSError, ValueError, RuntimeError, sqlite3.Error) as error:
+            name_error = str(error)
+    from title_family import release_display_title
+
+    titles = [release_display_title(name) for name in ([english] if english else candidates)]
+    common_title = titles[0] if titles and len({title.casefold() for title in titles}) == 1 else ''
+    recommended = scan.SYSTEMS.get(system)
+    return {'rom_update_supported': supported, 'rom_update': recovery, 'index': index, 'label': label,
+            'core_path': core_path, 'core_name': core_name, 'system': system,
+            'recommended_core': recommended[1].split('（', 1)[0] if recommended else '',
+            'english_name': english, 'english_title': common_title, 'english_candidates': candidates, 'chinese_name': chinese, 'name_error': name_error,
+            'filename': filename, 'format': file_format, 'compound': compound, 'files': files, 'total_size': total_size,
+            'size': probe.get('size'), 'file_status': probe['status'], 'file_path': location,
+            'file_directory': (location.rsplit('/', 1)[0] + '/' if mtp.is_mtp(location)
+                               else str(Path(location).parent) if location else None),
+            'archive_member': member}
 
 
 def validate_import(payload):

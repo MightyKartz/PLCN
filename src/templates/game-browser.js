@@ -1,12 +1,8 @@
-/* Native cover browser and docked inspector; selection never mutates a playlist. */
+/* Game library and independent detail view. */
 const gameInspector = {key:'', details:null, error:'', editing:false, draft:'', preview:null, romPlan:null, saving:false, status:''};
 let visibleGameItems = [];
-const narrowGameDetails = matchMedia('(max-width: 900px)');
 let gameDetailsReturnTop = 0;
 
-narrowGameDetails.addEventListener('change', () => {
-    if (!document.getElementById('game-library').hidden) renderGameInspector();
-});
 const gameSize = value => value == null ? workbenchText('未知', 'Unknown') : value < 1024 ? value + ' B'
     : new Intl.NumberFormat(currentUILanguage === 'en' ? 'en' : 'zh', {maximumFractionDigits:1}).format(value / (value >= 1024 ** 3 ? 1024 ** 3 : value >= 1024 ** 2 ? 1024 ** 2 : 1024)) + (value >= 1024 ** 3 ? ' GB' : value >= 1024 ** 2 ? ' MB' : ' KB');
 function setGameView(view) {
@@ -17,7 +13,7 @@ function inspectGame(index) {
     if (artworkDialogState?.docked) closeArtworkDialog();
     gameLibrary.activeIndex = index;
     renderGameLibrary();
-    if (narrowGameDetails.matches) document.getElementById('inspector-close')?.focus({preventScroll: true});
+    document.getElementById('inspector-close')?.focus({preventScroll:true});
 }
 function closeGameDetails() {
     if (gameInspector.saving || artworkDialogState?.applying || artworkDialogState?.jobId) return;
@@ -84,9 +80,8 @@ function renderGameInspector() {
     const loadingItem = gameLibrary.loading && gameLibrary.activeIndex !== null;
     pane.hidden = !item && !loadingItem;
     const library = document.getElementById('game-library');
-    library.classList.toggle('has-inspector', !pane.hidden);
     const panel = library.closest('.main-panel');
-    const page = !pane.hidden && narrowGameDetails.matches;
+    const page = !pane.hidden;
     const entering = page && !panel.classList.contains('game-details-page');
     if (entering) gameDetailsReturnTop = panel.scrollTop;
     panel.classList.toggle('game-details-page', page);
@@ -95,14 +90,13 @@ function renderGameInspector() {
 
     const backFocused = document.activeElement?.id === 'inspector-close';
     const header = wbElement('header', 'inspector-header');
-    const closeLabel = page ? workbenchText('返回游戏列表', 'Back to games') : workbenchText('关闭详情', 'Close details');
+    const closeLabel = workbenchText('返回游戏列表', 'Back to games');
     const close = gmButton(closeLabel, closeLabel, closeGameDetails);
     close.id = 'inspector-close';
     close.className = 'inspector-close';
     close.title = closeLabel;
     close.setAttribute('aria-label', closeLabel);
     close.disabled = gameInspector.saving;
-    if (!page) close.replaceChildren(wbIcon('x'));
     header.append(close);
     if (!item) {
         const status = wbElement('p', 'inspector-status', workbenchText('正在读取游戏详情…', 'Loading game details…'));
@@ -122,7 +116,10 @@ function renderGameInspector() {
     const artworkEditor = artworkDialogState?.docked ? document.getElementById('artwork-dialog') : null;
     if (artworkEditor) artworkEditor.remove();
     pane.replaceChildren(); pane.setAttribute('aria-label', workbenchText('游戏详情', 'Game details'));
-    pane.append(header, wbElement('h2', 'inspector-title', item.label || item.rom_name));
+    const layout = wbElement('div', 'inspector-layout');
+    const info = wbElement('section', 'inspector-info');
+    info.append(wbElement('h2', 'inspector-title', item.label || item.rom_name));
+    pane.append(header, layout);
     const busy = Boolean(workbench.operation);
     if (gameInspector.editing) {
         const label = wbElement('label', 'inspector-edit-label', workbenchText('显示名称', 'Display name'));
@@ -132,10 +129,10 @@ function renderGameInspector() {
             if (event.key === 'Enter' && !gameInspector.saving) saveGameName();
             if (event.key === 'Escape' && !gameInspector.saving) {gameInspector.editing = false; renderGameInspector();}
         };
-        label.append(input); pane.append(label);
+        label.append(input); info.append(label);
         const controls = wbElement('div', 'inspector-edit-actions');
         const save = gmButton('保存', 'Save', saveGameName, false); save.id = 'inspector-save'; save.disabled = busy;
-        const cancel = gmButton('取消', 'Cancel', () => {gameInspector.editing = false; renderGameInspector();}); cancel.disabled = busy; controls.append(save, cancel); pane.append(controls);
+        const cancel = gmButton('取消', 'Cancel', () => {gameInspector.editing = false; renderGameInspector();}); cancel.disabled = busy; controls.append(save, cancel); info.append(controls);
     } else {
         const actions = wbElement('div', 'inspector-actions');
         if (gameLibraryInput()[2]) {
@@ -146,7 +143,7 @@ function renderGameInspector() {
             const folder = gmButton('指定图片目录', 'Choose artwork folder', () => openPathSettings('thumbnails_override')); folder.id = 'inspector-artwork-folder'; actions.append(folder);
         }
         const edit = gmButton('编辑名称', 'Edit name', () => {gameInspector.editing = true; gameInspector.draft = item.label; renderGameInspector(); document.getElementById('inspector-name').focus();}); edit.id = 'inspector-edit-name'; edit.disabled = busy; actions.append(edit);
-        pane.append(actions);
+        info.append(actions);
     }
     const art = wbElement('div', 'inspector-art');
     const emptyArt = () => art.replaceChildren(wbIcon('photo'), wbElement('span', '', workbenchText('缺封面', 'No artwork')));
@@ -157,13 +154,77 @@ function renderGameInspector() {
         image.src = item.image_url;
         art.append(image);
     } else emptyArt();
-    pane.append(art);
+    layout.append(art, info);
+    const details = gameInspector.details;
+    if (details && details.file_status !== 'present') info.append(wbElement('p', 'inspector-warning', workbenchText('文件未找到或路径尚未映射，请检查设备连接与扫描配置。', 'File missing or path not mapped. Check the connection and scan configuration.')));
+    const meta = wbElement('dl', 'inspector-metadata');
+    const storage = {local:workbenchText('本地', 'Local'), internal:workbenchText('内部存储', 'Internal storage'), card:workbenchText('存储卡', 'Storage card')}[wbStorageKind(item.rom_path)];
+    const core = details?.core_name && details.core_name !== 'DETECT' ? details.core_name : details?.core_path && details.core_path !== 'DETECT' ? details.core_path.replaceAll('\\', '/').split('/').pop() : details ? workbenchText('由 RetroArch 选择', 'Choose in RetroArch') : '…';
+    const unknown = details || gameInspector.error ? workbenchText('未识别', 'Unknown') : '…';
+    const candidates = details?.english_candidates || [];
+    const english = details?.english_title || (candidates.length ? workbenchText('待确认', 'Unconfirmed') : unknown);
+    const platform = details?.system || gameLibraryInput()[1];
+    const platformName = wbSystemName(platform);
+    inspectorPair(meta, '文件名称', 'Filename', details?.filename || item.rom_name || '—');
+    inspectorPair(meta, '英文名称', 'English title', english);
+    const catalogVersion = details?.english_name && details.english_name !== english ? details.english_name : '';
+    if (candidates.length || catalogVersion) {
+        inspectorPair(meta, 'ROM 版本', 'ROM version', '');
+        const disclosure = wbElement('details', 'inspector-versions');
+        disclosure.open = pane.dataset.versionsOpen === key;
+        disclosure.ontoggle = () => {
+            pane.dataset.versionsOpen = disclosure.open ? key : '';
+        };
+        const label = candidates.length
+            ? workbenchText(`待确认 · 查看 ${candidates.length} 个候选`, `Unconfirmed · View ${candidates.length} ${candidates.length === 1 ? 'candidate' : 'candidates'}`)
+            : workbenchText('查看目录记录', 'View catalog record');
+        const versions = wbElement('ul', '');
+        versions.append(...(candidates.length ? candidates : [catalogVersion]).map(name => wbElement('li', '', name)));
+        disclosure.append(wbElement('summary', '', label), versions);
+        meta.lastElementChild.lastElementChild.append(disclosure);
+    }
+    inspectorPair(meta, '中文名称', 'Chinese title', details?.chinese_name || unknown);
+    inspectorPair(meta, '主机平台', 'Platform', platformName && !platform.includes(platformName) ? platform + ' · ' + platformName : platform);
+    inspectorPair(meta, '当前核心', 'Current core', core);
+    inspectorPair(meta, '建议核心', 'Suggested core', details?.recommended_core || (details ? workbenchText('暂无建议', 'No recommendation') : '…'));
+    inspectorPair(meta, '格式', 'Format', details?.format?.toUpperCase() || '—');
+    inspectorPair(meta, '大小', 'Size', details ? gameSize(details.size) : '…');
+    if (details?.compound) inspectorPair(meta, '关联文件总大小', 'Total with linked files',
+        details.total_size == null ? workbenchText('未能完整核对', 'Incomplete') : gameSize(details.total_size));
+    inspectorPair(meta, '位置', 'Storage', storage);
+    inspectorPair(meta, '启动路径', 'Launch path', item.rom_path || '—');
+    if (item.rom_path) {
+        const copyPath = gmButton('复制路径', 'Copy path', async () => {
+            try {
+                await navigator.clipboard.writeText(item.rom_path);
+                gameInspector.status = workbenchText('已复制启动路径。', 'Launch path copied.');
+            } catch (error) {
+                gameInspector.status = workbenchText('无法访问剪贴板，可选中文本复制。', 'Clipboard unavailable. Select the path to copy it.');
+            }
+            const status = document.getElementById('inspector-status');
+            if (status && gameInspector.key === key) status.textContent = gameInspector.status;
+        });
+        meta.lastElementChild.lastElementChild.append(copyPath);
+    }
+    info.append(meta);
+    if (details?.files?.length) {
+        const linked = wbElement('ul', 'inspector-linked-files');
+        for (const file of details.files) {
+            const name = file.path.replaceAll('\\', '/').split('/').pop();
+            const label = file.path.startsWith('mtp://') ? decodeURIComponent(name) : name;
+            const size = file.status === 'present' ? gameSize(file.size) : workbenchText('未确认', 'Unverified');
+            const row = wbElement('li', '', label + ' · ' + size);
+            row.title = file.path;
+            linked.append(row);
+        }
+        info.append(wbElement('h3', '', workbenchText('关联文件', 'Linked files')), linked);
+    }
     if (!gameInspector.editing) {
         const update = gmButton('更新 ROM', 'Update ROM', pickRomUpdate);
         update.id = 'inspector-update-rom';
         update.disabled = busy || !gameInspector.details?.rom_update_supported;
         update.title = gameInspector.details?.rom_update_supported ? workbenchText('备份并替换当前 ROM', 'Back up and replace this ROM') : workbenchText('需要可读取的单文件卡带 ROM（不超过 64 MiB）', 'Requires a readable single-file cartridge ROM (up to 64 MiB)');
-        pane.append(update);
+        info.append(update);
     }
     if (gameInspector.romPlan) {
         const preview = wbElement('section','inspector-rom-update');
@@ -172,34 +233,30 @@ function renderGameInspector() {
             wbElement('p','',workbenchText('自动备份旧 ROM，保留路径、名称、图片与存档文件。更新前请退出 RetroArch。', 'Back up the old ROM; keep its path, title, artwork and saves. Quit RetroArch before updating.')));
         const apply = gmButton('更新', 'Update', applyRomUpdate, false); apply.id = 'inspector-rom-confirm'; apply.disabled = busy;
         const cancel = gmButton('取消', 'Cancel', () => {gameInspector.romPlan=null; renderGameInspector();}); cancel.disabled = busy;
-        preview.append(apply,cancel); pane.append(preview);
+        preview.append(apply,cancel); info.append(preview);
     }
-    const details = gameInspector.details;
     if (details?.rom_update && details.rom_update.status !== 'restored') {
-        const restore = gmButton('恢复旧版 ROM', 'Restore previous ROM', restoreRomUpdate); restore.id='inspector-restore-rom'; restore.disabled=busy; pane.append(restore);
+        const restore = gmButton('恢复旧版 ROM', 'Restore previous ROM', restoreRomUpdate); restore.id='inspector-restore-rom'; restore.disabled=busy; info.append(restore);
     }
-    if (details && details.file_status !== 'present') pane.append(wbElement('p', 'inspector-warning', workbenchText('文件未找到或路径尚未映射，请检查设备连接与扫描配置。', 'File missing or path not mapped. Check the connection and scan configuration.')));
-    const meta = wbElement('dl', 'inspector-metadata');
-    const storage = {local:workbenchText('本地', 'Local'), internal:workbenchText('内部存储', 'Internal storage'), card:workbenchText('存储卡', 'Storage card')}[wbStorageKind(item.rom_path)];
-    const core = details?.core_name && details.core_name !== 'DETECT' ? details.core_name : details?.core_path && details.core_path !== 'DETECT' ? details.core_path.replaceAll('\\', '/').split('/').pop() : details ? workbenchText('由 RetroArch 选择', 'Choose in RetroArch') : '…';
-    inspectorPair(meta, '主机', 'System', getSystemAbbreviation(gameLibraryInput()[1]));
-    inspectorPair(meta, '位置', 'Storage', storage);
-    inspectorPair(meta, '大小', 'Size', details ? gameSize(details.size) : '…');
-    pane.append(meta);
     const more = wbElement('details', 'inspector-more'); more.id = 'inspector-more';
     more.append(wbElement('summary', '', workbenchText('更多信息', 'More info')));
     const moreMeta = wbElement('dl', 'inspector-metadata');
-    inspectorPair(moreMeta, '核心', 'Core', core);
-    inspectorPair(moreMeta, '游戏文件', 'Game file', item.rom_path || '—');
+    if (details?.archive_member) inspectorPair(moreMeta, '压缩包成员', 'Archive member', details.archive_member);
+    if (details?.name_error) inspectorPair(moreMeta, '名称资料读取失败', 'Could not read title data', details.name_error);
     const missing = missingArtworkKinds(item);
     const missingKinds = missing.length ? missing : (item.artwork_status || item.image_url ? [] : ['Named_Boxarts']);
     inspectorPair(moreMeta, '资料状态', 'Artwork status', !missingKinds.length
         ? workbenchText('图片已齐全', 'Artwork complete')
         : workbenchText('缺少：', 'Missing: ') + missingKinds.map(kind => artworkKindLabel(kind)).join(workbenchText('、', ', ')));
-    more.append(moreMeta); pane.append(more);
+    more.append(moreMeta); info.append(more);
     const footer = wbElement('footer', 'inspector-footer');
-    const remove = gmButton('移出列表', 'Remove from playlist', () => openGameRemoval([item.index])); remove.id = 'inspector-remove'; remove.disabled = busy; remove.className = 'btn btn-text';
-    remove.title = workbenchText('保留游戏文件、封面和存档', 'Keeps game files, artwork and saves'); footer.append(remove); pane.append(footer);
+    const locate = gmButton('在游戏文件中查看', 'Show in game files', () =>
+        openGameFiles(locate, {directory:details.file_directory, path:details.file_path}));
+    locate.id = 'inspector-locate-file';
+    locate.disabled = busy || details?.file_status !== 'present' || !details.file_directory;
+    if (locate.disabled && !busy) locate.title = workbenchText('需要可读取的文件和有效的存储映射。', 'Requires a readable file and a valid storage mapping.');
+    footer.append(locate);
+    info.append(footer);
     const status = wbElement('p', 'inspector-status', gameInspector.error || gameInspector.status); status.id = 'inspector-status'; status.setAttribute('role', 'status'); pane.append(status);
     if (artworkEditor) pane.append(artworkEditor);
     if (backFocused) close.focus({preventScroll:true});

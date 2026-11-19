@@ -12,6 +12,16 @@ METADATA = re.compile(
     r'(?:En|Ja|Fr|De|Es|It|Zh|Ko|Pt|Nl|Sv|Ru)(?:,(?:En|Ja|Fr|De|Es|It|Zh|Ko|Pt|Nl|Sv|Ru))*|T[+-][^\[\]()]+', re.I)
 
 
+def release_display_title(name):
+    """Remove trailing catalog release markers for display only."""
+    while match := re.search(r'\s*(?:\(([^()]*)\)|\[([^\[\]]*)\])$', name):
+        tag = (match[1] or match[2] or '').strip()
+        if not (METADATA.fullmatch(tag) or re.fullmatch(r'(?:Game|Omake|Bonus) Disc', tag, re.I)):
+            break
+        name = name[:match.start()].rstrip()
+    return name
+
+
 def family_key(name):
     """Retain unknown edition/hack tags and all sequel/subtitle text."""
     name = DISC_MARKER.sub('', name).replace('（', '(').replace('）', ')')

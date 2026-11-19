@@ -2399,18 +2399,6 @@ body[data-theme="dark"] .desktop-welcome p {
     font-size: 11px;
 }
 
-.library-system-search {
-    width: calc(100% - 12px);
-    margin: 0 6px 8px;
-    flex-shrink: 0;
-    padding: 8px 10px;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-    color: var(--text);
-    background: var(--surface);
-    font: inherit;
-    font-size: 12px;
-}
 
 .sidebar #scanned-playlists {
     flex: 1;
@@ -2489,10 +2477,6 @@ body[data-theme="dark"] .desktop-welcome p {
     font-size: 10px;
 }
 
-#library-system-empty {
-    margin: 8px;
-    font-size: 12px;
-}
 
 .workbench-content .panel-header {
     padding: 16px 20px 12px;

@@ -15,10 +15,11 @@ import requests
 from PIL import Image
 
 import app_paths
+from app_version import VERSION
 from dos_artwork_names import game
 from safe_io import atomic_write_bytes, atomic_write_json
 
-HEADERS = {'User-Agent': 'RetroArchAssistant/3.3.1 (RetroArch artwork manager; https://github.com/MightyKartz/retroarch-assistant)'}
+HEADERS = {'User-Agent': f'RetroArchAssistant/{VERSION} (RetroArch artwork manager; https://github.com/MightyKartz/retroarch-assistant)'}
 LIMIT = 12 * 1024 * 1024
 
 

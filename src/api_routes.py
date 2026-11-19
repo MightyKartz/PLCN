@@ -17,7 +17,10 @@ import api_config
 import api_games
 
 GET_ROUTES = {
+    '/api/game-files/storages': api_library.game_file_storages,
+    '/api/game-files/directory': api_library.game_file_directory,
     '/api/jobs/status': api_tasks.workbench_status,
+    '/api/library/playlist-summary': api_library.playlist_summary,
     '/api/library/overview': api_library.overview,
     '/api/m3u/history': api_m3u.history,
     '/api/cores/info': api_content.core_info,
@@ -43,6 +46,9 @@ GET_ROUTES = {
 }
 
 POST_ROUTES = {
+    '/api/game-files/change': api_library.change_game_file,
+    '/api/game-files/delete-preview': api_library.preview_game_file_deletion,
+    '/api/game-files/delete-apply': api_library.apply_game_file_deletion,
     '/api/games/mapping': api_games.save_mapping,
     '/api/games/preview': api_games.preview,
     '/api/games/details': api_games.details,

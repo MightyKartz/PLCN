@@ -38,14 +38,14 @@ def validate(payload):
 
 
 def preview(root, sources, progress=lambda *args: None, cancel_check=None):
-    documents = []
+    documents = {}
     has_playlists = any(entry['folder'] and entry['name'] == 'playlists' for entry in scan.folders(root))
     for entry in scan.folders(scan.join(root, 'playlists')) if has_playlists else []:
         if not entry['folder'] and entry['name'].endswith('.lpl'):
             content = scan.read(scan.join(root, 'playlists', entry['name']))
             document = json.loads(content.decode('utf-8-sig'))
-            documents.append((entry['name'], document))
-    all_paths = [item.get('path', '') for _, doc in documents for item in doc.get('items', [])]
+            documents[entry['name']] = document
+    all_paths = [item.get('path', '') for doc in documents.values() for item in doc.get('items', [])]
     plans, unclassified, visited = {}, [], set()
     profiles = scan.profiles().get(root, [])
     def walk(directory, depth=0):
@@ -70,8 +70,17 @@ def preview(root, sources, progress=lambda *args: None, cancel_check=None):
                 unclassified.append({'directory': path, 'reason': '目录名称未识别，可使用手动添加指定主机'})
     def prepare(directory, system):
         checkpoint(cancel_check)
-        old = next(((filename, doc) for filename, doc in documents if any(item.get('db_name') == system + '.lpl' for item in doc.get('items', [])) or filename == system + '.lpl' or ALIASES.get(filename[:-4].casefold()) == system), (system + '.lpl', {}))
         profile = next((p for p in profiles if p['directory'] == directory and p['system'] == system), None)
+        if profile:
+            filename = profile['playlist_name']
+            old = documents.get(filename, {})
+        else:
+            filename, old = next(
+                ((name, doc) for name, doc in documents.items()
+                 if name == system + '.lpl' or ALIASES.get(name[:-4].casefold()) == system
+                 or any(item.get('db_name') == system + '.lpl' for item in doc.get('items', []))),
+                (system + '.lpl', {}),
+            )
         core = scan.SYSTEMS[system][0]
         android = ''
         if mtp.is_mtp(directory):
@@ -82,21 +91,22 @@ def preview(root, sources, progress=lambda *args: None, cancel_check=None):
                 unclassified.append({'directory': directory, 'reason': '需要确认掌机实际启动路径；请通过手动添加设置一次'})
                 return
         config = dict(profile) if profile else dict(root=root, directory=directory, system=system, core_id=core,
-            core_path=old[1].get('default_core_path') or 'DETECT', extensions=scan.SYSTEMS[system][2], recursive=True,
-            dat_path='', dat_filter=False, android_directory=android, abi='', playlist_name=old[0])
+            core_path=old.get('default_core_path') or 'DETECT', extensions=scan.SYSTEMS[system][2], recursive=True,
+            dat_path='', dat_filter=False, android_directory=android, abi='', playlist_name=filename)
         plan = scan.preview(config, progress, cancel_check)
         for field in ('default_core_path', 'default_core_name'):
-            plan['document'][field] = old[1].get(field) or 'DETECT'
-        if system not in plans:
-            plans[system] = plan
+            plan['document'][field] = old.get(field) or 'DETECT'
+        target = plan['target']
+        if target not in plans:
+            plans[target] = plan
         else:
-            merged = plans[system]
+            merged = plans[target]
             existing = {item['path'] for item in merged['document']['items']}
             added = [item for item in plan['added'] if item['path'] not in existing]
             merged['added'].extend(added)
             merged['document']['items'].extend(added)
             merged['skipped'] += plan['skipped']
-        plans[system]['can_apply'] = bool(plans[system]['added'])
+        plans[target]['can_apply'] = bool(plans[target]['added'])
     for source in sources:
         name = (mtp.parse(source)[2][-1] if mtp.is_mtp(source) and mtp.parse(source)[2] else Path(source).name).casefold()
         if name in ALIASES:
@@ -107,16 +117,17 @@ def preview(root, sources, progress=lambda *args: None, cancel_check=None):
 
 
 def public_result(result):
-    return {'rows': [{'system': system, 'added': len(plan['added']), 'retained': plan['retained'], 'skipped': plan['skipped'], 'target': plan['target']}
-                     for system, plan in result['plans'].items()], 'unclassified': result['unclassified']}
+    return {'rows': [{'system': plan['config']['system'], 'added': len(plan['added']),
+                      'retained': plan['retained'], 'skipped': plan['skipped'], 'target': target}
+                     for target, plan in result['plans'].items()], 'unclassified': result['unclassified']}
 
 
-def apply(result, systems, progress=lambda *args: None, cancel_check=None):
+def apply(result, targets, progress=lambda *args: None, cancel_check=None):
     completed = []
-    for index, system in enumerate(systems):
+    for index, target in enumerate(targets):
         checkpoint(cancel_check)
-        plan = result['plans'][system]
+        plan = result['plans'][target]
         if plan['can_apply']:
-            progress(index, len(systems), '导入：' + system)
+            progress(index, len(targets), '导入：' + plan['config']['playlist_name'])
             completed.append(scan.apply(plan))
     return {'playlists': completed, 'added': sum(p['added'] for p in completed)}

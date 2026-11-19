@@ -1,5 +1,5 @@
 /* Real-data library workbench. Artwork and job state are read-only projections. */
-const workbenchOverview = {key: '', data: null, error: '', scope: 'all', loading: false};
+const workbenchOverview = {key: '', loadedKey: '', data: null, error: '', scope: 'all', loading: false};
 const libraryRead = {owner:'', stage:'', root:'', readyRoot:'', blocking:false, error:'', retry:'', focus:null};
 function beginLibraryRead(owner, stage, root = '', blocking = libraryRead.readyRoot !== root) {
     Object.assign(libraryRead, {owner, stage, root, blocking, error:'', retry:owner});
@@ -98,13 +98,36 @@ function workbenchGroups(data, scope) {
     }
     return [...groups.values()];
 }
+function libraryOverviewKey(scan) {
+    return JSON.stringify([scan.root_path || scan.target_path,
+        scan.playlists.filter(playlist => playlist.valid).map(playlist => [playlist.path,
+            playlist.revision || [playlist.item_count, playlist.modified_at], playlist.system]),
+        scan.directories?.thumbnails || '']);
+}
+
 async function loadWorkbenchOverview(key, root) {
     workbenchOverview.loading = true;
     beginLibraryRead('overview', workbenchText('正在统计游戏并获取封面信息…','Reading game counts and artwork information…'), root);
     try {
-        const data = await desktopRequest('/api/library/overview?root=' + encodeURIComponent(root));
+        const previous = workbenchOverview.loadedKey && JSON.parse(workbenchOverview.loadedKey);
+        let data;
+        if (previous && previous[0] === root) {
+            const [, rows, thumbnails] = JSON.parse(key);
+            const revisions = new Map(previous[1].map(row => [row[0], JSON.stringify(row)]));
+            const cached = new Map(workbenchOverview.data.playlists.map(row => [row.path, row]));
+            const playlists = await Promise.all(rows.map(async row => {
+                const [path] = row;
+                if (previous[2] === thumbnails && revisions.get(path) === JSON.stringify(row) && cached.has(path))
+                    return cached.get(path);
+                const query = new URLSearchParams({path, thumbnails});
+                return (await desktopRequest('/api/library/playlist-summary?' + query)).overview;
+            }));
+            data = {playlists};
+        } else {
+            data = await desktopRequest('/api/library/overview?root=' + encodeURIComponent(root));
+        }
         if (workbenchOverview.key !== key) return;
-        workbenchOverview.data = data; workbenchOverview.error = '';
+        workbenchOverview.data = data; workbenchOverview.loadedKey = key; workbenchOverview.error = '';
     } catch (error) {
         if (workbenchOverview.key === key) workbenchOverview.error = error.message;
     } finally {
@@ -117,7 +140,7 @@ async function loadWorkbenchOverview(key, root) {
     }
 }
 function refreshWorkbenchOverview() {
-    workbenchOverview.key = '';
+    workbenchOverview.key = workbenchOverview.loadedKey = '';
     renderWorkbench();
 }
 // Reuse decoded images when the surrounding overview is redrawn for the same library read.
@@ -207,10 +230,15 @@ function renderWorkbenchOverview(visible) {
     const panel = document.getElementById('library-overview'); panel.hidden = !visible;
     if (!visible) return;
     const root = currentDeviceScan.root_path || currentDeviceScan.target_path;
-    const key = JSON.stringify([root, currentDeviceScan.playlists.map(p => [p.path,p.item_count,p.modified_at])]);
+    const key = libraryOverviewKey(currentDeviceScan);
     if (key !== workbenchOverview.key && !workbench.operation) {
         const rootChanged = workbenchOverview.key && JSON.parse(workbenchOverview.key)[0] !== root;
-        workbenchOverview.key = key; if (rootChanged) workbenchOverview.data = null; workbenchOverview.error = '';
+        workbenchOverview.key = key;
+        if (rootChanged) {
+            workbenchOverview.data = null;
+            workbenchOverview.loadedKey = '';
+        }
+        workbenchOverview.error = '';
         loadWorkbenchOverview(key, root);
     }
     panel.replaceChildren();
@@ -225,6 +253,7 @@ function renderWorkbenchOverview(visible) {
     if (missing > 0 || nonChineseNames > 0) {
         const bar = wbElement('div','overview-status'); bar.id = 'overview-status';
         const complete = wbElement('button','btn btn-muted',workbenchText('一键补全','Complete all'));
+        wbIconButton(complete, 'circle-check', complete.textContent);
         complete.type='button'; complete.id='overview-complete-button'; complete.onclick=()=>startCompletion();
         complete.disabled=document.getElementById('preview-button').disabled;
         bar.append(wbIcon('photo'),wbElement('span','overview-status-text',[missing ? workbenchText(`${missing} 个游戏缺少封面`,`${missing} games missing artwork`) : '', nonChineseNames ? workbenchText(`${nonChineseNames} 个游戏尚未使用中文名`,`${nonChineseNames} games without Chinese names`) : ''].filter(Boolean).join(' · ')),complete);
@@ -240,7 +269,6 @@ function renderWorkbenchOverview(visible) {
         card.type = 'button';
         card.disabled = Boolean(workbench.operation);
         card.dataset.system = group.system;
-        card.dataset.search = `${group.system} ${displayName} ${abbreviation}`.toLowerCase();
         card.setAttribute('aria-label', `${displayName} · ${count}`);
         const badge = wbElement('span', 'overview-system-badge', abbreviation);
         badge.setAttribute('aria-hidden', 'true');
@@ -261,25 +289,22 @@ function renderWorkbenchOverview(visible) {
         card.onclick = () => browseLibrarySystem(group.system);
         grid.append(card);
     }
-    if (groups.length) {
-        const empty = wbElement('p', 'overview-note', workbenchText('没有匹配的主机', 'No matching systems'));
-        empty.id = 'overview-system-empty';
-        empty.setAttribute('role', 'status');
-        panel.append(grid, empty);
-        filterLibrarySystems();
-    }
+    if (groups.length) panel.append(grid);
     if (workbenchOverview.error || !groups.length) {
         const note=wbElement('p','overview-note');note.id='overview-note';
-        note.textContent=workbenchOverview.error ? workbenchText('资料读取失败：','Could not read artwork: ')+workbenchOverview.error : workbenchText('还没有游戏。点击「添加游戏」开始。','No games yet. Choose Add games to start.');
+        note.textContent=workbenchOverview.error ? workbenchText('资料读取失败：','Could not read artwork: ')+workbenchOverview.error : workbenchText('还没有游戏。打开「游戏文件」开始。','No games yet. Open Game files to start.');
         panel.append(note);
     }
     if (workbenchOverview.error) {const retry=wbElement('button','btn btn-muted',workbenchText('重新读取','Retry'));retry.onclick=refreshWorkbenchOverview;panel.append(retry);}
 }
 function renderWorkbenchChrome(state) {
     const localLibrary = currentDeviceScan?.transport === 'local';
+    const scanButton = document.getElementById('manual-scan-button');
+    const scanLabel = localLibrary ? workbenchText('扫描新增游戏', 'Scan for new games')
+        : workbenchText('扫描掌机游戏', 'Scan handheld games');
+    scanButton.title = scanLabel;
+    scanButton.setAttribute('aria-label', scanLabel);
     for (const [selector,zh,en] of [
-        ['#manual-scan-button',localLibrary ? '扫描新增游戏' : '扫描掌机游戏',localLibrary ? 'Scan for new games' : 'Scan handheld games'],
-        ['#manual-add-button','＋ 添加游戏','＋ Add games'],
         ['.tools-menu summary','工具','Tools'],['#device-switch-button','切换设备','Switch device']]) {
         const button=document.querySelector(selector);
         if(button?.lastChild?.nodeType===3)button.lastChild.textContent=workbenchText(zh,en);
@@ -297,7 +322,7 @@ function renderWorkbenchChrome(state) {
         :document.getElementById('playlist_path').value?workbenchText('补全整个列表','Complete entire playlist'):workbenchText('补全全部存储','Complete all storage');
     document.getElementById('preview-button').title=workbenchText('补全当前列表；未选择主机时补全全部存储中的列表','Complete the selected playlist, or all storage locations when no system is selected');
     if (!document.getElementById('playlist_path').value && currentDeviceScan?.connected) document.getElementById('workspace-title').textContent=workbenchText('游戏库','Game library');
-    document.getElementById('manual-add-button').hidden=state.previewValid;
+    document.getElementById('game-files-button').hidden=state.previewValid;
     document.getElementById('manual-scan-button').hidden=state.previewValid;
     if(workbenchOverview.data){
         const groups=workbenchGroups(workbenchOverview.data,workbenchOverview.scope);
@@ -348,18 +373,35 @@ async function previewAutoScan(){
     try{
         const {id,result}=await autoScanJob('/api/content/auto-preview',{root:autoScanState.root,sources});autoScanState.previewId=id;autoScanState.plan=result;
         const rows=document.getElementById('auto-scan-results');
-        for(const row of result.rows){const article=wbElement('label','auto-scan-result');const input=document.createElement('input');input.type='checkbox';input.dataset.system=row.system;input.checked=row.added>0;input.disabled=!row.added;
-            const details=wbElement('div','');details.append(wbElement('strong','',wbSystemName(row.system)),wbElement('small','',workbenchText(`新增 ${row.added} · 已有 ${row.retained} · 跳过 ${row.skipped}`,`New ${row.added} · Existing ${row.retained} · Skipped ${row.skipped}`)));article.append(input,details);rows.append(article);}
+        for (const row of result.rows) {
+            const article = wbElement('label', 'auto-scan-result');
+            const input = document.createElement('input');
+            input.type = 'checkbox';
+            input.value = row.target;
+            input.checked = row.added > 0;
+            input.disabled = !row.added;
+            const details = wbElement('div', '');
+            details.append(
+                wbElement('strong', '', wbSystemName(row.system)),
+                wbElement('small', '', row.target.split(/[\\/]/).pop()),
+                wbElement('small', '', workbenchText(`新增 ${row.added} · 已有 ${row.retained} · 跳过 ${row.skipped}`, `New ${row.added} · Existing ${row.retained} · Skipped ${row.skipped}`))
+            );
+            article.append(input, details);
+            rows.append(article);
+        }
         for(const row of result.unclassified){const article=wbElement('div','auto-scan-result');const details=wbElement('div','');details.append(wbElement('strong','',uiText('待配置')),wbElement('small','',row.directory),wbElement('small','',uiText(row.reason)));article.append(details);rows.append(article);}
         const count=result.rows.reduce((n,r)=>n+r.added,0);document.getElementById('auto-scan-status').textContent=workbenchText(`扫描完成：${count} 个新游戏，${result.unclassified.length} 个目录待配置。未配置核心的列表由 RetroArch 选择核心；已有核心设置保留。`,`Scan complete: ${count} new games; ${result.unclassified.length} folders need setup. RetroArch selects unassigned cores; existing core settings are preserved.`);
         document.getElementById('auto-scan-apply').hidden=!count;
     }catch(error){document.getElementById('auto-scan-status').textContent=error.message;}
 }
 async function applyAutoScan(){
-    const systems=[...document.querySelectorAll('#auto-scan-results input:checked')].map(input=>input.dataset.system);
-    if(!systems.length){document.getElementById('auto-scan-status').textContent=uiText('请选择至少一个有新增游戏的主机。');return;}
+    const targets=[...document.querySelectorAll('#auto-scan-results input:checked')].map(input=>input.value);
+    if (!targets.length) {
+        document.getElementById('auto-scan-status').textContent = workbenchText('请选择至少一个有新增游戏的列表。', 'Choose at least one playlist with new games.');
+        return;
+    }
     const complete=document.getElementById('auto-scan-complete').checked;
-    try{const {result}=await autoScanJob('/api/content/auto-apply',{preview_job_id:autoScanState.previewId,systems});autoScanState.previewId=null;document.getElementById('auto-scan-apply').hidden=true;
+    try{const {result}=await autoScanJob('/api/content/auto-apply',{preview_job_id:autoScanState.previewId,targets});autoScanState.previewId=null;document.getElementById('auto-scan-apply').hidden=true;
         document.getElementById('auto-scan-status').textContent=workbenchText(`已导入 ${result.added} 个游戏。原始游戏文件保持不变。`,`Imported ${result.added} games. Original game files are unchanged.`);
         const backups = result.playlists.filter(playlist => playlist.backup);
         if (backups.length) {
@@ -368,7 +410,7 @@ async function applyAutoScan(){
             for (const playlist of backups) details.append(wbElement('p', '', playlist.backup));
             document.getElementById('auto-scan-results').append(details);
         }
-        await scanDevice();refreshWorkbenchOverview();
+        await refreshLibraryPlaylists(result.playlists.map(playlist => playlist.playlist_path));
         if(complete){closeAutoScan();await runAllSystemsCompletion();}
     }catch(error){autoScanState.previewId=null;document.getElementById('auto-scan-apply').hidden=true;document.getElementById('auto-scan-status').textContent=error.message+workbenchText('；已完成的导入会保留，请重新扫描核对。','; completed imports are kept. Scan again to review.');}
 }

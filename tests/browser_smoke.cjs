@@ -236,7 +236,7 @@ async function main() {
     assert.equal(await evaluate(()=>document.querySelector('.completion-entry').hidden),true);
     await waitFor(()=>document.querySelector('#overview-status'),'artwork status bar after overview load');
     assert.match(await evaluate(()=>document.querySelector('.overview-status-text').textContent),/^\d+ 个游戏缺少封面 · 1 个游戏尚未使用中文名$/);
-    assert.equal(await evaluate(()=>document.querySelector('#overview-complete-button').textContent),'一键补全');
+    assert.equal(await evaluate(()=>document.querySelector('#overview-complete-button').title),'一键补全');
     assert.deepEqual(await evaluate(()=>Array.from(document.querySelectorAll('.platform-heading strong'),el=>el.textContent).sort()),['Game Boy Advance','超级任天堂']);
     assert.equal(await evaluate(()=>Array.from(document.querySelectorAll('.platform-fan')).every(fan=>fan.children.length===3)),true);
     await click('#library-all-systems');
@@ -289,7 +289,8 @@ async function main() {
     assert.equal(await evaluate(visible,'#artwork-directory-settings'),false);
     await click('#desktop-close');
 
-    await click('#completion-history-link');
+    await waitFor(()=>!document.querySelector('#desktop-dialog').open,'directory settings closed');
+    await evaluate(()=>openOperationHistory('completion'));
     await waitFor(()=>document.querySelector('#desktop-content [data-job-id] details'),'completion history from library');
     await click('#desktop-content [data-job-id] details > summary');
     await waitFor(()=>document.querySelector('#desktop-content details[open]')?.textContent.includes('测试图片网络失败'),'failed image details');
@@ -367,17 +368,11 @@ async function main() {
         location.covers = covers;
         renderWorkbenchOverview(true);
     }, originalCovers);
-    assert.equal(await evaluate(()=>document.getElementById('manual-scan-button').textContent),'扫描新增游戏');
+    assert.equal(await evaluate(()=>document.getElementById('manual-scan-button').title),'扫描新增游戏');
     await screenshot('01-system-covers');
 
-    const overviewSearch = '#overview-system-search';
-    await evaluate(selector => {
-        const input = document.querySelector(selector);
-        input.value = '超级任天堂';
-        input.dispatchEvent(new Event('input'));
-    }, overviewSearch);
-    const filteredCard = '#library-overview .overview-system-card:not([hidden])';
-    assert.equal(await evaluate(selector=>document.querySelectorAll(selector).length,filteredCard),1);
+    assert.equal(await evaluate(()=>document.querySelector('[aria-label="搜索主机"]')),null);
+    const selectedCard = '#library-overview .overview-system-card[data-system="Nintendo - Super Nintendo Entertainment System"]';
     await send('Emulation.setDeviceMetricsOverride', {width:390,height:400,deviceScaleFactor:1,mobile:false});
     const overviewScrollTop = await evaluate(()=>{
         const panel = document.querySelector('.main-panel');
@@ -385,15 +380,13 @@ async function main() {
         return panel.scrollTop;
     });
     assert.ok(overviewScrollTop>0);
-    await evaluate(selector=>document.querySelector(selector).click(),filteredCard);
+    await evaluate(selector=>document.querySelector(selector).click(),selectedCard);
     assert.equal(await evaluate(()=>document.querySelector('.main-panel').scrollTop),0);
     await click('#back-to-systems');
     assert.equal(await evaluate(()=>document.querySelector('.main-panel').scrollTop),overviewScrollTop);
-    assert.equal(await evaluate(selector=>document.querySelector(selector).value,overviewSearch),'超级任天堂');
-    assert.equal(await evaluate(selector=>document.activeElement.matches(selector),filteredCard),true);
+    assert.equal(await evaluate(selector=>document.activeElement.matches(selector),selectedCard),true);
     await screenshot('01-system-covers-narrow');
     await send('Emulation.setDeviceMetricsOverride', {width:Number(width),height:Number(height),deviceScaleFactor:1,mobile:false});
-    await evaluate(()=>filterLibrarySystems(''));
 
     await click('.playlist-system-tab[aria-label="Nintendo - Game Boy Advance"]');
     await waitFor(()=>gameLibrary.data?.items.length===1,'GBA cover grid');
@@ -482,10 +475,14 @@ async function main() {
 
     await click('#game-library-grid .game-card-open');
     await waitFor(()=>gameInspector.details,'inspector metadata loaded');
+    assert.equal(await evaluate(visible,'.game-library-main'),false);
+    const detailFields = await evaluate(()=>Array.from(document.querySelectorAll('.inspector-info > dl dt'),node=>node.textContent));
+    for (const label of ['文件名称','英文名称','中文名称','主机平台','当前核心','建议核心','大小']) assert.ok(detailFields.includes(label), label);
     assert.equal(await evaluate(visible,'#game-inspector'),true);
     assert.equal(await evaluate(()=>document.querySelectorAll('dialog[open]').length),0);
     assert.equal(await evaluate(()=>Boolean(document.querySelector('#inspector-more'))&&!document.querySelector('#inspector-more').open),true);
-    assert.equal(await evaluate(()=>document.querySelector('#inspector-remove').title),'保留游戏文件、封面和存档');
+    assert.equal(await evaluate(()=>document.querySelector('#inspector-remove')),null);
+    assert.ok(await evaluate(()=>document.querySelector('#inspector-locate-file')));
     await screenshot('02-game-inspector');
     await click('#inspector-artwork');
     await waitFor(()=>document.querySelector('#game-inspector #artwork-dialog')?.open,'docked artwork editor');
@@ -534,6 +531,7 @@ async function main() {
     await evaluate(()=>document.querySelector('.tools-menu').open=false);
     await click('#manual-scan-button');
     await waitFor(()=>document.querySelector('#auto-scan-dialog').open,'scan entry from add-games workspace');
+    assert.equal(await evaluate(()=>document.activeElement.id),'auto-scan-title');
     await waitFor(()=>!document.querySelector('#auto-scan-start').disabled,'English scan storage loaded');
     assert.doesNotMatch(await evaluate(()=>document.querySelector('#auto-scan-dialog').innerText),/\p{Script=Han}/u);
     await click('#auto-scan-start');
@@ -542,7 +540,11 @@ async function main() {
     await click('#auto-scan-dialog header > button');
     // Import through the native-picker boundary, remove via the batch toolbar,
     // then restore both playlist transactions. ROM copies remain on disk.
-    await click('#manual-add-button');
+    await click('#game-files-button');
+    await waitFor(()=>!document.querySelector('#game-files-workspace').hidden,'inline game files workspace');
+    assert.equal(await evaluate(()=>document.querySelectorAll('dialog[open]').length),0);
+    assert.equal(await evaluate(visible,'#library-browser'),false);
+    await click('#game-files-import');
     await waitFor(()=>document.querySelector('#gm-pick-files'),'game import loaded');
     assert.equal(await evaluate(()=>document.querySelector('#gm-preview')),null);
     assert.equal(await evaluate(()=>document.querySelector('#gm-destination-fields').hidden),true);
@@ -578,10 +580,17 @@ async function main() {
     assert.equal(await evaluate(visible,'#gm-complete-metadata'),true);
     await screenshot('02-game-import-complete');
     assert.equal(fs.readFileSync(path.join(libraryPath,'Roms/SNES/Imported demo.sfc'),'utf8'),'game import fixture');
-    await click('#gm-dialog header button');
+    await click('#gm-view-games');
     await click('#game-view-grid');
     await click('#game-library-grid [data-game-card="1"] .game-card-open');
     await waitFor(()=>gameInspector.details,'imported game details');
+    await click('#inspector-locate-file');
+    await waitFor(()=>document.querySelector('.game-files-rows [aria-pressed="true"]')?.textContent.includes('Imported demo.sfc'),'located ROM selected');
+    await click('.game-files-toolbar button[aria-label="Delete file"]');
+    await waitFor(()=>document.querySelector('.game-file-delete-impact')?.textContent.includes('Imported demo.sfc'),'deletion plan rendered');
+    assert.ok(await evaluate(()=>document.querySelector('.game-file-delete-impact').textContent.includes('Imported demo')));
+    await click('.game-file-delete-dialog button[aria-label="Close"], .game-file-delete-dialog button.btn-muted');
+    await click('.game-files-header button');
     const beforeRomUpdate=fs.readFileSync(path.join(libraryPath,'playlists/Nintendo - Super Nintendo Entertainment System.lpl'));
     await click('#inspector-update-rom');
     await waitFor(()=>Boolean(gameInspector.romPlan),'ROM update prepared');
@@ -1019,7 +1028,8 @@ async function main() {
 
     if(canConvert){
         const originalM3u=fs.readFileSync(path.join(discRoms,'Game.m3u'));
-        await click('#storage-close-history');
+        assert.equal(await evaluate(()=>document.querySelector('#storage-close-history')),null);
+        await evaluate(()=>openOperationHistory('chd'));
         await waitFor(()=>document.querySelector('[data-chd-operation]'),'CHD durable history');
         await screenshot('09-chd-history');
         await click('[data-chd-operation] button');
@@ -1089,7 +1099,8 @@ async function main() {
     await waitFor(()=>document.querySelector('#rom-storage-source').value.length>0,'source reopened');
     await click('#rom-storage-analyze');await waitFor(()=>!romStorage.busy&&!document.querySelector('#rom-storage-analysis').hidden,'dark directory analysis');
     await evaluate(()=>document.querySelector('#rom-storage-dialog').scrollTop=0);await screenshot('11-rom-layout-dark');
-    await click('#rom-storage-close-history');await waitFor(()=>document.querySelector('[data-rom-storage-operation]'),'ZIP durable history');
+    assert.equal(await evaluate(()=>document.querySelector('#rom-storage-close-history')),null);
+    await evaluate(()=>openOperationHistory('romStorage'));await waitFor(()=>document.querySelector('[data-rom-storage-operation]'),'ZIP durable history');
     await screenshot('11-rom-zip-history');await click('#desktop-close');await click('#rom-storage-close');
 
     // Stage 4B: move a synthetic CHD-only multi-disc set, then restore both operations.

@@ -136,7 +136,8 @@ def reference_path(parent, value):
         if relative == '..' or relative.startswith('../'):
             raise ValueError('引用超出存储空间')
         return mtp.uri(serial, storage, relative)
-    return posixpath.normpath(posixpath.join(parent.rsplit('/', 1)[0], value))
+    directory = parent.replace('\\', '/').rsplit('/', 1)[0]
+    return posixpath.normpath(posixpath.join(directory, value))
 
 
 def inspect_discs(playlist, system):
@@ -412,3 +413,40 @@ def inspect_discs(playlist, system):
                        'files':len({key for group in groups for key in group['files']}),'entries':entry_total,
                        'candidates':sum(group['kind']=='disc_set' for group in groups),'attention':sum(bool(group['issues']) for group in groups)},
             'note':'只读检查；候选分组不改写列表、M3U、核心或游戏文件。未声明总盘数时不能证明末尾无缺盘。'}
+
+
+def game_content_files(reader, location, probe, kind):
+    """Collect and size only the launch entry and its declared dependencies."""
+    files = {location: probe}
+    pending = [(location, probe, kind)]
+    complete = True
+    while pending:
+        path, info, fmt = pending.pop()
+        if fmt in {'ccd', 'toc', 'gdi'}:
+            complete = False
+        if fmt not in {'cue', 'm3u'}:
+            continue
+        size = info['size']
+        if size is None or size > METADATA_LIMIT:
+            complete = False
+            continue
+        try:
+            content = reader.metadata(path)
+            if content is None or len(content) > METADATA_LIMIT:
+                complete = False
+                continue
+            refs, issues = parse_references(content, fmt)
+            complete = complete and not issues
+            for ref in refs:
+                declared = reference_path(path, ref['value'])
+                target = reader.locate(declared)
+                if target is None:
+                    files[declared] = reader.probe(None)
+                elif target not in files:
+                    files[target] = reader.probe(target)
+                    pending.append((target, files[target], PurePosixPath(target).suffix.lower().lstrip('.')))
+        except (OSError, ValueError, RuntimeError):
+            complete = False
+    entries = [{'path': path, **info} for path, info in files.items() if path != location]
+    sizes = [info['size'] for info in files.values()]
+    return entries, sum(sizes) if complete and all(size is not None for size in sizes) else None

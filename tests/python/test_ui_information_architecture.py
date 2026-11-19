@@ -213,7 +213,7 @@ def test_legacy_overlays_removed_and_recovery_is_contextual():
     assert 'class="bottom-dock"' not in html
     assert 'renderTaskDetails' in html
     assert 'task-result-table' in html
-    assert 'id="completion-history-link"' in html
+    assert 'id="completion-history-link"' not in html
     assert 'id="playlist-history-link"' in html
     assert 'id="task-center-button"' not in html
     assert 'data-desktop-view="tasks"' not in html
@@ -295,7 +295,8 @@ def test_home_overview_uses_minimal_concept():
 
     assert 'id="automatic-scan-button"' not in html
     assert 'automatic-scan-button' not in html
-    assert 'id="manual-add-button" class="btn"' in html
+    assert 'id="game-files-button" class="btn"' in html
+    assert 'id="manual-add-button"' not in html
     assert "completion-entry').hidden = !state.previewValid" in html
     assert "'overview-status'" in html
     assert "'overview-complete-button'" in html
@@ -316,7 +317,7 @@ def test_home_overview_uses_minimal_concept():
     assert 'gm-mapping-config' in html
     assert 'gm-manual-scan' not in html
     assert 'openAutoScan()' in html
-    assert '还没有游戏。点击「添加游戏」开始。' in html
+    assert '还没有游戏。打开「游戏文件」开始。' in html
 
 
 def test_add_games_workspace_is_single_column_with_auto_analysis():
@@ -367,13 +368,14 @@ def test_system_page_uses_minimal_concept():
     assert "more.id = 'inspector-more'" in html
     assert 'inspector-more' in html
     assert 'inspector-close' in html
-    assert "wbIcon('x')" in html
+    assert "返回游戏列表" in html
+    assert ".game-details-page .game-library-main" in html
     assert 'inspector-preview-name' not in html
     assert 'previewGameName' not in html
     assert 'inspector-edit-review' not in html
     assert 'inspector-actions' in html
     assert 'inspector-artwork-folder' in html
     assert 'inspector-footer' in html
-    assert '保留游戏文件、封面和存档' in html
+    assert '在游戏文件中查看' in html
     assert 'preview_job_id:preview.id' in html
     assert 'sr-only' in html
