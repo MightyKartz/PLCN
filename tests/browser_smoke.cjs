@@ -554,6 +554,9 @@ async function main() {
     await waitFor(()=>!document.querySelector('#game-files-workspace').hidden,'inline game files workspace');
     assert.equal(await evaluate(()=>document.querySelectorAll('dialog[open]').length),0);
     assert.equal(await evaluate(visible,'#library-browser'),false);
+    assert.equal(await evaluate(()=>document.querySelector('#game-files-import').disabled),true);
+    await click('#game-files-local');
+    await waitFor(()=>!document.querySelector('#game-files-import').disabled,'import enabled after browsing a folder');
     await click('#game-files-import');
     await waitFor(()=>document.querySelector('#gm-pick-files'),'game import loaded');
     await waitFor(()=>document.querySelector('#gm-sources')?.textContent.includes('Imported demo.sfc'),'files auto-picked on open');

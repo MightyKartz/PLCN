@@ -40,6 +40,7 @@ function openGameFiles(opener, target = null) {
     storageStatus.setAttribute('role', 'status');
     const refresh = gmButton('重新检测存储', 'Detect storage again', loadStorages);
     const local = gmButton('电脑目录', 'Computer folder', chooseFolder);
+    local.id = 'game-files-local';
     local.prepend(wbIcon('folder'));
     navigation.append(wbElement('h3', '', tr('电脑', 'Computer')), local,
         wbElement('h3', '', tr('USB 掌机', 'USB handheld')), remote, storageStatus, refresh);
@@ -110,9 +111,11 @@ function openGameFiles(opener, target = null) {
         const compatible = !path || (mtp
             ? path.startsWith('mtp://') && storageDevice(path) === storageDevice(root)
             : !path.startsWith('mtp://'));
-        add.disabled = !root || root.startsWith('adb://') || !compatible;
+        add.disabled = !root || root.startsWith('adb://') || !compatible || !path;
         add.title = add.disabled
-            ? tr('现有导入流程需要打开对应的 RetroArch 游戏库。', 'Open the matching RetroArch library to import files.')
+            ? (!path
+                ? tr('先在左侧选择要浏览的存储或电脑目录。', 'Choose a storage or computer folder on the left first.')
+                : tr('现有导入流程需要打开对应的 RetroArch 游戏库。', 'Open the matching RetroArch library to import files.'))
             : add.getAttribute('aria-label');
     }
 
