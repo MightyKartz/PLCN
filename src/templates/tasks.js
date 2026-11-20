@@ -233,12 +233,13 @@ function finishBatchRun(outcome, analysis, applyResult, errorMessage = '') {
     const openHistory = () => openOperationHistory('completion');
     if (outcome === 'cancelled') {
         const processed = applyResult?.processed_count || 0;
-        showActionToast({message: processed
+        let message = processed
             ? workbenchText(`已取消，已处理 ${processed} 个列表；完成的部分会保留。`, `Cancelled; ${processed} playlist(s) processed and kept.`)
             : analysis
                 ? workbenchText('已取消，已完成的部分会保留。', 'Cancelled; completed work is kept.')
-                : workbenchText('已取消，未写入任何内容。', 'Cancelled; nothing was written.'),
-            details: openHistory});
+                : workbenchText('已取消，未写入任何内容。', 'Cancelled; nothing was written.');
+        if (applyResult?.cleanup_warnings?.length) message += ' · ' + applyResult.cleanup_warnings.join(' · ');
+        showActionToast({message, details: openHistory});
     } else if (outcome === 'failed') {
         showActionToast({message: errorMessage || workbenchText('处理失败，请查看补全记录。', 'The run failed; see completion history.'),
             details: openHistory});

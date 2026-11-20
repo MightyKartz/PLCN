@@ -156,8 +156,10 @@ def check_scope(record,after=False):
 def start(plan,cancelled=lambda: None,progress=lambda message: None):
     """Apply a confirmed plan: guarded staged uploads, reference update, cleanup."""
     if not plan['can_apply']: raise ValueError('请处理方案中的待确认项')
-    record={key:copy.deepcopy(value) for key,value in plan.items()}
-    record['metadata']=copy.deepcopy(plan['metadata_plan'])
+    # One deepcopy keeps shared dict identity (deletions entries are the same
+    # objects as sources entries), so per-file states stay consistent.
+    record=copy.deepcopy(plan)
+    record['metadata']=record.pop('metadata_plan')
     record['write_digests']={write['path']:mtp.digest(write['content']) for write in record['metadata']['writes']}
     record.update(status='applying',created_at=datetime.now(timezone.utc).isoformat(),error=None)
     reached_cleanup=False

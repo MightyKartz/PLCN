@@ -55,7 +55,7 @@ def preview(root, changes):
             for item in items_source:
                 if not isinstance(item, dict) or not isinstance(item.get('path'), str):
                     raise ValueError('播放列表条目结构损坏')
-        except (OSError, ValueError, KeyError, TypeError) as error:
+        except (OSError, ValueError, KeyError, TypeError, RuntimeError) as error:
             failed.append({'playlist': row['name'], 'error': str(error)})
             continue
         dependencies.append({'path': row['path'], 'digest': mtp.digest(raw)})

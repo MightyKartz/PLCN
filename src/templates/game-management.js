@@ -247,7 +247,9 @@ async function runGameJob(route, payload, onProgress) {
                 const job = JSON.parse(event.data);
                 onProgress(job);
                 if (job.status === 'completed') {events.close(); resolve(job.result);}
-                else if (job.error || ['failed', 'cancelled'].includes(job.status)) {events.close(); reject(new Error(job.error || workbenchText('任务已取消', 'Task cancelled')));}
+                else if (job.error || ['failed', 'cancelled'].includes(job.status)) {events.close();
+                    const error = new Error(job.error || workbenchText('任务已取消', 'Task cancelled'));
+                    error.result = job.result; error.cancelled = job.status === 'cancelled'; reject(error);}
             };
             events.onerror = async () => {
                 onProgress({connectionError:true, message:workbenchText('进度连接中断，正在重连；任务不会重复提交。', 'Progress disconnected; reconnecting without resubmitting the task.')});

@@ -153,6 +153,10 @@ def apply_delete(path, remote, progress=lambda *args: None, cancelled=lambda: No
         return {'path': path, 'deleted': deleted, 'cancelled': False}
     except TaskCancelled:
         return {'path': path, 'deleted': deleted, 'cancelled': True}
+    except (OSError, ValueError, RuntimeError) as error:
+        if not deleted:
+            raise
+        return {'path': path, 'deleted': deleted, 'cancelled': False, 'error': str(error)}
 
 
 def _unique_name(directory, name, remote):

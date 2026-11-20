@@ -357,6 +357,21 @@ def test_cleanup_continuation_is_bound_to_its_job(prepared,monkeypatch):
     assert outcome['status']=='completed' and not cue.exists() and not track.exists()
 
 
+def test_cleanup_remaining_lists_only_files_still_on_disk(prepared,monkeypatch):
+    playlist,cue,track,payload=prepared;plan=deploy.prepare(payload)
+    remove=chd_io.remove
+    def fail_track(path,*args,**kwargs):
+        if str(path)==str(track):raise RuntimeError('bin locked')
+        return remove(path,*args,**kwargs)
+    monkeypatch.setattr(chd_io,'remove',fail_track)
+    result=deploy.start(plan)
+    assert result['status']=='partial' and not cue.exists() and track.exists()
+    assert result['cleanup_remaining']==[str(track)]
+    monkeypatch.setattr(chd_io,'remove',remove)
+    outcome=deploy.continue_cleanup(result['cleanup'])
+    assert outcome['status']=='completed' and outcome['deleted']==[str(track)] and not track.exists()
+
+
 def test_continuation_refuses_when_reference_reverted(prepared,monkeypatch):
     playlist,cue,track,payload=prepared;plan=deploy.prepare(payload)
     monkeypatch.setattr(chd_io,'remove',lambda *args,**kwargs:(_ for _ in ()).throw(RuntimeError('disconnected')))

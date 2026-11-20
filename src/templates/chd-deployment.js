@@ -98,7 +98,9 @@ async function continueChdCleanup(){
             const details=deployField('details');details.replaceChildren();
             for(const entry of result.remaining||[]){const line=document.createElement('li');line.textContent='待清理：'+entry.path+' · '+entry.error;details.appendChild(line);}
             deployField('review').hidden=false;
-            if(result.cleanup_id){button.dataset.job=result.cleanup_id;button.hidden=false;}
+            if(result.cleanup_id){button.dataset.job=result.cleanup_id;button.hidden=false;button.disabled=false;}
         }
-    }catch(error){deployField('status').textContent=error.message;button.hidden=false;}
+    }catch(error){
+        // A failed request never claimed the plan server-side; the id can retry.
+        deployField('status').textContent=error.message;button.hidden=false;button.disabled=false;}
 }

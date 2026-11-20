@@ -394,8 +394,10 @@ function openGameFiles(opener, target = null) {
             changing = true;
             dialog.close();
             try {
-                const result = await runOpsJob(tr('正在删除…', 'Deleting…'), {action:'delete', path:item.path, root});
-                if (result?.cancelled) {
+                const result = await runOpsJob(tr('正在删除…', 'Deleting…'), {action:'delete', path:item.path, root})
+                    .catch(error => error.result?.deleted !== undefined ? error.result : Promise.reject(error));
+                const partial = result?.cancelled || result?.error;
+                if (partial) {
                     for (const deletedPath of result.deleted || []) {
                         recordFileChange(root, {action:'delete', path:deletedPath, folder:false});
                     }
@@ -404,10 +406,12 @@ function openGameFiles(opener, target = null) {
                 }
                 if (gameFilesView === view) {
                     await loadDirectory(directory);
+                    const removed = (result?.deleted || []).length;
                     status.textContent = result?.cancelled
-                        ? tr(`已取消：删除了 ${(result.deleted || []).length} 项，其余保留。`,
-                             `Cancelled: ${(result.deleted || []).length} item(s) deleted; the rest remains.`)
-                        : tr('已删除「' + item.name + '」。', 'Deleted "' + item.name + '".');
+                        ? tr(`已取消：删除了 ${removed} 项，其余保留。`, `Cancelled: ${removed} item(s) deleted; the rest remains.`)
+                        : result?.error
+                            ? tr(`部分删除：已删 ${removed} 项；失败：${result.error}`, `Partially deleted: ${removed} removed; failed: ${result.error}`)
+                            : tr('已删除「' + item.name + '」。', 'Deleted "' + item.name + '".');
                 }
             } catch (error) {
                 status.textContent = gmError(error);

@@ -292,6 +292,43 @@ def test_local_delete_can_stop_mid_folder(tmp_path):
     assert {Path(path).name for path in deleted['deleted']} == {'a.bin', 'b.bin', 'c.bin'} - {entry.name for entry in remaining}
 
 
+def test_local_delete_returns_partial_result_on_io_error(tmp_path, monkeypatch):
+    folder = tmp_path / 'Game'
+    folder.mkdir()
+    for name in ('a.bin', 'b.bin'):
+        (folder / name).write_bytes(name.encode())
+    real_unlink = Path.unlink
+    calls = [0]
+    def failing(path, *args, **kwargs):
+        calls[0] += 1
+        if calls[0] > 1:
+            raise OSError('设备 I/O 错误')
+        return real_unlink(path, *args, **kwargs)
+    monkeypatch.setattr(Path, 'unlink', failing)
+    result = ops.apply_delete(str(folder), False)
+    assert len(result['deleted']) == 1 and not result['cancelled']
+    assert 'I/O' in result['error']
+    survivors = list(folder.glob('*.bin'))
+    assert len(survivors) == 1 and str(survivors[0]) not in result['deleted']
+
+    solo = tmp_path / 'solo.bin'
+    solo.write_bytes(b'x')
+    monkeypatch.setattr(Path, 'unlink', lambda *a, **k: (_ for _ in ()).throw(OSError('io')))
+    with pytest.raises(OSError):
+        ops.apply_delete(str(solo), False)
+
+
+def test_completed_result_with_cancelled_flag_marks_job_cancelled():
+    from job_manager import JobManager
+    jobs = JobManager()
+    ident = jobs.create_job()
+    jobs.complete_job(ident, {'path': '/x', 'deleted': ['/x/a'], 'cancelled': True})
+    assert jobs.jobs[ident]['status'] == 'cancelled' and jobs.jobs[ident]['result']['deleted'] == ['/x/a']
+    other = jobs.create_job()
+    jobs.complete_job(other, {'path': '/y', 'deleted': ['/y'], 'cancelled': False})
+    assert jobs.jobs[other]['status'] == 'completed'
+
+
 def test_copy_paste_uses_host_platform_source_name(tmp_path):
     source = tmp_path / 'src'
     source.mkdir()
@@ -431,6 +468,31 @@ def test_sync_broken_playlist_does_not_block_valid_ones(tmp_path):
     sync.apply(str(root), changes, public['signature'])
     assert json.loads(target.read_text(encoding='utf-8'))['items'][0]['path'] == str(roms / 'b.nes')
     assert broken.read_bytes() == broken_bytes
+
+
+def test_sync_isolates_a_single_transport_read_failure(tmp_path, monkeypatch):
+    roms = tmp_path / 'Roms'
+    roms.mkdir()
+    root, target = library(tmp_path, [{'path': str(roms / 'a.nes'), 'label': 'A'}])
+    extra = root / 'playlists' / 'Extra.lpl'
+    extra.write_text(json.dumps({'items': [{'path': '/p.chd', 'label': 'P'}]}), encoding='utf-8')
+    extra_bytes = extra.read_bytes()
+    real_read = sync.scan.read
+    def flaky(path):
+        if Path(path).name == 'Extra.lpl':
+            raise RuntimeError('MTP 传输中断')
+        return real_read(path)
+    monkeypatch.setattr(sync.scan, 'read', flaky)
+    changes = [{'action': 'rename', 'path': str(roms / 'a.nes'), 'to': str(roms / 'b.nes'), 'folder': False}]
+    plan = sync.preview(str(root), changes)
+    public = plan['public']
+    assert [entry['label'] for entry in public['renamed']] == ['A']
+    assert [entry['playlist'] for entry in public['failed']] == ['Extra.lpl']
+    assert 'MTP' in public['failed'][0]['error']
+    assert public['playlists_total'] == 2 and public['playlists_read'] == 1
+    sync.apply(str(root), changes, public['signature'])
+    assert json.loads(target.read_text(encoding='utf-8'))['items'][0]['path'] == str(roms / 'b.nes')
+    assert extra.read_bytes() == extra_bytes
 
 
 def test_sync_reports_all_playlists_broken(tmp_path):

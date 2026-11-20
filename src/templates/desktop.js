@@ -175,6 +175,7 @@ async function refreshDesktop() {
                     const result = job.result || {};
                     if (result.revision) desktopElement('p', desktopText('上游版本：', 'Upstream revision: ') + result.revision, entry);
                     if (result.message) desktopElement('p', result.message, entry);
+                    for (const warning of result.cleanup_warnings || []) desktopElement('p', warning, entry);
                     if (result.comparison) {
                         const change = result.comparison;
                         desktopElement('p', desktopText(
