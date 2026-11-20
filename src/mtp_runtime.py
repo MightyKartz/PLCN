@@ -467,6 +467,7 @@ def upload_file(value,source,expected,stage,cancelled=lambda: None):
 def remove_file(value,expected,cancelled=lambda: None,expected_id=None):
     """Delete one MTP file only when its content still matches the reviewed digest."""
     import chd_io
+    from task_control import TaskCancelled
     with session(value) as (handle, storage, parts):
         cancelled();entry=resolve(handle,storage,parts)
         if not entry: raise ValueError('MTP 移除目标不是文件')
@@ -474,12 +475,22 @@ def remove_file(value,expected,cancelled=lambda: None,expected_id=None):
         # and this path belongs to something else — never auto-delete it.
         if expected_id is not None and entry['id']!=expected_id: raise chd_io.RemoveUnverified('待移除对象已变化：'+value)
         if entry['folder']: raise ValueError('MTP 移除目标不是文件')
-        if chd_io.digest(value,cancelled)!=expected:
-            if expected_id is not None:
-                try: probe=resolve(handle,storage,parts)
-                except Exception: probe=None
-                if probe is None or probe['id']!=expected_id:
-                    raise chd_io.RemoveUnverified('待移除对象已变化：'+value)
+        def confirm_identity():
+            # After a failed read-back, the approved id decides whether retrying
+            # is safe; a missing or different object must never be re-attempted.
+            try: probe=resolve(handle,storage,parts)
+            except Exception: probe=None
+            return probe is not None and probe['id']==expected_id
+        try:
+            actual=chd_io.digest(value,cancelled)
+        except TaskCancelled: raise
+        except Exception as error:
+            if expected_id is not None and not confirm_identity():
+                raise chd_io.RemoveUnverified('待移除对象已变化：'+value) from error
+            raise
+        if actual!=expected:
+            if expected_id is not None and not confirm_identity():
+                raise chd_io.RemoveUnverified('待移除对象已变化：'+value)
             raise ValueError('MTP 待移除文件已变化：'+value)
         cancelled()
         # The digest read-back can be slow; the path may have moved meanwhile.
@@ -488,6 +499,7 @@ def remove_file(value,expected,cancelled=lambda: None,expected_id=None):
             current=resolve(handle,storage,parts)
         except Exception as error: raise chd_io.RemoveUnverified('删除前无法确认对象：'+value) from error
         if current is None or current['id']!=entry['id']: raise chd_io.RemoveUnverified('对象已移动或路径已变化：'+value)
+        cancelled()
         try:
             failed=bool(library().LIBMTP_Delete_Object(handle,current['id']))
         except Exception as error: raise chd_io.RemoveUnverified('删除指令结果未知：'+value) from error

@@ -578,3 +578,52 @@ def test_remove_honors_cancellation_before_issuing_delete(device_files, monkeypa
     with pytest.raises(TaskCancelled):
         mtp.remove_file(target, chd_io.digest(target), cancelled)
     assert not deleted_ids and files[target] == b'track'
+
+
+def test_remove_cancels_during_final_lookup(device_files, monkeypatch):
+    from task_control import TaskCancelled
+    root, files, upload, lib = device_files
+    chd_io = _stub_chd_digest(monkeypatch, files)
+    target = mtp.join(root, 'victim.bin'); upload(None, 65537, 0, 'victim.bin', b'track')
+    real_resolve = mtp.resolve; calls = [0]; stop = [False]
+    def resolve(handle, storage, parts, create=False):
+        calls[0] += 1
+        if calls[0] == 2: stop[0] = True   # cancellation lands during the final lookup
+        return real_resolve(handle, storage, parts, create)
+    monkeypatch.setattr(mtp, 'resolve', resolve)
+    def cancelled():
+        if stop[0]: raise TaskCancelled('stop')
+    deleted = []
+    lib.LIBMTP_Delete_Object = lambda handle, ident: deleted.append(ident) or 1
+    with pytest.raises(TaskCancelled):
+        mtp.remove_file(target, chd_io.digest(target), cancelled)
+    assert not deleted and files[target] == b'track'
+
+
+def test_remove_flags_object_whose_readback_failed_after_rename(device_files, monkeypatch):
+    root, files, upload, lib = device_files
+    chd_io = _stub_chd_digest(monkeypatch, files)
+    target = mtp.join(root, 'data3.bin'); upload(None, 65537, 0, 'data3.bin', b'track')
+    saved = mtp.join(root, 'saved3.bin')
+    def digest(path, *args, **kwargs):
+        files[saved] = files.pop(target); raise RuntimeError('download error')
+    monkeypatch.setattr(chd_io, 'digest', digest)
+    deleted = []
+    lib.LIBMTP_Delete_Object = lambda handle, ident: deleted.append(ident) or 1
+    approved = mtp.resolve(None, 65537, mtp.parse(target)[2])['id']
+    with pytest.raises(chd_io.RemoveUnverified, match='变化'):
+        mtp.remove_file(target, b'sha', expected_id=approved)
+    assert not deleted and files[saved] == b'track'
+
+
+def test_remove_stays_retryable_when_identity_confirmed_after_readback_error(device_files, monkeypatch):
+    root, files, upload, lib = device_files
+    chd_io = _stub_chd_digest(monkeypatch, files)
+    target = mtp.join(root, 'flaky.bin'); upload(None, 65537, 0, 'flaky.bin', b'track')
+    monkeypatch.setattr(chd_io, 'digest', lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError('download error')))
+    deleted = []
+    lib.LIBMTP_Delete_Object = lambda handle, ident: deleted.append(ident) or 1
+    approved = mtp.resolve(None, 65537, mtp.parse(target)[2])['id']
+    with pytest.raises(RuntimeError, match='download error'):
+        mtp.remove_file(target, b'sha', expected_id=approved)
+    assert not deleted and files[target] == b'track'
