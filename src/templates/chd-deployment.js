@@ -87,10 +87,15 @@ function offerCleanup(result){
     for(const path of result.cleanup_remaining||[]){const line=document.createElement('li');line.textContent='待清理：'+path;details.appendChild(line);}
     deployField('review').hidden=false;
 }
+function setCleanupButton(check){
+    // Keep the icon container: checking must not look like a delete action.
+    wbIconButton(deployField('cleanup'),check?'search':'trash',
+        workbenchText(check?'核对清理结果':'继续清理原镜像',check?'Check cleanup result':'Continue removing originals'));
+}
 function clearCleanupOffer(){
     const button=deployField('cleanup');button.hidden=true;
     if(button.dataset){delete button.dataset.job;delete button.dataset.check;}
-    button.textContent='继续清理原镜像';chdDeployment.cleanupRequest=null;
+    setCleanupButton(false);chdDeployment.cleanupRequest=null;
 }
 function showCleanupResult(result){
     const button=deployField('cleanup');
@@ -105,12 +110,12 @@ function showCleanupResult(result){
     for(const entry of unverified){const line=document.createElement('li');line.textContent='待核对：'+entry.path+' · '+entry.error;details.appendChild(line);}
     for(const entry of remaining){const line=document.createElement('li');line.textContent='待清理：'+entry.path+' · '+entry.error;details.appendChild(line);}
     deployField('review').hidden=false;
-    if(result.cleanup_id){button.dataset.job=result.cleanup_id;delete button.dataset.check;button.textContent='继续清理原镜像';
+    if(result.cleanup_id){button.dataset.job=result.cleanup_id;delete button.dataset.check;setCleanupButton(false);
         button.hidden=false;button.disabled=false;}
 }
 function offerCleanupCheck(){
     const button=deployField('cleanup');
-    button.dataset.check='1';button.hidden=false;button.disabled=false;button.textContent='核对清理结果';
+    button.dataset.check='1';button.hidden=false;button.disabled=false;setCleanupButton(true);
 }
 async function reconcileCleanup(requestId,record,cause){
     // The request outcome is unknown: never resubmit until the server state is
@@ -120,8 +125,7 @@ async function reconcileCleanup(requestId,record,cause){
     deployField('status').textContent=(cause?cause+'；':'')+'正在核对清理结果…';
     let job;
     try{
-        const state=await desktopRequest('/api/desktop');
-        job=(state.jobs||[]).find(entry=>entry.request_id===requestId);
+        job=(await desktopRequest('/api/jobs/by-request',{request_id:requestId})).job;
     }catch(_error){job=null;}
     if(chdDeployment.record!==record||chdDeployment.cleanupRequest!==requestId)return;
     if(!job){deployField('status').textContent='无法确认清理结果；恢复连接后可再次核对。';offerCleanupCheck();return;}
@@ -137,7 +141,7 @@ async function reconcileCleanup(requestId,record,cause){
 async function continueChdCleanup(){
     const button=deployField('cleanup');if(chdDeployment.busy)return;
     const record=chdDeployment.record;
-    if(button.dataset.check&&chdDeployment.cleanupRequest){button.hidden=true;delete button.dataset.check;button.textContent='继续清理原镜像';
+    if(button.dataset.check&&chdDeployment.cleanupRequest){button.hidden=true;delete button.dataset.check;setCleanupButton(false);
         await reconcileCleanup(chdDeployment.cleanupRequest,record);return;}
     const cleanupId=button.dataset.job;if(!cleanupId)return;
     button.hidden=true;

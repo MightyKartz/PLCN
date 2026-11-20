@@ -90,6 +90,7 @@ POST_ROUTES = {
     '/api/desktop/pick': api_desktop.pick,
     '/api/desktop/shutdown': api_desktop.shutdown,
     '/api/fs/open': api_library.open_folder,
+    '/api/jobs/by-request': api_tasks.by_request,
     '/api/jobs/cancel': api_tasks.cancel,
     '/api/jobs/retry': api_tasks.retry,
     '/api/library/recent': api_library.recent,

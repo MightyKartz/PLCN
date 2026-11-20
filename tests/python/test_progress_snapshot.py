@@ -28,3 +28,15 @@ def test_progress_sends_terminal_snapshot_when_job_finishes_during_write(monkeyp
     assert [event['status'] for event in events] == ['running', 'completed']
     assert events[-1]['result'] == {'done': True}
     assert running['status'] == 'running'
+
+
+def test_find_by_request_survives_snapshot_cap():
+    jobs = JobManager()
+    target = jobs.create_job(); jobs.complete_job(target)
+    with jobs.lock: jobs.jobs[target]['request_id'] = 'req-9'
+    for _ in range(35):
+        other = jobs.create_job(); jobs.complete_job(other)
+    assert all(job['id'] != target for job in jobs.snapshot())
+    found = jobs.find_by_request('req-9')
+    assert found['id'] == target and found['request_id'] == 'req-9'
+    assert jobs.find_by_request('missing') is None and jobs.find_by_request('') is None

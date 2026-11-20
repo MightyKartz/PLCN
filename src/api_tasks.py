@@ -4,6 +4,11 @@ import time
 from api_common import reply, background
 
 
+def by_request(handler, context, payload):
+    from api_common import reply
+    reply(handler, {'job': context.job_manager.find_by_request(payload.get('request_id'))})
+
+
 def cancel(handler, context, payload):
     jobs = context.job_manager
     jobs.cancel(payload.get('job_id'))

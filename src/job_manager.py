@@ -90,3 +90,14 @@ class JobManager:
         with self.lock:
             job = self.jobs.get(job_id)
             return dict(job) if job is not None else None
+
+    def find_by_request(self, request_id):
+        """Exact job lookup for a client-issued request id; not capped by the
+        30-entry snapshot used for display."""
+        if not isinstance(request_id, str) or not request_id:
+            return None
+        with self.lock:
+            for key, job in reversed(list(self.jobs.items())):
+                if job.get('request_id') == request_id:
+                    return dict(job, id=key)
+            return None

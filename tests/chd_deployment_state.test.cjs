@@ -4,7 +4,9 @@ function harness(){
     const field=id=>{if(!fields.has(id))fields.set(id,{value:'',checked:false,disabled:false,hidden:false,textContent:'',replaceChildren(){},querySelectorAll(){return [];}});return fields.get(id);};
     const c={console,Set,JSON,document:{getElementById:field},workbench:{operation:null},
         beginWorkbenchOperation(op){if(c.workbench.operation)return false;c.workbench.operation=op;return true;},endWorkbenchOperation(){c.workbench.operation=null;},
-        desktopRequest:async()=>({job_id:'active'}),EventSource:class{constructor(){events.push(this);}close(){this.closed=true;}},resetGameLibrary(){},desktopClearPreview(){},refreshDesktop:async()=>{},scanDevice:async()=>{},currentDeviceScan:null};
+        desktopRequest:async()=>({job_id:'active'}),EventSource:class{constructor(){events.push(this);}close(){this.closed=true;}},resetGameLibrary(){},desktopClearPreview(){},refreshDesktop:async()=>{},scanDevice:async()=>{},currentDeviceScan:null,currentUILanguage:'zh',
+        workbenchText:(zh,en)=>c.currentUILanguage==='en'?en:zh,
+        wbIconButton(button,name,label){button.iconName=name;button.title=label;button.ariaLabel=label;}};
     vm.createContext(c);vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/templates/chd-deployment.js'),'utf8')+'\nglobalThis.store=chdDeployment',c);
     return {c,field:id=>field('deploy-'+id),events};
 }
@@ -58,26 +60,29 @@ test('an invalid cleanup id retires the continuation entry',async()=>{
 test('an ambiguous failure offers a recheck entry instead of resubmitting',async()=>{
     const {c,field}=harness();
     let requestId;c.deploymentJob=async(route,payload)=>{requestId=payload.request_id;throw new Error('网络错误');};
-    c.desktopRequest=async()=>({jobs:[]});
+    const lookups=[];c.desktopRequest=async(route,payload)=>{lookups.push({route,payload});return {job:null};};
     const button=field('cleanup');button.dataset={job:'old-id'};button.hidden=false;
     await c.continueChdCleanup();
     assert.equal(button.dataset.job,'old-id');assert.equal(button.dataset.check,'1');
     assert.equal(button.hidden,false);assert.equal(button.disabled,false);
     assert.match(field('status').textContent,/无法确认|核对/);
-    // The recheck only binds the job carrying this request's id.
+    // The recheck only binds the job carrying this request's id via exact lookup.
     c.deploymentJob=async()=>assert.fail('must not resubmit');
-    c.desktopRequest=async()=>({jobs:[{id:'job-9',request_id:requestId,status:'completed',
-        result:{status:'completed',deleted:['/a.cue'],remaining:[],unverified:[]}}]});
+    c.desktopRequest=async(route,payload)=>{lookups.push({route,payload});
+        return {job:{id:'job-9',request_id:requestId,status:'completed',
+        result:{status:'completed',deleted:['/a.cue'],remaining:[],unverified:[]}}};};
     await c.continueChdCleanup();
     assert.equal(button.hidden,true);
     assert.match(field('status').textContent,/清理完成/);
+    assert.ok(lookups.length>=2);
+    for(const entry of lookups){assert.equal(entry.route,'/api/jobs/by-request');assert.equal(entry.payload.request_id,requestId);}
 });
 
 test('reconcile never binds a cleanup job from another request or game',async()=>{
     const {c,field}=harness();
     c.deploymentJob=async()=>{throw new Error('连接已失效');};
-    // Same-titled job without this request's id must not be claimed.
-    c.desktopRequest=async()=>({jobs:[{id:'other',title:'继续清理 CHD 原镜像',status:'completed',result:{cleanup_id:'foreign'}}]});
+    // A foreign job is invisible to the exact request lookup.
+    c.desktopRequest=async()=>({job:null});
     c.store.record='game-A';
     const button=field('cleanup');button.dataset={job:'old-id'};button.hidden=false;
     await c.continueChdCleanup();
@@ -87,7 +92,7 @@ test('reconcile never binds a cleanup job from another request or game',async()=
     c.deploymentJob=async()=>assert.fail('recheck must not resubmit');
     const task=c.continueChdCleanup();
     c.store.record='game-B';button.dataset.job='b-cleanup';button.hidden=false;
-    resolve({jobs:[]});await task;
+    resolve({job:null});await task;
     assert.equal(button.dataset.job,'b-cleanup');assert.equal(button.dataset.check,undefined);
 });
 
@@ -97,7 +102,7 @@ test('reconcile binds the latest remaining list when the submitted job finished'
     field('details').appendChild=function(){};
     let requestId;c.deploymentJob=async(route,payload)=>{requestId=payload.request_id;throw new Error('连接已失效');};
     c.store.record='game';
-    c.desktopRequest=async()=>({jobs:[{id:'job-9',request_id:requestId,status:'completed',result:{status:'partial',deleted:['/a.cue'],remaining:[{path:'/a.bin',error:'io'}],cleanup_id:'next-id'}}]});
+    c.desktopRequest=async()=>({job:{id:'job-9',request_id:requestId,status:'completed',result:{status:'partial',deleted:['/a.cue'],remaining:[{path:'/a.bin',error:'io'}],cleanup_id:'next-id'}}});
     const button=field('cleanup');button.dataset={job:'old-id'};button.hidden=false;
     await c.continueChdCleanup();
     assert.equal(button.dataset.job,'next-id');assert.equal(button.hidden,false);assert.equal(button.disabled,false);
@@ -113,4 +118,29 @@ test('a cancelled cleanup job rebinds the freshly issued id with its remaining l
     await c.continueChdCleanup();
     assert.equal(button.dataset.job,'new-id');assert.equal(button.hidden,false);assert.equal(button.disabled,false);
     assert.match(field('status').textContent,/已取消/);
+});
+
+test('check mode keeps a search icon and read-only labels; a valid id restores delete mode in both languages',async()=>{
+    const {c,field}=harness();
+    const button=field('cleanup');button.dataset={job:'old-id'};button.hidden=false;
+    c.deploymentJob=async()=>{throw new Error('连接已失效');};
+    c.desktopRequest=async()=>({job:null});
+    await c.continueChdCleanup();
+    assert.equal(button.dataset.check,'1');
+    assert.equal(button.iconName,'search');
+    assert.equal(button.title,'核对清理结果');assert.equal(button.ariaLabel,'核对清理结果');
+    // A bound cleanup id restores delete semantics.
+    c.document.createElement=()=>({textContent:''});field('details').appendChild=function(){};
+    c.showCleanupResult({status:'partial',remaining:[{path:'/a.bin',error:'io'}],unverified:[],cleanup_id:'next'});
+    assert.equal(button.dataset.job,'next');assert.equal(button.dataset.check,undefined);
+    assert.equal(button.iconName,'trash');
+    assert.equal(button.title,'继续清理原镜像');assert.equal(button.ariaLabel,'继续清理原镜像');
+    // English labels for both modes.
+    c.currentUILanguage='en';
+    c.offerCleanupCheck();
+    assert.equal(button.iconName,'search');
+    assert.equal(button.title,'Check cleanup result');assert.equal(button.ariaLabel,'Check cleanup result');
+    c.showCleanupResult({status:'partial',remaining:[{path:'/b.bin',error:'io'}],unverified:[],cleanup_id:'n2'});
+    assert.equal(button.iconName,'trash');
+    assert.equal(button.title,'Continue removing originals');assert.equal(button.ariaLabel,'Continue removing originals');
 });

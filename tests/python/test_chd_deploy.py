@@ -468,3 +468,46 @@ def test_continuation_refuses_when_reference_reverted(prepared,monkeypatch):
     with pytest.raises(ValueError,match='引用'):
         deploy.continue_cleanup(result['cleanup'])
     assert cue.exists() and track.exists()
+
+
+def test_unverified_first_deploy_is_partial_and_reports_no_delta(prepared,monkeypatch):
+    _,cue,track,payload=prepared;plan=deploy.prepare(payload)
+    first=plan['deletions'][0]['path'];real=chd_io.remove
+    def flaky(path,expected,*args,**kwargs):
+        if path==first:Path(path).unlink(missing_ok=True);raise chd_io.RemoveUnverified('删除指令结果未知：'+path)
+        return real(path,expected,*args,**kwargs)
+    monkeypatch.setattr(chd_io,'remove',flaky)
+    result=deploy.start(plan)
+    assert result['status']=='partial' and '待核对' in result['error']
+    assert result['actual_image_delta_bytes'] is None and 'cleanup' not in result
+    assert [entry['path'] for entry in result['unverified']]==[first]
+
+
+def test_continuation_removes_remaining_with_absent_unverified_source(prepared,monkeypatch):
+    _,cue,track,payload=prepared;plan=deploy.prepare(payload)
+    first,second=(file['path'] for file in plan['deletions']);real=chd_io.remove
+    def flaky(path,expected,*args,**kwargs):
+        if path==first:Path(path).unlink(missing_ok=True);raise chd_io.RemoveUnverified('删除指令结果未知：'+path)
+        raise RuntimeError('disconnected after uncertain delete')
+    monkeypatch.setattr(chd_io,'remove',flaky)
+    result=deploy.start(plan)
+    assert result['status']=='partial' and not Path(first).exists() and Path(second).exists()
+    assert [entry['path'] for entry in result['cleanup']['pending']]==[second]
+    monkeypatch.setattr(chd_io,'remove',real)
+    outcome=deploy.continue_cleanup(result['cleanup'])
+    assert outcome['deleted']==[second] and not Path(second).exists()
+    assert [entry['path'] for entry in outcome['unverified']]==[first]
+
+
+def test_new_reference_still_blocks_continuation_with_unverified_absent(prepared,monkeypatch):
+    _,cue,track,payload=prepared;plan=deploy.prepare(payload)
+    first,second=(file['path'] for file in plan['deletions'])
+    def flaky(path,expected,*args,**kwargs):
+        if path==first:Path(path).unlink(missing_ok=True);raise chd_io.RemoveUnverified('删除指令结果未知：'+path)
+        raise RuntimeError('disconnected after uncertain delete')
+    monkeypatch.setattr(chd_io,'remove',flaky)
+    result=deploy.start(plan)
+    (Path(second).parent/'late.m3u').write_text('late\n',encoding='utf-8')
+    with pytest.raises(ValueError,match='变化'):
+        deploy.continue_cleanup(result['cleanup'])
+    assert Path(second).exists()

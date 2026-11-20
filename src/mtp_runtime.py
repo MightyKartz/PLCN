@@ -472,13 +472,14 @@ def remove_file(value,expected,cancelled=lambda: None):
         cancelled();entry=resolve(handle,storage,parts)
         if not entry or entry['folder']: raise ValueError('MTP 移除目标不是文件')
         try:
-            if library().LIBMTP_Delete_Object(handle,entry['id']): raise RuntimeError('MTP 移除失败')
-        except RuntimeError: raise
+            failed=bool(library().LIBMTP_Delete_Object(handle,entry['id']))
         except Exception as error: raise chd_io.RemoveUnverified('删除指令结果未知：'+value) from error
+        # The delete command was issued; a nonzero status is ambiguous — the
+        # device may have deleted then reported failure. Presence decides.
         try:
             still=resolve(handle,storage,parts)
         except Exception as error: raise chd_io.RemoveUnverified('删除已执行但无法核对：'+value) from error
-        if still is not None: raise RuntimeError('MTP 移除核对失败')
+        if still is not None: raise RuntimeError('MTP 移除失败' if failed else 'MTP 移除核对失败')
 
 
 def rename_object(value, name):

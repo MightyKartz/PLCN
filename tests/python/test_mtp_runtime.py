@@ -403,3 +403,51 @@ def test_locked_cached_session_is_released_and_unlock_can_open_a_new_session(mon
     assert found[0]['path'] == 'mtp://1-2/00010001/'
     assert found[0]['label'] == 'Internal'
     assert found[0]['device_name'] == 'Retroid Pocket Nova'
+
+
+def _stub_chd_digest(monkeypatch, files):
+    import chd_io
+    monkeypatch.setattr(chd_io, 'digest', lambda path, *a, **k: mtp.digest(files[path]) if path in files else None)
+    return chd_io
+
+
+def test_remove_nonzero_status_but_object_gone_counts_as_removed(device_files, monkeypatch):
+    root, files, upload, lib = device_files
+    chd_io = _stub_chd_digest(monkeypatch, files)
+    target = mtp.join(root, 'gone.cue'); upload(None, 65537, 0, 'gone.cue', b'cue bytes')
+    lib.LIBMTP_Delete_Object = lambda handle, ident: (files.pop(target, None), 1)[1]
+    mtp.remove_file(target, chd_io.digest(target))
+    assert target not in files
+
+
+def test_remove_nonzero_status_but_object_present_stays_retryable(device_files, monkeypatch):
+    root, files, upload, lib = device_files
+    chd_io = _stub_chd_digest(monkeypatch, files)
+    target = mtp.join(root, 'stays.cue'); upload(None, 65537, 0, 'stays.cue', b'cue bytes')
+    lib.LIBMTP_Delete_Object = lambda handle, ident: 1
+    with pytest.raises(RuntimeError, match='移除失败'):
+        mtp.remove_file(target, chd_io.digest(target))
+    assert target in files
+
+
+def test_remove_delete_command_transport_error_is_unverified(device_files, monkeypatch):
+    root, files, upload, lib = device_files
+    chd_io = _stub_chd_digest(monkeypatch, files)
+    target = mtp.join(root, 'lost.cue'); upload(None, 65537, 0, 'lost.cue', b'cue bytes')
+    lib.LIBMTP_Delete_Object = lambda handle, ident: (_ for _ in ()).throw(OSError('link dead'))
+    with pytest.raises(chd_io.RemoveUnverified, match='结果未知'):
+        mtp.remove_file(target, chd_io.digest(target))
+
+
+def test_remove_presence_check_failure_is_unverified(device_files, monkeypatch):
+    root, files, upload, lib = device_files
+    chd_io = _stub_chd_digest(monkeypatch, files)
+    target = mtp.join(root, 'grey.cue'); upload(None, 65537, 0, 'grey.cue', b'cue bytes')
+    real = mtp.resolve; calls = [0]
+    def flaky(handle, storage, parts, create=False):
+        calls[0] += 1
+        if calls[0] == 2: raise OSError('link dead')
+        return real(handle, storage, parts, create)
+    monkeypatch.setattr(mtp, 'resolve', flaky)
+    with pytest.raises(chd_io.RemoveUnverified, match='无法核对'):
+        mtp.remove_file(target, chd_io.digest(target))

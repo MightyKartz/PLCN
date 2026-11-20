@@ -134,7 +134,7 @@ def check_scope(record,after=False):
     # a retried plan may also find scheduled deletions already absent.
     expected=copy.deepcopy(record['scope_snapshot']['directories'])
     absent={file['path'] for file in record.get('deletions',[]) if not io.digest(file['path'])}
-    absent.update(file['path'] for file in record.get('sources',[]) if file.get('state') in {'deleting','deleted'} and not io.digest(file['path']))
+    absent.update(file['path'] for file in record.get('sources',[]) if file.get('state') in {'deleting','deleted','unverified'} and not io.digest(file['path']))
     for path in absent:
         parent=path.rsplit('/',1)[0];name=mtp.parse(path)[2][-1] if mtp.is_mtp(path) else Path(path).name
         if parent in expected: expected[parent]=[entry for entry in expected[parent] if entry[0]!=name]
@@ -142,7 +142,7 @@ def check_scope(record,after=False):
     scheduled={file['path'] for file in record.get('deletions',[])}
     for path,digest in record['scope_snapshot']['documents'].items():
         gone=io.digest(path) is None
-        if gone and (path in scheduled or any(file['path']==path and file.get('state') in {'deleted','deleting'} for file in record['sources'])): continue
+        if gone and (path in scheduled or any(file['path']==path and file.get('state') in {'deleted','deleting','unverified'} for file in record['sources'])): continue
         acceptable={digest}
         if after:
             if record.get('write_digests'):
@@ -239,6 +239,8 @@ def start(plan,cancelled=lambda: None,progress=lambda message: None):
         record['status']='completed';record['error']=None
     except (OSError,ValueError,RuntimeError,TaskCancelled) as error:
         record.update(status='partial',error=str(error))
+    if record['status']=='completed' and record.get('unverified'):
+        record['status']='partial';record['error']=str(len(record['unverified']))+' 项删除结果待核对'
     record['actual_image_delta_bytes']=(sum(file['size'] for file in record['sources'] if file.get('state')=='deleted')-sum(item['size'] for item in record['copies'] if item['created'] and item.get('state')=='verified')) if record['status']=='completed' else None
     # The result travels through the job API; internal descriptors are not JSON-safe.
     result={key:value for key,value in record.items() if key not in {'metadata','metadata_plan','scope_snapshot','origin_analysis','write_digests'}} | {
@@ -247,6 +249,7 @@ def start(plan,cancelled=lambda: None,progress=lambda message: None):
     if record['mode']=='replace' and record['status']=='partial' and reached_cleanup:
         remaining=[file for file in record['deletions'] if file.get('state') not in {'deleted','unverified'}]
         result['cleanup_remaining']=[file['path'] for file in remaining]
+        if not remaining: return result
         result['cleanup']={'playlist':record['playlist'],'roots':record['roots'],
                            'copies':[{'target':item['target'],'sha256':item['sha256'],'created':item['created']} for item in record['copies']],
                            'pending':[{'path':file['path'],'sha256':file['sha256'],'size':file['size']} for file in remaining],
