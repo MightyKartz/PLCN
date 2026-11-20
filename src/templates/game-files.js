@@ -368,9 +368,9 @@ function openGameFiles(opener, target = null) {
         actions.append(cancel, confirm);
         const name = wbElement('p', 'game-file-dialog-name', item.name);
         dialog.append(heading, name,
-            wbElement('p', '', tr(item.directory ? '文件夹及其内容会移到电脑上的备份目录。' : '文件会移到电脑上的备份目录。',
-                                  item.directory ? 'The folder and its contents move to a backup folder on this computer.'
-                                                 : 'The file moves to a backup folder on this computer.')),
+            wbElement('p', '', tr(item.directory ? '文件夹及其内容将被永久删除，无法撤销。' : '文件将被永久删除，无法撤销。',
+                                  item.directory ? 'The folder and its contents will be permanently deleted. There is no undo.'
+                                                 : 'The file will be permanently deleted. There is no undo.')),
             message, actions);
         document.body.append(dialog);
         dialog.addEventListener('close', () => dialog.remove(), {once:true});
@@ -387,7 +387,7 @@ function openGameFiles(opener, target = null) {
                 recordFileChange(root, {action:'delete', path:item.path, folder:Boolean(item.directory)});
                 if (gameFilesView === view) {
                     await loadDirectory(directory);
-                    status.textContent = tr('已删除。备份：', 'Deleted. Backup: ') + result.backup_directory;
+                    status.textContent = tr('已删除「' + item.name + '」。', 'Deleted "' + item.name + '".');
                 }
             } catch (error) {
                 status.textContent = gmError(error);
@@ -531,10 +531,10 @@ function openGameFiles(opener, target = null) {
         dialog.setAttribute('aria-labelledby', heading.id);
         const names = conflicts.join('、');
         const message = all
-            ? tr(`「${names}」已存在，是否替换？原有内容会移到电脑上的备份目录。`,
-                 `"${names}" already exists. Replace it? The original moves to a backup folder on this computer.`)
-            : tr(`「${names}」已存在。替换会用所选内容覆盖并备份原有内容；跳过则保留原有文件。`,
-                 `"${names}" already exists. Replacing overwrites it after backup; skipping keeps the original.`);
+            ? tr(`「${names}」已存在，是否替换？原有内容将被永久删除。`,
+                 `"${names}" already exists. Replace it? The original will be permanently deleted.`)
+            : tr(`「${names}」已存在。替换会用所选内容覆盖并永久删除原有内容；跳过则保留原有文件。`,
+                 `"${names}" already exists. Replacing overwrites and permanently deletes the original; skipping keeps it.`);
         const actions = wbElement('div', 'desktop-confirm-actions');
         actions.append(gmButton('取消', 'Cancel', () => dialog.close()));
         if (!all) actions.append(gmButton('跳过同名', 'Skip existing', () => { dialog.close(); submitAdd(sources, false); }));

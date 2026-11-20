@@ -1,11 +1,10 @@
-"""Plain file-manager operations: rename, delete-to-backup, copy."""
+"""Plain file-manager operations: rename, delete, copy."""
 from pathlib import Path, PurePosixPath
 import itertools
 import shutil
 import tempfile
 import uuid
 
-import app_paths
 import chd_io
 import mtp_runtime as mtp
 from safe_io import file_lock
@@ -113,29 +112,26 @@ def _ensure_remote_dir(path):
 
 
 def apply_delete(path, remote, progress=lambda *args: None, cancelled=lambda: None):
-    """Move a file or folder into a local backup folder; return the backup directory."""
-    backup = app_paths.user_data_dir() / 'file-trash' / uuid.uuid4().hex
+    """Permanently delete a file or folder; return the deleted path."""
     if not remote:
         source = Path(path)
-        if not source.exists():
+        if not source.exists() and not source.is_symlink():
             raise ValueError('文件已移动或不存在')
-        backup.mkdir(parents=True)
         with file_lock(path):
-            shutil.move(str(source), str(backup / source.name))
-        return str(backup)
+            if source.is_dir() and not source.is_symlink():
+                shutil.rmtree(source)
+            else:
+                source.unlink()
+        return path
     files, folders = _walk_remote(path)
-    root_name = PurePosixPath(path).name
-    backup.mkdir(parents=True)
     for index, entry in enumerate(files):
         cancelled()
-        progress(index, len(files), '备份：' + entry['path'])
-        target = backup / root_name / entry['relative'] if folders else backup / entry['relative']
-        target.parent.mkdir(parents=True, exist_ok=True)
-        digest = chd_io.copy_to(entry['path'], target, cancelled)
-        chd_io.remove(entry['path'], digest, cancelled)
+        progress(index, len(files), '删除：' + entry['path'])
+        mtp.delete_object(entry['path'])
     for folder in sorted(folders, key=lambda f: len(mtp.parse(f)[2]), reverse=True):
+        cancelled()
         mtp.delete_object(folder)
-    return str(backup)
+    return path
 
 
 def _unique_name(directory, name, remote):
@@ -260,9 +256,8 @@ def apply_add(sources, directory, remote, overwrite=False, progress=lambda *args
     """Copy local sources into the browsed directory.
 
     Same-named top-level items are skipped, or — when overwrite is set — staged,
-    then the original moves to the local backup folder before the staged copy
-    takes its name. The report keeps copied/replaced/skipped/failed/remaining
-    lists even after cancellation.
+    the original is deleted, and the staged copy then takes its name. The report
+    keeps copied/replaced/skipped/failed/remaining lists even after cancellation.
     """
     items = []
     for source in sources:

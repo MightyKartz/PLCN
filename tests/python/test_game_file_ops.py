@@ -16,7 +16,7 @@ def library(tmp_path, items):
     return root, target
 
 
-def test_rename_copy_and_trash_work_on_any_local_file_and_folder(tmp_path, monkeypatch):
+def test_rename_copy_and_delete_work_on_any_local_file_and_folder(tmp_path, monkeypatch):
     monkeypatch.setenv('RETROARCH_ASSISTANT_HOME', str(tmp_path / 'home'))
     root = tmp_path / 'RetroArch'
     directory = tmp_path / 'Roms'
@@ -32,8 +32,8 @@ def test_rename_copy_and_trash_work_on_any_local_file_and_folder(tmp_path, monke
                                           'root': str(root), 'directory': str(directory)})
     assert ops.apply_copy(path, target, remote) == str(directory / 'renamed 副本.bak')
     path, _, remote = ops.validate_op({'action': 'delete', 'path': str(folder), 'root': str(root)})
-    trash = Path(ops.apply_delete(path, remote))
-    assert not folder.exists() and (trash / 'Folder' / 'a.md').read_bytes() == b'a'
+    deleted = ops.apply_delete(path, remote)
+    assert deleted == str(folder) and not folder.exists()
 
 
 def test_file_ops_reject_device_boundary_and_bad_names(tmp_path):
@@ -73,7 +73,7 @@ def test_add_copies_files_and_folders_and_skips_existing(tmp_path):
     assert (destination / 'existing.sfc').read_bytes() == b'old'
 
 
-def test_add_overwrite_backs_up_then_replaces(tmp_path, monkeypatch):
+def test_add_overwrite_stages_then_replaces(tmp_path, monkeypatch):
     monkeypatch.setenv('RETROARCH_ASSISTANT_HOME', str(tmp_path / 'home'))
     destination = tmp_path / 'Roms'
     destination.mkdir()
@@ -96,11 +96,8 @@ def test_add_overwrite_backs_up_then_replaces(tmp_path, monkeypatch):
     assert result['skipped'] == [] and result['failed'] == []
     assert (destination / 'game.sfc').read_bytes() == b'new version'
     assert (destination / 'Game' / 'b.bin').read_bytes() == b'new bin'
-    trash = tmp_path / 'home' / 'file-trash'
-    backups = list(trash.iterdir())
-    assert len(backups) == 2
-    backup_files = [entry.read_bytes() for entry in trash.rglob('*') if entry.is_file()]
-    assert sorted(backup_files) == [b'old bin', b'old version']
+    assert not (destination / 'Game' / 'a.bin').exists()
+    assert not (tmp_path / 'home' / 'file-trash').exists()
 
 
 def test_add_reports_failure_and_remaining_and_cleans_partial(tmp_path):

@@ -79,7 +79,7 @@ def game_file_ops(handler, context, payload):
         return
     manager = context.job_manager
     title = '删除文件' if action == 'delete' else '复制文件'
-    work = (lambda jid: {'backup_directory': game_file_actions.apply_delete(
+    work = (lambda jid: {'deleted': game_file_actions.apply_delete(
         path, remote, lambda current, total, msg: manager.update_job(jid, current, total, msg),
         lambda: checkpoint(lambda: manager.cancelled(jid)))}) if action == 'delete' else (
         lambda jid: {'path': game_file_actions.apply_copy(
