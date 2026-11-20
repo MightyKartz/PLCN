@@ -468,12 +468,13 @@ def remove_file(value,expected,cancelled=lambda: None,expected_id=None):
     """Delete one MTP file only when its content still matches the reviewed digest."""
     import chd_io
     with session(value) as (handle, storage, parts):
-        if chd_io.digest(value,cancelled)!=expected: raise ValueError('MTP 待移除文件已变化：'+value)
         cancelled();entry=resolve(handle,storage,parts)
-        if not entry or entry['folder']: raise ValueError('MTP 移除目标不是文件')
-        # The reviewed object was approved by id; a different id at the same
-        # path is a replacement that must never be deleted automatically.
+        if not entry: raise ValueError('MTP 移除目标不是文件')
+        # Identity first: a different object id means the reviewed file is gone
+        # and this path belongs to something else — never auto-delete it.
         if expected_id is not None and entry['id']!=expected_id: raise chd_io.RemoveUnverified('待移除对象已变化：'+value)
+        if entry['folder']: raise ValueError('MTP 移除目标不是文件')
+        if chd_io.digest(value,cancelled)!=expected: raise ValueError('MTP 待移除文件已变化：'+value)
         try:
             failed=bool(library().LIBMTP_Delete_Object(handle,entry['id']))
         except Exception as error: raise chd_io.RemoveUnverified('删除指令结果未知：'+value) from error

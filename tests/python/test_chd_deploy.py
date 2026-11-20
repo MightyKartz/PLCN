@@ -152,10 +152,11 @@ def remote(tmp_path,monkeypatch):
         files[stage]=Path(source).read_bytes();assert mtp.digest(files[stage])==expected
         files[path]=files.pop(stage);calls.append(('upload',path))
     def remove(path,expected,cancelled=lambda:None,object_id=None):
-        cancelled();assert mtp.digest(files[path])==expected
+        cancelled()
         entry=mtp.stat_file(path)
-        if object_id is not None and entry['id']!=object_id:
+        if object_id is not None and (entry is None or entry['id']!=object_id):
             raise chd_io.RemoveUnverified('待移除对象已变化：'+path)
+        assert mtp.digest(files[path])==expected
         files.pop(path);calls.append(('remove',path))
     def write(path,content,expected,suffix=None):
         assert mtp.digest(files.get(path))==expected
@@ -572,3 +573,50 @@ def test_continuation_never_deletes_a_same_named_replacement(remote,monkeypatch)
     assert outcome['deleted']==[str(track)]
     assert files[cue]==original[cue]
     assert not any(call==('remove',cue) for call in calls)
+
+
+def test_continuation_marks_replaced_object_unverified(remote,monkeypatch):
+    import mtp_runtime as mtp
+    files,original,calls,payload,cue,track=remote
+    plan=deploy.prepare(payload)
+    fixture_remove=mtp.remove_file
+    monkeypatch.setattr(mtp,'remove_file',lambda *args,**kwargs:(_ for _ in ()).throw(RuntimeError('disconnected')))
+    result=deploy.start(plan);assert result['status']=='partial'
+    # The BIN is replaced: new device object id AND different bytes.
+    files[track]=b'replacement bytes'
+    real_stat=mtp.stat_file
+    def stat(value):
+        entry=real_stat(value)
+        if entry and value==str(track): entry=dict(entry,id=entry['id']+9000)
+        return entry
+    monkeypatch.setattr(mtp,'stat_file',stat)
+    monkeypatch.setattr(mtp,'remove_file',fixture_remove)
+    outcome=deploy.continue_cleanup(result['cleanup'])
+    assert [entry['path'] for entry in outcome['unverified']]==[str(track)]
+    assert not any(entry['path']==str(track) for entry in outcome['remaining'])
+    assert 'cleanup' not in outcome and outcome['status']=='partial'
+    assert files[track]==b'replacement bytes'
+    assert not any(call==('remove',track) for call in calls)
+
+
+def test_continuation_keeps_replaced_object_in_unverified_while_cleaning_rest(remote,monkeypatch):
+    import mtp_runtime as mtp
+    files,original,calls,payload,cue,track=remote
+    plan=deploy.prepare(payload)
+    fixture_remove=mtp.remove_file
+    monkeypatch.setattr(mtp,'remove_file',lambda *args,**kwargs:(_ for _ in ()).throw(RuntimeError('disconnected')))
+    result=deploy.start(plan);assert result['status']=='partial'
+    # The BIN is replaced (new id + bytes); the CUE stays the approved object.
+    files[track]=b'replacement bytes'
+    real_stat=mtp.stat_file
+    def stat(value):
+        entry=real_stat(value)
+        if entry and value==str(track): entry=dict(entry,id=entry['id']+9000)
+        return entry
+    monkeypatch.setattr(mtp,'stat_file',stat)
+    monkeypatch.setattr(mtp,'remove_file',fixture_remove)
+    outcome=deploy.continue_cleanup(result['cleanup'])
+    assert [entry['path'] for entry in outcome['unverified']]==[str(track)]
+    assert outcome['deleted']==[str(cue)]
+    assert files[track]==b'replacement bytes' and str(cue) not in files
+    assert not any(call==('remove',track) for call in calls)

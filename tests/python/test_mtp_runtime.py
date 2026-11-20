@@ -496,3 +496,27 @@ def test_remove_proceeds_when_object_id_matches(device_files, monkeypatch):
     approved = mtp.resolve(None, 65537, mtp.parse(target)[2])['id']
     mtp.remove_file(target, chd_io.digest(target), expected_id=approved)
     assert target not in files
+
+
+def test_remove_identity_change_wins_over_digest_mismatch(device_files, monkeypatch):
+    root, files, upload, lib = device_files
+    chd_io = _stub_chd_digest(monkeypatch, files)
+    target = mtp.join(root, 'swapped2.cue'); upload(None, 65537, 0, 'swapped2.cue', b'new bytes')
+    deleted_ids = []
+    lib.LIBMTP_Delete_Object = lambda handle, ident: deleted_ids.append(ident) or 1
+    # Both the device object id and the content differ from what was approved.
+    with pytest.raises(chd_io.RemoveUnverified, match='对象已变化'):
+        mtp.remove_file(target, 'approved-sha', expected_id=999)
+    assert not deleted_ids and files[target] == b'new bytes'
+
+
+def test_remove_digest_guard_still_blocks_same_id_content_change(device_files, monkeypatch):
+    root, files, upload, lib = device_files
+    chd_io = _stub_chd_digest(monkeypatch, files)
+    target = mtp.join(root, 'mutated.cue'); upload(None, 65537, 0, 'mutated.cue', b'mutated')
+    approved = mtp.resolve(None, 65537, mtp.parse(target)[2])['id']
+    deleted_ids = []
+    lib.LIBMTP_Delete_Object = lambda handle, ident: deleted_ids.append(ident) or 1
+    with pytest.raises(ValueError, match='已变化'):
+        mtp.remove_file(target, 'approved-sha', expected_id=approved)
+    assert not deleted_ids and files[target] == b'mutated'
