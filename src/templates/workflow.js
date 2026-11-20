@@ -226,7 +226,6 @@ function renderWorkbench() {
     const completionRunning = workbench.operation === 'apply' && Boolean(batchRunJobId || workbench.jobId);
     document.getElementById('workbench-busy').classList.toggle('completion-running', completionRunning);
     document.getElementById('completion-cancel').hidden = !completionRunning;
-    document.getElementById('action-toast-undo').disabled = Boolean(workbench.operation);
     const counts = buildRepairPreviewSummary(currentChanges, getRepairMode());
     document.getElementById('preview-plan-scope').textContent = formatPreviewScope(counts, 'repair');
     document.querySelectorAll('.filter-btn').forEach(button => {

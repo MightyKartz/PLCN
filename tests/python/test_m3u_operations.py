@@ -1,4 +1,4 @@
-"""M3U plans and durable application/restore against isolated local fixtures."""
+"""M3U plans and guarded application against isolated local fixtures."""
 import copy
 import json
 from pathlib import Path
@@ -35,7 +35,7 @@ def library(tmp_path,monkeypatch):
     return playlist,roms,saves,states,payload
 
 
-def test_preview_read_only_application_save_copy_identity_and_restore(library):
+def test_preview_read_only_application_save_copy_and_identity(library):
     playlist,roms,saves,_,payload=library
     (saves/'Game (Disc 1).bkr').write_bytes(b'my save')
     before=playlist.read_bytes();old=read_playlist(str(playlist),SYSTEM)
@@ -44,7 +44,7 @@ def test_preview_read_only_application_save_copy_identity_and_restore(library):
     assert plan['can_apply'],plan['issues']
     assert playlist.read_bytes()==before and not (roms/'Game.m3u').exists()
     assert plan['content']=='Game (Disc 1).chd\nGame (Disc 2).chd\n'
-    result=tx.start(plan)
+    result=tx.apply(plan)
     assert result['status']=='applied',result
     doc=json.loads(playlist.read_text(encoding='utf-8'));assert len(doc['items'])==2
     assert Path(doc['items'][0]['path'])==roms/'Game.m3u' and doc['items'][0]['custom']=='keep'
@@ -53,11 +53,6 @@ def test_preview_read_only_application_save_copy_identity_and_restore(library):
     updated=read_playlist(str(playlist),SYSTEM)
     assert updated['items'][0]['game_id']==old['items'][0]['game_id']
     assert {disc['id'] for disc in updated['library_model']['discs']} >= {value[1] for path,value in disc_ids.items() if 'Disc' in path}
-    restored=tx.run(result['operation_id'],restore=True)
-    assert restored['status']=='restored',restored
-    assert playlist.read_bytes()==before
-    assert not (roms/'Game.m3u').exists() and not (saves/'Game.bkr').exists()
-    assert (saves/'Game (Disc 1).bkr').read_bytes()==b'my save'
 
 
 def test_conflicting_saves_require_explicit_source_and_states_are_not_migrated(library):
@@ -68,7 +63,7 @@ def test_conflicting_saves_require_explicit_source_and_states_are_not_migrated(l
     assert any('不同' in issue for issue in plan['issues'])
     payload.update(save_source=str(roms/'Game (Disc 2).chd'),preserve_states=True)
     plan=plans.prepare(payload);assert plan['can_apply'],plan['issues']
-    result=tx.start(plan);assert result['status']=='applied',result
+    result=tx.apply(plan);assert result['status']=='applied',result
     assert (saves/'Game.bkr').read_bytes()==b'two' and (states/'Game (Disc 1).state').read_bytes()==b'state'
 
 
@@ -78,7 +73,7 @@ def test_unknown_saves_offer_file_only_and_reject_target_collision(library):
     assert not plans.prepare(payload)['can_apply']
     payload['mode']='file';plan=plans.prepare(payload)
     assert plan['can_apply'];before=playlist.read_bytes()
-    result=tx.start(plan);assert result['status']=='applied' and playlist.read_bytes()==before
+    result=tx.apply(plan);assert result['status']=='applied' and playlist.read_bytes()==before
     assert not plans.prepare(payload)['can_apply']
     (roms/'Game.m3u').write_text('different.chd\n',encoding='utf-8')
     assert not plans.prepare(payload)['can_apply']
@@ -88,53 +83,55 @@ def test_changed_playlist_and_new_save_after_preview_prevent_any_target_write(li
     playlist,roms,saves,_,payload=library
     plan=plans.prepare(payload)
     (saves/'Game (Disc 1).bkr').write_bytes(b'new save')
-    with pytest.raises(ValueError,match='目录'):tx.start(plan)
+    with pytest.raises(ValueError,match='目录'):tx.apply(plan)
     assert not (roms/'Game.m3u').exists()
     plan=plans.prepare(payload);playlist.write_text('{"items":[]}',encoding='utf-8')
-    with pytest.raises(ValueError,match='变化'):tx.start(plan)
+    with pytest.raises(ValueError,match='变化'):tx.apply(plan)
     assert not (roms/'Game.m3u').exists()
 
 
-def test_partial_write_is_recoverable_and_later_external_edits_are_not_overwritten(library,monkeypatch):
+def test_partial_write_can_be_retried_with_the_same_plan(library,monkeypatch):
     playlist,roms,_,_,payload=library;before=playlist.read_bytes()
     plan=plans.prepare(payload);original=tx.write_checked
     def fail(path,content,expected):
         if Path(path)==playlist: raise RuntimeError('injected playlist write failure')
         return original(path,content,expected)
     monkeypatch.setattr(tx,'write_checked',fail)
-    result=tx.start(plan);assert result['status']=='partial' and (roms/'Game.m3u').exists()
+    with pytest.raises(RuntimeError):tx.apply(plan)
+    assert (roms/'Game.m3u').exists() and playlist.read_bytes()==before
     monkeypatch.setattr(tx,'write_checked',original)
-    restored=tx.run(result['operation_id'],restore=True);assert restored['status']=='restored' and playlist.read_bytes()==before
-    result=tx.start(plans.prepare(payload));assert result['status']=='applied'
-    (roms/'Game.m3u').write_text('external change\n',encoding='utf-8')
-    result=tx.run(result['operation_id'],restore=True)
-    assert result['status']=='restore_pending' and (roms/'Game.m3u').read_text(encoding='utf-8')=='external change\n'
+    result=tx.apply(plan);assert result['status']=='applied',result
+    doc=json.loads(playlist.read_text(encoding='utf-8'))
+    assert Path(doc['items'][0]['path'])==roms/'Game.m3u'
 
 
-def test_resume_partial_transaction_and_preserve_unrelated_metadata_on_restore(library,monkeypatch):
+def test_retry_after_partial_write_preserves_unrelated_metadata(library,monkeypatch):
+    import app_paths
     playlist,_,_,_,payload=library;before=playlist.read_bytes()
     original=tx.write_checked;failed=[False]
     def fail_once(path,content,expected):
         if Path(path)==playlist and not failed[0]: failed[0]=True;raise RuntimeError('disconnect')
         return original(path,content,expected)
+    plan=plans.prepare(payload)
     monkeypatch.setattr(tx,'write_checked',fail_once)
-    result=tx.start(plans.prepare(payload));assert result['status']=='partial'
-    result=tx.run(result['operation_id']);assert result['status']=='applied',result
-    index=tx.app_paths.user_data_dir()/'library-identities.json';data=json.loads(index.read_text(encoding='utf-8'))
+    with pytest.raises(RuntimeError):tx.apply(plan)
+    monkeypatch.setattr(tx,'write_checked',original)
+    result=tx.apply(plan);assert result['status']=='applied',result
+    index=app_paths.user_data_dir()/'library-identities.json'
+    data=json.loads(index.read_text(encoding='utf-8'))
     data['game_ids']['unrelated-key']='unrelated-value';index.write_text(json.dumps(data))
-    result=tx.run(result['operation_id'],restore=True);assert result['status']=='restored',result
     assert json.loads(index.read_text(encoding='utf-8'))['game_ids']['unrelated-key']=='unrelated-value'
-    assert playlist.read_bytes()==before
+    assert playlist.read_bytes()!=before
 
 
 def test_reorder_existing_m3u_preserves_identity_and_noop_is_not_applied(library):
     playlist,_,_,_,payload=library
-    result=tx.start(plans.prepare(payload));assert result['status']=='applied'
+    result=tx.apply(plans.prepare(payload));assert result['status']=='applied'
     graph=inspect_discs(str(playlist),SYSTEM);group=next(group for group in graph['groups'] if group['kind']=='m3u')
     game_id=read_playlist(str(playlist),SYSTEM)['items'][0]['game_id']
     payload.update(group_id=group['id'],disc_ids=list(reversed(group['discs'])))
     plan=plans.prepare(payload);assert plan['can_apply'],plan['issues']
-    result=tx.start(plan);assert result['status']=='applied',result
+    result=tx.apply(plan);assert result['status']=='applied',result
     assert read_playlist(str(playlist),SYSTEM)['items'][0]['game_id']==game_id
     graph=inspect_discs(str(playlist),SYSTEM);group=next(group for group in graph['groups'] if group['kind']=='m3u')
     payload.update(group_id=group['id'],disc_ids=group['discs'])
@@ -152,13 +149,10 @@ def test_saved_artwork_choice_and_existing_images_extend_to_new_entry(library):
                                'label':'游戏'},'Manual cover (Japan)','Named_Boxarts')
     payload['thumbnails']=str(images)
     plan=plans.prepare(payload);assert plan['can_apply'],plan['issues']
-    result=tx.start(plan);assert result['status']=='applied',result
+    result=tx.apply(plan);assert result['status']=='applied',result
     assert (directory/'游戏.png').read_bytes()==original.read_bytes()
     new=artwork_identity.remembered({'system':SYSTEM,'playlist_path':str(playlist),'rom_path':plan['target'],'label':'游戏'})
     assert new['sources']['Named_Boxarts']=='Manual cover (Japan)'
-    result=tx.run(result['operation_id'],restore=True);assert result['status']=='restored',result
-    assert original.exists() and not (directory/'游戏.png').exists()
-    assert not artwork_identity.remembered({'system':SYSTEM,'playlist_path':str(playlist),'rom_path':plan['target'],'label':'游戏'})
 
 
 def test_split_existing_m3u_keeps_unselected_disc_as_independent_entry(library):
@@ -169,24 +163,15 @@ def test_split_existing_m3u_keeps_unselected_disc_as_independent_entry(library):
     playlist.write_text(json.dumps(doc,ensure_ascii=False),encoding='utf-8')
     graph=inspect_discs(str(playlist),SYSTEM);group=next(group for group in graph['groups'] if group['kind']=='disc_set')
     payload.update(group_id=group['id'],disc_ids=group['discs'])
-    result=tx.start(plans.prepare(payload));assert result['status']=='applied'
+    result=tx.apply(plans.prepare(payload));assert result['status']=='applied'
     graph=inspect_discs(str(playlist),SYSTEM);group=next(group for group in graph['groups'] if group['kind']=='m3u')
     payload.update(group_id=group['id'],disc_ids=group['discs'][:2])
     plan=plans.prepare(payload);assert plan['can_apply'],plan['issues']
-    result=tx.start(plan);assert result['status']=='applied'
+    result=tx.apply(plan);assert result['status']=='applied'
     assert next(item for item in json.loads(playlist.read_text(encoding='utf-8'))['items'] if Path(item['path'])==third)==original_third
 
 
-def test_corrupted_computer_backup_prevents_restore_before_any_change(library):
-    playlist,roms,_,_,payload=library
-    result=tx.start(plans.prepare(payload));before=playlist.read_bytes()
-    receipt=json.loads(tx.receipt_path(result['operation_id']).read_text(encoding='utf-8'))
-    Path(next(entry['before'] for entry in receipt['files'] if entry['kind']=='playlist')).write_bytes(b'corrupted')
-    result=tx.run(result['operation_id'],restore=True)
-    assert result['status']=='restore_pending' and playlist.read_bytes()==before and (roms/'Game.m3u').exists()
-
-
-def test_mtp_disconnect_after_rename_can_restore_from_computer_backup(tmp_path,monkeypatch):
+def test_mtp_disconnect_mid_write_can_retry_without_reading_roms(tmp_path,monkeypatch):
     import disc_inspection as inspection
     import mtp_runtime as mtp
     monkeypatch.setenv('RETROARCH_ASSISTANT_HOME',str(tmp_path/'home'))
@@ -224,23 +209,24 @@ def test_mtp_disconnect_after_rename_can_restore_from_computer_backup(tmp_path,m
         if path==playlist and not failed[0]:failed[0]=True;files.pop(path);raise RuntimeError('USB disconnected after rename')
         files[path]=content
     monkeypatch.setattr(mtp,'write',write)
-    def remove(path,expected):assert mtp.digest(files[path])==expected;files.pop(path)
-    monkeypatch.setattr(mtp,'remove_verified',remove)
-    result=tx.start(plan);assert result['status']=='partial'
-    result=tx.run(result['operation_id'],restore=True);assert result['status']=='restored',result
-    assert files[playlist]==before and uri(0x20001,'Roms/Game.m3u') not in files
+    with pytest.raises(RuntimeError):tx.apply(plan)
+    assert files.get(playlist) is None
+    files[playlist]=before
+    result=tx.apply(plan);assert result['status']=='applied',result
+    assert files[playlist]!=before and uri(0x20001,'Roms/Game.m3u') in files
     assert not any(path.lower().endswith('.chd') for path in reads)
 
 
 def test_changed_source_identity_or_manual_choice_cannot_apply_stale_plan(library):
+    import app_paths
     import uuid
     playlist,roms,_,_,payload=library
     plan=plans.prepare(payload)
-    index_path=tx.app_paths.user_data_dir()/'library-identities.json'
+    index_path=app_paths.user_data_dir()/'library-identities.json'
     index=json.loads(index_path.read_text(encoding='utf-8'))
     key=next(key for key in index['game_ids'] if 'Disc 1' in key)
     index['game_ids'][key]=str(uuid.uuid4());index_path.write_text(json.dumps(index))
-    with pytest.raises(ValueError,match='来源关联'):tx.start(plan)
+    with pytest.raises(ValueError,match='来源关联'):tx.apply(plan)
     assert not (roms/'Game.m3u').exists()
 
 
@@ -268,7 +254,7 @@ def test_server_plan_is_consumed_once_and_client_cannot_replace_its_paths(monkey
     jobs=JobManager();ident=jobs.create_job();jobs.complete_job(ident,{})
     plan={'can_apply':True,'trusted':'original'};jobs.contexts[ident]={'m3u_plan':plan}
     calls=[]
-    monkeypatch.setattr(api_m3u.transaction,'start',lambda value:calls.append(value) or {'status':'applied','operation_id':'receipt'})
+    monkeypatch.setattr(api_m3u.transaction,'apply',lambda value:calls.append(value) or {'status':'applied'})
     monkeypatch.setattr(api_m3u,'background',lambda manager,title,work:work('apply-job') or 'job')
     monkeypatch.setattr(api_m3u,'reply',lambda *args:None)
     context=SimpleNamespace(job_manager=jobs)
@@ -288,16 +274,14 @@ def test_state_only_progress_cannot_be_assumed_to_have_an_ingame_save(library):
 
 def test_renaming_existing_m3u_checks_its_current_save_and_copies_to_new_basename(library):
     playlist,roms,saves,_,payload=library
-    result=tx.start(plans.prepare(payload));assert result['status']=='applied'
+    result=tx.apply(plans.prepare(payload));assert result['status']=='applied'
     (saves/'Game.bkr').write_bytes(b'latest progress from M3U')
     graph=inspect_discs(str(playlist),SYSTEM);group=next(group for group in graph['groups'] if group['kind']=='m3u')
     payload.update(group_id=group['id'],disc_ids=group['discs'],filename='Renamed.m3u')
     plan=plans.prepare(payload);assert plan['can_apply'],plan['issues']
-    result=tx.start(plan);assert result['status']=='applied'
+    result=tx.apply(plan);assert result['status']=='applied'
     assert (saves/'Renamed.bkr').read_bytes()==(saves/'Game.bkr').read_bytes()
     assert (roms/'Game.m3u').exists()
-    result=tx.run(result['operation_id'],restore=True);assert result['status']=='restored'
-    assert not (saves/'Renamed.bkr').exists() and (saves/'Game.bkr').exists()
 
 
 def test_original_artwork_context_survives_playlist_path_alias_normalization(library):
@@ -308,5 +292,5 @@ def test_original_artwork_context_survives_playlist_path_alias_normalization(lib
     artwork_identity.remember(context,'Manual choice','Named_Boxarts')
     payload['playlist_path']=alias
     plan=plans.prepare(payload);assert plan['can_apply'],plan['issues']
-    result=tx.start(plan);assert result['status']=='applied'
+    result=tx.apply(plan);assert result['status']=='applied'
     assert artwork_identity.remembered({**context,'rom_path':plan['target']})['sources']['Named_Boxarts']=='Manual choice'

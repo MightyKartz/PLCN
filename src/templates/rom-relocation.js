@@ -47,11 +47,11 @@ async function previewRomRelocation(){
         if(revision!==romRelocation.revision||key!==relocationKey())return;
         romRelocation.preview=id;romRelocation.key=key;relocateField('review').hidden=false;relocateField('settings').open=!result.can_apply;
         const details=relocateField('details');details.replaceChildren();
-        for(const text of ['方式：'+({copy:'仅复制；原文件与引用保留',switch:'复制并更新引用；原文件保留',replace:'复制、更新引用并清理有备份的原文件'}[result.mode]),
-            '电脑备份：'+result.backup_directory,'本次源／目标文件净释放：'+storageBytes(result.image_delta_bytes)+'；不含电脑备份和元数据备份，同卷备份可能减少总可用空间',
-            ...result.copies.map(item=>'复制并回读校验：'+item.source+' → '+item.target+(item.created?'':'（复用此前复制操作的已校验目标）')),
-            ...result.reference_changes.map(item=>'备份并更新引用：'+item.path),
-            ...result.deletions.map(item=>'校验与备份完成后移除：'+item.path),
+        for(const text of ['方式：'+({copy:'仅复制；原文件与引用保留',switch:'复制并更新引用；原文件保留',replace:'复制、更新引用并清理无其他引用的原文件'}[result.mode]),
+            '本次源／目标文件净释放：'+storageBytes(result.image_delta_bytes),
+            ...result.copies.map(item=>'复制并回读校验：'+item.source+' → '+item.target+(item.created?'':'（已有相同目标，保留）')),
+            ...result.reference_changes.map(item=>'更新引用：'+item.path),
+            ...result.deletions.map(item=>'校验后移除：'+item.path),
             ...result.retained.map(item=>'保留仍有引用的源文件：'+item.path+' · '+item.consumers.join('、')),
             '存档检查：'+({checked:'固定全局目录已核对，原存档位置保持不变',pending:'尚有待处理项',not_required:'仅复制，不切换入口'}[result.saves.status]),
             ...result.saves.directories.map(path=>'保留存档目录：'+path),...result.saves.issues,
@@ -67,11 +67,6 @@ async function applyRomRelocation(){
     romRelocation.preview=null;
     try{
         const {result}=await relocationJob('/api/rom-storage/relocation/apply',{preview_job_id:id});romRelocation.changed=true;
-        relocateField('review').hidden=true;relocateField('status').textContent='已完成。电脑备份：'+result.backup_directory+'；操作记录可还原原文件和引用。'+(result.mode==='copy'?'验证目标运行后，可修改执行方式并重新预览，或稍后从任务记录继续。':'');
-    }catch(error){romRelocation.changed=true;relocateField('status').textContent=error.message+'；请从操作记录查看整理记录。';}
-}
-async function recoverRomRelocation(id,action){
-    assertWorkbenchIdle();if(!await desktopConfirm(action==='restore'?'恢复原目录与引用？先还原源文件，再还原引用和关联；仍有新引用的输出会保留。':'核对备份、目标、引用和存档设置后继续此方案？', workbenchText(action==='restore'?'恢复':'继续', action==='restore'?'Restore':'Continue')))return;
-    try{await relocationJob('/api/rom-storage/relocation/recover',{id,action});resetGameLibrary();desktopClearPreview();await refreshDesktop();}
-    catch(error){await refreshDesktop();showStatus(error.message,'error');}
+        relocateField('review').hidden=true;relocateField('status').textContent='已完成。';
+    }catch(error){romRelocation.changed=true;relocateField('status').textContent=error.message;}
 }

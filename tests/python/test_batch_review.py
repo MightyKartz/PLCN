@@ -43,7 +43,7 @@ def test_summary_reads_only_and_apply_does_not_match_again(library):
     assert not result['errors']
     assert result['processed_count'] == 1
     assert json.loads(path.read_text(encoding='utf-8'))['items'][0]['label'] == '游戏'
-    assert result['playlists'][0]['apply']['backup_path']
+    assert 'backup_path' not in result['playlists'][0]['apply']
 
 
 def test_external_playlist_edit_requires_a_fresh_summary(library):
@@ -76,7 +76,7 @@ def test_artwork_only_uses_original_labels_and_preserves_playlist_bytes(library,
     assert result['processed_count'] == 1
     assert path.read_bytes() == before
     assert tasks and all(task[2] == 'Game' for task in tasks)
-    assert result['playlists'][0]['apply']['backup_path'] is None
+    assert 'backup_path' not in result['playlists'][0]['apply']
 
 
 def test_rename_still_applies_when_artwork_has_no_source(library, monkeypatch):
@@ -164,7 +164,7 @@ def test_adb_transport_only_pushes_playlist_when_names_are_enabled(library, monk
         assert expected == json.loads(original)
         assert json.loads(Path(local).read_text(encoding='utf-8'))['items'][0]['label'] == '游戏'
         pushed_lists.append(uri)
-        return 'adb://device/backup/NES.lpl'
+        return None
     monkeypatch.setattr(transport, 'materialize_adb_file', materialize)
     monkeypatch.setattr(transport, 'verified_push_adb_playlist', push_playlist)
     monkeypatch.setattr(transport, 'push_adb_directory', lambda local, uri: pushed_images.append(uri))

@@ -71,7 +71,11 @@ def device_files(monkeypatch):
         files[new] = files.pop(old)
         ids[ident] = new
         return 0
-    lib = SimpleNamespace(LIBMTP_new_file_t=lambda: ctypes.pointer(mtp.File()), LIBMTP_destroy_file_t=lambda p: None, LIBMTP_Set_File_Name=rename)
+    def delete(handle, ident):
+        files.pop(ids.pop(ident), None)
+        return 0
+    lib = SimpleNamespace(LIBMTP_new_file_t=lambda: ctypes.pointer(mtp.File()), LIBMTP_destroy_file_t=lambda p: None,
+                          LIBMTP_Set_File_Name=rename, LIBMTP_Delete_Object=delete)
     monkeypatch.setattr(mtp, 'session', session)
     monkeypatch.setattr(mtp, 'upload', upload)
     monkeypatch.setattr(mtp, 'resolve', resolve)
@@ -80,7 +84,7 @@ def device_files(monkeypatch):
     return root, files, upload, lib
 
 
-def test_write_preserves_verified_backup_and_rejects_stale_preview(device_files):
+def test_write_replaces_in_place_and_rejects_stale_preview(device_files):
     root, files, upload, lib = device_files
     target = mtp.join(root, '游戏.lpl')
     upload(None, 65537, 0, '游戏.lpl', b'original')
@@ -88,10 +92,9 @@ def test_write_preserves_verified_backup_and_rejects_stale_preview(device_files)
     with pytest.raises(RuntimeError, match='重新预览'):
         mtp.write(target, b'new', mtp.digest(b'outdated'))
     assert files == before
-    backup = mtp.write(target, b'new', mtp.digest(b'original'), suffix='review')
-    assert backup == target + '.bak-review'
-    assert files[backup] == b'original'
+    mtp.write(target, b'new', mtp.digest(b'original'), suffix='review')
     assert files[target] == b'new'
+    assert not any('.bak' in path or '.plcn-' in path for path in files)
 
 
 def test_failed_publish_restores_original_name(device_files):
@@ -113,7 +116,7 @@ def test_reviewed_transport_uses_snapshot_digest_and_remote_results(tmp_path, mo
     content = b'{"items": []}'
     monkeypatch.setattr(mtp, 'read', lambda path: content)
     writes, pushes = [], []
-    monkeypatch.setattr(mtp, 'write', lambda *args: writes.append(args) or target + '.bak-test')
+    monkeypatch.setattr(mtp, 'write', lambda *args: writes.append(args))
     monkeypatch.setattr(mtp, 'push_directory', lambda *args, **kwargs: pushes.append((args, kwargs)))
     def apply(path, changes, images, **kwargs):
         Path(path).write_bytes(b'{"items": [], "version": "1"}')
@@ -336,7 +339,7 @@ def test_mtp_replaces_only_reviewed_old_artwork_hashes_and_keeps_playlist(tmp_pa
     assert files[path] == playlist
     assert all(files[mtp.join(images, 'MAME', kind, '游戏.png')] == new for kind in THUMBNAIL_TYPES)
     assert result['download_summary']['total']['success'] == 3
-    assert (app_paths.user_data_dir() / 'artwork-backups' / (digest + '.png')).read_bytes() == old
+    assert not (app_paths.user_data_dir() / 'artwork-backups').exists()
 
 
 def test_locked_cached_session_is_released_and_unlock_can_open_a_new_session(monkeypatch):

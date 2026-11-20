@@ -1,10 +1,7 @@
 """Desktop HTTP handlers; request transport is owned by server.py."""
 import threading
 import app_paths
-import repair_history
-import m3u_transaction
 import chd_operations
-import chd_deploy
 import rom_storage
 from api_common import reply
 
@@ -16,10 +13,9 @@ def instance(handler, context, payload):
 def desktop(handler, context, payload):
     jobs = context.job_manager
     config_path = context.CONFIG_FILE
-    deployments=chd_deploy.history()
     reply(handler, {'data_dir': str(app_paths.user_data_dir()), 'cache_dir': str(app_paths.cache_dir()),
                     'config_path': str(config_path), 'resource_dir': str(app_paths.resource_root()),
-                    'active_jobs': jobs.active(), 'history': repair_history.list_history(), 'm3u_operations': m3u_transaction.receipts(), 'rom_storage_operations': rom_storage.history(), 'chd_operations': chd_operations.history(), 'chd_deployments': [record for record in deployments if record.get('kind')!='rom_relocation'], 'rom_relocations': [record for record in deployments if record.get('kind')=='rom_relocation'], 'jobs': jobs.snapshot()})
+                    'active_jobs': jobs.active(), 'rom_storage_operations': rom_storage.history(), 'chd_operations': chd_operations.history(), 'jobs': jobs.snapshot()})
 
 
 def pick(handler, context, payload):

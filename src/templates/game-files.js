@@ -74,8 +74,8 @@ async function openFileSyncDialog() {
             list('未匹配到条目的改动', 'Changes with no matching entry', result.unmatched);
             const total = result.renamed.length + result.removed.length;
             message.textContent = total
-                ? tr(`将更新 ${result.renamed.length} 条、移出 ${result.removed.length} 条列表条目；修改前会保存列表备份。`,
-                     `${result.renamed.length} entries will be updated and ${result.removed.length} removed. Playlists are backed up first.`)
+                ? tr(`将更新 ${result.renamed.length} 条、移出 ${result.removed.length} 条列表条目。`,
+                     `${result.renamed.length} entries will be updated and ${result.removed.length} removed.`)
                 : tr('没有需要更新的列表条目。', 'No playlist entries need updating.');
             confirm.disabled = !total;
         } catch (error) {

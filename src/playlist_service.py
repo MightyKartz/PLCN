@@ -31,7 +31,6 @@ from playlist_analysis import (
     analyze_playlist,
 )
 from playlist_writeback import (
-    timestamped_backup_path,
     find_playlist_item_by_path,
     skipped_apply_detail,
     wrap_apply_result,
@@ -70,7 +69,6 @@ __all__ = [
     'classify_match',
     'build_change_proposal',
     'proposal_matches_item',
-    'timestamped_backup_path',
     'find_playlist_item_by_path',
     'skipped_apply_detail',
     'wrap_apply_result',

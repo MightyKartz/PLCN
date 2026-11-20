@@ -104,26 +104,21 @@ def change_for(index, item, new_label, thumbnail_source=None, proposal_id=None):
     }
 
 
-def test_apply_changes_creates_timestamped_backup_file(tmp_path, monkeypatch):
+def test_apply_changes_creates_no_backup_files(tmp_path, monkeypatch):
     monkeypatch.setattr(playlist_writeback, "ThumbnailDownloader", RecordingDownloader)
     RecordingDownloader.reset()
     playlist_path = tmp_path / f"{SYSTEM}.lpl"
     original_item = playlist_item("/roms/nes/Contra (USA).zip", "Contra (USA)")
     write_playlist(playlist_path, [original_item])
 
-    result = plcn.apply_changes(
+    plcn.apply_changes(
         str(playlist_path),
         [],
         str(tmp_path / "thumbnails"),
-        backup=True,
         download_thumbnails=False,
     )
 
-    backups = list(Path(app_paths.user_data_dir() / "playlist-backups").glob(f"{playlist_path.name}.bak-*"))
-    assert len(backups) == 1
-    assert re.search(r"\.lpl\.bak-\d{8}-\d{6}$", backups[0].name)
-    assert read_playlist(backups[0])["items"][0]["label"] == "Contra (USA)"
-    assert result["apply"]["backup_path"] == str(backups[0])
+    assert not list(Path(app_paths.user_data_dir()).rglob("*.bak*"))
 
 
 def test_stale_proposal_is_skipped_without_enqueueing_downloads(tmp_path, monkeypatch):
@@ -145,7 +140,6 @@ def test_stale_proposal_is_skipped_without_enqueueing_downloads(tmp_path, monkey
         str(playlist_path),
         [stale_change],
         str(tmp_path / "thumbnails"),
-        backup=False,
         download_thumbnails=True,
     )
 
@@ -183,7 +177,6 @@ def test_apply_result_includes_structured_apply_and_download_details(tmp_path, m
         str(playlist_path),
         [change],
         str(tmp_path / "thumbnails"),
-        backup=False,
         download_thumbnails=False,
     )
 
@@ -221,7 +214,6 @@ def test_read_back_verification_confirms_written_labels(tmp_path, monkeypatch):
         str(playlist_path),
         [change],
         str(tmp_path / "thumbnails"),
-        backup=False,
         download_thumbnails=False,
     )
 

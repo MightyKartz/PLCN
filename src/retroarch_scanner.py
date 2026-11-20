@@ -481,19 +481,6 @@ def materialize_adb_file(uri, cache_dir=None, adb_runner=None):
     return str(target_path)
 
 
-def backup_adb_file(uri, adb_runner=None):
-    serial, remote_path = parse_adb_uri(uri)
-    if not remote_path:
-        raise ValueError("ADB URI must include a remote file path")
-    import app_paths
-    backup_dir = f'/sdcard/RetroArch/.plcn-backups'
-    backup_path = f"{backup_dir}/{os.path.basename(remote_path)}.bak-{time.strftime('%Y%m%d-%H%M%S')}"
-    _adb_shell(serial, f'mkdir -p {shlex.quote(backup_dir)}', adb_runner=adb_runner)
-    script = f"cp {shlex.quote(remote_path)} {shlex.quote(backup_path)}"
-    _adb_shell(serial, script, adb_runner=adb_runner)
-    return adb_uri(serial, backup_path)
-
-
 def push_adb_file(local_path, uri, adb_runner=None):
     serial, remote_path = parse_adb_uri(uri)
     if not remote_path:
@@ -503,7 +490,7 @@ def push_adb_file(local_path, uri, adb_runner=None):
 
 
 def verified_push_adb_playlist(local_path, uri, expected, adb_runner=None):
-    """Compare remote snapshot, stage/verify, back up, replace, and read back."""
+    """Compare remote snapshot, stage/verify, atomically replace, and read back."""
     import uuid
     serial, remote_path = parse_adb_uri(uri)
     desired = json.loads(Path(local_path).read_text(encoding='utf-8-sig'))
@@ -511,29 +498,20 @@ def verified_push_adb_playlist(local_path, uri, expected, adb_runner=None):
         return json.loads(_adb_cat(serial, path, adb_runner=adb_runner))
     if read(remote_path) != expected:
         raise RuntimeError('设备游戏列表已改变，请重新预览')
-    suffix = uuid.uuid4().hex
-    staged = remote_path + '.plcn-' + suffix + '.tmp'
-    import app_paths
-    backup_dir = f'/sdcard/RetroArch/.plcn-backups'
-    backup = f"{backup_dir}/{os.path.basename(remote_path)}.bak-{time.strftime('%Y%m%d-%H%M%S')}-{suffix[:8]}"
+    staged = remote_path + '.plcn-' + uuid.uuid4().hex + '.tmp'
     try:
         push_adb_file(local_path, adb_uri(serial, staged), adb_runner=adb_runner)
         if read(staged) != desired:
             raise RuntimeError('ADB 暂存文件验证失败，未替换原列表')
         if read(remote_path) != expected:
             raise RuntimeError('设备游戏列表已改变，请重新预览')
-        _adb_shell(serial, f'mkdir -p {shlex.quote(backup_dir)}', adb_runner=adb_runner)
-        _adb_shell(serial, f'cp {shlex.quote(remote_path)} {shlex.quote(backup)}', adb_runner=adb_runner)
-        if read(backup) != expected:
-            raise RuntimeError(f'ADB 备份验证失败：{backup}')
         _adb_shell(serial, f'mv {shlex.quote(staged)} {shlex.quote(remote_path)}', adb_runner=adb_runner)
         try:
             confirmed = read(remote_path) == desired
         except Exception as exc:
-            raise RuntimeError(f'ADB 写回后无法读取验证；备份位于 {backup}') from exc
+            raise RuntimeError('ADB 写回后无法读取验证') from exc
         if not confirmed:
-            raise RuntimeError(f'ADB 写回验证失败；备份位于 {backup}')
-        return adb_uri(serial, backup)
+            raise RuntimeError('ADB 写回验证失败')
     finally:
         try:
             _adb_shell(serial, f'rm -f {shlex.quote(staged)}', adb_runner=adb_runner)

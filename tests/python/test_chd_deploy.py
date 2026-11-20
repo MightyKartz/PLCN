@@ -1,4 +1,4 @@
-"""CHD deployment/restore on isolated synthetic images; no user/device mutations."""
+"""Guarded CHD copy/switch/cleanup transactions on synthetic images; no devices."""
 import json
 from pathlib import Path
 import shutil
@@ -32,7 +32,7 @@ def prepared(tmp_path,monkeypatch):
     return playlist,cue,track,payload
 
 
-def test_replace_and_restore_keep_exact_originals_and_identity(prepared):
+def test_replace_applies_exactly_and_keeps_identity(prepared):
     playlist,cue,track,payload=prepared
     before={path:path.read_bytes() for path in [playlist,cue,track]};game=read_playlist(str(playlist),SYSTEM)['items'][0]
     plan=deploy.prepare(payload);assert plan['can_apply'],plan['issues']
@@ -42,8 +42,7 @@ def test_replace_and_restore_keep_exact_originals_and_identity(prepared):
     updated=read_playlist(str(playlist),SYSTEM)['items'][0]
     assert updated['game_id']==game['game_id'] and updated['disc_id']==game['disc_id']
     assert updated['label']=='人工名称' and json.loads(playlist.read_text(encoding='utf-8'))['items'][0]['custom']=='keep'
-    result=deploy.run(result['id'],restore=True);assert result['status']=='restored',result.get('error')
-    assert all(path.read_bytes()==raw for path,raw in before.items()) and not cue.with_suffix('.chd').exists()
+
 
 
 def test_copy_only_needs_no_runtime_report_and_never_changes_references(prepared):
@@ -52,7 +51,6 @@ def test_copy_only_needs_no_runtime_report_and_never_changes_references(prepared
     plan=deploy.prepare(payload);assert plan['can_apply'] and not plan['reference_changes']
     result=deploy.start(plan);assert result['status']=='completed',result['error']
     assert cue.exists() and track.exists() and playlist.read_bytes()==before
-    assert deploy.run(result['id'],restore=True)['status']=='restored'
 
 
 def test_unknown_runtime_and_unknown_scope_block_cleanup(prepared):
@@ -72,8 +70,6 @@ def test_loose_m3u_cross_list_and_shared_track_are_preserved(prepared):
     result=deploy.start(plan);assert result['status']=='completed',result['error']
     assert track.exists() and shared.exists() and '.chd' in loose.read_text(encoding='utf-8')
     assert all(json.loads(path.read_text(encoding='utf-8'))['items'][0]['path'].endswith('.chd') for path in [playlist,other])
-    result=deploy.run(result['id'],restore=True);assert result['status']=='restored',result['error']
-    assert all(path.read_bytes()==raw for path,raw in before.items())
 
 
 def test_new_reference_after_preview_blocks_any_upload(prepared):
@@ -82,7 +78,7 @@ def test_new_reference_after_preview_blocks_any_upload(prepared):
     result=deploy.start(plan);assert result['status']=='partial' and not cue.with_suffix('.chd').exists()
 
 
-def test_partial_upload_can_resume_without_repeating_metadata(prepared,monkeypatch):
+def test_partial_upload_can_retry_from_same_plan(prepared,monkeypatch):
     _,cue,_,payload=prepared;plan=deploy.prepare(payload);original=chd_io.put_new;calls=[0]
     def fail(*args,**kwargs):
         calls[0]+=1
@@ -90,15 +86,15 @@ def test_partial_upload_can_resume_without_repeating_metadata(prepared,monkeypat
         return original(*args,**kwargs)
     monkeypatch.setattr(chd_io,'put_new',fail)
     result=deploy.start(plan);assert result['status']=='partial'
-    result=deploy.run(result['id']);assert result['status']=='completed',result['error']
+    result=deploy.start(plan);assert result['status']=='completed',result['error']
     assert not cue.exists()
-    assert deploy.run(result['id'],restore=True)['status']=='restored'
 
 
-def test_changed_output_or_corrupt_backup_is_never_overwritten(prepared):
-    _,cue,_,payload=prepared;result=deploy.start(deploy.prepare(payload));assert result['status']=='completed'
+def test_changed_output_is_never_overwritten(prepared):
+    _,cue,_,payload=prepared;plan=deploy.prepare(payload)
+    result=deploy.start(plan);assert result['status']=='completed'
     cue.with_suffix('.chd').write_bytes(b'external change')
-    result=deploy.run(result['id'],restore=True);assert result['status']=='restore_pending'
+    result=deploy.start(plan);assert result['status']=='partial'
     assert cue.with_suffix('.chd').read_bytes()==b'external change' and not cue.exists()
 
 
@@ -158,7 +154,7 @@ def remote(tmp_path,monkeypatch):
         cancelled();assert mtp.digest(files[path])==expected;files.pop(path);calls.append(('remove',path))
     def write(path,content,expected,suffix=None):
         assert mtp.digest(files.get(path))==expected
-        backup=path+'.bak-test';files[backup]=files[path];files[path]=content;return backup
+        files[path]=content
     monkeypatch.setattr(mtp,'session',session);monkeypatch.setattr(mtp,'listing',listing)
     monkeypatch.setattr(mtp,'resolve',resolve);monkeypatch.setattr(mtp,'children',children)
     monkeypatch.setattr(mtp,'read',read_small);monkeypatch.setattr(mtp,'download_file',download)
@@ -178,17 +174,15 @@ def remote(tmp_path,monkeypatch):
     return files,original,calls,payload,cue,track
 
 
-def test_remote_pull_conversion_transfer_cleanup_and_restore(remote):
+def test_remote_pull_conversion_transfer_and_cleanup(remote):
     files,original,calls,payload,cue,track=remote
     plan=deploy.prepare(payload);assert plan['can_apply'],plan['issues']
     result=deploy.start(plan);assert result['status']=='completed',result['error']
     target=plan['copies'][0]['target'];assert target in files and cue not in files and track not in files
-    result=deploy.run(result['id'],restore=True);assert result['status']=='restored',result['error']
-    assert all(files[path]==value for path,value in original.items()) and target not in files
     assert any(kind=='upload' for kind,_ in calls)
 
 
-def test_remote_disconnect_after_upload_rename_resumes_without_duplicate_upload(remote,monkeypatch):
+def test_remote_disconnect_after_upload_retries_without_duplicate_upload(remote,monkeypatch):
     import mtp_runtime as mtp
     files,original,calls,payload,cue,track=remote
     plan=deploy.prepare(payload);upload=mtp.upload_file;failed=[False]
@@ -197,22 +191,21 @@ def test_remote_disconnect_after_upload_rename_resumes_without_duplicate_upload(
         if not failed[0]:failed[0]=True;raise RuntimeError('disconnected after rename')
     monkeypatch.setattr(mtp,'upload_file',disconnect)
     result=deploy.start(plan);assert result['status']=='partial' and cue in files
-    result=deploy.run(result['id']);assert result['status']=='completed',result['error']
+    result=deploy.start(plan);assert result['status']=='completed',result['error']
     assert len([call for call in calls if call[0]=='upload'])==1
-    assert deploy.run(result['id'],restore=True)['status']=='restored'
 
 
-def test_remote_disconnect_during_source_cleanup_resumes_only_remaining_deletions(remote,monkeypatch):
+def test_remote_disconnect_during_source_cleanup_retries_remaining_deletions(remote,monkeypatch):
     import mtp_runtime as mtp
     files,_,calls,payload,cue,track=remote;remove=mtp.remove_file;failed=[False]
     def disconnect(*args,**kwargs):
         remove(*args,**kwargs)
         if not failed[0]:failed[0]=True;raise RuntimeError('disconnected after delete')
     monkeypatch.setattr(mtp,'remove_file',disconnect)
-    result=deploy.start(deploy.prepare(payload));assert result['status']=='partial'
-    result=deploy.run(result['id']);assert result['status']=='completed',result['error']
+    plan=deploy.prepare(payload)
+    result=deploy.start(plan);assert result['status']=='partial'
+    result=deploy.start(plan);assert result['status']=='completed',result['error']
     assert len([call for call in calls if call[0]=='remove'])==2
-    assert deploy.run(result['id'],restore=True)['status']=='restored'
 
 
 def test_source_edit_during_upload_stops_before_reference_update(prepared,monkeypatch):
@@ -224,18 +217,14 @@ def test_source_edit_during_upload_stops_before_reference_update(prepared,monkey
     assert playlist.read_bytes()==before and cue.exists() and track.read_bytes()==b'changed by another program'
 
 
-def test_metadata_rollback_after_write_stops_cleanup(prepared,monkeypatch):
-    playlist,cue,track,payload=prepared;before=playlist.read_bytes();run=tx.run
-    def rollback(ident,restore=False):
-        result=run(ident,restore)
-        if not restore:playlist.write_bytes(before)
-        return result
-    monkeypatch.setattr(tx,'run',rollback)
+def test_metadata_write_failure_stops_cleanup(prepared,monkeypatch):
+    playlist,cue,track,payload=prepared;before=playlist.read_bytes()
+    monkeypatch.setattr(deploy.tx,'apply',lambda plan:(_ for _ in ()).throw(ValueError('metadata write failed')))
     result=deploy.start(deploy.prepare(payload));assert result['status']=='partial'
     assert cue.exists() and track.exists() and playlist.read_bytes()==before
 
 
-def test_backup_corruption_and_user_source_identity_edits_are_not_overwritten(prepared):
+def test_user_source_identity_edits_are_not_overwritten(prepared):
     import uuid
     playlist,cue,track,payload=prepared;plan=deploy.prepare(payload)
     index=app_paths.user_data_dir()/'library-identities.json';data=json.loads(index.read_text(encoding='utf-8'))
@@ -243,37 +232,7 @@ def test_backup_corruption_and_user_source_identity_edits_are_not_overwritten(pr
     data['game_ids'][key]=str(uuid.uuid4());index.write_text(json.dumps(data),encoding='utf-8')
     result=deploy.start(plan);assert result['status']=='partial' and not cue.with_suffix('.chd').exists()
     payload['mode']='copy';result=deploy.start(deploy.prepare(payload));assert result['status']=='completed'
-    Path(result['copies'][0]['backup']).write_bytes(b'corrupt backup')
-    result=deploy.run(result['id'],restore=True);assert result['status']=='restore_pending'
     assert cue.exists() and track.exists()
-
-
-def test_interrupted_backup_resumes_without_recopying_completed_sources(prepared,monkeypatch):
-    _,_,_,payload=prepared;copy_file=chd_io.copy_to;calls=[];failed=[False]
-    def fail_second(source,target,cancelled=lambda:None):
-        calls.append(source)
-        if len(calls)==2 and not failed[0]:failed[0]=True;raise RuntimeError('computer copy interrupted')
-        return copy_file(source,target,cancelled)
-    monkeypatch.setattr(chd_io,'copy_to',fail_second)
-    result=deploy.start(deploy.prepare(payload));assert result['status']=='partial'
-    first=calls[0];result=deploy.run(result['id']);assert result['status']=='completed',result['error']
-    assert calls.count(first)==1
-
-
-def test_nested_reference_restore_cannot_bypass_parent_source_restoration(prepared,monkeypatch):
-    import api_m3u
-    from types import SimpleNamespace
-    result=deploy.start(deploy.prepare(prepared[3]));assert result['status']=='completed'
-    assert all(item['id']!=result['references_id'] for item in tx.receipts())
-    with pytest.raises(ValueError,match='先还原原镜像'):api_m3u.recover(None,SimpleNamespace(),{'id':result['references_id'],'action':'restore'})
-
-
-def test_restore_preserves_output_that_gained_a_new_unrelated_reference(prepared):
-    _,cue,track,payload=prepared;result=deploy.start(deploy.prepare(payload));assert result['status']=='completed'
-    target=cue.with_suffix('.chd');new=cue.parent/'later.m3u';new.write_text(target.name+'\n',encoding='utf-8')
-    result=deploy.run(result['id'],restore=True);assert result['status']=='restored',result['error']
-    assert cue.exists() and track.exists() and target.exists() and result['restored_retained_outputs']
-    assert result['actual_image_delta_bytes']==-target.stat().st_size
 
 
 def test_server_owned_deployment_plan_is_single_use_and_ignores_client_mutations(prepared,monkeypatch):
@@ -290,7 +249,7 @@ def test_server_owned_deployment_plan_is_single_use_and_ignores_client_mutations
     result=captured[0](jobs.create_job());assert result['mode']=='copy' and cue.exists() and track.exists()
 
 
-def test_cancellation_after_upload_preserves_old_references_and_can_restore(prepared,monkeypatch):
+def test_cancellation_after_upload_preserves_old_references(prepared,monkeypatch):
     from task_control import TaskCancelled
     playlist,cue,track,payload=prepared;before=playlist.read_bytes();put=chd_io.put_new;stop=[False]
     def upload(*args,**kwargs):
@@ -300,7 +259,6 @@ def test_cancellation_after_upload_preserves_old_references_and_can_restore(prep
     monkeypatch.setattr(chd_io,'put_new',upload)
     result=deploy.start(deploy.prepare(payload),cancelled);assert result['status']=='partial'
     assert playlist.read_bytes()==before and cue.exists() and track.exists() and result['actual_image_delta_bytes'] is None
-    result=deploy.run(result['id'],restore=True);assert result['status']=='restored' and result['actual_image_delta_bytes']==0
 
 
 def test_confirmed_m3u_group_keeps_disc_ids_and_split_snapshots_across_conversion(prepared,monkeypatch):
@@ -315,7 +273,7 @@ def test_confirmed_m3u_group_keeps_disc_ids_and_split_snapshots_across_conversio
     monkeypatch.setattr(m3u_plan,'core_support',lambda path:{'id':'mednafen_saturn','extensions':['cue','chd','m3u'],'message':'fixture'})
     graph=inspect_discs(str(playlist),SYSTEM);group=next(group for group in graph['groups'] if group['kind']=='disc_set')
     merge=m3u_plan.prepare({'playlist_path':str(playlist),'system':SYSTEM,'group_id':group['id'],'disc_ids':group['discs'],'mode':'switch','label':'两盘游戏','filename':'两盘.m3u'})
-    assert merge['can_apply'],merge['issues'];assert tx.start(merge)['status']=='applied'
+    assert merge['can_apply'],merge['issues'];assert tx.apply(merge)['status']=='applied'
     before=read_playlist(str(playlist),SYSTEM);ids={disc['id'] for disc in before['library_model']['discs']}
     plan=ops.analyze({'playlist_path':str(playlist),'system':SYSTEM,'workspace':str(root)})
     converted=ops.convert(plan,[row['id'] for row in plan['rows'] if row['eligible']])
@@ -326,18 +284,15 @@ def test_confirmed_m3u_group_keeps_disc_ids_and_split_snapshots_across_conversio
     assert after['items'][0]['game_id']==before['items'][0]['game_id']
     groups=json.loads((app_paths.user_data_dir()/'library-disc-groups.json').read_text(encoding='utf-8'))['groups']
     assert all(item['path'].endswith('.chd') for group in groups.values() for item in group['original_items'].values())
-    restored=deploy.run(result['id'],restore=True);assert restored['status']=='restored',restored['error']
-    assert first.exists() and second.exists() and track.exists()
 
 
-def test_interrupted_metadata_snapshot_preparation_can_be_rebuilt_before_upload(prepared,monkeypatch):
-    payload=prepared[3];prepare=tx.prepare;failed=[False]
-    def interrupt(plan,ident=None):
-        result=prepare(plan,ident)
+def test_interrupted_metadata_apply_retries_from_same_plan(prepared,monkeypatch):
+    payload=prepared[3];real=tx.apply;failed=[False]
+    def interrupt(plan):
         if not failed[0]:
-            failed[0]=True;tx.receipt_path(result).unlink();raise RuntimeError('metadata snapshot interrupted')
-        return result
-    monkeypatch.setattr(tx,'prepare',interrupt)
-    result=deploy.start(deploy.prepare(payload));assert result['status']=='partial'
-    result=deploy.run(result['id']);assert result['status']=='completed',result['error']
-    assert deploy.run(result['id'],restore=True)['status']=='restored'
+            failed[0]=True;raise RuntimeError('metadata apply interrupted')
+        return real(plan)
+    monkeypatch.setattr(deploy.tx,'apply',interrupt)
+    plan=deploy.prepare(payload)
+    result=deploy.start(plan);assert result['status']=='partial'
+    result=deploy.start(plan);assert result['status']=='completed',result['error']

@@ -183,4 +183,8 @@ def test_home_to_library_to_preview(tmp_path, monkeypatch, chrome_binary, viewpo
         finally:
             httpd.shutdown()
             thread.join(2)
-    assert {file: file.read_bytes() for file in playlists.iterdir()} == originals
+    final = {file: file.read_bytes() for file in playlists.iterdir()}
+    assert set(final) == set(originals)
+    for file in playlists.iterdir():
+        document = json.loads(file.read_text(encoding='utf-8'))
+        assert isinstance(document.get('items'), list), file

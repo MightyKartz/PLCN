@@ -687,7 +687,6 @@ def test_apply_changes_skips_stale_proposal_snapshot(tmp_path):
         str(playlist_path),
         [stale_change],
         str(tmp_path / "thumbnails"),
-        backup=False,
         download_thumbnails=False,
     )
 
@@ -696,7 +695,7 @@ def test_apply_changes_skips_stale_proposal_snapshot(tmp_path):
     assert summary["total"] == {"success": 0, "failed": 0, "skipped": 0}
 
 
-def test_apply_changes_returns_writeback_summary_and_timestamped_backup(tmp_path):
+def test_apply_changes_returns_writeback_summary_without_backups(tmp_path):
     playlist_path = tmp_path / "Nintendo - Super Nintendo Entertainment System.lpl"
     item = snes_item()
     write_playlist(playlist_path, [item])
@@ -706,17 +705,14 @@ def test_apply_changes_returns_writeback_summary_and_timestamped_backup(tmp_path
         str(playlist_path),
         [change],
         str(tmp_path / "thumbnails"),
-        backup=True,
         download_thumbnails=False,
     )
 
-    backups = list(Path(app_paths.user_data_dir() / "playlist-backups").glob("Nintendo - Super Nintendo Entertainment System.lpl.bak-*"))
-    assert len(backups) == 1
-    assert re.search(r"\.bak-\d{8}-\d{6}$", str(backups[0]))
+    assert not list(Path(app_paths.user_data_dir()).rglob("*.bak*"))
 
     saved = json.loads(playlist_path.read_text(encoding="utf-8"))
     assert saved["items"][0]["label"] == "超级马里奥世界"
-    assert summary["writeback"]["backup_path"] == str(backups[0])
+    assert "backup_path" not in summary["writeback"]
     assert summary["writeback"]["applied"][0]["proposal_id"] == change["proposal_id"]
     assert summary["writeback"]["applied"][0]["path"] == item["path"]
     assert summary["writeback"]["applied"][0]["new_label"] == "超级马里奥世界"
@@ -738,7 +734,6 @@ def test_apply_changes_reports_readback_failure_without_silent_success(tmp_path,
         str(playlist_path),
         [change],
         str(tmp_path / "thumbnails"),
-        backup=False,
         download_thumbnails=False,
     )
 
@@ -767,7 +762,6 @@ def test_apply_changes_readback_uses_index_not_any_duplicate_path(tmp_path, monk
         str(playlist_path),
         [change],
         str(tmp_path / "thumbnails"),
-        backup=False,
         download_thumbnails=False,
     )
 
@@ -805,7 +799,6 @@ def test_apply_changes_removes_ps1_raw_companion_during_apply(tmp_path):
         str(playlist_path),
         changes,
         str(tmp_path / "thumbnails"),
-        backup=False,
         download_thumbnails=False,
     )
 

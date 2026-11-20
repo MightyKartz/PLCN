@@ -91,7 +91,5 @@ def apply(root, changes, signature):
     transaction = {'playlist': plan['writes'][0]['path'], 'label': '同步文件管理改动',
                    'mode': 'game_file_sync', 'can_apply': True,
                    'dependencies': plan['dependencies'], 'writes': plan['writes'], 'patches': []}
-    result = tx.start(transaction)
-    if result['status'] != 'applied':
-        raise RuntimeError(result['error'] or '播放列表更新未完成')
+    tx.apply(transaction)
     return {'playlists': [write['path'] for write in plan['writes']]}

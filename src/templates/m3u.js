@@ -61,7 +61,7 @@ async function previewM3u(){
         m3uEditor.previewId=id;m3uEditor.previewKey=key;m3uField('review').hidden=false;m3uField('content').textContent=result.content;
         m3uField('scope').textContent=(result.mode==='switch'?'更新当前列表，替换 '+result.removed_indices.length+' 个入口；':'仅保存 M3U，保留当前列表；')+'目标：'+result.target;
         const details=m3uField('details');details.replaceChildren();
-        for(const text of [result.core.message,'电脑备份位置：'+result.backup_root,result.saves.note||'',
+        for(const text of [result.core.message,result.saves.note||'',
             ...(result.saves.states.length?['保留且不迁移即时存档：'+result.saves.states.join('、')]:[]),...result.issues,...result.notes,...result.saves.issues,
             ...result.changes.map(change=>({m3u:'保存 M3U',playlist:'更新当前列表',save_copy:'复制游戏内存档',artwork_copy:'延续原图片'}[change.kind])+' · '+change.path+' · '+change.size+' B'),
             ...result.retained_discs.map(item=>'未选中的原分盘保留独立入口：'+item.path),
@@ -70,7 +70,7 @@ async function previewM3u(){
             ...result.affected_playlists.map(path=>'受此 M3U 顺序影响的现有列表：'+path)]){
             const line=document.createElement('li');line.textContent=text;details.appendChild(line);
         }
-        m3uField('status').textContent=result.issues.length?'有待处理问题，请修改设置后重新预览。':result.can_apply?'方案已就绪；确认后备份并写入。请先退出 RetroArch。':'没有需要应用的变化。';
+        m3uField('status').textContent=result.issues.length?'有待处理问题，请修改设置后重新预览。':result.can_apply?'方案已就绪；确认后写入。请先退出 RetroArch。':'没有需要应用的变化。';
         m3uField('apply').disabled=!result.can_apply;
     }catch(error){m3uField('status').textContent=error.message;}
 }
@@ -79,20 +79,13 @@ async function applyM3u(){
     if(m3uEditor.previewKey!==m3uInputsKey()){invalidateM3uPreview();m3uField('status').textContent='方案输入已变化，请重新预览';return;}
     m3uEditor.previewId=null;
     try{const {result}=await m3uJob('/api/m3u/apply',{preview_job_id:id});m3uEditor.changed=true;reflectM3uResult(result);
-        m3uField('status').textContent='已完成，原光盘和存档保留。电脑备份：'+result.backup_directory+'。关闭后刷新游戏库。';
+        m3uField('status').textContent='已完成，原光盘和存档保留。关闭后刷新游戏库。';
         m3uField('review').hidden=true;
-    }catch(error){m3uEditor.changed=true;m3uField('status').textContent=error.message+'；请在操作记录查看多盘操作记录。';}
+    }catch(error){m3uEditor.changed=true;m3uField('status').textContent=error.message;}
 }
 async function closeM3uEditor(){
     if(m3uEditor.busy)return;invalidateM3uPreview();m3uField('dialog').close();
     if(m3uEditor.changed){m3uEditor.changed=false;closeDiscInspection();await scanDevice(false);}
-}
-async function recoverM3u(id,action,mode=''){
-    assertWorkbenchIdle();
-    const text=mode==='game_rom_update' ? workbenchText(action==='restore'?'恢复旧版 ROM？存档文件保持不变。':'继续此次 ROM 更新？请先退出 RetroArch。',action==='restore'?'Restore the previous ROM? Save files are kept.':'Resume this ROM update? Quit RetroArch first.') : mode.startsWith('game_') ? workbenchText(action==='restore'?'恢复此次列表修改？已复制的游戏文件会保留。':'核对当前列表后继续此次修改？',action==='restore'?'Restore this playlist change? Copied game files will be kept.':'Check the current playlist and continue this change?') : action==='restore'?'恢复此多盘操作？仅移除本次新建且未变化的文件，原光盘与存档不会删除。':'核对当前文件后继续这次未完成操作？';
-    if(!await desktopConfirm(text, workbenchText(action==='restore'?'恢复':'继续', action==='restore'?'Restore':'Continue')))return;
-    const {result}=await m3uJob('/api/m3u/recover',{id,action});
-    desktopClearPreview();reflectM3uResult(result);await refreshDesktop();return result;
 }
 function reflectM3uResult(result){
     if(Number.isInteger(result.playlist_count) && currentDeviceScan){

@@ -510,18 +510,11 @@ async function main() {
     await waitFor(()=>gameLibrary.activeIndex===0&&Boolean(gameInspector.details),'inspector retained after name edit');
     assert.equal(await evaluate(()=>gameLibrary.filter),'missing');
     assert.equal(await evaluate(()=>document.getElementById('game-library-search').value),'Shadowrun');
-    await evaluate(async()=>{
-        const state=await desktopRequest('/api/desktop');
-        const edit=state.m3u_operations.find(record=>record.mode==='game_edit');
-        const {result}=await runGameJob('/api/m3u/recover',{id:edit.id,action:'restore'},()=>{});
-        if(result.status!=='restored')throw new Error('Name recovery failed');
-        resetGameLibrary();renderWorkbench();
-    });
-    await waitFor(()=>gameLibrary.data?.items[0]?.label==='Shadowrun (USA)','name restored');
+    await click('#inspector-close');
     await click('#game-view-list');
     assert.ok(await evaluate(visible, '#game-library-table'));
     assert.deepEqual(await evaluate(() => Array.from(document.querySelectorAll('#game-library-table th'), th => th.textContent)), ['', '封面', '游戏名称']);
-    assert.deepEqual(await evaluate(() => Array.from(document.querySelector('#game-library-rows tr').cells, td => td.textContent)), ['', '', 'Shadowrun (USA)']);
+    assert.deepEqual(await evaluate(() => Array.from(document.querySelector('#game-library-rows tr').cells, td => td.textContent)), ['', '', 'My Shadowrun']);
     assert.equal(await evaluate(() => document.querySelectorAll('#game-library-rows :is(button, input, summary)').length), 2);
     await screenshot('02-compact-game-list');
     await click('#game-library-rows [data-game-details="0"]');
@@ -548,8 +541,8 @@ async function main() {
     await waitFor(()=>document.querySelector('#auto-scan-status').textContent.startsWith('Scan complete:'),'English scan summary');
     await screenshot('02-english-auto-scan');
     await click('#auto-scan-dialog header > button');
-    // Import through the native-picker boundary, remove via the batch toolbar,
-    // then restore both playlist transactions. ROM copies remain on disk.
+    // Import through the native-picker boundary, then remove via the batch
+    // toolbar. ROM copies remain on disk.
     await click('#game-files-button');
     await waitFor(()=>!document.querySelector('#game-files-workspace').hidden,'inline game files workspace');
     assert.equal(await evaluate(()=>document.querySelectorAll('dialog[open]').length),0);
@@ -618,24 +611,10 @@ async function main() {
     await waitFor(()=>Boolean(gameInspector.romPlan),'ROM update prepared');
     await screenshot('02-rom-update-preview');
     await click('#inspector-rom-confirm');
-    await waitFor(()=>!workbench.operation&&Boolean(document.querySelector('#inspector-restore-rom')),'ROM updated with restore entry');
+    await waitFor(()=>!workbench.operation,'ROM update applied');
     assert.equal(fs.readFileSync(path.join(libraryPath,'Roms/SNES/Imported demo.sfc'),'utf8'),'new version fixture');
     assert.deepEqual(fs.readFileSync(path.join(libraryPath,'playlists/Nintendo - Super Nintendo Entertainment System.lpl')),beforeRomUpdate);
     await screenshot('02-rom-updated');
-    const previousPage = await evaluate(()=>performance.timeOrigin);
-    await send('Page.reload');
-    await waitFor(previous=>performance.timeOrigin!==previous && document.querySelector('#library-onboarding')?.getAttribute('aria-busy')==='false','app reload before ROM recovery',previousPage);
-    await click('#workbench-device');
-    await click('#scan-device-btn');
-    await click(system);
-    await waitFor(()=>gameLibrary.data?.items.some(item=>item.label.includes('Imported demo')),'reopened imported game');
-    const importedIndex = await evaluate(()=>gameLibrary.data.items.find(item=>item.label.includes('Imported demo')).index);
-    await click(`[data-game-card="${importedIndex}"] .game-card-open`);
-    await waitFor(()=>document.querySelector('#inspector-restore-rom'),'durable ROM recovery entry');
-    await click('#inspector-actions-menu > summary');
-    await click('#inspector-restore-rom');
-    await waitFor(()=>!workbench.operation&&gameInspector.details&&!document.querySelector('#inspector-restore-rom'),'previous ROM restored');
-    assert.equal(fs.readFileSync(path.join(libraryPath,'Roms/SNES/Imported demo.sfc'),'utf8'),'game import fixture');
     await click('#game-inspector .inspector-close');
     assert.equal(await evaluate(()=>document.querySelector('#game-selection-toolbar').hidden),false);
     assert.equal(await evaluate(()=>document.querySelector('#game-selection-toolbar').classList.contains('has-status')),true);
@@ -666,17 +645,8 @@ async function main() {
     await click('#gm-apply');
     await waitFor(()=>document.querySelector('#gm-status').textContent.startsWith('Done:')&&!workbench.operation,'removal completed');
     assert.equal(fs.existsSync(path.join(libraryPath,'Roms/SNES/Imported demo.sfc')),true);
-    await evaluate(async()=>{
-        const state=await desktopRequest('/api/desktop');
-        for(const mode of ['game_remove','game_import']){
-            const record=state.m3u_operations.find(record=>record.mode===mode);
-            const {result}=await gmJob('/api/m3u/recover',{id:record.id,action:'restore'});
-            if(result.status!=='restored')throw new Error('Recovery did not restore the playlist');
-        }
-        resetGameLibrary();renderWorkbench();
-    });
     await click('#gm-dialog header button');
-    await waitFor(()=>gameLibrary.data?.items.length===1,'original games restored');
+    await waitFor(()=>gameLibrary.data?.items.length===1,'imported game removed from list');
     await click('#manual-scan-button');
     await waitFor(()=>document.querySelector('#auto-scan-dialog').open,'auto-scan from add-games workspace');
     await click('#auto-scan-dialog footer button[onclick="openContentScan()"]');
@@ -719,19 +689,16 @@ async function main() {
     assert.equal(await evaluate(() => document.querySelector('#library-all-systems').getAttribute('aria-pressed')), 'true');
     await evaluate(() => { runAllSystemsCompletion(); });
     await waitFor(() => document.querySelector('#action-toast-text').textContent.startsWith('已补全'), 'completed all-systems toast');
-    assert.equal(await evaluate(visible, '#action-toast-undo'), true);
+    assert.equal(await evaluate(visible, '#action-toast-undo'), false);
     assert.equal(await evaluate(visible, '#action-toast-details'), true);
     await screenshot('02-all-systems-done');
-    await waitFor(() => !workbench.operation, 'run finished before undo');
-    await click('#action-toast-undo');
-    await waitFor(() => document.querySelector('#action-toast-text').textContent.startsWith('已撤销'), 'all-systems undo applied');
-    await waitFor(() => !workbench.operation, 'undo finished');
-    assert.deepEqual(playlistFiles(), beforeRun);
+    await waitFor(() => !workbench.operation, 'all-systems run finished');
+    assert.notDeepEqual(playlistFiles(), beforeRun);
     await click('#action-toast-details');
     await waitFor(() => document.querySelector('#desktop-dialog').open
-        && document.querySelector('#desktop-content').textContent.includes('最近补全'), 'details opens recent completion history');
+        && document.querySelector('#desktop-content [data-job-id]'), 'details opens completion history');
     await evaluate(() => [...document.querySelectorAll('#desktop-content h3')]
-        .find(h => h.textContent === '最近补全')?.scrollIntoView({block: 'center'}));
+        .find(h => h.textContent === '本次运行的补全')?.scrollIntoView({block: 'center'}));
     await screenshot('02-tasks-recent-completions');
     await click('#desktop-close');
     await evaluate(()=>toggleTheme());
@@ -740,16 +707,20 @@ async function main() {
     await waitFor(() => document.querySelector('#action-toast-text').textContent.startsWith('Completed'), 'English all-systems toast');
     await screenshot('02-dark-en-all-systems-done');
     await waitFor(() => !workbench.operation, 'English run finished');
-    await click('#action-toast-undo');
-    await waitFor(() => document.querySelector('#action-toast-text').textContent === 'Undone', 'English undo restores');
-    await waitFor(() => !workbench.operation, 'English undo finished');
-    assert.deepEqual(playlistFiles(), beforeRun);
     await evaluate(()=>toggleUILanguage());
     await evaluate(()=>toggleTheme());
     await click(system);
     await waitFor(() => document.querySelector('#workspace-title')?.textContent.includes('SNES')
         && document.querySelector('#game-library')?.getAttribute('aria-busy') === 'false'
         && document.querySelector('.game-library-table tbody tr'), 'SNES reselected for preview');
+    // Completion kept the translated name; rename back so the preview has a proposal.
+    await click('#game-library-grid .game-card-open');
+    await waitFor(()=>Boolean(gameInspector.details),'inspector for rename');
+    await click('#inspector-edit-name');
+    await evaluate(()=>{const input=document.querySelector('#inspector-name');input.value='My Shadowrun';input.dispatchEvent(new Event('input',{bubbles:true}));});
+    await click('#inspector-save');
+    await waitFor(()=>gameLibrary.data?.items[0]?.label==='My Shadowrun','name reset before preview');
+    await click('#inspector-close');
     await evaluate(() => previewTask());
     await waitFor(() => !document.querySelector('#option-download-artwork').disabled
         && document.querySelector('#preview-table-body .new-label-text')?.textContent === '暗影狂奔', 'default preview');
@@ -871,13 +842,9 @@ async function main() {
     const snesBefore = fs.readFileSync(snesPlaylistPath);
     await click('#games-complete-button');
     await waitFor(() => document.querySelector('#action-toast-text').textContent.startsWith('已补全'), 'direct single-system toast');
-    assert.equal(await evaluate(visible, '#action-toast-undo'), true);
+    assert.equal(await evaluate(visible, '#action-toast-undo'), false);
     await waitFor(() => !workbench.operation, 'direct run finished');
     assert.notDeepEqual(fs.readFileSync(snesPlaylistPath), snesBefore);
-    await click('#action-toast-undo');
-    await waitFor(() => document.querySelector('#action-toast-text').textContent.startsWith('已撤销'), 'single-system undo toast');
-    await waitFor(() => !workbench.operation, 'single-system undo finished');
-    assert.deepEqual(fs.readFileSync(snesPlaylistPath), snesBefore);
     await evaluate(() => previewTask());
     await waitFor(() => document.querySelector('#preview-table-body .new-label-text')?.textContent === '暗影狂奔', 'fresh preview');
     if (!await evaluate(() => document.querySelector('#option-download-artwork').checked)) {
@@ -886,7 +853,7 @@ async function main() {
     }
     await click('#option-write-names');
     await waitFor(() => !document.querySelector('#option-write-names').disabled
-        && document.querySelector('#preview-table-body .new-label-text')?.textContent === 'Shadowrun (USA)', 'artwork-only keeps current name');
+        && document.querySelector('#preview-table-body .new-label-text')?.textContent === '暗影狂奔', 'artwork-only keeps current name');
     await screenshot('04-artwork-only-preview');
     await click('#option-write-names');
     await waitFor(() => !document.querySelector('#option-download-artwork').disabled, 'names restored');
@@ -981,6 +948,7 @@ async function main() {
     await waitFor(()=>!document.querySelector('#m3u-close').disabled && document.querySelector('#m3u-status').textContent.includes('已完成'),'M3U applied');
     assert.equal(JSON.parse(fs.readFileSync(discPath,'utf8')).items.length,2);
     assert.equal(fs.readFileSync(path.join(discRoms,m3uName),'utf8'),'GulliverBoy Disc2.chd\nGulliverBoy Disc1.chd\n');
+    const discApplied=fs.readFileSync(discPath);
     await screenshot('08-m3u-applied');
     holdRecent = true;
     await click('#m3u-close');
@@ -996,29 +964,19 @@ async function main() {
     await click('.playlist-system-tab[aria-label="Sega - Saturn"]');
     await waitFor(()=>gameLibrary.data?.items.length===2,'two launch entries after grouping');
     assert.equal(await evaluate(()=>gameLibrary.data.items[0].game_id),originalGameId);
-    await click('#game-library-discs');await click('#disc-inspection-close-history');
-    await waitFor(()=>document.querySelector('[data-m3u-operation] button'),'durable M3U history');
-    await click('[data-m3u-operation] button');
-    await click('.desktop-confirm button:last-of-type');
-    await waitFor(()=>document.querySelector('[data-m3u-operation] strong')?.textContent.includes('已恢复'),'M3U restored');
-    assert.deepEqual(fs.readFileSync(discPath),discBefore);
-    assert.equal(fs.existsSync(path.join(discRoms,m3uName)),false);
-    await waitFor(()=>gameLibrary.data?.items.length===3,'restored library cache refreshed');
-    await screenshot('08-m3u-restored');
-    await click('#desktop-close');
-    await click('#disc-inspection-close');
     await evaluate(()=>toggleTheme());
     await click('#game-library-discs');
-    await waitFor(()=>document.querySelectorAll('#disc-inspection-groups > details').length===2,'restored groups inspected');
+    await waitFor(()=>document.querySelectorAll('#disc-inspection-groups > details').length===2,'groups inspected after apply');
+    assert.equal(fs.existsSync(path.join(discRoms,m3uName)),true);
     await click('#disc-inspection-groups > details:last-child summary');
-    await waitFor(()=>document.querySelector('#disc-inspection-groups > details:last-child .disc-group-body > button'),'restored candidate action');
+    await waitFor(()=>document.querySelector('#disc-inspection-groups > details:last-child .disc-group-body > button'),'remaining group candidate action');
     await click('#disc-inspection-groups > details:last-child .disc-group-body > button');
     await screenshot('08-m3u-editor-light');
     await click('#m3u-close');
     await click('#disc-inspection-close');
 
 
-    assert.deepEqual(fs.readFileSync(discPath),discBefore);
+    assert.deepEqual(fs.readFileSync(discPath),discApplied);
 
     // Synthetic optical sectors exercise local CHD copy conversion through the real APIs.
     const rawTrack=path.join(discRoms,'Game (Disc 1).bin'),rawCue=path.join(discRoms,'Game (Disc 1).cue');
@@ -1044,7 +1002,7 @@ async function main() {
         assert.equal(operation.results[0].runtime_status,'not_tested');
         await screenshot('09-chd-verified');
     }
-    assert.deepEqual(fs.readFileSync(discPath),discBefore,'CHD copy conversion does not change playlist');
+    assert.deepEqual(fs.readFileSync(discPath),discApplied,'CHD copy conversion does not change playlist');
     assert.deepEqual(fs.readFileSync(rawTrack),rawBefore);assert.deepEqual(fs.readFileSync(rawCue),cueBefore);
     await click('#storage-close');await evaluate(()=>toggleTheme());if (!await evaluate(() => document.querySelector('.tools-menu').open)) await click('.tools-menu > summary');
     await click('#storage-entry');await click('#storage-analyze');
@@ -1075,13 +1033,8 @@ async function main() {
         assert.equal(fs.existsSync(path.join(discRoms,'Game (Disc 1).chd')),true);
         assert.equal(fs.readFileSync(path.join(discRoms,'Game.m3u'),'utf8').includes('Game (Disc 1).chd'),true);
         await screenshot('10-chd-deployed');
-        await click('#deploy-close-history');await waitFor(()=>document.querySelector('[data-chd-deployment]'),'deployment receipt displayed');
-        await click('[data-chd-deployment] button');await click('.desktop-confirm button:last-of-type');
-        await waitFor(()=>document.querySelector('[data-chd-deployment] strong').textContent.includes('已恢复'),'deployment restored');
-        assert.deepEqual(fs.readFileSync(rawCue),cueBefore);assert.deepEqual(fs.readFileSync(rawTrack),rawBefore);
-        assert.deepEqual(fs.readFileSync(path.join(discRoms,'Game.m3u')),originalM3u);
-        assert.equal(fs.existsSync(path.join(discRoms,'Game (Disc 1).chd')),false);
-        await screenshot('10-chd-restored');await click('#desktop-close');await click('#deploy-close');
+        await click('#deploy-close-history');await waitFor(()=>document.querySelector('[data-chd-operation]'),'CHD conversion history');
+        await screenshot('10-chd-history');await click('#desktop-close');await click('#deploy-close');
     }
 
     // Cartridge directory analysis and real ZIP generation: separate synthetic library.
@@ -1129,7 +1082,7 @@ async function main() {
     await evaluate(()=>openOperationHistory('romStorage'));await waitFor(()=>document.querySelector('[data-rom-storage-operation]'),'ZIP durable history');
     await screenshot('11-rom-zip-history');await click('#desktop-close');await click('#rom-storage-close');
 
-    // Stage 4B: move a synthetic CHD-only multi-disc set, then restore both operations.
+    // Stage 4B: move a synthetic CHD-only multi-disc set.
     const layoutRoot=path.join(libraryPath,'layout-samples','RetroArch'),layoutLists=path.join(layoutRoot,'playlists'),layoutRoms=path.join(layoutRoot,'Roms'),layoutNested=path.join(layoutRoms,'多盘游戏');
     for(const directory of [layoutLists,layoutNested,path.join(layoutRoot,'saves'),path.join(layoutRoot,'states')])fs.mkdirSync(directory,{recursive:true});
     const layoutDiscs=['多盘 (Disc 1).chd','多盘 (Disc 2).chd'].map(name=>path.join(layoutNested,name)),layoutM3u=path.join(layoutNested,'多盘.m3u');
@@ -1160,33 +1113,18 @@ async function main() {
     for(const [file,bytes] of layoutBefore)assert.deepEqual(fs.readFileSync(file),bytes);
     await screenshot('12-layout-copy-preview');await click('#relocate-apply');
     await waitFor(()=>!romRelocation.busy&&document.querySelector('#relocate-status').textContent.includes('已完成'),'copy completed');
-    const copies=await evaluate(async()=> (await (await fetch('/api/desktop')).json()).rom_relocations);const copyId=copies[0].id;
-    assert.equal(copies[0].mode,'copy');for(const file of [layoutM3u,...layoutDiscs])assert.equal(fs.existsSync(file),true);
+    for(const file of [layoutM3u,...layoutDiscs])assert.equal(fs.existsSync(file),true);
     await click('#relocate-settings > summary');
     await evaluate(()=>{const input=document.querySelector('#relocate-mode');input.value='replace';input.dispatchEvent(new Event('input',{bubbles:true}));});
     await evaluate(()=>{const input=document.querySelector('#relocate-version');input.value='synthetic browser fixture';input.dispatchEvent(new Event('input',{bubbles:true}));});
     await click('#relocate-tested');await click('#relocate-scope');await click('#relocate-preview');
     await waitFor(()=>!document.querySelector('#relocate-apply').disabled,'layout move preview ready');await screenshot('12-layout-move-preview');
     await click('#relocate-apply');await waitFor(()=>!romRelocation.busy&&document.querySelector('#relocate-status').textContent.includes('已完成'),'layout move completed');
-    const moves=await evaluate(async()=> (await (await fetch('/api/desktop')).json()).rom_relocations);const moveId=moves.find(row=>row.mode==='replace').id;
     for(const file of [layoutM3u,...layoutDiscs])assert.equal(fs.existsSync(file),false);
     assert.equal(fs.readFileSync(path.join(layoutRoms,'多盘.m3u'),'utf8'),layoutDiscs.map(file=>path.basename(file)).join('\n')+'\n');
     assert.equal(JSON.parse(fs.readFileSync(layoutPlaylist,'utf8')).items[0].path.replaceAll('\\','/'),path.join(layoutRoms,'多盘.m3u').replaceAll('\\','/'));
     await screenshot('12-layout-moved');
-    await click('#relocate-close-history');
-    await waitFor(id=>document.querySelector('[data-rom-relocation="'+id+'"]'),'layout move receipt',moveId);
-    if(await evaluate(()=>workbench.operation))await waitFor(()=>!workbench.operation,'background scan finished');
-    await evaluate(()=>beginWorkbenchOperation('scan'));
-    assert.equal(await evaluate(id=>document.querySelector('[data-rom-relocation="'+id+'"] button').disabled,moveId),true,'idle-gated while operation active');
-    await evaluate(()=>endWorkbenchOperation());
-    assert.equal(await evaluate(id=>document.querySelector('[data-rom-relocation="'+id+'"] button').disabled,moveId),false,'idle-gated re-enabled');
-    await click('[data-rom-relocation="'+moveId+'"] button');await click('.desktop-confirm button:last-of-type');
-    await waitFor(id=>document.querySelector('[data-rom-relocation="'+id+'"] strong').textContent.includes('已恢复'),'move restored',moveId);
-    await click('[data-rom-relocation="'+copyId+'"] button');await click('.desktop-confirm button:last-of-type');
-    await waitFor(id=>document.querySelector('[data-rom-relocation="'+id+'"] strong').textContent.includes('已恢复'),'copy restored',copyId);
-    for(const [file,bytes] of layoutBefore)assert.deepEqual(fs.readFileSync(file),bytes);
-    for(const file of [layoutM3u,...layoutDiscs])assert.equal(fs.existsSync(path.join(layoutRoms,path.basename(file))),false);
-    await screenshot('12-layout-restored');await click('#desktop-close');await click('#relocate-close');
+    await click('#relocate-close');
 
     assert.deepEqual(errors, [], 'Page errors');
     console.log(`Browser smoke OK (${width}×${height}): home → local library → SNES → translated preview`);

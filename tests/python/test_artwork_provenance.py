@@ -24,7 +24,7 @@ def test_only_unchanged_automatic_images_from_another_game_are_stale(tmp_path, a
     assert image.read_bytes() == (picture('blue') if changed else old)
 
 
-def test_replacement_requires_matching_bytes_and_keeps_backup(tmp_path):
+def test_replacement_requires_matching_bytes(tmp_path):
     old, new = picture('red'), picture('blue')
     target = tmp_path / 'MAME' / 'Named_Boxarts' / '游戏.png';target.parent.mkdir(parents=True);target.write_bytes(old)
     digest = hashlib.sha256(old).hexdigest()
@@ -35,7 +35,7 @@ def test_replacement_requires_matching_bytes_and_keeps_backup(tmp_path):
     results = downloader.download_thumbnail('MAME', 'Correct Game', '游戏')
     assert all(r['status'] == 'success' for r in results)
     assert target.read_bytes() == new
-    assert (app_paths.user_data_dir() / 'artwork-backups' / (digest + '.png')).read_bytes() == old
+    assert not (app_paths.user_data_dir() / 'artwork-backups').exists()
     # A different existing image is treated as a user change and preserved.
     target.write_bytes(picture('green'))
     results = downloader.download_thumbnail('MAME', 'Correct Game', '游戏')

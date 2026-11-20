@@ -56,22 +56,8 @@ def deployment_apply(handler,context,payload):
         stored.pop('chd_deployment')
     def work(jid):
         def cancelled():
-            if jobs.cancelled(jid): raise TaskCancelled('操作已在安全步骤停止，查看记录后继续或恢复')
+            if jobs.cancelled(jid): raise TaskCancelled('操作已在安全步骤停止')
         result=chd_deploy.start(plan,cancelled,lambda message:jobs.update_job(jid,0,1,message))
-        if result['status']!='completed': raise RuntimeError('CHD 操作部分完成：'+result['id']+' · '+str(result['error']))
+        if result['status']!='completed': raise RuntimeError('CHD 操作部分完成：'+str(result['error']))
         return result
     reply(handler,{'job_id':background(jobs,'执行已确认的 CHD 回传方案',work)})
-
-
-def deployment_recover(handler,context,payload):
-    import chd_deploy
-    jobs=context.job_manager;ident=payload.get('id');action=payload.get('action')
-    chd_deploy.receipt(ident)
-    if action not in {'resume','restore'}: raise ValueError('请选择继续或恢复')
-    def work(jid):
-        def cancelled():
-            if jobs.cancelled(jid): raise TaskCancelled('CHD 任务已停止，可继续恢复')
-        result=chd_deploy.run(ident,action=='restore',cancelled,lambda message:jobs.update_job(jid,0,1,message))
-        if result['status'] not in {'completed','restored'}: raise RuntimeError('CHD 操作待处理：'+ident+' · '+str(result['error']))
-        return result
-    reply(handler,{'job_id':background(jobs,'恢复 CHD 操作' if action=='restore' else '核对后继续 CHD 操作',work)})

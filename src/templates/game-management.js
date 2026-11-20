@@ -345,7 +345,7 @@ async function openGameRemoval(indices) {
     try {
         const {id, result} = await gmJob('/api/games/preview', payload); gameManagement.preview = id;
         for (const item of result.removed) gmField('results').append(wbElement('strong', 'gm-result-name', item.label || item.path), wbElement('small', 'gm-path', item.path));
-        gmField('status').textContent = workbenchText(`将移出 ${result.count} 个列表条目。修改前会保存列表备份。`, `${result.count} playlist entries will be removed. A playlist backup is saved first.`);
+        gmField('status').textContent = workbenchText(`将移出 ${result.count} 个列表条目。`, `${result.count} playlist entries will be removed.`);
         gmField('apply').hidden = false; gmField('apply').disabled = false;
     } catch (error) {gmField('status').textContent = gmError(error);}
 }
@@ -360,13 +360,12 @@ async function applyGameManagement() {
         const results = gmField('results');
         if (gameManagement.mode === 'import') {
             gmStatus(workbenchText(`新增 ${result.added} 个条目 · 复制 ${result.copied} 个文件 · 复用 ${result.reused} 个 · 跳过 ${result.skipped} 个 · 失败 ${result.failed} 个`, `Added ${result.added} entries · Copied ${result.copied} files · Reused ${result.reused} · Skipped ${result.skipped} · Failed ${result.failed}`));
-            const backup = wbElement('details', 'gm-backup'); backup.append(wbElement('summary', '', workbenchText('备份位置', 'Backup location')), wbElement('p', 'gm-path', result.backup_directory));
-            results.replaceChildren(wbElement('h3','',workbenchText('3 · 导入结果', '3 · Import result')), wbElement('p','',gmField('destination-summary').textContent), wbElement('p','',workbenchText('文件复制与列表更新已完成；请在掌机验证启动。', 'Files copied and playlist updated; test startup on the handheld.')), backup); results.hidden = false;
+            results.replaceChildren(wbElement('h3','',workbenchText('3 · 导入结果', '3 · Import result')), wbElement('p','',gmField('destination-summary').textContent), wbElement('p','',workbenchText('文件复制与列表更新已完成；请在掌机验证启动。', 'Files copied and playlist updated; test startup on the handheld.'))); results.hidden = false;
             gmField('fields').hidden = true; gmField('apply').hidden = true;
 
         } else {
-            gmStatus(workbenchText(`完成：新增 ${result.added} 个条目，移出 ${result.removed} 个条目。备份可在列表修改记录中查看。`, `Done: ${result.added} entries added, ${result.removed} removed. The backup is available in Playlist history.`));
-            results.replaceChildren(wbElement('p', 'gm-path', result.backup_directory));
+            gmStatus(workbenchText(`完成：新增 ${result.added} 个条目，移出 ${result.removed} 个条目。`, `Done: ${result.added} entries added, ${result.removed} removed.`));
+            results.replaceChildren();
         }
         const playlistPath = gameManagement.mode === 'import' ? result.playlist_path : previousPlaylist;
         resetGameLibrary();

@@ -131,7 +131,6 @@ def details(payload):
         core_path = data.get('default_core_path') or 'DETECT'
         core_name = data.get('default_core_name') or 'DETECT'
     import rom_updates
-    recovery = rom_updates.latest(path, location)
     system = payload.get('system') or (item.get('db_name') or '').removesuffix('.lpl')
     supported = rom_updates.supports(system, physical, member, probe)
     filename = rom_filename(unquote(physical) if mtp.is_mtp(physical) else physical)
@@ -169,7 +168,7 @@ def details(payload):
     titles = [release_display_title(name) for name in ([english] if english else candidates)]
     common_title = titles[0] if titles and len({title.casefold() for title in titles}) == 1 else ''
     recommended = scan.SYSTEMS.get(system)
-    return {'rom_update_supported': supported, 'rom_update': recovery, 'index': index, 'label': label,
+    return {'rom_update_supported': supported, 'index': index, 'label': label,
             'core_path': core_path, 'core_name': core_name, 'system': system,
             'recommended_core': recommended[1].split('（', 1)[0] if recommended else '',
             'english_name': english, 'english_title': common_title, 'english_candidates': candidates, 'chinese_name': chinese, 'name_error': name_error,
@@ -261,9 +260,6 @@ def save_import_mapping(payload):
                      'dat_path':'', 'dat_filter':False, 'abi':'', 'playlist_name':config['playlist_name']}
             rows.append(entry)
         entry.update(android_directory=config['android_directory'], mapping_source='manual')
-        if path.exists():
-            backup = path.with_name(path.name + '.bak-' + uuid.uuid4().hex)
-            backup.write_bytes(path.read_bytes())
         atomic_write_json(path, saved)
     return {'mapping_state':'manual', 'profiles':rows}
 
@@ -399,7 +395,7 @@ def public_preview(plan):
 def apply(plan, progress=lambda *args: None, cancelled=lambda: None):
     if plan.get('rom_update'):
         import rom_updates
-        cancelled(); progress(0,1,'正在备份并安全更新 ROM…')
+        cancelled(); progress(0,1,'正在安全更新 ROM…')
         return rom_updates.apply(plan)
     if 'config' in plan and plan['config']['mapping_state'] == 'unverified':
         raise ValueError('目标与启动路径的对应关系待核对，不能导入')
@@ -424,10 +420,10 @@ def apply(plan, progress=lambda *args: None, cancelled=lambda: None):
             if not mtp.is_mtp(stage) and Path(stage).exists():
                 Path(stage).unlink()
     cancelled()
-    # Playlist write and recovery use the existing transaction journal. Verified
-    # copies are deliberately retained on cancellation, failure, and restoration.
+    # Playlist writes use the guarded transaction. Verified copies are
+    # deliberately retained on cancellation and failure.
     if not mtp.is_mtp(change['path']): Path(change['path']).parent.mkdir(parents=True, exist_ok=True)
-    result = tx.start(plan['transaction'])
+    result = tx.apply(plan['transaction'])
     return {**result, 'added': len(plan.get('added', [])), 'removed': plan.get('count', 0), 'edited': plan.get('edited', 0),
             'copied': sum(f['state'] == 'new' for f in plan.get('copies', [])),
             'reused':plan.get('duplicates',0), 'skipped':plan.get('skipped',0), 'failed':0}

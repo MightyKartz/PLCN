@@ -10,13 +10,9 @@ let batchRunCreatedArtworkDir = false;
 
 let actionToastTimer = null;
 
-function showActionToast({message, receiptId = '', details = null}) {
+function showActionToast({message, details = null}) {
     const toast = document.getElementById('action-toast');
     document.getElementById('action-toast-text').textContent = message;
-    const undo = document.getElementById('action-toast-undo');
-    undo.hidden = !receiptId;
-    undo.disabled = Boolean(workbench.operation);
-    undo.onclick = receiptId ? () => undoCompletion(receiptId) : null;
     const view = document.getElementById('action-toast-details');
     view.hidden = !details;
     view.onclick = details || null;
@@ -76,30 +72,6 @@ async function cancelCompletion() {
         await desktopRequest('/api/jobs/cancel', {job_id: jobId});
     } catch (error) {
         showStatus(error.message, 'error');
-    }
-}
-
-async function undoCompletion(receiptId) {
-    if (!beginWorkbenchOperation('apply')) return;
-    document.getElementById('action-toast-undo').disabled = true;
-    try {
-        const started = await desktopRequest('/api/completion/undo', {id: receiptId});
-        workbench.jobId = started.job_id;
-        completionJobIds.add(workbench.jobId);
-        renderWorkbench();
-        const summary = await watchCompletionJob(started.job_id, workbenchText('正在撤销：', 'Undoing: '));
-        const skipped = summary?.skipped?.length || 0;
-        showActionToast({message: skipped
-            ? workbenchText(`已撤销部分内容，${skipped} 项在补全后被改动，已保留`, `Partially undone; ${skipped} items changed since completion were kept`)
-            : workbenchText('已撤销', 'Undone'),
-            details: () => openOperationHistory('completion')});
-    } catch (error) {
-        showActionToast({message: workbenchText('撤销失败：', 'Undo failed: ') + error.message});
-    } finally {
-        workbench.jobId = null;
-        invalidateWorkbenchPreview();
-        endWorkbenchOperation();
-        refreshAfterCompletion();
     }
 }
 
@@ -183,12 +155,12 @@ async function runDirectCompletion(scope = null) {
         if (failedImages) message += workbenchText(`，${failedImages} 张封面下载失败`, `, ${failedImages} images failed`);
         if (result?.memory_warning) message += ' · ' + result.memory_warning;
         if (needsManual) message += workbenchText(`，${needsManual} 个游戏需手动处理`, `, ${needsManual} games need manual work`);
-        showActionToast({message, receiptId: result?.receipt_id || '',
+        showActionToast({message,
             details: needsManual ? () => previewTask(scope) : openHistory});
     } catch (error) {
         if (error.cancelled) {
             showActionToast({message: workbenchText('已取消，已完成的部分会保留', 'Cancelled; completed work is kept.'),
-                receiptId: error.result?.receipt_id || '', details: () => openOperationHistory('completion')});
+                details: () => openOperationHistory('completion')});
         } else {
             showActionToast({message: error.message, details: () => openOperationHistory('completion')});
         }
@@ -262,7 +234,7 @@ function finishBatchRun(outcome, analysis, applyResult, errorMessage = '') {
         showActionToast({message: analysis
             ? workbenchText('已取消，已完成的部分会保留。', 'Cancelled; completed work is kept.')
             : workbenchText('已取消，未写入任何内容。', 'Cancelled; nothing was written.'),
-            receiptId: applyResult?.receipt_id || '', details: openHistory});
+            details: openHistory});
     } else if (outcome === 'failed') {
         showActionToast({message: errorMessage || workbenchText('处理失败，请查看补全记录。', 'The run failed; see completion history.'),
             details: openHistory});
@@ -273,7 +245,7 @@ function finishBatchRun(outcome, analysis, applyResult, errorMessage = '') {
         if (failedPlaylists) text += workbenchText(`，${failedPlaylists} 个列表处理失败`, `, ${failedPlaylists} playlists failed`);
         if (failedImages) text += workbenchText(`，${failedImages} 张封面下载失败`, `, ${failedImages} images failed`);
         if (manual) text += workbenchText(`，${manual} 个游戏需手动处理`, `, ${manual} games need manual work`);
-        showActionToast({message: text, receiptId: applyResult.receipt_id || '', details: openHistory});
+        showActionToast({message: text, details: openHistory});
     } else {
         const failedRows = (analysis?.rows || []).filter(row => row.error);
         let message = workbenchText('没有需要自动补全的内容', 'Nothing needed auto-completion')

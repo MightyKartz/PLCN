@@ -23,7 +23,7 @@ def library(tmp_path, monkeypatch):
     return root, games, config
 
 
-def test_incremental_import_preserves_overrides_backups_and_refresh(library):
+def test_incremental_import_preserves_overrides_and_refresh(library):
     root, games, config = library
     (games / 'old.sfc').write_bytes(b'old'); (games / 'new.sfc').write_bytes(b'new')
     (games / 'notes.txt').write_text('not a ROM', encoding='utf-8')
@@ -37,7 +37,6 @@ def test_incremental_import_preserves_overrides_backups_and_refresh(library):
     assert plan['document']['sort_mode'] == 1
     assert target.read_bytes() == before
     result = scan.apply(plan)
-    assert Path(result['backup']).read_bytes() == before
     assert json.loads(target.read_text(encoding='utf-8'))['default_core_path'] == config['core_path']
     assert scan.profiles()[str(root)][0] == config
     again = scan.preview(config)

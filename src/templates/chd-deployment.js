@@ -53,10 +53,10 @@ async function previewChdDeployment(){
         if(revision!==chdDeployment.revision||key!==deploymentKey())return;
         chdDeployment.preview=id;chdDeployment.key=key;deployField('review').hidden=false;deployField('settings').open=!result.can_apply;deployField('dialog').scrollTop=0;
         const details=deployField('details');details.replaceChildren();
-        for(const text of ['方式：'+({copy:'仅回传；保留原文件与引用',switch:'回传并更新引用；保留原文件',replace:'回传、更新引用并清理有备份且无其他引用的原文件'}[result.mode]),
-            '电脑备份：'+result.backup_directory,'镜像空间净变化：'+storageBytes(result.image_delta_bytes)+'；不含电脑备份和元数据备份，电脑同卷备份可能使总可用空间减少',
+        for(const text of ['方式：'+({copy:'仅回传；保留原文件与引用',switch:'回传并更新引用；保留原文件',replace:'回传、更新引用并清理无其他引用的原文件'}[result.mode]),
+            '镜像空间净变化：'+storageBytes(result.image_delta_bytes),
             ...result.copies.map(item=>'回传并回读：'+item.source+' → '+item.target+(item.created?'':'（已有相同目标，保留）')),
-            ...result.reference_changes.map(item=>'备份并更新引用：'+item.path),...result.deletions.map(item=>'有电脑备份后移除：'+item.path),
+            ...result.reference_changes.map(item=>'更新引用：'+item.path),...result.deletions.map(item=>'校验后移除：'+item.path),
             ...result.retained.map(item=>'保留共享源：'+item.path+'；引用：'+item.consumers.join('、')),
             ...result.roots.map(path=>'递归引用检查目录：'+path),...result.scope_errors,
             ...result.capacity.map(item=>'空间检查：'+item.path+' · 需要 '+storageBytes(item.required)+'／可用 '+storageBytes(item.free)),
@@ -72,13 +72,6 @@ async function applyChdDeployment(){
     chdDeployment.preview=null;
     try{
         const {result}=await deploymentJob('/api/chd/deployment/apply',{preview_job_id:id});chdDeployment.changed=true;
-        deployField('status').textContent='已完成。电脑备份：'+result.backup_directory+'。可从操作记录还原原镜像和引用。';deployField('review').hidden=true;
-    }catch(error){chdDeployment.changed=true;deployField('status').textContent=error.message+'；请在操作记录检查 CHD 回传记录。';}
-}
-async function recoverChdDeployment(id,action){
-    assertWorkbenchIdle();
-    if(!await desktopConfirm(action==='restore'?'恢复此 CHD 操作？先还原原镜像，再还原引用，最后移除本次新建且未变化的 CHD。':'核对电脑备份、目标与引用后继续原方案？', workbenchText(action==='restore'?'恢复':'继续', action==='restore'?'Restore':'Continue')))return;
-    try{
-        await deploymentJob('/api/chd/deployment/recover',{id,action});resetGameLibrary();desktopClearPreview();await refreshDesktop();
-    }catch(error){await refreshDesktop();showStatus(error.message,'error');}
+        deployField('status').textContent='已完成。';deployField('review').hidden=true;
+    }catch(error){chdDeployment.changed=true;deployField('status').textContent=error.message;}
 }

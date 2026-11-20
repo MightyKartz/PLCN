@@ -96,12 +96,11 @@ def adb_files(tmp_path, corrupt_stage=False):
     return local, files, old, new, runner
 
 
-def test_adb_stages_backs_up_and_reads_back(tmp_path):
+def test_adb_stages_and_reads_back(tmp_path):
     local, files, old, new, runner = adb_files(tmp_path)
-    backup = verified_push_adb_playlist(str(local), 'adb://device/list.lpl', old, runner)
+    verified_push_adb_playlist(str(local), 'adb://device/list.lpl', old, runner)
     assert json.loads(files['/list.lpl']) == new
-    assert json.loads(files[backup.removeprefix('adb://device')]) == old
-    assert not any(path.endswith('.tmp') for path in files)
+    assert not any('.plcn-' in path or path.endswith('.tmp') for path in files)
 
 
 def test_adb_conflict_preserves_external_changes(tmp_path):
@@ -199,7 +198,7 @@ def test_playlist_routes_preview_write_and_report_progress(service, tmp_path, mo
         assert final['result']['processed_count'] == 1
     else:
         assert final['result']['applied_count'] == 1
-        assert final['result']['apply']['backup_path']
+        assert 'backup_path' not in final['result']['apply']
 
 
 def test_open_folder_route_reaches_platform_opener(service, tmp_path, monkeypatch):

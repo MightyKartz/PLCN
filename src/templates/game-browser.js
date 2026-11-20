@@ -240,7 +240,7 @@ function renderGameInspector() {
         const preview = wbElement('section','inspector-rom-update');
         preview.append(wbElement('p','',workbenchText('新版文件：','New file: ')+gameInspector.romPlan.source_name),
             wbElement('p','',gameSize(gameInspector.romPlan.old_size)+' → '+gameSize(gameInspector.romPlan.new_size)),
-            wbElement('p','',workbenchText('自动备份旧 ROM，保留路径、名称、图片与存档文件。更新前请退出 RetroArch。', 'Back up the old ROM; keep its path, title, artwork and saves. Quit RetroArch before updating.')));
+            wbElement('p','',workbenchText('替换当前 ROM，保留路径、名称、图片与存档文件。更新前请退出 RetroArch。', 'Replace the ROM in place; keep its path, title, artwork and saves. Quit RetroArch before updating.')));
         const apply = gmButton('替换 ROM', 'Replace ROM', applyRomUpdate, false); apply.id = 'inspector-rom-confirm'; apply.disabled = busy;
         const cancel = gmButton('取消', 'Cancel', () => {gameInspector.romPlan=null; renderGameInspector();}); cancel.disabled = busy;
         preview.append(apply,cancel); info.append(preview);
@@ -271,15 +271,9 @@ function renderGameInspector() {
         const update = wbElement('button', 'action-menu-item', workbenchText('更新 ROM…', 'Update ROM…'));
         update.type = 'button'; update.id = 'inspector-update-rom';
         update.disabled = busy || !gameInspector.details?.rom_update_supported;
-        update.title = gameInspector.details?.rom_update_supported ? workbenchText('备份并替换当前 ROM', 'Back up and replace this ROM') : workbenchText('需要可读取的单文件卡带 ROM（不超过 64 MiB）', 'Requires a readable single-file cartridge ROM (up to 64 MiB)');
+        update.title = gameInspector.details?.rom_update_supported ? workbenchText('替换当前 ROM', 'Replace this ROM') : workbenchText('需要可读取的单文件卡带 ROM（不超过 64 MiB）', 'Requires a readable single-file cartridge ROM (up to 64 MiB)');
         update.onclick = () => {menu.open = false; pickRomUpdate();};
         menuList.append(update);
-    }
-    if (details?.rom_update && details.rom_update.status !== 'restored') {
-        const restore = wbElement('button', 'action-menu-item', workbenchText('恢复旧版 ROM', 'Restore previous ROM'));
-        restore.type = 'button'; restore.id = 'inspector-restore-rom'; restore.disabled = busy;
-        restore.onclick = () => {menu.open = false; restoreRomUpdate();};
-        menuList.append(restore);
     }
     const remove = wbElement('button', 'action-menu-item', workbenchText('移出列表…', 'Remove from playlist…'));
     remove.type = 'button'; remove.id = 'inspector-remove-game'; remove.disabled = busy;
@@ -307,7 +301,7 @@ async function saveGameName() {
         if (result.status !== 'applied') throw new Error(result.error || result.status);
         gameInspector.editing = false;
         retryGameLibrary(item.index); refreshWorkbenchOverview();
-        showGameLibraryToast(workbenchText('名称已保存，修改前的列表已备份。', 'Name saved. The previous playlist was backed up.'));
+        showGameLibraryToast(workbenchText('名称已保存。', 'Name saved.'));
     } catch (error) {gameInspector.status = gmError(error); renderGameInspector();}
 }
 
@@ -329,17 +323,9 @@ async function applyRomUpdate() {
     gameInspector.romPlan=null;
     try {
         const {result}=await inspectorJob('/api/games/apply',{preview_job_id:plan.id});
-        if (result.status !== 'applied') {if (gameInspector.details) gameInspector.details.rom_update={id:result.operation_id,status:result.restored?'restored':'restore_pending'}; throw new Error((result.error || workbenchText('更新失败','Update failed'))+(result.restored ? workbenchText('；旧版已恢复','; previous ROM restored') : workbenchText('；可在此处恢复旧版','; restore the previous ROM here')));}
         gameInspector.key=''; retryGameLibrary(item.index);
-        showGameLibraryToast(workbenchText('ROM 已更新，旧版已备份。','ROM updated; previous version backed up.'));
+        showGameLibraryToast(workbenchText('ROM 已更新。','ROM updated.'));
     } catch (error) {gameInspector.status=gmError(error); renderGameInspector();}
-}
-async function restoreRomUpdate() {
-    const item=inspectorItem(), record=gameInspector.details?.rom_update; if (!item || !record || workbench.operation) return;
-    try {
-        await inspectorJob('/api/m3u/recover',{id:record.id,action:'restore'});
-        gameInspector.key='';retryGameLibrary(item.index);showGameLibraryToast(workbenchText('已恢复旧版 ROM。','Previous ROM restored.'));
-    } catch (error) {gameInspector.status=gmError(error);renderGameInspector();}
 }
 
 async function prepareRomUpdate(payload) {

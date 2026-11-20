@@ -526,7 +526,7 @@ test('direct completion reports applied games and counts only review items as ma
         desktopRequest:async(url)=>url==='/api/playlist/preview'?{changes}:{job_id:'apply-1'},
         preparePreviewChanges:list=>list,
         currentMatchesWriteName:()=>false,
-        watchCompletionJob:async()=>({applied_count:1,receipt_id:'r1',download_summary:{types:{}}}),
+        watchCompletionJob:async()=>({applied_count:1,download_summary:{types:{}}}),
         showActionToast:toast=>toasts.push(toast),
         workbenchText:zh=>zh,uiText:x=>x,previewTask:scope=>{previewed=scope;},
         openDesktop:()=>{}};
@@ -535,7 +535,6 @@ test('direct completion reports applied games and counts only review items as ma
     await context.runDirectCompletion();
     assert.equal(toasts.length,1);
     assert.equal(toasts[0].message,'已补全 1 个游戏，2 个游戏需手动处理');
-    assert.equal(toasts[0].receiptId,'r1');
     toasts[0].details();
     assert.notEqual(previewed,undefined);
 });
@@ -561,7 +560,7 @@ test('direct completion renames a game with a failed gallery and strips its stal
         desktopRequest:async(url,payload)=>{ if(url==='/api/playlist/preview')return{changes}; applied=payload; return{job_id:'apply-1'};},
         preparePreviewChanges:list=>list,
         currentMatchesWriteName:()=>false,
-        watchCompletionJob:async()=>({applied_count:1,receipt_id:'r1',download_summary:{types:{}}}),
+        watchCompletionJob:async()=>({applied_count:1,download_summary:{types:{}}}),
         showActionToast:toast=>toasts.push(toast),
         workbenchText:zh=>zh,uiText:x=>x,previewTask:()=>{},openDesktop:()=>{}};
     vm.createContext(context);
@@ -729,7 +728,7 @@ test('updating an import conflict waits for the selected library before preparin
     assert.equal(prepared,true);
 });
 for (const errors of [[], ['NES: playlist changed']]) {
-    test(`all-systems completion reports ${errors.length} failed playlists and retains undo`, () => {
+    test(`all-systems completion reports ${errors.length} failed playlists`, () => {
         let toast;
         const context = {
             invalidateWorkbenchPreview: () => {}, workbenchText: zh => zh,
@@ -739,10 +738,9 @@ for (const errors of [[], ['NES: playlist changed']]) {
         vm.createContext(context);
         vm.runInContext(source('finishBatchRun'), context);
         context.finishBatchRun('completed', {rows: []}, {
-            applied_count: 2, receipt_id: 'partial-receipt', errors, playlists: [], download_summary: {types: {}}
+            applied_count: 2, errors, playlists: [], download_summary: {types: {}}
         });
         assert.equal(toast.message, errors.length ? '已补全 2 个游戏，1 个列表处理失败' : '已补全 2 个游戏');
-        assert.equal(toast.receiptId, 'partial-receipt');
         assert.equal(toast.details(), 'completion');
     });
 }

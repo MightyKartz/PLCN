@@ -5,7 +5,6 @@ import json
 import posixpath
 from pathlib import Path, PurePosixPath
 import re
-import uuid
 import sys
 import xml.etree.ElementTree as ET
 
@@ -255,16 +254,13 @@ def apply(plan):
     target = plan['target']
     content = (json.dumps(plan['document'], ensure_ascii=False, indent=2) + '\n').encode('utf-8')
     if mtp.is_mtp(target):
-        backup = mtp.write(target, content, plan['expected'])
+        mtp.write(target, content, plan['expected'])
     else:
         with file_lock(target):
-            before = read(target)
-            if mtp.digest(before) != plan['expected']:
+            if mtp.digest(read(target)) != plan['expected']:
                 raise RuntimeError('列表已变化，请重新扫描预览')
-            backup = target + '.bak-' + uuid.uuid4().hex if before is not None else None
-            if backup: atomic_write_bytes(backup, before)
             atomic_write_bytes(target, content, expected_digest=plan['expected'])
-    result = {'playlist_path': target, 'added': len(plan['added']), 'retained': plan['retained'], 'backup': backup}
+    result = {'playlist_path': target, 'added': len(plan['added']), 'retained': plan['retained']}
     path = profiles_path()
     try:
         with file_lock(path):

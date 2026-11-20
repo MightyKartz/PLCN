@@ -39,7 +39,7 @@ def mark_stale(row):
             image['status'] = 'stale'
     if replace:
         row['replace_artwork_hashes'] = replace
-        row['match_reason'] += '；将备份并替换来自旧推荐的图片'
+        row['match_reason'] += '；将替换来自旧推荐的图片'
         if 'Named_Boxarts' in replace:
             row.update(cover_exists=False, thumbnail_exists=False, local_thumbnail_exists=False,
                        cover_path=None, cover_preview_url=None)

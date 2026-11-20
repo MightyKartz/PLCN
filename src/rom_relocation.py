@@ -1,4 +1,4 @@
-"""Reviewed ROM moves/ZIP deployments on the shared durable backup engine."""
+"""Reviewed ROM moves/ZIP deployments on the shared guarded engine."""
 import base64
 import hashlib
 import json
@@ -73,10 +73,6 @@ def save_check(playlist, cores):
 
 
 def prepare(payload, analysis=None, cancelled=lambda: None, progress=lambda message: None):
-    if payload.get('operation_id'):
-        prior=json.loads(engine.receipt(payload['operation_id']).read_text(encoding='utf-8'))
-        if prior.get('kind')!='rom_relocation' or prior['status']!='completed' or prior['mode']!='copy': raise ValueError('只有已完成的复制操作可重新预览切换；其他操作请先恢复或重新分析')
-        analysis=prior.get('origin_analysis');payload={**payload,'conversion_id':prior['conversion_id']}
     selected=payload.get('file_ids');mode=payload.get('mode','copy');runtime=payload.get('runtime',{})
     if (not isinstance(selected,list) or not selected or any(not isinstance(value,str) for value in selected)
             or len(set(selected))!=len(selected) or not isinstance(mode,str) or mode not in {'copy','switch','replace'}
@@ -85,7 +81,8 @@ def prepare(payload, analysis=None, cancelled=lambda: None, progress=lambda mess
         raise ValueError('请选择文件、执行方式和有效的运行报告')
     operation=uuid.uuid4().hex;issues=[];copies=[];sources={};selections={};zip_mode=analysis is None
     if zip_mode:
-        conversion_id=payload.get('conversion_id');engine.receipt(conversion_id)
+        conversion_id=payload.get('conversion_id')
+        if not isinstance(conversion_id,str) or not re.fullmatch('[a-f0-9]{32}',conversion_id): raise ValueError('无效的转换记录')
         record=json.loads((app_paths.user_data_dir()/'rom-storage'/conversion_id/'manifest.json').read_text(encoding='utf-8'))
         rows={entry.get('id') or hashlib.sha256(io.key(entry['source']).encode()).hexdigest()[:24]:entry for entry in record['results'] if entry.get('verification')=='byte_for_byte'}
         playlist=record['playlist'];system=record['system'];workspace=Path(record.get('workspace') or Path(record['output_directory']).parent)
@@ -164,7 +161,6 @@ def prepare(payload, analysis=None, cancelled=lambda: None, progress=lambda mess
             writes=[entry for entry in writes if entry['path']!=item['source']]
             for ref in after_refs:
                 if ref['owner']==item['source']: ref['owner']=item['target']
-    previous=engine.history()
     for item in copies:
         name=mtp.parse(item['target'])[2][-1] if mtp.is_mtp(item['target']) else Path(item['target']).name
         entries=target_directories[item['target'].rsplit('/',1)[0]]
@@ -172,10 +168,7 @@ def prepare(payload, analysis=None, cancelled=lambda: None, progress=lambda mess
         if folder_conflict: issues.append('目标已有同名目录，不覆盖：'+item['target'])
         current=None if folder_conflict else io.digest(item['target'],cancelled)
         if current is not None:
-            owned=any(record.get('kind')=='rom_relocation' and record['status']=='completed' and any(
-                value['target']==item['target'] and value['sha256']==item['sha256'] and value.get('original_source')==item['original_source'] for value in record['copies']) and any(
-                value['path']==item['original_source'] and value['sha256']==sources[item['original_source']]['sha256'] for value in record['sources']) for record in previous)
-            if current!=item['sha256'] or not owned: issues.append('目标已存在，不覆盖或合并：'+item['target'])
+            if current!=item['sha256']: issues.append('目标已存在，不覆盖或合并：'+item['target'])
             item['created']=False
         for entry in entries:
             if entry['name'].casefold()==name.casefold() and entry['name']!=name:
@@ -195,15 +188,12 @@ def prepare(payload, analysis=None, cancelled=lambda: None, progress=lambda mess
         consumers=sorted({ref['owner'] for ref in after_refs if ref['target']==source and ref['owner'] not in selections})
         if consumers: retained.append({'path':source,'consumers':consumers})
         elif mode=='replace': deletions.append(file)
-    backup=workspace/('PLCN-DEPLOY-'+operation);requirements={}
+    requirements={}
     def reserve(path,size):
         value=requirements.setdefault(io.volume(path),{'path':path,'bytes':0});value['bytes']+=size
     for item in copies:
         if item['created']: reserve(item['target'],item['size'])
     for write in writes if mode!='copy' else []: reserve(write['path'],len(write['content']))
-    computer=sum(item['size'] for item in copies)+(sum(file['size'] for file in sources.values()) if mode!='copy' else 0)
-    reserve(str(backup),computer)
-    reserve(str(app_paths.user_data_dir()/'metadata-probe'),sum(len(checked['documents'][write['path']]['raw'])+len(write['content']) for write in writes) if mode!='copy' else 0)
     temporary=max([file['size'] for file in sources.values()]+[item['size'] for item in copies])
     if reader.remote: reserve(str(Path(tempfile.gettempdir())/'verify-probe'),temporary)
     capacity=[]
@@ -215,10 +205,10 @@ def prepare(payload, analysis=None, cancelled=lambda: None, progress=lambda mess
               'documents':{path:mtp.digest(value['raw']) for path,value in checked['documents'].items()}}
     metadata={'can_apply':True,'playlist':playlist,'label':'目录整理／ZIP 引用更新','mode':'rom_references',
               'writes':writes if mode!='copy' else [],'patches':patches,'dependencies':dependencies+guards}
-    return {'id':operation,'origin_analysis':analysis,'selected_ids':sorted(selected),'kind':'rom_relocation','conversion_id':conversion_id,'playlist':playlist,'system':system,'mode':mode,
-            'copies':copies,'sources':list(sources.values()),'deletions':deletions,'retained':retained,'backup_directory':str(backup),
+    return {'id':operation,'selected_ids':sorted(selected),'kind':'rom_relocation','conversion_id':conversion_id,'playlist':playlist,'system':system,'mode':mode,
+            'copies':copies,'sources':list(sources.values()),'deletions':deletions,'retained':retained,
             'roots':roots,'scope_snapshot':snapshot,'scope_errors':checked['errors'],'runtime':{'cores':sorted(cores),'version':runtime.get('version',''),'confirmed':runtime.get('confirmed') is True,'source':'user_reported'},
-            'saves':saves,'metadata_plan':metadata,'capacity':capacity,'computer_required':computer,'temporary_required':temporary,
+            'saves':saves,'metadata_plan':metadata,'capacity':capacity,'temporary_required':temporary,
             'reference_changes':[{'path':write['path'],'bytes':len(write['content'])} for write in metadata['writes']],
             'image_delta_bytes':sum(file['size'] for file in deletions)-sum(item['size'] for item in copies if item['created']),
             'issues':list(dict.fromkeys(issues)),'can_apply':not issues}

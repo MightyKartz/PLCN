@@ -272,7 +272,7 @@ def digest(content):
 
 
 def write(value, content, expected, suffix=None):
-    """Verify staging and backup before replacing the named object; return backup URI."""
+    """Stage, verify and atomically swap the named object in place."""
     with session(value) as (handle, storage, parts):
         before = read(value)
         if digest(before) != expected:
@@ -284,7 +284,6 @@ def write(value, content, expected, suffix=None):
         stage_uri = uri(parse(value)[0], storage, '/'.join(parts[:-1] + [stage_name]))
         if read(stage_uri) != content:
             raise RuntimeError('MTP 暂存校验失败，原文件未替换')
-        backup = None
         old = resolve(handle, storage, parts)
         def rename(ident, name):
             metadata = library().LIBMTP_new_file_t()
@@ -296,21 +295,22 @@ def write(value, content, expected, suffix=None):
                 library().LIBMTP_destroy_file_t(metadata)
         if digest(read(value)) != expected:
             raise RuntimeError('设备文件在传输期间发生变化')
+        old_name = parts[-1] + '.plcn-' + suffix + '.old'
         if old:
-            backup = value + '.bak-' + suffix
-            rename(old['id'], parts[-1] + '.bak-' + suffix)
-            if read(backup) != before:
-                rename(old['id'], parts[-1])
-                raise RuntimeError('MTP 原文件备份校验失败，已恢复原名称')
+            rename(old['id'], old_name)
         try:
             rename(ident, parts[-1])
             if read(value) != content:
-                raise RuntimeError('MTP 写回校验失败；备份：' + str(backup))
+                raise RuntimeError('MTP 写回校验失败')
         except RuntimeError:
+            # `ident` still holds the stage name or already the target name;
+            # removing it clears either the stray stage file or the bad write.
+            library().LIBMTP_Delete_Object(handle, ident)
             if old and read(value) is None:
                 rename(old['id'], parts[-1])
             raise
-        return backup
+        if old:
+            library().LIBMTP_Delete_Object(handle, old['id'])
 
 
 def materialize(value, cache_dir=None):
@@ -376,20 +376,6 @@ def push_directory(local, target, expected_hashes=None, include_files=None):
             if old != content:
                 expected = expected_hashes[destination] if expected_hashes is not None and destination in expected_hashes else digest(old)
                 write(destination, content, expected)
-
-
-def remove_verified(value, expected):
-    """Remove only an unchanged file created by a recorded, explicitly restored operation."""
-    with session(value) as (handle, storage, parts):
-        if digest(read(value)) != expected:
-            raise ValueError('MTP 新建文件已变化，拒绝移除')
-        entry = resolve(handle, storage, parts)
-        if entry is None or entry['folder']:
-            raise ValueError('MTP 恢复目标不是文件')
-        if library().LIBMTP_Delete_Object(handle, entry['id']):
-            raise RuntimeError('MTP 恢复时移除新建文件失败')
-        if read(value) is not None:
-            raise RuntimeError('MTP 移除后的核对失败')
 
 
 Progress = C.CFUNCTYPE(C.c_int, C.c_uint64, C.c_uint64, C.c_void_p)
@@ -469,7 +455,7 @@ def upload_file(value,source,expected,stage,cancelled=lambda: None):
 
 
 def remove_file(value,expected,cancelled=lambda: None):
-    """Only a journaled source with a verified computer backup or owned output may call this."""
+    """Delete one MTP file only when its content still matches the reviewed digest."""
     import chd_io
     with session(value) as (handle, storage, parts):
         if chd_io.digest(value,cancelled)!=expected: raise ValueError('MTP 待移除文件已变化：'+value)

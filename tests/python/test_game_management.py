@@ -26,7 +26,7 @@ def library(tmp_path, monkeypatch):
     return root, source, destination, playlist, old, config
 
 
-def test_import_copies_and_preserves_metadata_with_restore(library):
+def test_import_copies_and_preserves_metadata(library):
     root, source, target, playlist, old, config = library
     (source / 'demo.gba').write_bytes(b'game')
     before = playlist.read_bytes()
@@ -39,8 +39,6 @@ def test_import_copies_and_preserves_metadata_with_restore(library):
     updated = json.loads(playlist.read_text())
     assert updated['items'][0] == old['items'][0]
     assert updated['default_core_path'] == 'special-core' and updated['custom'] == 'keep'
-    assert tx.run(result['operation_id'], restore=True)['status'] == 'restored'
-    assert playlist.read_bytes() == before and (target / 'demo.gba').exists()
     assert not games.import_preview(config)['copies'][0]['state'] == 'new'
 
 
@@ -127,7 +125,7 @@ def test_source_name_collision_rejected(library, tmp_path):
     with pytest.raises(ValueError, match='同名目标'): games.import_preview(config)
 
 
-def test_removal_preserves_files_fields_and_is_recoverable(library):
+def test_removal_preserves_files_and_fields(library):
     root, source, target, playlist, old, config = library
     rom = source / 'demo.gba'; rom.write_bytes(b'game')
     artwork = source / 'demo.png'; artwork.write_bytes(b'artwork')
@@ -139,8 +137,6 @@ def test_removal_preserves_files_fields_and_is_recoverable(library):
     assert json.loads(playlist.read_text()) == {**old, 'items':[]}
     assert result['removed'] == 1
     assert rom.read_bytes() == b'game' and artwork.read_bytes() == b'artwork' and save.read_bytes() == b'save'
-    tx.run(result['operation_id'], restore=True)
-    assert playlist.read_bytes() == before
 
 
 @pytest.mark.parametrize('indices', [[], [True], [-1], [1], [0,0], ['0']])
@@ -175,7 +171,7 @@ def test_mtp_import_keeps_android_paths_and_uses_verified_upload(library, monkey
     monkeypatch.setattr(mtp, 'session', session)
     monkeypatch.setattr(mtp, 'resolve', lambda *a, **k: calls.append(('mkdir', a, k)))
     monkeypatch.setattr(mtp, 'upload_file', lambda *a: calls.append(('upload', a)))
-    monkeypatch.setattr(tx, 'start', lambda p: {'status':'applied'})
+    monkeypatch.setattr(tx, 'apply', lambda p: {'status':'applied'})
     plan = games.import_preview(config)
     assert plan['added'][0]['path'] == '/storage/CARD/Roms/GBA/demo.gba'
     result = games.apply(plan)
@@ -217,7 +213,7 @@ def test_game_apply_consumes_server_plan_once(library, monkeypatch):
     with pytest.raises(ValueError, match='预览无效'): api_games.apply(None, SimpleNamespace(job_manager=jobs), {'preview_job_id':ident})
 
 
-def test_name_edit_is_playlist_only_and_recoverable(library):
+def test_name_edit_is_playlist_only(library):
     root, source, target, playlist, old, config = library
     before = playlist.read_bytes()
     payload = {'playlist':str(playlist), 'index':0, 'expected':mtp.digest(before), 'label':'New display name'}
@@ -228,8 +224,7 @@ def test_name_edit_is_playlist_only_and_recoverable(library):
     assert result['edited'] == 1
     assert updated['items'][0] == {**old['items'][0], 'label':'New display name'}
     assert updated['default_core_path'] == old['default_core_path']
-    tx.run(result['operation_id'], restore=True)
-    assert playlist.read_bytes() == before
+    payload['expected']=mtp.digest(playlist.read_bytes())
     with pytest.raises(ValueError, match='有效游戏名称'): games.edit_preview({**payload, 'label':'\n'})
     playlist.write_text('{"items":[]}')
     with pytest.raises(ValueError, match='列表已变化'): games.edit_preview(payload)
@@ -248,13 +243,11 @@ def test_inspector_details_report_actual_size_default_core_and_missing_file(libr
     assert games.details(payload)['file_status'] == 'missing'
 
 
-def test_import_remembers_target_mapping_and_restore_reverts_profile(library):
+def test_import_remembers_target_mapping(library):
     root, source, target, playlist, old, config = library
     (source / 'demo.gba').write_bytes(b'game')
     result = games.apply(games.import_preview(config))
     assert games.scan.profiles()[str(root)][0]['directory'] == str(target)
-    tx.run(result['operation_id'], restore=True)
-    assert not games.scan.profiles().get(str(root))
 
 
 def test_name_edit_preserves_three_artwork_types_and_refuses_collisions(library):
@@ -271,10 +264,8 @@ def test_name_edit_preserves_three_artwork_types_and_refuses_collisions(library)
     result = games.apply(plan)
     for kind in ('Named_Boxarts', 'Named_Snaps', 'Named_Titles'):
         assert (thumbnails / SYSTEM / kind / 'Custom name.png').read_bytes() == (thumbnails / SYSTEM / kind / 'New label.png').read_bytes()
-    tx.run(result['operation_id'], restore=True)
-    assert playlist.read_bytes() == before
-    assert not (thumbnails / SYSTEM / 'Named_Boxarts/New label.png').exists()
-    Image.new('RGB', (4,4), 'red').save(thumbnails / SYSTEM / 'Named_Boxarts/New label.png')
+    Image.new('RGB', (4,4), 'red').save(thumbnails / SYSTEM / 'Named_Boxarts/Other label.png')
+    payload.update(expected=mtp.digest(playlist.read_bytes()),label='Other label')
     with pytest.raises(ValueError, match='已有不同图片'): games.edit_preview(payload)
 
 

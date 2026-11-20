@@ -119,7 +119,7 @@ function openArtworkDialog(item, autoSearch = true) {
     artworkElement('game').textContent = item.label;
     artworkElement('shared').hidden = true;
     artworkElement('new-label').value = '';
-    artworkElement('scope').textContent = text('选择候选后确认写入；旧图会备份，未勾选类型保持不变。', 'Select a candidate, then confirm. Replaced images are backed up; unchecked types stay unchanged.');
+    artworkElement('scope').textContent = text('选择候选后确认写入；未勾选类型保持不变。', 'Select a candidate, then confirm. Unchecked types stay unchanged.');
     wbIconButton(artworkElement('close'), 'x', text('关闭', 'Close'));
     artworkElement('kind-label').textContent = text('图片类型（可多选）', 'Image types (multiple allowed)');
     artworkKindLabels();
@@ -237,7 +237,7 @@ async function discoverArtwork(searchAfter = true) {
             artworkElement('new-label').value = state.context.label;
             artworkElement('shared-message').textContent = workbenchText('当前 ROM：', 'Current ROM: ') + (state.context.rom_path.split('/').pop());
             artworkElement('shared-help').hidden = true;
-            artworkElement('new-label').title = workbenchText('改名会备份游戏列表；已有的 ROM 文件名图片会同步更新。', 'Renaming backs up the playlist; existing ROM-named artwork is updated too.');
+            artworkElement('new-label').title = workbenchText('改名会更新游戏列表；已有的 ROM 文件名图片会同步更新。', 'Renaming updates the playlist; existing ROM-named artwork is updated too.');
             if (state.entryInfo.shared?.length) {
                 artworkElement('shared-help').hidden = false;
                 artworkElement('shared-message').textContent = workbenchText('以下条目共用同一个图片名称，请先核对当前 ROM：', 'These entries share an artwork name. Check the selected ROM:');
@@ -250,7 +250,7 @@ async function discoverArtwork(searchAfter = true) {
                 artworkElement('new-label-title').textContent = workbenchText('当前游戏的独立名称', 'Independent name for this game');
                 artworkElement('new-label').value = state.entryInfo.suggested_label;
                 artworkElement('scope').textContent = workbenchText('确认后只修改当前条目的名称并保存独立图片；原共用图片继续供其他条目使用。', 'Confirm to rename this entry and save independent artwork. Other entries keep the shared image.');
-                artworkElement('shared-help').textContent = workbenchText('建议名称取自 ROM 文件名，可修改。请核对英文名与游戏版本；未勾选的类型图片会复制保留，游戏列表会备份。', 'The suggested name comes from the ROM filename and is editable. Check the English title and game version. Unchecked types are copied and the playlist is backed up.');
+                artworkElement('shared-help').textContent = workbenchText('建议名称取自 ROM 文件名，可修改。请核对英文名与游戏版本；未勾选的类型图片会复制保留。', 'The suggested name comes from the ROM filename and is editable. Check the English title and game version. Unchecked types are copied.');
             }
         }
         const lookup = {...state.context, kind: selectedArtworkKinds()[0] || 'Named_Boxarts'};
@@ -393,7 +393,7 @@ function showArtworkComparison(state, result, version) {
         if (image.current_image_url) current.src = image.current_image_url;
         artworkElement('candidate-caption-' + kind).textContent = [image.source, `${image.width} × ${image.height}`,
             image.provenance?.provider_label, image.provenance?.platform, image.provenance?.version].filter(Boolean).join(' · ');
-        artworkElement('target-' + kind).textContent = (image.replacing ? workbenchText('更换并备份旧图：', 'Replace and back up: ') : workbenchText('新增图片：', 'Add image: ')) + image.target;
+        artworkElement('target-' + kind).textContent = (image.replacing ? workbenchText('更换图片：', 'Replace: ') : workbenchText('新增图片：', 'Add image: ')) + image.target;
         const candidate = artworkElement('candidate-image-' + kind);
         candidate.alt = state.context.label;
         pending++;
@@ -522,9 +522,7 @@ async function confirmArtwork() {
                     item.image_path = primary.target;
                     item.image_status = 'exists';
                     item.image_message = '';
-                    item.artwork_result = job.result.new_label ? workbenchText('已设置独立名称和图片，列表已备份', 'Independent name and artwork saved; playlist backed up')
-                        : job.result.backup ? updated + workbenchText('，旧图已备份', '; previous images backed up') : updated;
-                    item.artwork_backup = job.result.playlist_backup || job.result.backup || '';
+                    item.artwork_result = job.result.new_label ? workbenchText('已设置独立名称和图片', 'Independent name and artwork saved') : updated;
                     if (job.result.memory_warning) item.artwork_result += ' · ' + job.result.memory_warning;
                     gameLibrary.notice = item.label + '：' + item.artwork_result;
                     // Read the same authoritative image selection used on page reload.

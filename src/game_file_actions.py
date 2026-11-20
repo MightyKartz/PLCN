@@ -72,7 +72,7 @@ def validate_add(payload):
 
 
 def _walk_remote(path):
-    """All descendant files (with backup-relative names) and folder paths under an MTP path."""
+    """All descendant files (with relative names) and folder paths under an MTP path."""
     entry = mtp.stat_file(path)
     if entry is None:
         raise ValueError('文件已移动或不存在')

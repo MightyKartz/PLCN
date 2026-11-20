@@ -24,7 +24,7 @@ def rom(tmp_path,monkeypatch):
     return target,source,playlist,document,payload
 
 
-def test_update_and_restore_preserve_metadata_and_saves(rom):
+def test_update_preserves_metadata_and_saves(rom):
     target,source,playlist,original,payload=rom
     save=target.with_suffix('.sav');save.write_bytes(b'keep save')
     before=playlist.read_bytes();plan=updates.prepare(payload)
@@ -34,15 +34,11 @@ def test_update_and_restore_preserve_metadata_and_saves(rom):
     changed=json.loads(playlist.read_bytes());assert changed['items'][0]['crc32']=='DETECT'
     changed['items'][0]['crc32']='12345678|crc';assert changed==original
     assert save.read_bytes()==b'keep save'
-    assert games.details({k:payload[k] for k in ('playlist','index')}|{'expected':mtp.digest(playlist.read_bytes())})['rom_update']['id']==result['operation_id']
-    assert tx.run(result['operation_id'],restore=True)['status']=='restored'
-    assert target.read_bytes()==b'old ROM' and playlist.read_bytes()==before
 
 
 def test_identical_rom_is_a_noop(rom):
     target,source,playlist,original,payload=rom;source.write_bytes(target.read_bytes())
     assert not updates.prepare(payload)['can_apply']
-    assert not tx.operations_dir().exists()
 
 
 def test_changed_target_is_not_overwritten(rom):
@@ -52,16 +48,21 @@ def test_changed_target_is_not_overwritten(rom):
     assert target.read_bytes()==b'changed by user'
 
 
-def test_failed_update_restores_old_rom(rom,monkeypatch):
+def test_interrupted_update_can_be_retried_with_the_same_plan(rom,monkeypatch):
     target,source,playlist,original,payload=rom;before=playlist.read_bytes();plan=updates.prepare(payload)
-    write=tx.write_checked
+    write=tx.write_checked;failed=[False]
     def fail_after_write(path,content,expected):
         result=write(path,content,expected)
-        if path==str(target) and content==b'new ROM':raise OSError('simulated readback failure')
+        if path==str(target) and content==b'new ROM' and not failed[0]:
+            failed[0]=True;raise OSError('simulated readback failure')
         return result
     monkeypatch.setattr(tx,'write_checked',fail_after_write)
+    with pytest.raises(OSError):games.apply(plan)
+    assert target.read_bytes()==b'new ROM' and playlist.read_bytes()==before
+    monkeypatch.setattr(tx,'write_checked',write)
     result=games.apply(plan)
-    assert result['restored'] and target.read_bytes()==b'old ROM' and playlist.read_bytes()==before
+    assert result['status']=='applied' and target.read_bytes()==b'new ROM'
+    assert json.loads(playlist.read_bytes())['items'][0]['crc32']=='DETECT'
 
 
 def test_optical_and_mismatched_formats_are_rejected(rom):
@@ -71,7 +72,7 @@ def test_optical_and_mismatched_formats_are_rejected(rom):
     with pytest.raises(ValueError,match='格式相同'):updates.prepare({**payload,'source':str(wrong)})
 
 
-def test_mtp_update_uses_the_same_backup_and_restore_journal(rom,monkeypatch):
+def test_mtp_update_uses_the_same_guarded_transaction(rom,monkeypatch):
     target,source,playlist,original,payload=rom
     remote='mtp://device/00020001/Roms/GBA/Original.gba';listing='mtp://device/00010001/RetroArch/playlists/GBA.lpl'
     original['items'][0]['path']='/storage/CARD/Roms/GBA/Original.gba'
@@ -85,15 +86,15 @@ def test_mtp_update_uses_the_same_backup_and_restore_journal(rom,monkeypatch):
     monkeypatch.setattr(tx,'write_checked',write)
     plan=updates.prepare({**payload,'playlist':listing,'expected':mtp.digest(files[listing])})
     result=games.apply(plan);assert result['status']=='applied' and files[remote]==b'new ROM'
-    assert tx.run(result['operation_id'],restore=True)['status']=='restored'
-    assert files[remote]==b'old ROM'
+    assert json.loads(files[listing])['items'][0]['crc32']=='DETECT'
 
 
-def test_restore_refuses_to_overwrite_a_later_rom_change(rom):
+def test_reapply_refuses_to_overwrite_a_later_rom_change(rom):
     target,source,playlist,original,payload=rom
-    result=games.apply(updates.prepare(payload));target.write_bytes(b'later manual version')
-    recovery=tx.run(result['operation_id'],restore=True)
-    assert recovery['status']=='restore_pending' and target.read_bytes()==b'later manual version'
+    plan=updates.prepare(payload)
+    games.apply(plan);target.write_bytes(b'later manual version')
+    with pytest.raises(ValueError,match='变化'):tx.apply(plan['transaction'])
+    assert target.read_bytes()==b'later manual version'
 
 
 def test_import_conflict_offers_the_existing_game_as_update_target(rom):

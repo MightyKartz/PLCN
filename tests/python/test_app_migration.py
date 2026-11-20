@@ -6,7 +6,6 @@ import pytest
 import app_paths
 from app_migration import migrate
 from app_runtime import InstanceLock
-import repair_history
 from safe_io import file_digest
 
 
@@ -15,18 +14,13 @@ def test_old_environment_is_ignored_and_new_override_is_used(tmp_path):
     assert app_paths.user_data_dir('linux', {'RETROARCH_ASSISTANT_HOME': str(tmp_path)}, tmp_path) == tmp_path
 
 
-def test_migration_relocates_rules_and_receipts_preserving_backup_bytes(tmp_path, monkeypatch):
+def test_migration_relocates_rules_and_manifests_preserving_payload_bytes(tmp_path, monkeypatch):
     old, new = tmp_path / 'old', tmp_path / 'new'
     old.mkdir()
     monkeypatch.setenv('RETROARCH_ASSISTANT_HOME', str(old))
     app_paths.initialize()
     playlist = tmp_path / 'game.lpl'
-    original = b'{"items": [{"label": "Original"}]}'
-    backup = old / 'playlist-backups/game.bak'
-    backup.parent.mkdir()
-    backup.write_bytes(original)
     playlist.write_bytes(b'{"items": [{"label": "Changed"}]}')
-    ident = repair_history.record_write(playlist, backup, 1)
     (old / 'manual_overrides.json').write_text('[{"name":"中文"}]', encoding='utf-8')
     (old / 'config.json').write_text(json.dumps({'manual_overrides_path': str(old / 'manual_overrides.json')}), encoding='utf-8')
     transaction = old / 'm3u-operations/test'
@@ -46,9 +40,6 @@ def test_migration_relocates_rules_and_receipts_preserving_backup_bytes(tmp_path
     assert manifest['backup'] == str(new / 'm3u-operations/test/metadata-0-before.json')
     assert file_digest(manifest['backup']) == digest
     assert (new / 'cache/library.db').read_bytes() == b'cached database'
-    repair_history.restore(ident)
-    assert playlist.read_bytes() == original
-    assert (new / 'playlist-backups/game.bak').read_bytes() == original
 
 
 def test_separate_cache_migration(tmp_path, monkeypatch):

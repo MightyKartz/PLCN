@@ -113,8 +113,6 @@ class ThumbnailDownloader:
             expected = self.replace_hashes.get((system, game_english_name, game_chinese_name), {}).get(type_name)
             replace = (expected and valid_image_file(target_path)
                        and hashlib.sha256(Path(target_path).read_bytes()).hexdigest() == expected)
-            if replace:
-                atomic_write_bytes(app_paths.user_data_dir() / 'artwork-backups' / (expected + '.png'), Path(target_path).read_bytes())
             if valid_image_file(target_path) and not replace:
                 results.append({
                     "type": type_name,

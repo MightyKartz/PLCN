@@ -226,7 +226,7 @@ async function applyContentScan() {
     try {
         const {result} = await contentJob('/api/content/apply', {preview_job_id: contentScan.previewId});
         contentScan.previewId = null; contentScan.imported = result; contentField('apply').hidden = true; contentField('complete').hidden = false;
-        contentField('status').textContent = workbenchText(`已更新列表，新增 ${result.added} 项、保留 ${result.retained} 项。`,`Playlist updated: ${result.added} added, ${result.retained} retained. `) + (result.backup ? uiText('原列表已备份。') : uiText('已创建新列表。')) + (result.warning || '');
+        contentField('status').textContent = workbenchText(`已更新列表，新增 ${result.added} 项、保留 ${result.retained} 项。`,`Playlist updated: ${result.added} added, ${result.retained} retained. `) + (result.warning || '');
     } catch (error) { invalidateContentScan(); contentField('status').textContent = error.message; }
 }
 async function completeImportedContent() {
