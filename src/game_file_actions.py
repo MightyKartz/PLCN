@@ -9,6 +9,7 @@ import app_paths
 import chd_io
 import mtp_runtime as mtp
 from safe_io import file_lock
+from task_control import TaskCancelled
 
 
 def validate_op(payload):
@@ -22,7 +23,7 @@ def validate_op(payload):
         serial, _, parts = mtp.parse(path)
         if not parts or not mtp.is_mtp(root) or mtp.parse(root)[0] != serial:
             raise ValueError('请先打开此掌机的 RetroArch 游戏库')
-    elif not Path(path).is_absolute() or mtp.is_mtp(root):
+    elif not Path(path).is_absolute():
         raise ValueError('请选择本地文件')
     if action == 'rename':
         name = payload.get('name')
@@ -45,6 +46,30 @@ def validate_op(payload):
             raise ValueError('不能复制到自身或它的子目录')
         return path, directory, remote
     return path, None, remote
+
+
+def validate_add(payload):
+    """Local files/folders copied into the browsed directory (local or MTP)."""
+    sources, directory, root = payload.get('sources'), payload.get('directory'), payload.get('root')
+    if (not isinstance(sources, list) or not sources or len(sources) > 500
+            or any(not isinstance(source, str) or mtp.is_mtp(source) for source in sources)
+            or not isinstance(directory, str) or not isinstance(root, str)):
+        raise ValueError('添加参数无效')
+    remote = mtp.is_mtp(directory)
+    if remote:
+        if not mtp.is_mtp(root) or mtp.parse(root)[0] != mtp.parse(directory)[0]:
+            raise ValueError('请先打开此掌机的 RetroArch 游戏库')
+    elif not Path(directory).is_dir():
+        raise ValueError('目标目录不存在')
+    else:
+        destination = Path(directory).resolve()
+        if any(Path(source).resolve().is_dir() and destination.is_relative_to(Path(source).resolve())
+               for source in sources):
+            raise ValueError('不能把文件夹复制到自身内部')
+    for source in sources:
+        if not Path(source).is_absolute() or not Path(source).exists():
+            raise ValueError('请选择电脑上存在的文件或文件夹')
+    return [str(Path(source)) for source in sources], directory, remote
 
 
 def _walk_remote(path):
@@ -159,13 +184,106 @@ def _remote_copy_file(source, destination, cancelled):
     """Download to a temp file, then upload verified; cleans up a stray stage on failure."""
     with tempfile.TemporaryDirectory(prefix='plcn-copy-') as temporary:
         local = Path(temporary) / 'payload'
-        expected = chd_io.copy_to(source, local, cancelled)
-        stage = destination + '.plcn-' + uuid.uuid4().hex
+        chd_io.copy_to(source, local, cancelled)
+        _upload_local(local, destination, cancelled)
+
+
+def _upload_local(source, destination, cancelled):
+    expected = chd_io.digest(str(source), cancelled)
+    stage = destination + '.plcn-' + uuid.uuid4().hex
+    try:
+        mtp.upload_file(destination, str(source), expected, stage, cancelled)
+    except Exception:
         try:
-            mtp.upload_file(destination, str(local), expected, stage, cancelled)
+            mtp.delete_object(stage)
         except Exception:
-            try:
-                mtp.delete_object(stage)
-            except Exception:
-                pass
-            raise
+            pass
+        raise
+
+
+def _remove_destination(target, remote):
+    """Best-effort cleanup of a partially copied destination."""
+    try:
+        if remote:
+            files, folders = _walk_remote(target)
+            for entry in files:
+                mtp.delete_object(entry['path'])
+            for folder in sorted(folders, key=lambda f: len(mtp.parse(f)[2]), reverse=True):
+                mtp.delete_object(folder)
+        else:
+            target_path = Path(target)
+            if target_path.is_dir() and not target_path.is_symlink():
+                shutil.rmtree(target_path)
+            else:
+                target_path.unlink(missing_ok=True)
+    except Exception:
+        pass
+
+
+def apply_add(sources, directory, remote, progress=lambda *args: None, cancelled=lambda: None):
+    """Copy local sources into the browsed directory, skipping same-named items.
+
+    Top-level folders are treated as units so two releases never merge. The
+    report keeps copied/skipped/failed/remaining lists even after cancellation.
+    """
+    items = []
+    for source in sources:
+        path = Path(source)
+        if path.is_dir():
+            files = sorted(entry for entry in path.rglob('*') if entry.is_file())
+            folders = sorted(entry for entry in path.rglob('*') if entry.is_dir())
+        else:
+            files, folders = [path], []
+        items.append({'source': path, 'name': path.name, 'files': files, 'folders': folders})
+    total = sum(len(item['files']) for item in items)
+    result = {'copied': [], 'skipped': [], 'failed': [], 'remaining': [], 'destination': directory}
+    done = 0
+    for index, item in enumerate(items):
+        name = item['name']
+        target = mtp.join(directory, name) if remote else str(Path(directory) / name)
+        exists = mtp.stat_file(target) is not None if remote else (Path(target).exists() or Path(target).is_symlink())
+        if exists:
+            result['skipped'].append(name)
+            done += len(item['files'])
+            continue
+        is_dir = item['source'].is_dir()
+        try:
+            if remote:
+                if is_dir:
+                    _ensure_remote_dir(target)
+                    for folder in item['folders']:
+                        _ensure_remote_dir(target + '/' + folder.relative_to(item['source']).as_posix())
+                for entry in item['files']:
+                    cancelled()
+                    relative = entry.relative_to(item['source']).as_posix() if is_dir else name
+                    _upload_local(entry, target + '/' + relative if is_dir else target, cancelled)
+                    done += 1
+                    progress(done, total, '复制：' + name)
+            elif is_dir:
+                Path(target).mkdir()
+                for folder in item['folders']:
+                    (Path(target) / folder.relative_to(item['source'])).mkdir(parents=True, exist_ok=True)
+                for entry in item['files']:
+                    cancelled()
+                    (Path(target) / entry.relative_to(item['source'])).parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(entry, Path(target) / entry.relative_to(item['source']))
+                    done += 1
+                    progress(done, total, '复制：' + name)
+            else:
+                cancelled()
+                with file_lock(str(item['source'])):
+                    shutil.copy2(item['source'], target)
+                done += 1
+                progress(done, total, '复制：' + name)
+            result['copied'].append(name)
+        except TaskCancelled as error:
+            _remove_destination(target, remote)
+            result['failed'].append({'name': name, 'error': str(error)})
+            result['remaining'] = [pending['name'] for pending in items[index + 1:]]
+            return result
+        except Exception as error:
+            _remove_destination(target, remote)
+            result['failed'].append({'name': name, 'error': str(error)})
+            result['remaining'] = [pending['name'] for pending in items[index + 1:]]
+            return result
+    return result

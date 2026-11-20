@@ -47,6 +47,70 @@ def test_file_ops_reject_device_boundary_and_bad_names(tmp_path):
         ops.validate_op({'action': 'unknown', 'path': str(tmp_path / 'x'), 'root': str(tmp_path)})
 
 
+def test_add_copies_files_and_folders_and_skips_existing(tmp_path):
+    destination = tmp_path / 'Roms' / 'SFC'
+    destination.mkdir(parents=True)
+    (destination / 'existing.sfc').write_bytes(b'old')
+    source_dir = tmp_path / 'incoming'
+    game_folder = source_dir / 'Game'
+    (game_folder / 'disc').mkdir(parents=True)
+    (game_folder / 'disc' / 'game.cue').write_bytes(b'cue')
+    (game_folder / 'disc' / 'game.bin').write_bytes(b'bin')
+    rom = source_dir / 'new.sfc'
+    rom.write_bytes(b'new')
+    clash = source_dir / 'existing.sfc'
+    clash.write_bytes(b'clash')
+    sources, directory, remote = ops.validate_add({
+        'action': 'add', 'sources': [str(rom), str(game_folder), str(clash)],
+        'directory': str(destination), 'root': str(tmp_path)})
+    result = ops.apply_add(sources, directory, remote)
+    assert result['copied'] == ['new.sfc', 'Game']
+    assert result['skipped'] == ['existing.sfc']
+    assert result['failed'] == [] and result['remaining'] == []
+    assert (destination / 'new.sfc').read_bytes() == b'new'
+    assert (destination / 'Game' / 'disc' / 'game.cue').read_bytes() == b'cue'
+    assert (destination / 'existing.sfc').read_bytes() == b'old'
+
+
+def test_add_reports_failure_and_remaining_and_cleans_partial(tmp_path):
+    destination = tmp_path / 'dest'
+    destination.mkdir()
+    folder = tmp_path / 'src' / 'big'
+    folder.mkdir(parents=True)
+    (folder / 'a.bin').write_bytes(b'a')
+    (folder / 'b.bin').write_bytes(b'b')
+    later = tmp_path / 'src' / 'later.sfc'
+    later.write_bytes(b'later')
+    sources = [str(folder), str(later)]
+    calls = iter([None, RuntimeError('disk full')])
+    real_copy2 = ops.shutil.copy2
+
+    def fake_copy2(*args, **kwargs):
+        outcome = next(calls)
+        if isinstance(outcome, Exception):
+            raise outcome
+        return real_copy2(*args, **kwargs)
+
+    ops.shutil.copy2 = fake_copy2
+    try:
+        result = ops.apply_add(sources, str(destination), False)
+    finally:
+        ops.shutil.copy2 = real_copy2
+    assert result['failed'] == [{'name': 'big', 'error': 'disk full'}]
+    assert result['remaining'] == ['later.sfc']
+    assert result['copied'] == []
+    assert not (destination / 'big').exists()
+
+
+def test_validate_add_boundaries(tmp_path):
+    with pytest.raises(ValueError):
+        ops.validate_add({'action': 'add', 'sources': ['/nonexistent-file'], 'directory': str(tmp_path), 'root': ''})
+    with pytest.raises(ValueError):
+        ops.validate_add({'action': 'add', 'sources': [str(tmp_path)], 'directory': 'mtp://dev/0001/Roms', 'root': 'mtp://other/0001/Lib'})
+    with pytest.raises(ValueError):
+        ops.validate_add({'action': 'add', 'sources': ['mtp://dev/0001/a'], 'directory': str(tmp_path), 'root': ''})
+
+
 def test_sync_renames_paths_removes_entries_and_reports_unmatched(tmp_path):
     roms = tmp_path / 'Roms' / 'GBA'
     root, target = library(tmp_path, [

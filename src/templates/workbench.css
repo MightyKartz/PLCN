@@ -388,10 +388,16 @@ dialog :is(h2,h3)[autofocus]:focus {outline:none;}
 .game-files-table {min-height:260px;flex:1;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
 .game-files-column {background:var(--surface-soft);font-size:12px;color:var(--muted);padding:9px 12px;}
 .game-files-rows {list-style:none;margin:0;padding:0;max-height:52vh;overflow:auto;}
-.game-files-row {border-top:1px solid var(--border);overflow-wrap:anywhere;}
+.game-files-row {border-top:1px solid var(--border);overflow-wrap:anywhere;display:flex;align-items:stretch;}
 .game-files-row > span {display:block;padding:9px 12px;}
-.game-files-row .btn {display:flex;justify-content:flex-start;text-align:left;width:100%;border-radius:0;border:0;background:transparent;color:var(--primary);overflow-wrap:anywhere;}
+.game-files-row .btn {display:flex;justify-content:flex-start;text-align:left;flex:1;min-width:0;border-radius:0;border:0;background:transparent;color:var(--primary);overflow-wrap:anywhere;}
 .game-files-row .btn:hover {background:var(--primary-soft);}
+.game-files-new {background:var(--primary-soft);}
+.game-files-row-menu {flex:none;position:relative;display:flex;}
+.game-files-row-menu>summary {width:36px;display:flex;align-items:center;justify-content:center;color:var(--muted);}
+.game-files-row-menu>summary:hover {background:var(--primary-soft);color:var(--primary);}
+.game-files-row-menu .action-menu-list {max-height:60vh;overflow:auto;}
+.game-files-empty {margin:48px 16px;text-align:center;color:var(--muted);font-size:13px;}
 .game-files-status {margin:12px 0 0;}
 @media(max-width:820px){.app-shell.showing-game-files{grid-template-columns:180px minmax(0,1fr);}}
 @media(max-width:560px){

@@ -64,6 +64,14 @@ def game_file_ops(handler, context, payload):
     import game_file_actions
     from task_control import checkpoint
 
+    if payload.get('action') == 'add':
+        sources, directory, remote = game_file_actions.validate_add(payload)
+        manager = context.job_manager
+        reply(handler, {'job_id': background(manager, '添加游戏文件', lambda jid: game_file_actions.apply_add(
+            sources, directory, remote,
+            lambda current, total, msg: manager.update_job(jid, current, total, msg),
+            lambda: checkpoint(lambda: manager.cancelled(jid))))})
+        return
     path, argument, remote = game_file_actions.validate_op(payload)
     action = payload['action']
     if action == 'rename':

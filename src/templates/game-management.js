@@ -129,7 +129,7 @@ function closeGameManagement({returnToLibrary = false} = {}) {
     if (returnToLibrary) closeGameFiles();
     else if (typeof gameFilesView !== 'undefined') gameFilesView?.refresh();
     (document.getElementById('game-files-workspace')?.hidden === false
-        ? document.getElementById('game-files-import') : document.getElementById('game-files-button'))?.focus();
+        ? document.getElementById('game-files-add') : document.getElementById('game-files-button'))?.focus();
 }
 function gmInput(form, id, zh, en, value = '') {
     const label = wbElement('label', 'gm-field', workbenchText(zh, en));

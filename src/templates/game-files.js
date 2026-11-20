@@ -148,25 +148,24 @@ function openGameFiles(opener, target = null) {
     up.disabled = true;
     const location = wbElement('nav', 'game-files-location', tr('选择要浏览的存储或电脑目录', 'Choose a storage or computer folder'));
     location.setAttribute('aria-label', tr('当前路径', 'Current path'));
-    const add = gmButton('添加文件', 'Add files', () => {
-        openGameImport(current?.path || '', {autoPick: 'files'});
-    }, false);
-    add.id = 'game-files-import';
-    wbIconButton(add, 'plus', add.textContent);
-    const rename = gmButton('重命名', 'Rename', renameFile);
-    const remove = gmButton('删除文件', 'Delete file', deleteFile);
-    const copy = gmButton('复制', 'Copy', copyFile);
+    const add = gmButton('添加游戏文件…', 'Add game files…', addFiles, false);
+    add.id = 'game-files-add';
+    const addFolder = gmButton('添加文件夹…', 'Add folder…', addFolderFiles);
+    addFolder.id = 'game-files-add-folder';
+    const rename = gmButton('重命名', 'Rename', () => renameFile());
+    const remove = gmButton('删除文件', 'Delete file', () => deleteFile());
+    const copy = gmButton('复制', 'Copy', () => copyFile());
     const paste = gmButton('粘贴', 'Paste', pasteFiles);
     wbIconButton(rename, 'pencil', rename.textContent);
     wbIconButton(remove, 'trash', remove.textContent);
     wbIconButton(copy, 'copy', copy.textContent);
     wbIconButton(paste, 'clipboard', paste.textContent);
-    rename.disabled = remove.disabled = copy.disabled = paste.disabled = true;
-    toolbar.append(up, location, rename, remove, copy, paste, add);
-    updateImportAction();
+    rename.disabled = remove.disabled = copy.disabled = paste.disabled = add.disabled = addFolder.disabled = true;
+    toolbar.append(up, location, rename, remove, copy, paste, addFolder, add);
     const table = wbElement('div', 'game-files-table');
     const rows = wbElement('ul', 'game-files-rows');
-    table.append(wbElement('div', 'game-files-column', tr('名称', 'Name')), rows);
+    const empty = wbElement('p', 'game-files-empty', tr('从左侧选择要存放游戏的目录', 'Pick a folder on the left to store games'));
+    table.append(wbElement('div', 'game-files-column', tr('名称', 'Name')), empty, rows);
     const status = wbElement('p', 'game-files-status');
     status.setAttribute('role', 'status');
     pane.append(toolbar, table, status);
@@ -205,18 +204,16 @@ function openGameFiles(opener, target = null) {
         });
     }
 
-    function updateImportAction(path = '') {
-        const mtp = root.startsWith('mtp://');
-        const storageDevice = value => value.split('/')[2];
-        const compatible = !path || (mtp
-            ? path.startsWith('mtp://') && storageDevice(path) === storageDevice(root)
-            : !path.startsWith('mtp://'));
-        add.disabled = !root || root.startsWith('adb://') || !compatible || !path;
-        add.title = add.disabled
-            ? (!path
-                ? tr('先在左侧选择要浏览的存储或电脑目录。', 'Choose a storage or computer folder on the left first.')
-                : tr('现有导入流程需要打开对应的 RetroArch 游戏库。', 'Open the matching RetroArch library to import files.'))
-            : add.getAttribute('aria-label');
+    function updateActionState() {
+        rename.disabled = remove.disabled = copy.disabled = !selected || changing;
+        paste.disabled = !gameFilesClipboard || gameFilesClipboard.root !== root || !current?.path || changing;
+        const mtpDest = current?.path?.startsWith('mtp://');
+        const blocked = Boolean(mtpDest && (!root.startsWith('mtp://') || root.split('/')[2] !== current.path.split('/')[2]));
+        add.disabled = addFolder.disabled = !current?.path || changing || blocked;
+        add.title = addFolder.title = blocked
+            ? tr('先在游戏库中打开这台掌机。', 'Open this handheld library first.')
+            : tr('把电脑上的文件复制进当前目录。', 'Copy computer files into this folder.');
+        empty.hidden = Boolean(current);
     }
 
     async function loadStorages() {
@@ -255,11 +252,6 @@ function openGameFiles(opener, target = null) {
         }
     }
 
-    function updateActionState() {
-        rename.disabled = remove.disabled = copy.disabled = !selected || changing;
-        paste.disabled = !gameFilesClipboard || gameFilesClipboard.root !== root || !current?.path || changing;
-    }
-
     function selectFile(item, button) {
         rows.querySelector('[aria-pressed=true]')?.setAttribute('aria-pressed', 'false');
         selected = item;
@@ -267,9 +259,8 @@ function openGameFiles(opener, target = null) {
         updateActionState();
     }
 
-    function renameFile() {
-        if (!selected || changing) return;
-        const item = selected;
+    function renameFile(item = selected) {
+        if (!item || changing) return;
         const directory = current.path;
         const dialog = wbElement('dialog', 'desktop-confirm app-dialog');
         const heading = wbElement('h2', '', tr('重命名', 'Rename'));
@@ -311,9 +302,8 @@ function openGameFiles(opener, target = null) {
         }
     }
 
-    function deleteFile() {
-        if (!selected || changing) return;
-        const item = selected;
+    function deleteFile(item = selected) {
+        if (!item || changing) return;
         const directory = current.path;
         const dialog = wbElement('dialog', 'desktop-confirm app-dialog game-file-delete-dialog');
         const heading = wbElement('h2', '', tr('删除文件', 'Delete item'));
@@ -360,11 +350,11 @@ function openGameFiles(opener, target = null) {
         }
     }
 
-    function copyFile() {
-        if (!selected || changing) return;
-        gameFilesClipboard = {root, item: {path:selected.path, name:selected.name, folder:Boolean(selected.directory)}};
+    function copyFile(item = selected) {
+        if (!item || changing) return;
+        gameFilesClipboard = {root, item: {path:item.path, name:item.name, folder:Boolean(item.directory)}};
         updateActionState();
-        status.textContent = tr('已复制「' + selected.name + '」，切换到目标目录后粘贴。', 'Copied "' + selected.name + '". Paste it in the destination folder.');
+        status.textContent = tr('已复制「' + item.name + '」，切换到目标目录后粘贴。', 'Copied "' + item.name + '". Paste it in the destination folder.');
     }
 
     async function pasteFiles() {
@@ -391,7 +381,14 @@ function openGameFiles(opener, target = null) {
         }
     }
 
-    async function loadDirectory(path, selectedPath = null) {
+    function storageLabel(path) {
+        for (const button of remote.children) {
+            if (button.dataset.storage === path) return button.textContent;
+        }
+        return '';
+    }
+
+    async function loadDirectory(path, selectedPath = null, highlightNames = new Set()) {
         const request = ++directoryRequest;
         status.textContent = tr('正在读取目录…', 'Reading folder…');
         try {
@@ -408,7 +405,7 @@ function openGameFiles(opener, target = null) {
                 else button.removeAttribute('aria-current');
             }
             location.replaceChildren(...result.breadcrumbs.flatMap(({name, path}, index, crumbs) => {
-                const label = name || tr('存储根目录', 'Storage root');
+                const label = (index || !isRemote ? name : '') || (isRemote ? storageLabel(path) : '') || name || tr('存储根目录', 'Storage root');
                 const currentCrumb = index === crumbs.length - 1;
                 const crumb = currentCrumb ? wbElement('span', '', label)
                     : gmButton(label, label, () => loadDirectory(path));
@@ -419,16 +416,27 @@ function openGameFiles(opener, target = null) {
                 return [separator, crumb];
             }));
             up.disabled = !result.parent;
-            updateImportAction(result.path);
             rows.replaceChildren(...result.items.map(item => {
                 const row = wbElement('li', 'game-files-row');
+                if (highlightNames.has(item.name)) row.classList.add('game-files-new');
                 if (item.directory) {
-                    const button = gmButton(item.name, item.name, () => selectFile(item, button));
-                    button.setAttribute('aria-pressed', 'false');
-                    button.ondblclick = () => loadDirectory(item.path);
-                    button.onkeydown = event => { if (event.key === 'Enter' && !event.isComposing) loadDirectory(item.path); };
+                    const button = gmButton(item.name, item.name, () => loadDirectory(item.path));
                     button.prepend(wbIcon('folder'));
-                    row.append(button);
+                    const menu = wbElement('details', 'action-menu game-files-row-menu');
+                    const summary = wbElement('summary', 'action-menu-trigger');
+                    summary.setAttribute('aria-label', tr(item.name + ' 的更多操作', 'More actions for ' + item.name));
+                    summary.append(wbIcon('dots'));
+                    const drop = wbElement('div', 'action-menu-list');
+                    const entry = (zh, en, action) => {
+                        const option = wbElement('button', 'action-menu-item', tr(zh, en));
+                        option.onclick = () => { menu.open = false; action(item); };
+                        drop.append(option);
+                    };
+                    entry('重命名', 'Rename', renameFile);
+                    entry('复制', 'Copy', copyFile);
+                    entry('删除…', 'Delete…', deleteFile);
+                    menu.append(summary, drop);
+                    row.append(button, menu);
                 } else {
                     const button = gmButton(item.name, item.name, () => selectFile(item, button));
                     button.setAttribute('aria-pressed', 'false');
@@ -441,9 +449,69 @@ function openGameFiles(opener, target = null) {
             status.textContent = result.items.length
                 ? tr(result.items.length + ' 个项目', result.items.length + ' items')
                 : tr('此目录没有文件。', 'This folder is empty.');
+            updateActionState();
         } catch (error) {
-            if (gameFilesView === view && request === directoryRequest) status.textContent = error.message;
+            if (gameFilesView !== view || request !== directoryRequest) return;
+            current = null;
+            selectFile(null);
+            up.disabled = true;
+            rows.replaceChildren();
+            status.textContent = tr('读取目录失败：', 'Could not read the folder: ') + error.message;
+            updateActionState();
         }
+    }
+
+    async function addFiles() {
+        if (!current?.path || changing) return;
+        try {
+            const result = await desktopRequest('/api/desktop/pick', {kind:'files', initial:lastLocal});
+            if (gameFilesView === view && result.paths?.length) await submitAdd(result.paths);
+        } catch (error) {
+            status.textContent = error.message;
+        }
+    }
+
+    async function addFolderFiles() {
+        if (!current?.path || changing) return;
+        try {
+            const result = await desktopRequest('/api/desktop/pick', {kind:'directory', initial:lastLocal});
+            if (gameFilesView === view && result.path) await submitAdd([result.path]);
+        } catch (error) {
+            status.textContent = error.message;
+        }
+    }
+
+    async function submitAdd(sources) {
+        if (!current?.path || changing || !sources.length) return;
+        if (!beginWorkbenchOperation('game-file-ops')) { status.textContent = tr('请等待当前任务完成。', 'Wait for the current task.'); return; }
+        const directory = current.path;
+        changing = true;
+        updateActionState();
+        status.textContent = tr('正在复制…', 'Copying…');
+        try {
+            const {result} = await runGameJob('/api/game-files/file-ops', {action:'add', sources, directory, root},
+                state => { if (state.connectionError || currentUILanguage !== 'en') status.textContent = state.message; });
+            if (gameFilesView === view) {
+                await loadDirectory(directory, null, new Set(result.copied));
+                status.textContent = addSummary(result);
+            }
+        } catch (error) {
+            status.textContent = gmError(error);
+        } finally {
+            changing = false;
+            if (gameFilesView === view) updateActionState();
+            endWorkbenchOperation();
+        }
+    }
+
+    function addSummary(result) {
+        const parts = [];
+        const list = names => names.length > 4 ? names.slice(0, 4).join('、') + ' 等 ' + names.length + ' 项' : names.join('、');
+        if (result.copied.length) parts.push(tr('已复制：', 'Copied: ') + list(result.copied));
+        if (result.skipped.length) parts.push(tr('已跳过（同名已存在）：', 'Skipped (same name exists): ') + list(result.skipped));
+        if (result.failed.length) parts.push(tr('失败：', 'Failed: ') + list(result.failed.map(entry => entry.name)));
+        if (result.remaining.length) parts.push(tr('未完成：', 'Not finished: ') + list(result.remaining));
+        return parts.length ? parts.join(tr('；', '; ')) : tr('没有可复制的内容。', 'Nothing to copy.');
     }
 }
 
