@@ -449,7 +449,7 @@ def test_remove_presence_check_failure_is_unverified(device_files, monkeypatch):
         if calls[0] == 2: raise OSError('link dead')
         return real(handle, storage, parts, create)
     monkeypatch.setattr(mtp, 'resolve', flaky)
-    with pytest.raises(chd_io.RemoveUnverified, match='无法核对'):
+    with pytest.raises(chd_io.RemoveUnverified, match='无法核对|无法确认'):
         mtp.remove_file(target, chd_io.digest(target))
 
 
@@ -468,7 +468,7 @@ def test_remove_flags_same_named_replacement_object_as_unverified(device_files, 
     def resolve(handle, storage, parts, create=False):
         calls[0] += 1
         entry = real_resolve(handle, storage, parts, create)
-        if calls[0] == 2 and entry: entry = dict(entry, id=entry['id'] + 5496)
+        if calls[0] == 3 and entry: entry = dict(entry, id=entry['id'] + 5496)
         return entry
     monkeypatch.setattr(mtp, 'resolve', resolve)
     with pytest.raises(chd_io.RemoveUnverified, match='新对象'):
@@ -520,3 +520,61 @@ def test_remove_digest_guard_still_blocks_same_id_content_change(device_files, m
     with pytest.raises(ValueError, match='已变化'):
         mtp.remove_file(target, 'approved-sha', expected_id=approved)
     assert not deleted_ids and files[target] == b'mutated'
+
+
+def test_remove_never_deletes_after_path_moved_mid_readback(device_files, monkeypatch):
+    root, files, upload, lib = device_files
+    chd_io = _stub_chd_digest(monkeypatch, files)
+    target = mtp.join(root, 'data.bin'); upload(None, 65537, 0, 'data.bin', b'track')
+    saved = mtp.join(root, 'saved.bin')
+    real_resolve = mtp.resolve; calls = [0]
+    def resolve(handle, storage, parts, create=False):
+        calls[0] += 1
+        if calls[0] == 2:
+            files[saved] = files.pop(target)   # renamed during the read-back
+            return None
+        return real_resolve(handle, storage, parts, create)
+    monkeypatch.setattr(mtp, 'resolve', resolve)
+    deleted_ids = []
+    lib.LIBMTP_Delete_Object = lambda handle, ident: deleted_ids.append(ident) or 1
+    approved = mtp.resolve(None, 65537, mtp.parse(target)[2])['id']
+    calls[0] = 0
+    with pytest.raises(chd_io.RemoveUnverified, match='移动|变化'):
+        mtp.remove_file(target, chd_io.digest(target), expected_id=approved)
+    assert not deleted_ids and files[saved] == b'track'
+
+
+def test_remove_never_deletes_after_new_object_mid_readback(device_files, monkeypatch):
+    root, files, upload, lib = device_files
+    chd_io = _stub_chd_digest(monkeypatch, files)
+    target = mtp.join(root, 'data2.bin'); upload(None, 65537, 0, 'data2.bin', b'track')
+    real_resolve = mtp.resolve; calls = [0]
+    def resolve(handle, storage, parts, create=False):
+        calls[0] += 1
+        entry = real_resolve(handle, storage, parts, create)
+        if calls[0] == 2 and entry: entry = dict(entry, id=entry['id'] + 9000)
+        return entry
+    monkeypatch.setattr(mtp, 'resolve', resolve)
+    deleted_ids = []
+    lib.LIBMTP_Delete_Object = lambda handle, ident: deleted_ids.append(ident) or 1
+    approved = mtp.resolve(None, 65537, mtp.parse(target)[2])['id']
+    calls[0] = 0
+    with pytest.raises(chd_io.RemoveUnverified, match='移动|变化'):
+        mtp.remove_file(target, chd_io.digest(target), expected_id=approved)
+    assert not deleted_ids and files[target] == b'track'
+
+
+def test_remove_honors_cancellation_before_issuing_delete(device_files, monkeypatch):
+    from task_control import TaskCancelled
+    root, files, upload, lib = device_files
+    chd_io = _stub_chd_digest(monkeypatch, files)
+    target = mtp.join(root, 'halt.bin'); upload(None, 65537, 0, 'halt.bin', b'track')
+    hits = [0]
+    def cancelled():
+        hits[0] += 1
+        if hits[0] >= 2: raise TaskCancelled('stop')
+    deleted_ids = []
+    lib.LIBMTP_Delete_Object = lambda handle, ident: deleted_ids.append(ident) or 1
+    with pytest.raises(TaskCancelled):
+        mtp.remove_file(target, chd_io.digest(target), cancelled)
+    assert not deleted_ids and files[target] == b'track'

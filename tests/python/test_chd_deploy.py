@@ -620,3 +620,33 @@ def test_continuation_keeps_replaced_object_in_unverified_while_cleaning_rest(re
     assert outcome['deleted']==[str(cue)]
     assert files[track]==b'replacement bytes' and str(cue) not in files
     assert not any(call==('remove',track) for call in calls)
+
+
+def test_continuation_marks_undownloadable_replacement_unverified(remote,monkeypatch):
+    import mtp_runtime as mtp
+    files,original,calls,payload,cue,track=remote
+    plan=deploy.prepare(payload)
+    fixture_remove=mtp.remove_file
+    monkeypatch.setattr(mtp,'remove_file',lambda *args,**kwargs:(_ for _ in ()).throw(RuntimeError('disconnected')))
+    result=deploy.start(plan);assert result['status']=='partial'
+    # Replacement BIN: metadata resolves, its content cannot be downloaded.
+    files[track]=b'replacement bytes'
+    real_stat=mtp.stat_file
+    def stat(value):
+        entry=real_stat(value)
+        if entry and value==str(track): entry=dict(entry,id=entry['id']+9000)
+        return entry
+    real_download=mtp.download_file
+    def download(path,target_path,cancelled=lambda:None):
+        if path==str(track): raise RuntimeError('read error')
+        return real_download(path,target_path,cancelled)
+    monkeypatch.setattr(mtp,'stat_file',stat)
+    monkeypatch.setattr(mtp,'download_file',download)
+    monkeypatch.setattr(mtp,'remove_file',fixture_remove)
+    before=len(calls)
+    outcome=deploy.continue_cleanup(result['cleanup'])
+    assert [entry['path'] for entry in outcome['unverified']]==[str(track)]
+    assert outcome['deleted']==[str(cue)] and not outcome['remaining']
+    assert 'cleanup' not in outcome and outcome['status']=='partial'
+    assert files[track]==b'replacement bytes'
+    assert not any(call==('remove',track) or call==('download',track) for call in calls[before:])

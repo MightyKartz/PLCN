@@ -474,9 +474,22 @@ def remove_file(value,expected,cancelled=lambda: None,expected_id=None):
         # and this path belongs to something else — never auto-delete it.
         if expected_id is not None and entry['id']!=expected_id: raise chd_io.RemoveUnverified('待移除对象已变化：'+value)
         if entry['folder']: raise ValueError('MTP 移除目标不是文件')
-        if chd_io.digest(value,cancelled)!=expected: raise ValueError('MTP 待移除文件已变化：'+value)
+        if chd_io.digest(value,cancelled)!=expected:
+            if expected_id is not None:
+                try: probe=resolve(handle,storage,parts)
+                except Exception: probe=None
+                if probe is None or probe['id']!=expected_id:
+                    raise chd_io.RemoveUnverified('待移除对象已变化：'+value)
+            raise ValueError('MTP 待移除文件已变化：'+value)
+        cancelled()
+        # The digest read-back can be slow; the path may have moved meanwhile.
+        # Re-resolve right before issuing the delete command.
         try:
-            failed=bool(library().LIBMTP_Delete_Object(handle,entry['id']))
+            current=resolve(handle,storage,parts)
+        except Exception as error: raise chd_io.RemoveUnverified('删除前无法确认对象：'+value) from error
+        if current is None or current['id']!=entry['id']: raise chd_io.RemoveUnverified('对象已移动或路径已变化：'+value)
+        try:
+            failed=bool(library().LIBMTP_Delete_Object(handle,current['id']))
         except Exception as error: raise chd_io.RemoveUnverified('删除指令结果未知：'+value) from error
         # The delete command was issued; a nonzero status is ambiguous — the
         # device may have deleted then reported failure. Presence decides.

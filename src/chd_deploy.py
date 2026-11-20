@@ -132,16 +132,20 @@ def check_scope(record,after=False):
 
     # Deleted descriptors legitimately disappear after references have been updated;
     # a retried plan may also find scheduled deletions already absent.
+    def _present(path):
+        """Presence check; MTP paths are confirmed by device metadata only, so
+        a replacement object is never downloaded just to be classified."""
+        return io.object_id(path) is not None if mtp.is_mtp(path) else io.digest(path) is not None
     expected=copy.deepcopy(record['scope_snapshot']['directories'])
-    absent={file['path'] for file in record.get('deletions',[]) if not io.digest(file['path'])}
-    absent.update(file['path'] for file in record.get('sources',[]) if file.get('state') in {'deleting','deleted','unverified'} and not io.digest(file['path']))
+    absent={file['path'] for file in record.get('deletions',[]) if not _present(file['path'])}
+    absent.update(file['path'] for file in record.get('sources',[]) if file.get('state') in {'deleting','deleted','unverified'} and not _present(file['path']))
     for path in absent:
         parent=path.rsplit('/',1)[0];name=mtp.parse(path)[2][-1] if mtp.is_mtp(path) else Path(path).name
         if parent in expected: expected[parent]=[entry for entry in expected[parent] if entry[0]!=name]
     if current!=expected: raise ValueError('引用目录在预览后变化，请重新核对')
     scheduled={file['path'] for file in record.get('deletions',[])}
     for path,digest in record['scope_snapshot']['documents'].items():
-        gone=io.digest(path) is None
+        gone=not _present(path)
         if gone and (path in scheduled or any(file['path']==path and file.get('state') in {'deleted','deleting','unverified'} for file in record['sources'])): continue
         acceptable={digest}
         if after:
@@ -216,9 +220,13 @@ def start(plan,cancelled=lambda: None,progress=lambda message: None):
                 path=file['path']
                 cancelled();progress('删除原镜像：'+path)
                 try:
-                    if io.digest(path,cancelled) is not None:
-                        if mtp.is_mtp(path) and 'object_id' in file and file['object_id'] is None:
-                            raise io.RemoveUnverified('无法确认待移除对象身份：'+path)
+                    if mtp.is_mtp(path) and 'object_id' in file:
+                        current=io.object_id(path)
+                        if current is not None:
+                            if file['object_id'] is None or current!=file['object_id']:
+                                raise io.RemoveUnverified('待移除对象已变化：'+path)
+                            io.remove(path,file['sha256'],cancelled,file['object_id'])
+                    elif io.digest(path,cancelled) is not None:
                         io.remove(path,file['sha256'],cancelled,file.get('object_id'))
                 except io.RemoveUnverified as error:
                     file['state']='unverified'
@@ -306,12 +314,20 @@ def continue_cleanup(payload,cancelled=lambda: None,progress=lambda message: Non
             continue
         try:
             cancelled();progress('清理原镜像：'+path)
-            if io.digest(path,cancelled) is None:
+            if mtp.is_mtp(path) and 'object_id' in file:
+                current=io.object_id(path)
+                if current is None:
+                    deleted.append(path);continue
+                if file['object_id'] is None or current!=file['object_id']:
+                    if path not in unverified_paths:
+                        unverified_paths.add(path)
+                        unverified.append({'path':path,'error':'无法确认待移除对象身份' if file['object_id'] is None else '待移除对象已变化'})
+                    continue
+                io.remove(path,file['sha256'],cancelled,file['object_id'])
+            elif io.digest(path,cancelled) is None:
                 deleted.append(path);continue
-            if mtp.is_mtp(path) and 'object_id' in file and file['object_id'] is None:
-                if path not in unverified_paths: unverified_paths.add(path);unverified.append({'path':path,'error':'无法确认待移除对象身份'})
-                continue
-            io.remove(path,file['sha256'],cancelled,file.get('object_id'))
+            else:
+                io.remove(path,file['sha256'],cancelled,file.get('object_id'))
         except TaskCancelled as error:
             remaining.append({'path':path,'error':str(error)});stopped=True;continue
         except (OSError,ValueError,RuntimeError) as error:
