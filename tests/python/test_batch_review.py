@@ -179,3 +179,76 @@ def test_adb_transport_only_pushes_playlist_when_names_are_enabled(library, monk
     assert result['applied_count'] == int(write_names)
     assert path.read_bytes() == original
     assert all(not local.exists() for local in staged)
+
+
+def classify(change, names=True, images=True):
+    from batch_review import classify_change
+    return classify_change(dict(change), {'write_names': names, 'download_thumbnails': images})
+
+
+def base_change(**overrides):
+    change = {'original_item_label': 'Game', 'original_label': 'Game', 'new_label': '游戏',
+              'path': '/roms/Game.zip', 'system': 'NES', 'identity': {},
+              'thumbnail_source': 'Game (USA)', 'cover_exists': False,
+              'artwork': {'Named_Boxarts': {'status': 'missing'}}, 'artwork_gallery_status': 'found'}
+    change.update(overrides)
+    return change
+
+
+@pytest.mark.parametrize('change,names,images,expected', [
+    # Trusted rename, no artwork source: rename applies, artwork gap is manual.
+    (base_change(thumbnail_source=None, artwork_gallery_status='not_found'), True, True,
+     {'rename': True, 'artwork': False, 'manual': True}),
+    (base_change(thumbnail_source=None, artwork_gallery_status='unavailable'), True, True,
+     {'rename': True, 'artwork': False, 'manual': True}),
+    # Complete game, gallery empty: nothing to do, nothing manual.
+    (base_change(original_item_label='游戏', thumbnail_source=None, artwork_gallery_status='not_found',
+                 cover_exists=True, artwork={'Named_Boxarts': {'status': 'exists'}}), True, True,
+     {'rename': False, 'artwork': False, 'manual': False}),
+    # Untranslatable English name, artwork complete: manual name gap only.
+    (base_change(new_label='Game', cover_exists=True,
+                 artwork={'Named_Boxarts': {'status': 'exists'}}), True, True,
+     {'rename': False, 'artwork': False, 'manual': True}),
+    # Untranslatable English name and no artwork source: one manual entry.
+    (base_change(new_label='Game', thumbnail_source=None, artwork_gallery_status='not_found'), True, True,
+     {'rename': False, 'artwork': False, 'manual': True}),
+    # Conflicting identity blocks auto-apply but stays manual.
+    (base_change(identity={'requires_review': True}, thumbnail_source=None,
+                 artwork_gallery_status='not_found'), True, True,
+     {'rename': False, 'artwork': False, 'manual': True}),
+    # Names-only run: rename applies, artwork never counted.
+    (base_change(thumbnail_source=None, artwork_gallery_status='unavailable'), True, False,
+     {'rename': True, 'artwork': False, 'manual': False}),
+    # Artwork-only run on a complete, untranslatable game: nothing to do.
+    (base_change(new_label='Game', cover_exists=True,
+                 artwork={'Named_Boxarts': {'status': 'exists'}}), False, True,
+     {'rename': False, 'artwork': False, 'manual': False}),
+], ids=['rename-gallery-not-found', 'rename-gallery-unavailable', 'complete-game',
+        'untranslatable-complete', 'untranslatable-no-source', 'identity-conflict',
+        'names-only-rename', 'images-only-complete'])
+def test_classify_change_acceptance_matrix(change, names, images, expected):
+    assert classify(change, names, images) == expected
+
+
+def test_classify_change_strips_unverified_source_for_rename():
+    change = base_change(artwork_gallery_status='not_found')
+    from batch_review import classify_change
+    verdict = classify_change(change, {'write_names': True, 'download_thumbnails': True})
+    assert verdict['rename'] is True and verdict['artwork'] is False
+    assert change['thumbnail_source'] is None
+
+
+def test_classify_change_artwork_only_uses_current_label_for_missing_images(tmp_path, monkeypatch):
+    """仅补图时按实际保留的列表名称查本地图片，而不是按提案名。"""
+    checked = []
+    monkeypatch.setattr('batch_review.open_artwork_reader', lambda t, s: ('resolver', 'lookups', None))
+    monkeypatch.setattr('batch_review.artwork_statuses',
+                        lambda label, path, *args: checked.append(label)
+                        or {'Named_Boxarts': {'status': 'exists'}})
+    change = base_change(new_label='游戏')
+    from batch_review import classify_change
+    verdict = classify_change(change, {'write_names': False, 'download_thumbnails': True},
+                              str(tmp_path), 'NES', {})
+    assert checked == ['Game']
+    assert change['new_label'] == 'Game'
+    assert verdict == {'rename': False, 'artwork': False, 'manual': False}

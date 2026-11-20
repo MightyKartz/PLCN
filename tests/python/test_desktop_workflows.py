@@ -177,14 +177,44 @@ def test_compare_installed_pack_keeps_active_config_and_reuses_baseline(tmp_path
     config = tmp_path / 'config.json'
     config.write_text(json.dumps({'rom_name_cn_path': str(source), 'manual_overrides_path': 'keep.json'}), encoding='utf-8')
     before = config.read_bytes()
-    result = compare_active(pack, config)
+    result = compare_active(pack, source)
     assert result == {'added': 0, 'removed': 1, 'changed': 1, 'untranslated': 0}
-    assert compare_active(pack, config) == result
+    assert compare_active(pack, source) == result
     assert len(list((desktop_home / 'packs').glob('baseline-*'))) == 1
     assert config.read_bytes() == before
     assert managed_pack(str(pack)) == pack.resolve()
     with pytest.raises(ValueError, match='数据目录'):
         managed_pack(str(tmp_path / 'unmanaged'))
+
+
+def test_missing_name_source_resolves_to_bundled_for_display_and_compare(tmp_path, monkeypatch, desktop_home):
+    """A configured absolute directory that no longer exists must not pin the
+    data-pack page or comparison baseline to a stale location."""
+    import app_paths
+    from api_data import effective_name_source, compare_active
+    missing = tmp_path / 'moved-away'
+    config_file = tmp_path / 'config.json'
+    config_file.write_text(json.dumps({'rom_name_cn_path': str(missing)}), encoding='utf-8')
+    monkeypatch.setattr('server.CONFIG_FILE', str(config_file))
+    from types import SimpleNamespace
+    import server
+    context = SimpleNamespace(load_server_config=server.load_server_config, CONFIG_FILE=str(config_file))
+
+    assert effective_name_source(context) == app_paths.default_source()
+    # Comparing a valid pack against the missing directory used to raise
+    # FileNotFoundError; the fallback must yield the same baseline as the
+    # bundled source.
+    source_dir = tmp_path / 'custom'; source_dir.mkdir()
+    (source_dir / 'NES.csv').write_text('Name EN,Name CN\nGame,游戏\n', encoding='utf-8')
+    import data_pack
+    pack = desktop_home / 'packs' / 'test-pack'
+    data_pack.build_pack(source_dir, pack)
+    assert compare_active(pack, effective_name_source(context)) == compare_active(pack, app_paths.default_source())
+
+    custom = tmp_path / 'config2.json'
+    custom.write_text(json.dumps({'rom_name_cn_path': str(source_dir)}), encoding='utf-8')
+    monkeypatch.setattr('server.CONFIG_FILE', str(custom))
+    assert effective_name_source(context) == source_dir
 
 
 def test_desktop_launcher_restores_streams_after_service_exit(desktop_home, monkeypatch):

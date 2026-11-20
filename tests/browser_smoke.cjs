@@ -167,7 +167,7 @@ async function main() {
     assert.equal(await evaluate(()=>document.title),'RetroArch 助手');
     assert.equal(await evaluate(()=>document.getElementById('scan-default-btn').textContent.trim()),'');
     assert.equal(await evaluate(()=>document.getElementById('scan-default-btn').getAttribute('aria-label')),'重新检测');
-    assert.equal(await evaluate(visible,'#home-library-folder'),true);
+    assert.equal(await evaluate(()=>document.getElementById('home-library-folder')),null);
     await screenshot('01-home');
     assert.equal(await evaluate(()=>document.querySelector('.workbench-nav, #workbench-task')),null);
     assert.equal(await evaluate(()=>document.querySelector('#task-center-button,#task-popover,[data-desktop-view="tasks"]')),null);
@@ -436,10 +436,10 @@ async function main() {
     assert.equal(await evaluate(()=>document.querySelector('#workspace-title .workspace-count').textContent),'1 个游戏');
     assert.equal(await evaluate(() => document.querySelector('.completion-entry').hidden), true);
     assert.equal(await evaluate(() => document.querySelector('#games-status').hidden), false);
-    assert.equal(await evaluate(() => document.querySelector('#games-status .overview-status-text').textContent), '1 个游戏缺少封面');
+    assert.equal(await evaluate(() => document.querySelector('#games-status .overview-status-text').textContent), '1 个游戏图片待补全');
     assert.equal(await evaluate(() => document.querySelector('#games-complete-button').textContent), '一键补全');
     assert.equal(await evaluate(() => document.querySelector('#games-complete-button').disabled), false);
-    assert.equal(await evaluate(() => document.querySelector('#game-library-filter-missing').textContent), '缺封面 1');
+    assert.equal(await evaluate(() => document.querySelector('#game-library-filter-missing').textContent), '图片待补全 1');
     assert.equal(await evaluate(() => document.querySelector('#game-library-search').placeholder), '搜索 SNES 游戏');
     assert.equal(await evaluate(() => document.querySelector('#game-library-note')), null);
     assert.equal(await evaluate(() => document.querySelector('#game-selection-toolbar').hidden), true);

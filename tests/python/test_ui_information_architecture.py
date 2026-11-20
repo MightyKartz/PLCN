@@ -302,7 +302,7 @@ def test_home_overview_uses_minimal_concept():
     assert "'overview-complete-button'" in html
     assert "startCompletion()" in html
     assert '个游戏缺少封面' in html
-    assert 'games missing artwork' in html
+    assert 'games missing cover' in html
     assert 'overview-subtitle' in html
     assert '个主机' in html
     assert 'workbench-summary' not in html
