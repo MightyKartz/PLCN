@@ -144,3 +144,17 @@ test('check mode keeps a search icon and read-only labels; a valid id restores d
     assert.equal(button.iconName,'trash');
     assert.equal(button.title,'Continue removing originals');assert.equal(button.ariaLabel,'Continue removing originals');
 });
+
+test('an unverified-only apply result lists the paths and offers no cleanup action',async()=>{
+    const {c,field}=harness();
+    Object.assign(c.store,{preview:'plan',key:'k'});c.deploymentKey=()=> 'k';
+    const entries=[];c.document.createElement=()=>{const node={textContent:''};entries.push(node);return node;};
+    field('details').appendChild=function(){};
+    c.deploymentJob=async()=>({result:{status:'partial',error:'1 项删除结果待核对',
+        unverified:[{path:'/roms/a.cue',error:'删除已执行但无法核对'}],actual_image_delta_bytes:null,cleanup_remaining:[]}});
+    const button=field('cleanup');
+    await c.applyChdDeployment();
+    assert.equal(button.hidden,true);
+    assert.match(field('status').textContent,/待核对/);
+    assert.equal(entries[0].textContent,'待核对：/roms/a.cue · 删除已执行但无法核对');
+});

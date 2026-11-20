@@ -112,6 +112,7 @@ function showCleanupResult(result){
     deployField('review').hidden=false;
     if(result.cleanup_id){button.dataset.job=result.cleanup_id;delete button.dataset.check;setCleanupButton(false);
         button.hidden=false;button.disabled=false;}
+    else button.hidden=true;
 }
 function offerCleanupCheck(){
     const button=deployField('cleanup');

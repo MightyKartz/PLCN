@@ -511,3 +511,23 @@ def test_new_reference_still_blocks_continuation_with_unverified_absent(prepared
     with pytest.raises(ValueError,match='变化'):
         deploy.continue_cleanup(result['cleanup'])
     assert Path(second).exists()
+
+
+def test_deployment_api_returns_unverified_only_partial_result(prepared,monkeypatch):
+    import api_chd
+    from job_manager import JobManager
+    from types import SimpleNamespace
+    _,cue,track,payload=prepared;plan=deploy.prepare(payload)
+    jobs=JobManager();ident=jobs.create_job();jobs.complete_job(ident);jobs.contexts[ident]={'chd_deployment':plan}
+    monkeypatch.setattr(api_chd,'reply',lambda *args:None)
+    captured=[];monkeypatch.setattr(api_chd,'background',lambda jobs,title,work:(captured.append(work),'job-x')[1])
+    first=plan['deletions'][0]['path'];real=chd_io.remove
+    def flaky(path,expected,*args,**kwargs):
+        if path==first:Path(path).unlink(missing_ok=True);raise chd_io.RemoveUnverified('删除指令结果未知：'+path)
+        return real(path,expected,*args,**kwargs)
+    monkeypatch.setattr(chd_io,'remove',flaky)
+    api_chd.deployment_apply(None,SimpleNamespace(job_manager=jobs),{'preview_job_id':ident})
+    result=captured[0](jobs.create_job())
+    assert result['status']=='partial' and 'cleanup_id' not in result and 'cleanup' not in result
+    assert [entry['path'] for entry in result['unverified']]==[first]
+    assert result['actual_image_delta_bytes'] is None

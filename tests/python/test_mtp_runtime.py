@@ -451,3 +451,27 @@ def test_remove_presence_check_failure_is_unverified(device_files, monkeypatch):
     monkeypatch.setattr(mtp, 'resolve', flaky)
     with pytest.raises(chd_io.RemoveUnverified, match='无法核对'):
         mtp.remove_file(target, chd_io.digest(target))
+
+
+def test_remove_flags_same_named_replacement_object_as_unverified(device_files, monkeypatch):
+    root, files, upload, lib = device_files
+    chd_io = _stub_chd_digest(monkeypatch, files)
+    target = mtp.join(root, 'restored.cue'); upload(None, 65537, 0, 'restored.cue', b'cue bytes')
+    deleted_ids = []
+    def flaky_delete(handle, ident):
+        deleted_ids.append(ident)
+        files.pop(target, None)
+        files[target] = b'cue bytes'   # A same-named object appears before read-back.
+        return 1
+    lib.LIBMTP_Delete_Object = flaky_delete
+    real_resolve = mtp.resolve; calls = [0]
+    def resolve(handle, storage, parts, create=False):
+        calls[0] += 1
+        entry = real_resolve(handle, storage, parts, create)
+        if calls[0] == 2 and entry: entry = dict(entry, id=entry['id'] + 5496)
+        return entry
+    monkeypatch.setattr(mtp, 'resolve', resolve)
+    with pytest.raises(chd_io.RemoveUnverified, match='新对象'):
+        mtp.remove_file(target, chd_io.digest(target))
+    assert files[target] == b'cue bytes'
+    assert len(deleted_ids) == 1

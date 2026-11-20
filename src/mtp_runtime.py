@@ -479,7 +479,9 @@ def remove_file(value,expected,cancelled=lambda: None):
         try:
             still=resolve(handle,storage,parts)
         except Exception as error: raise chd_io.RemoveUnverified('删除已执行但无法核对：'+value) from error
-        if still is not None: raise RuntimeError('MTP 移除失败' if failed else 'MTP 移除核对失败')
+        if still is not None:
+            if still['id']!=entry['id']: raise chd_io.RemoveUnverified('路径已出现同名新对象：'+value)
+            raise RuntimeError('MTP 移除失败' if failed else 'MTP 移除核对失败')
 
 
 def rename_object(value, name):

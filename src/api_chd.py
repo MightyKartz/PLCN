@@ -58,7 +58,7 @@ def deployment_apply(handler,context,payload):
         def cancelled():
             if jobs.cancelled(jid): raise TaskCancelled('操作已在安全步骤停止')
         result=chd_deploy.start(plan,cancelled,lambda message:jobs.update_job(jid,0,1,message))
-        if result['status']!='completed' and not result.get('cleanup'):
+        if result['status']!='completed' and not result.get('cleanup') and not result.get('unverified'):
             raise RuntimeError('CHD 操作部分完成：'+str(result['error']))
         if result.get('cleanup'):
             # The verified remainder stays server-side; the client references it by job id.
