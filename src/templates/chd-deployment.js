@@ -72,6 +72,29 @@ async function applyChdDeployment(){
     chdDeployment.preview=null;
     try{
         const {result}=await deploymentJob('/api/chd/deployment/apply',{preview_job_id:id});chdDeployment.changed=true;
-        deployField('status').textContent='已完成。';deployField('review').hidden=true;
+        if(result?.status==='partial'&&result.cleanup){offerCleanup(result);}
+        else{deployField('status').textContent='已完成。';deployField('review').hidden=true;}
     }catch(error){chdDeployment.changed=true;deployField('status').textContent=error.message;}
+}
+function offerCleanup(result){
+    deployField('status').textContent='引用已切换，但清理未全部完成：'+(result.error||'');
+    const button=deployField('cleanup');button.hidden=false;button.dataset.payload=JSON.stringify(result.cleanup);
+    const details=deployField('details');details.replaceChildren();
+    for(const path of result.cleanup_remaining||[]){const line=document.createElement('li');line.textContent='待清理：'+path;details.appendChild(line);}
+    deployField('review').hidden=false;
+}
+async function continueChdCleanup(){
+    const button=deployField('cleanup');if(chdDeployment.busy)return;
+    let payload=null;try{payload=JSON.parse(button.dataset.payload||'null');}catch(error){}
+    if(!payload)return;button.hidden=true;
+    try{
+        const {result}=await deploymentJob('/api/chd/deployment/cleanup',{cleanup:payload});
+        if(result.status==='completed'){deployField('status').textContent='清理完成：已移除 '+result.deleted.length+' 个原镜像。';deployField('review').hidden=true;}
+        else{
+            deployField('status').textContent='部分原镜像未能移除：'+(result.error||'');
+            const details=deployField('details');details.replaceChildren();
+            for(const entry of result.remaining||[]){const line=document.createElement('li');line.textContent='待清理：'+entry.path+' · '+entry.error;details.appendChild(line);}
+            deployField('review').hidden=false;button.hidden=false;
+        }
+    }catch(error){deployField('status').textContent=error.message;button.hidden=false;}
 }

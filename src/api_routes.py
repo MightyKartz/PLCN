@@ -59,6 +59,7 @@ POST_ROUTES = {
     '/api/rom-storage/convert': api_rom_storage.convert,
     '/api/chd/deployment/preview': api_chd.deployment_preview,
     '/api/chd/deployment/apply': api_chd.deployment_apply,
+    '/api/chd/deployment/cleanup': api_chd.deployment_cleanup,
     '/api/chd/analyze': api_chd.analyze,
     '/api/chd/convert': api_chd.convert,
     '/api/m3u/preview': api_m3u.preview,

@@ -117,7 +117,7 @@ def test_desktop_endpoints_and_shutdown_refuses_active_work(tmp_path, desktop_ho
             assert client.post(url + '/api/desktop/shutdown', json={}, timeout=3).status_code == 409
             assert client.post(url + '/api/jobs/cancel', json={'job_id': job}, timeout=3).status_code == 200
             jobs.complete_job(job, {'partial': True})
-            assert jobs.get_job(job)['status'] == 'cancelled'
+            assert jobs.get_job(job)['status'] == 'completed'
             assert client.get(url + '/api/desktop', timeout=3).json()['jobs'][0]['result']['partial']
     finally:
         httpd.shutdown(); httpd.server_close(); thread.join(3)

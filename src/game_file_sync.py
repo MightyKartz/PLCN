@@ -42,38 +42,57 @@ def preview(root, changes):
         elif action == 'delete' and isinstance(path, str):
             rules.append({'kind': 'delete', 'old': launch_path(path), 'dir': folder, 'source': path})
 
-    writes, dependencies, renamed, removed, matched = {}, [], [], [], set()
+    writes, dependencies, renamed, removed, failed, matched = {}, [], [], [], [], set()
     for row in library['playlists']:
-        raw = scan.read(row['path'])
-        if raw is None:
-            raise ValueError('播放列表已移除，请重新读取游戏库')
-        data = json.loads(raw.decode('utf-8-sig'))
+        try:
+            raw = scan.read(row['path'])
+            if raw is None:
+                raise ValueError('播放列表已移除')
+            data = json.loads(raw.decode('utf-8-sig'))
+            items_source = data['items']
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            failed.append({'playlist': row['name'], 'error': str(error)})
+            continue
         dependencies.append({'path': row['path'], 'digest': mtp.digest(raw)})
         items, changed = [], False
-        for item in data['items']:
+        for item in items_source:
             physical, inner = split_archive(item.get('path', ''))
             physical = physical.replace('\\', '/')
-            rule = next((candidate for candidate in rules if candidate['old'] and
-                         (physical == candidate['old'] or
-                          (candidate['dir'] and physical.startswith(candidate['old'].rstrip('/') + '/')))), None)
-            if rule is None:
-                items.append(item)
+            current, deleted = physical, False
+            for candidate in rules:
+                if not candidate['old'] or deleted:
+                    continue
+                if current == candidate['old']:
+                    matched.add(id(candidate))
+                    if candidate['kind'] == 'rename' and candidate['new']:
+                        current = candidate['new']
+                    else:
+                        deleted = True
+                elif candidate['dir'] and current.startswith(candidate['old'].rstrip('/') + '/'):
+                    matched.add(id(candidate))
+                    if candidate['kind'] == 'rename' and candidate['new']:
+                        current = candidate['new'] + current[len(candidate['old']):]
+                    else:
+                        deleted = True
+            if deleted:
+                changed = True
+                removed.append({'playlist': row['name'], 'label': item.get('label') or item['path'],
+                                'path': item['path']})
                 continue
-            changed, _ = True, matched.add(id(rule))
-            if rule['kind'] == 'rename' and rule['new']:
+            if current != physical:
+                changed = True
                 updated = dict(item)
-                updated['path'] = rule['new'] + physical[len(rule['old']):] + ('#' + inner if inner else '')
+                updated['path'] = current + ('#' + inner if inner else '')
                 renamed.append({'playlist': row['name'], 'label': item.get('label') or item['path'],
                                 'old': item['path'], 'new': updated['path']})
                 items.append(updated)
             else:
-                removed.append({'playlist': row['name'], 'label': item.get('label') or item['path'],
-                                'path': item['path']})
+                items.append(item)
         if changed:
             writes[row['path']] = {'expected': next(entry['digest'] for entry in dependencies if entry['path'] == row['path']),
                                    'document': {**data, 'items': items}}
     unmatched = [rule['source'] for rule in rules if id(rule) not in matched]
-    public = {'renamed': renamed, 'removed': removed, 'unmatched': unmatched}
+    public = {'renamed': renamed, 'removed': removed, 'unmatched': unmatched, 'failed': failed}
     signature = hashlib.sha256(json.dumps({'public': public, 'dependencies': dependencies},
                                           sort_keys=True).encode()).hexdigest()
     return {'public': {**public, 'signature': signature}, 'signature': signature, 'dependencies': dependencies,

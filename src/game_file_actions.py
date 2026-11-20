@@ -1,6 +1,7 @@
 """Plain file-manager operations: rename, delete, copy."""
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 import itertools
+import os
 import shutil
 import tempfile
 import uuid
@@ -77,7 +78,7 @@ def _walk_remote(path):
     if entry is None:
         raise ValueError('文件已移动或不存在')
     if not entry['folder']:
-        return [{'path': path, 'relative': PurePosixPath(path).name}], []
+        return [{'path': path, 'relative': mtp.parse(path)[2][-1]}], []
     files, folders, queue = [], [path], [(path, '')]
     while queue:
         current, rel_prefix = queue.pop(0)
@@ -117,9 +118,19 @@ def apply_delete(path, remote, progress=lambda *args: None, cancelled=lambda: No
         source = Path(path)
         if not source.exists() and not source.is_symlink():
             raise ValueError('文件已移动或不存在')
+        cancelled()
         with file_lock(path):
             if source.is_dir() and not source.is_symlink():
-                shutil.rmtree(source)
+                entries = sorted(source.rglob('*'), key=lambda p: len(p.parts), reverse=True)
+                total = len(entries)
+                for index, entry in enumerate(entries):
+                    cancelled()
+                    progress(index + 1, total, '删除：' + str(entry))
+                    if entry.is_dir() and not entry.is_symlink():
+                        entry.rmdir()
+                    else:
+                        entry.unlink()
+                source.rmdir()
             else:
                 source.unlink()
         return path
@@ -148,19 +159,37 @@ def _unique_name(directory, name, remote):
             return candidate
 
 
+def _source_leaf(path, remote):
+    """Display name of the copy source on its own platform."""
+    return mtp.parse(path)[2][-1] if remote else Path(path).name
+
+
 def apply_copy(path, directory, remote, progress=lambda *args: None, cancelled=lambda: None):
     """Copy a file or folder into a directory, auto-renaming on conflict; return the new path."""
-    name = _unique_name(directory, PurePosixPath(path).name, remote)
+    name = _unique_name(directory, _source_leaf(path, remote), remote)
     if not remote:
         source = Path(path)
         target = Path(directory) / name
         if not source.exists():
             raise ValueError('文件已移动或不存在')
-        if source.is_dir():
-            shutil.copytree(source, target)
-        else:
-            with file_lock(path):
-                shutil.copy2(source, target)
+        cancelled()
+        try:
+            if source.is_dir():
+                folders = sorted(p for p in source.rglob('*') if p.is_dir() and not p.is_symlink())
+                files = sorted(p for p in source.rglob('*') if not p.is_dir() or p.is_symlink())
+                target.mkdir()
+                for entry in folders:
+                    (target / entry.relative_to(source)).mkdir(parents=True, exist_ok=True)
+                for index, entry in enumerate(files):
+                    cancelled()
+                    progress(index + 1, len(files), '复制：' + entry.name)
+                    shutil.copy2(entry, target / entry.relative_to(source))
+            else:
+                with file_lock(path):
+                    shutil.copy2(source, target)
+        except Exception:
+            _remove_destination(str(target), False)
+            raise
         return str(target)
     destination = mtp.join(directory, name)
     files, folders = _walk_remote(path)
@@ -252,6 +281,42 @@ def _rename_into(target, staged, remote):
         Path(staged).rename(target)
 
 
+def _publish_replace(target, staged, remote):
+    """Publish a staged sibling over an existing target.
+
+    The original is first moved aside (same directory), the staged object then
+    takes the target name, and the parked original is removed. Returns the
+    parked object's path when cleanup fails, else None. When publishing fails,
+    the original is moved back; if that also fails the error names both paths.
+    """
+    if not remote and not (Path(target).is_dir() and not Path(target).is_symlink()):
+        # Same-volume atomic replace for files and symlinks.
+        os.replace(staged, target)
+        return None
+    parked = target + '.plcn-old-' + uuid.uuid4().hex
+    leaf = mtp.parse(target)[2][-1] if remote else Path(target).name
+    parked_leaf = mtp.parse(parked)[2][-1] if remote else Path(parked).name
+    if remote:
+        mtp.rename_object(target, parked_leaf)
+        rollback = lambda: mtp.rename_object(parked, leaf)
+    else:
+        Path(target).rename(parked)
+        rollback = lambda: Path(parked).rename(target)
+    try:
+        _rename_into(target, staged, remote)
+    except Exception as error:
+        try:
+            rollback()
+        except Exception:
+            raise RuntimeError('发布失败且无法还原原件：原内容保留在「' + parked + '」，新内容在「' + staged + '」') from error
+        raise
+    try:
+        apply_delete(parked, remote)
+    except Exception:
+        return parked
+    return None
+
+
 def apply_add(sources, directory, remote, overwrite=False, progress=lambda *args: None, cancelled=lambda: None):
     """Copy local sources into the browsed directory.
 
@@ -269,7 +334,8 @@ def apply_add(sources, directory, remote, overwrite=False, progress=lambda *args
             files, folders = [path], []
         items.append({'source': path, 'name': path.name, 'files': files, 'folders': folders})
     total = sum(len(item['files']) for item in items)
-    result = {'copied': [], 'replaced': [], 'skipped': [], 'failed': [], 'remaining': [], 'destination': directory}
+    result = {'copied': [], 'replaced': [], 'skipped': [], 'failed': [], 'remaining': [],
+              'leftovers': [], 'destination': directory}
     done = 0
     for index, item in enumerate(items):
         name = item['name']
@@ -290,9 +356,10 @@ def apply_add(sources, directory, remote, overwrite=False, progress=lambda *args
             _write_item(item, staged, remote, cancelled, note_file)
             if exists:
                 cancelled()
-                apply_delete(target, remote, cancelled=cancelled)
-                _rename_into(target, staged, remote)
+                leftover = _publish_replace(target, staged, remote)
                 result['replaced'].append(name)
+                if leftover:
+                    result['leftovers'].append({'name': name, 'path': leftover})
             else:
                 result['copied'].append(name)
         except TaskCancelled as error:

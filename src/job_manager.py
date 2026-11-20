@@ -42,7 +42,9 @@ class JobManager:
     def complete_job(self, job_id, result=None):
         with self.lock:
             if job_id in self.jobs:
-                self.jobs[job_id]['status'] = 'cancelled' if self.cancel_events[job_id].is_set() else 'completed'
+                # A returned result is the ground truth: if the operation still
+                # finished after a cancel request, report what actually happened.
+                self.jobs[job_id]['status'] = 'completed'
                 self.jobs[job_id]['result'] = result
                 self.jobs[job_id]['progress'] = self.jobs[job_id]['total']
 

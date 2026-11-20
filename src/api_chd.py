@@ -58,6 +58,18 @@ def deployment_apply(handler,context,payload):
         def cancelled():
             if jobs.cancelled(jid): raise TaskCancelled('操作已在安全步骤停止')
         result=chd_deploy.start(plan,cancelled,lambda message:jobs.update_job(jid,0,1,message))
-        if result['status']!='completed': raise RuntimeError('CHD 操作部分完成：'+str(result['error']))
+        if result['status']!='completed' and not result.get('cleanup'):
+            raise RuntimeError('CHD 操作部分完成：'+str(result['error']))
         return result
     reply(handler,{'job_id':background(jobs,'执行已确认的 CHD 回传方案',work)})
+
+
+def deployment_cleanup(handler,context,payload):
+    import chd_deploy
+    jobs=context.job_manager;cleanup=payload.get('cleanup')
+    if not isinstance(cleanup,dict): raise ValueError('缺少继续清理所需的任务结果')
+    def work(jid):
+        def cancelled():
+            if jobs.cancelled(jid): raise TaskCancelled('清理已在安全步骤停止')
+        return chd_deploy.continue_cleanup(cleanup,cancelled,lambda message:jobs.update_job(jid,0,1,message))
+    reply(handler,{'job_id':background(jobs,'继续清理 CHD 原镜像',work)})

@@ -154,6 +154,7 @@ async function runDirectCompletion(scope = null) {
         let message = workbenchText(`已补全 ${appliedCount} 个游戏`, `Completed ${appliedCount} ${appliedCount === 1 ? 'game' : 'games'}`);
         if (failedImages) message += workbenchText(`，${failedImages} 张封面下载失败`, `, ${failedImages} images failed`);
         if (result?.memory_warning) message += ' · ' + result.memory_warning;
+        if (result?.cleanup_warnings?.length) message += ' · ' + result.cleanup_warnings.join(' · ');
         if (needsManual) message += workbenchText(`，${needsManual} 个游戏需手动处理`, `, ${needsManual} games need manual work`);
         showActionToast({message,
             details: needsManual ? () => previewTask(scope) : openHistory});
@@ -366,7 +367,9 @@ function trackProgress(jobId, mode = 'single') {
             }
             if (mode === 'single' && job.result) applyCompletedJobToPreview(job.result);
             if (job.result?.memory_warning) outcome.message += ' · ' + job.result.memory_warning;
-            showStatus(outcome.message, outcome.complete ? (job.result?.memory_warning ? 'info' : 'success') : job.status === 'cancelled' ? 'info' : 'error');
+            if (job.result?.cleanup_warnings?.length) outcome.message += ' · ' + job.result.cleanup_warnings.join(' · ');
+            const hasWarning = job.result?.memory_warning || job.result?.cleanup_warnings?.length;
+            showStatus(outcome.message, outcome.complete ? (hasWarning ? 'info' : 'success') : job.status === 'cancelled' ? 'info' : 'error');
         } else showStatus(job.error || workbenchText('任务失败', 'Task failed'), 'error');
         workbench.jobId = null;
         endWorkbenchOperation();

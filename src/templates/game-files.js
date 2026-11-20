@@ -72,11 +72,18 @@ async function openFileSyncDialog() {
             list('将移出的列表条目', 'Playlist entries to remove',
                  result.removed.map(entry => entry.playlist + ' · ' + entry.label));
             list('未匹配到条目的改动', 'Changes with no matching entry', result.unmatched);
+            list('无法读取的列表', 'Unreadable playlists',
+                 (result.failed || []).map(entry => entry.playlist + ' · ' + entry.error));
             const total = result.renamed.length + result.removed.length;
+            const failures = (result.failed || []).length;
             message.textContent = total
-                ? tr(`将更新 ${result.renamed.length} 条、移出 ${result.removed.length} 条列表条目。`,
-                     `${result.renamed.length} entries will be updated and ${result.removed.length} removed.`)
-                : tr('没有需要更新的列表条目。', 'No playlist entries need updating.');
+                ? tr(`将更新 ${result.renamed.length} 条、移出 ${result.removed.length} 条列表条目。` +
+                     (failures ? `${failures} 个列表读取失败，将保持原样。` : ''),
+                     `${result.renamed.length} entries will be updated and ${result.removed.length} removed.` +
+                     (failures ? ` ${failures} playlist(s) unreadable and left unchanged.` : ''))
+                : failures
+                    ? tr('所有列表都无法读取，请修复后再同步。', 'Every playlist failed to read; fix them before syncing.')
+                    : tr('没有需要更新的列表条目。', 'No playlist entries need updating.');
             confirm.disabled = !total;
         } catch (error) {
             message.textContent = gmError(error);
@@ -575,6 +582,7 @@ function openGameFiles(opener, target = null) {
         if (result.skipped.length) parts.push(tr('已跳过（同名已存在）：', 'Skipped (same name exists): ') + list(result.skipped));
         if (result.failed.length) parts.push(tr('失败：', 'Failed: ') + list(result.failed.map(entry => entry.name)));
         if (result.remaining.length) parts.push(tr('未完成：', 'Not finished: ') + list(result.remaining));
+        if (result.leftovers?.length) parts.push(tr('残留旧对象：', 'Leftover originals: ') + list(result.leftovers.map(entry => entry.path)));
         return parts.length ? parts.join(tr('；', '; ')) : tr('没有可复制的内容。', 'Nothing to copy.');
     }
 }

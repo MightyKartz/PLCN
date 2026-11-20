@@ -448,12 +448,14 @@ def write_selected_images(manifest, directory, token, receipt):
             raise RuntimeError('目标图片已改变，请重新预览后确认')
     manifest['image_writes_started'] = True
     atomic_write_json(receipt, manifest)
-    written = []
+    written, leftovers = [], []
     for asset in assets:
         if digest(read_target(asset['target'])) != asset['digest']:
-            write_target(asset['target'], asset['content'], asset['original_digest'], suffix=token)
+            leftover = write_target(asset['target'], asset['content'], asset['original_digest'], suffix=token)
+            if leftover:
+                leftovers.append(leftover)
         written.append({'kind': asset['kind'], 'target': asset['target']})
-    return written
+    return written, leftovers
 
 
 def preview(payload):
@@ -561,8 +563,7 @@ def preview(payload):
 
 def write_target(target, content, expected, suffix=None):
     if mtp.is_mtp(target):
-        mtp.write(target, content, expected, suffix=suffix)
-        return
+        return mtp.write(target, content, expected, suffix=suffix)
     before = read_target(target)
     if digest(before) != expected:
         raise RuntimeError('目标图片已改变，请重新预览后确认')
@@ -648,10 +649,13 @@ def apply(token):
                     content = image_cache(directory, token, image).read_bytes()
                     if digest(content) != image['image_digest']:
                         raise RuntimeError('候选图片已改变，请重新预览')
-                written = written_images(manifest, directory, token, write_selected_images(manifest, directory, token, path))
+                written_list, leftovers = write_selected_images(manifest, directory, token, path)
+                written = written_images(manifest, directory, token, written_list)
                 result = {'images': written, 'target': written[0]['target'],
                           'index': manifest['index'], 'playlist_path': manifest['playlist_path'],
                           'label': manifest['label'], 'kind': written[0]['kind'], 'image_url': written[0]['image_url']}
+                if leftovers:
+                    result['cleanup_warnings'] = ['图片已写入，但旧版本残留未能移除：' + item for item in leftovers]
             manifest['result'] = result
             atomic_write_json(path, manifest)
             warning = remember_sources(manifest)
@@ -703,12 +707,14 @@ def apply_independent(manifest, directory, token, receipt):
         manifest['writes_started'] = True
         atomic_write_json(receipt, manifest)
         # Every selected image is managed with its existing ROM alias as one resumable operation.
-        written_assets = write_selected_images(manifest, directory, token, receipt)
+        written_assets, leftovers = write_selected_images(manifest, directory, token, receipt)
         companion_errors = []
         for asset in manifest['companions']:
             if digest(read_target(asset['target'])) != asset['digest']:
                 try:
-                    write_target(asset['target'], (directory / asset['cache']).read_bytes(), None)
+                    leftover = write_target(asset['target'], (directory / asset['cache']).read_bytes(), None)
+                    if leftover:
+                        leftovers.append(leftover)
                 except (OSError, RuntimeError) as error:
                     # Keep the selected image and name update; report unwritten companion images.
                     companion_errors.append(str(error))
@@ -716,7 +722,9 @@ def apply_independent(manifest, directory, token, receipt):
             print('Warning: Could not copy companion artwork: ' + ' | '.join(companion_errors))
         if not completed:
             try:
-                write_target(playlist_path, updated, manifest['playlist_digest'], suffix=token)
+                leftover = write_target(playlist_path, updated, manifest['playlist_digest'], suffix=token)
+                if leftover:
+                    leftovers.append(leftover)
             except Exception as error:
                 raise RuntimeError('独立图片已准备，游戏列表写入未确认；可重试查询。') from error
         written = written_images(manifest, directory, token, written_assets)
@@ -724,6 +732,8 @@ def apply_independent(manifest, directory, token, receipt):
                   'index': manifest['index'], 'playlist_path': playlist_path, 'label': manifest['label'],
                   'new_label': manifest['new_label'], 'kind': written[0]['kind'], 'companion_warnings': companion_errors,
                   'image_url': written[0]['image_url']}
+        if leftovers:
+            result['cleanup_warnings'] = ['已写入，但旧版本残留未能移除：' + item for item in leftovers]
         warning = remember_sources(manifest)
         if warning:
             result['memory_warning'] = warning

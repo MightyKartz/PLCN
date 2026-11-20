@@ -67,8 +67,7 @@ def check_dependencies(dependencies, ignored_paths=(), patches=()):
 
 def write_checked(path,content,expected):
     if mtp.is_mtp(path):
-        mtp.write(path,content,expected)
-        return
+        return mtp.write(path,content,expected)
     before=read(path)
     if mtp.digest(before)!=expected:
         raise ValueError('目标文件已变化：'+path)
@@ -76,6 +75,7 @@ def write_checked(path,content,expected):
     atomic_write_bytes(path,content,expected_digest=expected if before is not None else None)
     if read(path)!=content:
         raise RuntimeError('写回核对失败：'+path)
+    return None
 
 
 def apply(plan):
@@ -113,10 +113,12 @@ def apply(plan):
             current=mtp.digest(read(entry['path']))
             if current not in {entry['before_digest'],entry['after_digest']}:
                 raise ValueError('文件在操作后发生变化，拒绝覆盖：'+entry['path'])
+        leftovers=[]
         for entry in files:
             current=mtp.digest(read(entry['path']))
             if current!=entry['after_digest']:
-                write_checked(entry['path'],entry['content'],current)
+                leftover=write_checked(entry['path'],entry['content'],current)
+                if leftover: leftovers.append(leftover)
         for path,patches in metadata:
             raw=read(path)
             latest=json.loads(raw.decode('utf-8')) if raw is not None else copy.deepcopy(patches[0]['default'])
@@ -129,4 +131,6 @@ def apply(plan):
     count=None
     if playlist_change:
         count=len(json.loads(playlist_change['content'].decode('utf-8-sig'))['items'])
-    return {'playlist_count':count,'status':'applied','error':None,'playlist_path':plan['playlist']}
+    result={'playlist_count':count,'status':'applied','error':None,'playlist_path':plan['playlist']}
+    if leftovers: result['cleanup_warnings']=[('已写入，但旧版本残留未能移除：'+path) for path in leftovers]
+    return result

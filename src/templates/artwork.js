@@ -524,6 +524,7 @@ async function confirmArtwork() {
                     item.image_message = '';
                     item.artwork_result = job.result.new_label ? workbenchText('已设置独立名称和图片', 'Independent name and artwork saved') : updated;
                     if (job.result.memory_warning) item.artwork_result += ' · ' + job.result.memory_warning;
+                    if (job.result.cleanup_warnings?.length) item.artwork_result += ' · ' + job.result.cleanup_warnings.join(' · ');
                     gameLibrary.notice = item.label + '：' + item.artwork_result;
                     // Read the same authoritative image selection used on page reload.
                     // A screenshot update must not temporarily replace the row's box art.

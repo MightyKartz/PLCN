@@ -272,7 +272,10 @@ def digest(content):
 
 
 def write(value, content, expected, suffix=None):
-    """Stage, verify and atomically swap the named object in place."""
+    """Stage, verify and atomically swap the named object in place.
+
+    Returns the leftover `.plcn-*.old` URI when cleanup fails after the new
+    content was verified, else None."""
     with session(value) as (handle, storage, parts):
         before = read(value)
         if digest(before) != expected:
@@ -310,7 +313,9 @@ def write(value, content, expected, suffix=None):
                 rename(old['id'], parts[-1])
             raise
         if old:
-            library().LIBMTP_Delete_Object(handle, old['id'])
+            if library().LIBMTP_Delete_Object(handle, old['id']):
+                # New content is verified and live; only the parked object remains.
+                return uri(parse(value)[0], storage, '/'.join(parts[:-1] + [old_name]))
 
 
 def materialize(value, cache_dir=None):

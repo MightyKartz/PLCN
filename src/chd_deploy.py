@@ -144,7 +144,11 @@ def check_scope(record,after=False):
         if gone and (path in scheduled or any(file['path']==path and file.get('state') in {'deleted','deleting'} for file in record['sources'])): continue
         acceptable={digest}
         if after:
-            acceptable.update(mtp.digest(write['content']) for write in record['metadata']['writes'] if write['path']==path)
+            if record.get('write_digests'):
+                acceptable.add(record['write_digests'].get(path))
+            else:
+                acceptable.update(mtp.digest(write['content']) for write in record['metadata']['writes'] if write['path']==path)
+            acceptable.discard(None)
         if mtp.digest(read(path)) not in acceptable: raise ValueError('引用内容已变化：'+path)
     if checked['errors'] and record['mode']=='replace': raise ValueError('引用检查出现未知项，停止清理')
 
@@ -154,7 +158,9 @@ def start(plan,cancelled=lambda: None,progress=lambda message: None):
     if not plan['can_apply']: raise ValueError('请处理方案中的待确认项')
     record={key:copy.deepcopy(value) for key,value in plan.items()}
     record['metadata']=copy.deepcopy(plan['metadata_plan'])
+    record['write_digests']={write['path']:mtp.digest(write['content']) for write in record['metadata']['writes']}
     record.update(status='applying',created_at=datetime.now(timezone.utc).isoformat(),error=None)
+    reached_cleanup=False
     try:
         for capacity in record['capacity']:
             if io.free_bytes(capacity['path'])<max(RESERVE,capacity['required']):
@@ -193,9 +199,10 @@ def start(plan,cancelled=lambda: None,progress=lambda message: None):
             tx.apply(record['metadata'])
             record['status']='references_verified'
         if record['mode']=='replace':
+            reached_cleanup=True
             check_scope(record,after=True)
             for write in record['metadata']['writes']:
-                if mtp.digest(read(write['path']))!=mtp.digest(write['content']): raise ValueError('引用未保持已确认的新内容，停止清理')
+                if mtp.digest(read(write['path']))!=record['write_digests'][write['path']]: raise ValueError('引用未保持已确认的新内容，停止清理')
             for item in record['copies']:
                 if io.digest(item['target'],cancelled)!=item['sha256']: raise ValueError('CHD 在回传后变化，停止清理')
             tx.check_dependencies(record['metadata']['dependencies'],patches=record['metadata']['patches'])
@@ -211,5 +218,60 @@ def start(plan,cancelled=lambda: None,progress=lambda message: None):
         record.update(status='partial',error=str(error))
     record['actual_image_delta_bytes']=(sum(file['size'] for file in record['sources'] if file.get('state')=='deleted')-sum(item['size'] for item in record['copies'] if item['created'] and item.get('state')=='verified')) if record['status']=='completed' else None
     # The result travels through the job API; internal descriptors are not JSON-safe.
-    return {key:value for key,value in record.items() if key not in {'metadata','metadata_plan','scope_snapshot','origin_analysis'}} | {
+    result={key:value for key,value in record.items() if key not in {'metadata','metadata_plan','scope_snapshot','origin_analysis','write_digests'}} | {
         'copies':[{key:value for key,value in item.items() if key!='content_base64'} for item in record['copies']]}
+    if record['mode']=='replace' and record['status']=='partial' and reached_cleanup:
+        remaining=[file for file in record['deletions'] if file.get('state')!='deleted']
+        result['cleanup_remaining']=[file['path'] for file in remaining]
+        result['cleanup']={'playlist':record['playlist'],'roots':record['roots'],
+                           'copies':[{'target':item['target'],'sha256':item['sha256'],'created':item['created']} for item in record['copies']],
+                           'pending':[{'path':file['path'],'sha256':file['sha256'],'size':file['size']} for file in remaining],
+                           'writes':[{'path':path,'after_digest':digest} for path,digest in record['write_digests'].items()],
+                           'dependencies':record['metadata']['dependencies'],
+                           'patches':record['metadata'].get('patches',[]),
+                           'scope_snapshot':record['scope_snapshot'],
+                           'sources':[{'path':file['path'],'sha256':file['sha256'],'size':file['size'],'state':file.get('state')} for file in record['sources']]}
+    return result
+
+
+def continue_cleanup(payload,cancelled=lambda: None,progress=lambda message: None):
+    """Finish a replace-mode cleanup interrupted after references were switched.
+
+    The payload is the `cleanup` section of a partial deployment result. Every
+    deletion is re-guarded by the recorded digest and the current reference
+    state; already-removed files count as satisfied."""
+    if not isinstance(payload,dict): raise ValueError('清理方案无效')
+    playlist=payload.get('playlist');roots=payload.get('roots')
+    if not isinstance(playlist,str) or not playlist or not isinstance(roots,list) or not roots or any(not isinstance(root,str) for root in roots):
+        raise ValueError('清理方案无效')
+    copies=payload.get('copies');pending=payload.get('pending');writes=payload.get('writes')
+    snapshot=payload.get('scope_snapshot');dependencies=payload.get('dependencies',[]);sources=payload.get('sources',[]);patches=payload.get('patches',[])
+    if not isinstance(copies,list) or not isinstance(pending,list) or not isinstance(writes,list) or not isinstance(snapshot,dict) or not isinstance(dependencies,list) or not isinstance(sources,list) or not isinstance(patches,list):
+        raise ValueError('清理方案无效')
+    for entry in [*copies,*pending,*writes,*sources]:
+        if not isinstance(entry,dict) or not isinstance(entry.get('path') or entry.get('target'),str): raise ValueError('清理方案无效')
+    record={'playlist':playlist,'roots':roots,'copies':copies,'mode':'replace',
+            'sources':[dict(file) for file in sources],'deletions':[dict(file) for file in pending],
+            'scope_snapshot':snapshot,'write_digests':{write['path']:write.get('after_digest') for write in writes},
+            'metadata':{'writes':[]},'dependencies':dependencies}
+    check_scope(record,after=True)
+    for write in writes:
+        if mtp.digest(read(write['path']))!=write.get('after_digest'):
+            raise ValueError('引用未保持已切换到 CHD 的内容，停止清理：'+write['path'])
+    for item in copies:
+        if io.digest(item['target'],cancelled)!=item['sha256']: raise ValueError('CHD 在回传后变化，停止清理：'+item['target'])
+    tx.check_dependencies(dependencies,patches=patches)
+    deleted=[];remaining=[]
+    for file in pending:
+        path=file['path'];cancelled();progress('清理原镜像：'+path)
+        try:
+            if io.digest(path,cancelled) is None:
+                deleted.append(path);continue
+            io.remove(path,file['sha256'],cancelled)
+            if io.digest(path,cancelled) is not None: raise RuntimeError('删除后文件仍存在')
+            deleted.append(path)
+        except (OSError,ValueError,RuntimeError,TaskCancelled) as error:
+            remaining.append({'path':path,'error':str(error)})
+    if isinstance(pending,list) and not pending: progress('没有待清理的原镜像')
+    return {'status':'completed' if not remaining else 'partial','deleted':deleted,'remaining':remaining,
+            'playlist':playlist,'error':None if not remaining else '部分原镜像未能移除'}

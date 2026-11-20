@@ -501,6 +501,7 @@ Object.assign(UI_EN, {
     "复制、更新引用并清理无其他引用的原文件": "Copy, update references and remove unreferenced originals",
     "预览名称与图片补全": "Preview names and artwork",
     "预览回传方案": "Preview transfer plan",
+    "继续清理原镜像": "Continue removing originals",
     "预览方案": "Preview plan",
     "预览目录包含全部相关列表与描述文件，执行前已退出 RetroArch": "The preview covers all related playlists and descriptors, and RetroArch is closed",
     "预览目录整理": "Preview folder organization",

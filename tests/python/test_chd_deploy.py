@@ -296,3 +296,50 @@ def test_interrupted_metadata_apply_retries_from_same_plan(prepared,monkeypatch)
     plan=deploy.prepare(payload)
     result=deploy.start(plan);assert result['status']=='partial'
     result=deploy.start(plan);assert result['status']=='completed',result['error']
+
+
+def test_interrupted_cleanup_offers_continuation(prepared,monkeypatch):
+    playlist,cue,track,payload=prepared;plan=deploy.prepare(payload)
+    remove=chd_io.remove;failed=[False]
+    def disconnect(*args,**kwargs):
+        if not failed[0]:failed[0]=True;raise RuntimeError('disconnected during cleanup')
+        return remove(*args,**kwargs)
+    monkeypatch.setattr(chd_io,'remove',disconnect)
+    result=deploy.start(plan)
+    assert result['status']=='partial' and result['error']=='disconnected during cleanup'
+    assert cue.exists() and track.exists()
+    cleanup=result['cleanup'];assert result['cleanup_remaining']==[file['path'] for file in plan['deletions']]
+    outcome=deploy.continue_cleanup(cleanup)
+    assert outcome['status']=='completed' and not outcome['remaining']
+    assert not cue.exists() and not track.exists() and cue.with_suffix('.chd').exists()
+    assert json.loads(playlist.read_text(encoding='utf-8'))['items'][0]['path'].endswith('.chd')
+
+
+def test_continuation_rechecks_scope_and_never_redetects_removed(prepared,monkeypatch):
+    playlist,cue,track,payload=prepared;plan=deploy.prepare(payload)
+    remove=chd_io.remove;failed=[False]
+    def disconnect(path,*args,**kwargs):
+        if not failed[0] and path.endswith('.cue'):failed[0]=True;raise RuntimeError('disconnected')
+        return remove(path,*args,**kwargs)
+    monkeypatch.setattr(chd_io,'remove',disconnect)
+    result=deploy.start(plan);assert result['status']=='partial'
+    cleanup=result['cleanup']
+    outcome=deploy.continue_cleanup(cleanup)
+    assert outcome['status']=='completed' and not cue.exists() and not track.exists()
+    # Already-removed entries stay satisfied on a retry; a file recreated with
+    # different content is reported remaining, never deleted unread.
+    track.write_bytes(b'external change')
+    outcome=deploy.continue_cleanup(cleanup)
+    assert outcome['status']=='partial'
+    assert outcome['remaining']==[{'path':str(track),'error':'待移除文件已变化：'+str(track)}]
+    assert track.read_bytes()==b'external change'
+
+
+def test_continuation_refuses_when_reference_reverted(prepared,monkeypatch):
+    playlist,cue,track,payload=prepared;plan=deploy.prepare(payload)
+    monkeypatch.setattr(chd_io,'remove',lambda *args,**kwargs:(_ for _ in ()).throw(RuntimeError('disconnected')))
+    result=deploy.start(plan);assert result['status']=='partial'
+    doc=json.loads(playlist.read_text(encoding='utf-8'));doc['items'][0]['path']=str(cue);playlist.write_text(json.dumps(doc),encoding='utf-8')
+    with pytest.raises(ValueError,match='引用'):
+        deploy.continue_cleanup(result['cleanup'])
+    assert cue.exists() and track.exists()

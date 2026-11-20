@@ -92,10 +92,11 @@ def apply_playlist(path, changes, thumbnails, *, options, progress, cancel_check
             expected_digest=expected_digest,
         )
         summary, applied = split_plcn_apply_result(result)
+        leftover = None
         if remote and options.get('write_names', True) and applied and applied.get('applied'):
             progress(len(changes), len(changes), '正在验证并写入实机游戏列表...')
             if mtp.is_mtp(path):
-                mtp.write(path, Path(local_path).read_bytes(), original_digest)
+                leftover = mtp.write(path, Path(local_path).read_bytes(), original_digest)
             else:
                 verified_push_adb_playlist(local_path, path, expected_remote)
         if remote_images and (download or relabel_changes):
@@ -158,4 +159,6 @@ def apply_playlist(path, changes, thumbnails, *, options, progress, cancel_check
                             progress(len(changes), len(changes), result['memory_warning'])
         if not options.get('write_names', True):
             result['applied_count'] = 0
+        if leftover:
+            result['cleanup_warnings'] = ['列表已写入，但设备上的旧版本残留未能移除：' + leftover]
         return result

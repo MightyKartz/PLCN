@@ -253,14 +253,17 @@ def preview(config, progress=lambda *args: None, cancel_check=None):
 def apply(plan):
     target = plan['target']
     content = (json.dumps(plan['document'], ensure_ascii=False, indent=2) + '\n').encode('utf-8')
+    leftover = None
     if mtp.is_mtp(target):
-        mtp.write(target, content, plan['expected'])
+        leftover = mtp.write(target, content, plan['expected'])
     else:
         with file_lock(target):
             if mtp.digest(read(target)) != plan['expected']:
                 raise RuntimeError('列表已变化，请重新扫描预览')
             atomic_write_bytes(target, content, expected_digest=plan['expected'])
     result = {'playlist_path': target, 'added': len(plan['added']), 'retained': plan['retained']}
+    if leftover:
+        result['cleanup_warnings'] = ['列表已更新，但旧版本残留未能移除：' + leftover]
     path = profiles_path()
     try:
         with file_lock(path):

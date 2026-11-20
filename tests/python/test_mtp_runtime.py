@@ -108,6 +108,17 @@ def test_failed_publish_restores_original_name(device_files):
     assert files[target] == b'original'
 
 
+def test_cleanup_failure_reports_leftover_after_verified_write(device_files):
+    root, files, upload, lib = device_files
+    target = mtp.join(root, 'games.lpl')
+    upload(None, 65537, 0, 'games.lpl', b'original')
+    lib.LIBMTP_Delete_Object = lambda handle, ident: 1
+    leftover = mtp.write(target, b'new', mtp.digest(b'original'))
+    assert files[target] == b'new'
+    assert leftover and '.plcn-' in leftover and leftover.endswith('.old')
+    assert files[leftover] == b'original'
+
+
 def test_reviewed_transport_uses_snapshot_digest_and_remote_results(tmp_path, monkeypatch):
     import playlist_transport
     root = mtp.uri('device', 65537, 'RetroArch')
