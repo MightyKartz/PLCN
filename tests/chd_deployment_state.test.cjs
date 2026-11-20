@@ -45,3 +45,24 @@ test('a queued settings close cannot discard the response for a reopened CHD his
     pending.resolve({chd_operations:[],chd_deployments:[]});await request;
     assert.ok(field('desktop-content').children.length>0);assert.equal(field('desktop-message').textContent,'');
 });
+
+test('an invalid cleanup id retires the continuation entry',async()=>{
+    const {c,field}=harness();
+    c.deploymentJob=async()=>{throw new Error('该清理任务已失效，请重新生成方案');};
+    const button=field('cleanup');button.dataset={job:'old-id'};button.hidden=false;
+    await c.continueChdCleanup();
+    assert.equal(button.dataset.job,undefined);assert.equal(button.hidden,true);
+    assert.match(field('status').textContent,/失效/);
+});
+
+test('a cancelled cleanup job rebinds the freshly issued id with its remaining list',async()=>{
+    const {c,field}=harness();
+    c.document.createElement=()=>({textContent:''});
+    field('details').appendChild=function(){};
+    c.deploymentJob=async()=>{const error=new Error('cancelled');
+        error.result={status:'partial',cancelled:true,deleted:['/game.cue'],remaining:[{path:'/game.bin',error:'停止'}],cleanup_id:'new-id'};throw error;};
+    const button=field('cleanup');button.dataset={job:'old-id'};button.hidden=false;
+    await c.continueChdCleanup();
+    assert.equal(button.dataset.job,'new-id');assert.equal(button.hidden,false);assert.equal(button.disabled,false);
+    assert.match(field('status').textContent,/已取消/);
+});

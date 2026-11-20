@@ -129,6 +129,7 @@ def check_scope(record,after=False):
             parent=item['target'].rsplit('/',1)[0]
             name=mtp.parse(item['target'])[2][-1] if mtp.is_mtp(item['target']) else Path(item['target']).name
             if parent in current: current[parent]=[entry for entry in current[parent] if entry[0]!=name]
+
     # Deleted descriptors legitimately disappear after references have been updated;
     # a retried plan may also find scheduled deletions already absent.
     expected=copy.deepcopy(record['scope_snapshot']['directories'])
@@ -263,10 +264,14 @@ def continue_cleanup(payload,cancelled=lambda: None,progress=lambda message: Non
     for item in copies:
         if io.digest(item['target'],cancelled)!=item['sha256']: raise ValueError('CHD 在回传后变化，停止清理：'+item['target'])
     tx.check_dependencies(dependencies,patches=patches)
-    deleted=[];remaining=[]
+    deleted=[];remaining=[];stopped=False
     for file in pending:
-        path=file['path'];cancelled();progress('清理原镜像：'+path)
+        path=file['path']
+        if stopped:
+            remaining.append({'path':path,'error':'取消后未执行'})
+            continue
         try:
+            cancelled();progress('清理原镜像：'+path)
             if io.digest(path,cancelled) is None:
                 deleted.append(path);continue
             io.remove(path,file['sha256'],cancelled)
@@ -274,9 +279,11 @@ def continue_cleanup(payload,cancelled=lambda: None,progress=lambda message: Non
             deleted.append(path)
         except (OSError,ValueError,RuntimeError,TaskCancelled) as error:
             remaining.append({'path':path,'error':str(error)})
+            if isinstance(error,TaskCancelled): stopped=True
     if isinstance(pending,list) and not pending: progress('没有待清理的原镜像')
     result={'status':'completed' if not remaining else 'partial','deleted':deleted,'remaining':remaining,
             'playlist':playlist,'error':None if not remaining else '部分原镜像未能移除'}
+    if stopped: result['cancelled']=True
     if remaining:
         still={entry['path'] for entry in remaining}
         done={entry['path'] for entry in pending}-still

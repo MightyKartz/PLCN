@@ -160,10 +160,10 @@ async function refreshDesktop() {
             for (const job of jobs) {
                 const entry = desktopElement('div', undefined, body); entry.className = 'desktop-entry';
                 entry.dataset.jobId = job.id;
-                const progress = job.total ? ` · ${job.progress}/${job.total}` : '';
+                const progress = job.total ? ` · ${job.progress}/${job.total}` + (job.result?.processed_count !== undefined ? desktopText(' 个列表', ' playlists') : '') : '';
                 desktopElement('strong', (job.status === 'completed' && (job.result?.errors?.length || job.result?.download_summary?.total?.failed)
                     ? desktopText('部分完成', 'Partially completed') : desktopJobStatus(job.status)) + progress, entry);
-                if (job.result?.applied_count !== undefined) desktopElement('p', desktopText(`已处理 ${job.result.applied_count} 项`, `${job.result.applied_count} items processed`), entry);
+                if (job.result?.applied_count !== undefined) desktopElement('p', desktopText(`已处理 ${job.result.applied_count} 个条目`, `${job.result.applied_count} entries processed`), entry);
                 desktopElement('p', job.error || job.message, entry);
                 renderTaskDetails(entry, job, expanded.has(job.id));
                 if (['pending', 'running'].includes(job.status)) {

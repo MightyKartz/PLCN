@@ -31,7 +31,9 @@ async function deploymentJob(route,payload){
         return await new Promise((resolve,reject)=>{
             const events=new EventSource('/api/progress?job_id='+encodeURIComponent(started.job_id));
             events.onmessage=event=>{const job=JSON.parse(event.data);
-                if(['failed','cancelled'].includes(job.status)){events.close();reject(new Error(job.error||'任务已停止，请检查持久记录'));}
+                if(['failed','cancelled'].includes(job.status)){events.close();
+                    const error=new Error(job.error||'任务已停止，请检查持久记录');
+                    error.result=job.result;error.cancelled=job.status==='cancelled';reject(error);}
                 else if(job.status==='completed'){events.close();resolve({id:started.job_id,result:job.result});}
                 else deployField('status').textContent=job.message||'正在核对…';
             };
@@ -90,17 +92,25 @@ async function continueChdCleanup(){
     const button=deployField('cleanup');if(chdDeployment.busy)return;
     const cleanupId=button.dataset.job;if(!cleanupId)return;
     button.hidden=true;
+    const showResult=result=>{
+        if(result.status==='completed'||!(result.remaining||[]).length){
+            deployField('status').textContent=(result.cancelled?'已取消；':'')+'清理完成：已移除 '+(result.deleted||[]).length+' 个原镜像。';
+            deployField('review').hidden=true;return;}
+        deployField('status').textContent=(result.cancelled?'已取消；':'')+'部分原镜像未能移除：'+(result.error||'');
+        const details=deployField('details');details.replaceChildren();
+        for(const entry of result.remaining||[]){const line=document.createElement('li');line.textContent='待清理：'+entry.path+' · '+entry.error;details.appendChild(line);}
+        deployField('review').hidden=false;
+        if(result.cleanup_id){button.dataset.job=result.cleanup_id;button.hidden=false;button.disabled=false;}
+    };
     try{
         const {result}=await deploymentJob('/api/chd/deployment/cleanup',{cleanup_job_id:cleanupId});
-        if(result.status==='completed'){deployField('status').textContent='清理完成：已移除 '+result.deleted.length+' 个原镜像。';deployField('review').hidden=true;}
-        else{
-            deployField('status').textContent='部分原镜像未能移除：'+(result.error||'');
-            const details=deployField('details');details.replaceChildren();
-            for(const entry of result.remaining||[]){const line=document.createElement('li');line.textContent='待清理：'+entry.path+' · '+entry.error;details.appendChild(line);}
-            deployField('review').hidden=false;
-            if(result.cleanup_id){button.dataset.job=result.cleanup_id;button.hidden=false;button.disabled=false;}
-        }
+        showResult(result);
     }catch(error){
-        // A failed request never claimed the plan server-side; the id can retry.
-        deployField('status').textContent=error.message;button.hidden=false;button.disabled=false;}
+        // A cancelled job still returns what it did: bind the freshly issued id.
+        if(error.result&&Array.isArray(error.result.deleted)){showResult(error.result);return;}
+        // A definitive invalid-id answer retires the entry; ambiguous failures
+        // may not have run, so keep the id but say the outcome is unconfirmed.
+        if(/失效|invalid|expired/i.test(error.message)){delete button.dataset.job;deployField('status').textContent=error.message;return;}
+        deployField('status').textContent=error.message+'；无法确认清理是否执行，请核对任务记录后重试。';
+        button.hidden=false;button.disabled=false;}
 }

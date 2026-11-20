@@ -10,6 +10,7 @@ import chd_deploy as deploy
 import chd_io
 import chd_operations as ops
 import m3u_transaction as tx
+from task_control import TaskCancelled
 from playlist_browser import read_playlist
 
 SYSTEM='Sega - Saturn'
@@ -370,6 +371,33 @@ def test_cleanup_remaining_lists_only_files_still_on_disk(prepared,monkeypatch):
     monkeypatch.setattr(chd_io,'remove',remove)
     outcome=deploy.continue_cleanup(result['cleanup'])
     assert outcome['status']=='completed' and outcome['deleted']==[str(track)] and not track.exists()
+
+
+def test_cleanup_cancel_reports_deleted_and_only_continues_remaining(prepared,monkeypatch):
+    playlist,cue,track,payload=prepared;plan=deploy.prepare(payload)
+    original={str(cue):cue.read_bytes(),str(track):track.read_bytes()}
+    remove=chd_io.remove;failed=[False]
+    def disconnect(*args,**kwargs):
+        if not failed[0]:failed[0]=True;raise RuntimeError('disconnected during cleanup')
+        return remove(*args,**kwargs)
+    monkeypatch.setattr(chd_io,'remove',disconnect)
+    cleanup=deploy.start(plan)['cleanup']
+    monkeypatch.setattr(chd_io,'remove',remove)
+    seen=[]
+    def progress(message):
+        seen.append(message)
+        if len(seen)>=2: raise TaskCancelled('停止')
+    outcome=deploy.continue_cleanup(cleanup,progress=progress)
+    assert outcome['cancelled'] and len(outcome['deleted'])==1
+    remaining={entry['path'] for entry in outcome['remaining']}
+    assert remaining=={str(cue),str(track)}-set(outcome['deleted'])
+    assert {file['path'] for file in outcome['cleanup']['pending']}==remaining
+    # Restoring identical content must not put the file back on the deletion
+    # list: the new continuation removes only the verified remainder.
+    removed_path=outcome['deleted'][0]
+    Path(removed_path).write_bytes(original[removed_path])
+    done=deploy.continue_cleanup(outcome['cleanup'])
+    assert done['deleted']==list(remaining) and Path(removed_path).read_bytes()==original[removed_path]
 
 
 def test_continuation_refuses_when_reference_reverted(prepared,monkeypatch):

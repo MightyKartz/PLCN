@@ -329,6 +329,42 @@ def test_completed_result_with_cancelled_flag_marks_job_cancelled():
     assert jobs.jobs[other]['status'] == 'completed'
 
 
+def test_cancelled_batch_progress_reports_processed_count():
+    from job_manager import JobManager
+    jobs = JobManager()
+    ident = jobs.create_job()
+    jobs.update_job(ident, 0, 3, 'start')
+    jobs.complete_job(ident, {'processed_count': 1, 'total_count': 3, 'applied_count': 5, 'cancelled': True})
+    job = jobs.jobs[ident]
+    assert job['status'] == 'cancelled' and job['progress'] == 1 and job['total'] == 3
+
+
+def test_local_replace_reports_parked_leftover_when_cleanup_partially_fails(tmp_path, monkeypatch):
+    source = tmp_path / 'new' / 'Game'
+    source.mkdir(parents=True)
+    (source / 'a.txt').write_text('new-a')
+    (source / 'b.txt').write_text('new-b')
+    destination = tmp_path / 'dest'
+    target = destination / 'Game'
+    target.mkdir(parents=True)
+    (target / 'old1.txt').write_text('x')
+    (target / 'old2.txt').write_text('y')
+    real_unlink = Path.unlink
+    calls = [0]
+    def flaky(path, *args, **kwargs):
+        if '.plcn-old-' in str(path):
+            calls[0] += 1
+            if calls[0] > 1:
+                raise OSError('io error')
+        return real_unlink(path, *args, **kwargs)
+    monkeypatch.setattr(Path, 'unlink', flaky)
+    result = ops.apply_add([str(source)], str(destination), False, overwrite=True)
+    parked = [entry for entry in destination.iterdir() if '.plcn-old-' in entry.name and not entry.name.endswith('.plcn-lock')]
+    assert parked, 'parked original should remain on disk'
+    assert [item['path'] for item in result['leftovers']] == [str(parked[0])]
+    assert (target / 'a.txt').read_text() == 'new-a' and (target / 'b.txt').read_text() == 'new-b'
+
+
 def test_copy_paste_uses_host_platform_source_name(tmp_path):
     source = tmp_path / 'src'
     source.mkdir()

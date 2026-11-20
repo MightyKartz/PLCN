@@ -46,7 +46,10 @@ class JobManager:
                 # finished after a cancel request, report what actually happened.
                 self.jobs[job_id]['status'] = 'cancelled' if isinstance(result, dict) and result.get('cancelled') else 'completed'
                 self.jobs[job_id]['result'] = result
-                self.jobs[job_id]['progress'] = self.jobs[job_id]['total']
+                if isinstance(result, dict) and 'processed_count' in result:
+                    self.jobs[job_id]['progress'] = result['processed_count']
+                else:
+                    self.jobs[job_id]['progress'] = self.jobs[job_id]['total']
 
     def fail_job(self, job_id, error):
         with self.lock:

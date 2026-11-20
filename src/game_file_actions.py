@@ -337,7 +337,9 @@ def _publish_replace(target, staged, remote):
             raise failure from error
         raise
     try:
-        apply_delete(parked, remote)
+        outcome = apply_delete(parked, remote)
+        if outcome.get('error') or outcome.get('cancelled'):
+            return parked
     except Exception:
         return parked
     return None
