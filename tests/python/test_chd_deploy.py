@@ -151,8 +151,12 @@ def remote(tmp_path,monkeypatch):
             assert mtp.digest(files[path])==expected;return
         files[stage]=Path(source).read_bytes();assert mtp.digest(files[stage])==expected
         files[path]=files.pop(stage);calls.append(('upload',path))
-    def remove(path,expected,cancelled=lambda:None):
-        cancelled();assert mtp.digest(files[path])==expected;files.pop(path);calls.append(('remove',path))
+    def remove(path,expected,cancelled=lambda:None,object_id=None):
+        cancelled();assert mtp.digest(files[path])==expected
+        entry=mtp.stat_file(path)
+        if object_id is not None and entry['id']!=object_id:
+            raise chd_io.RemoveUnverified('待移除对象已变化：'+path)
+        files.pop(path);calls.append(('remove',path))
     def write(path,content,expected,suffix=None):
         assert mtp.digest(files.get(path))==expected
         files[path]=content
@@ -531,3 +535,40 @@ def test_deployment_api_returns_unverified_only_partial_result(prepared,monkeypa
     assert result['status']=='partial' and 'cleanup_id' not in result and 'cleanup' not in result
     assert [entry['path'] for entry in result['unverified']]==[first]
     assert result['actual_image_delta_bytes'] is None
+
+
+def test_reappeared_source_is_unverified_not_relisted(prepared,monkeypatch):
+    _,cue,track,payload=prepared;plan=deploy.prepare(payload)
+    first,second=(file['path'] for file in plan['deletions']);real=chd_io.remove
+    def flaky(path,expected,*args,**kwargs):
+        real(path,expected,*args,**kwargs)
+        if path==first:Path(path).write_bytes(b'restored content')
+    monkeypatch.setattr(chd_io,'remove',flaky)
+    result=deploy.start(plan)
+    assert result['status']=='partial' and 'cleanup' not in result
+    assert [entry['path'] for entry in result['unverified']]==[first]
+    assert Path(first).read_bytes()==b'restored content' and not Path(second).exists()
+
+
+def test_continuation_never_deletes_a_same_named_replacement(remote,monkeypatch):
+    import mtp_runtime as mtp
+    files,original,calls,payload,cue,track=remote
+    plan=deploy.prepare(payload)
+    approved=next(file['object_id'] for file in plan['sources'] if file['path']==str(cue))
+    assert approved is not None
+    fixture_remove=mtp.remove_file
+    monkeypatch.setattr(mtp,'remove_file',lambda *args,**kwargs:(_ for _ in ()).throw(RuntimeError('disconnected')))
+    result=deploy.start(plan);assert result['status']=='partial'
+    # A same-named, same-content object with a new device id appears before continuation.
+    real_stat=mtp.stat_file
+    def stat(value):
+        entry=real_stat(value)
+        if entry and value==str(cue): entry=dict(entry,id=entry['id']+9000)
+        return entry
+    monkeypatch.setattr(mtp,'stat_file',stat)
+    monkeypatch.setattr(mtp,'remove_file',fixture_remove)
+    outcome=deploy.continue_cleanup(result['cleanup'])
+    assert [entry['path'] for entry in outcome['unverified']]==[str(cue)]
+    assert outcome['deleted']==[str(track)]
+    assert files[cue]==original[cue]
+    assert not any(call==('remove',cue) for call in calls)

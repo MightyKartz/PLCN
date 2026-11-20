@@ -68,7 +68,7 @@ def prepare(payload,cancelled=lambda: None,progress=lambda message: None):
             expected=inventory.get(key)
             if expected is None or not expected.get('sha256'): raise ValueError('缺少原镜像的完整指纹，请重新转换')
             if io.digest(path,cancelled)!=expected['sha256']: raise ValueError('原光盘在转换后变化：'+path)
-            sources[key]={'path':key,'size':expected['size'],'sha256':expected['sha256']}
+            sources[key]={'path':key,'size':expected['size'],'sha256':expected['sha256'],'object_id':io.object_id(path)}
     roots=sorted({path.rsplit('/',1)[0] for path in sources}|{io.key(record['playlist']).rsplit('/',1)[0]})
     roots=[root for root in roots if not any(root.startswith(other+'/') for other in roots if root!=other)]
     checked=references.scope(roots,record['playlist'],cancelled)
@@ -217,7 +217,9 @@ def start(plan,cancelled=lambda: None,progress=lambda message: None):
                 cancelled();progress('删除原镜像：'+path)
                 try:
                     if io.digest(path,cancelled) is not None:
-                        io.remove(path,file['sha256'],cancelled)
+                        if mtp.is_mtp(path) and 'object_id' in file and file['object_id'] is None:
+                            raise io.RemoveUnverified('无法确认待移除对象身份：'+path)
+                        io.remove(path,file['sha256'],cancelled,file.get('object_id'))
                 except io.RemoveUnverified as error:
                     file['state']='unverified'
                     record['unverified'].append({'path':path,'error':str(error)})
@@ -234,7 +236,12 @@ def start(plan,cancelled=lambda: None,progress=lambda message: None):
                     file['state']='unverified'
                     record['unverified'].append({'path':path,'error':'删除已执行但未能核对：'+str(error)})
                     continue
-                if residual is not None: raise RuntimeError('删除后文件仍存在：'+path)
+                if residual is not None:
+                    # Verified-absent delete, then the path reappeared: this is a
+                    # new object — never list it for automatic deletion again.
+                    file['state']='unverified'
+                    record['unverified'].append({'path':path,'error':'删除后路径重新出现'})
+                    continue
                 file['state']='deleted'
         record['status']='completed';record['error']=None
     except (OSError,ValueError,RuntimeError,TaskCancelled) as error:
@@ -252,7 +259,7 @@ def start(plan,cancelled=lambda: None,progress=lambda message: None):
         if not remaining: return result
         result['cleanup']={'playlist':record['playlist'],'roots':record['roots'],
                            'copies':[{'target':item['target'],'sha256':item['sha256'],'created':item['created']} for item in record['copies']],
-                           'pending':[{'path':file['path'],'sha256':file['sha256'],'size':file['size']} for file in remaining],
+                           'pending':[{'path':file['path'],'sha256':file['sha256'],'size':file['size'],**({'object_id':file['object_id']} if 'object_id' in file else {})} for file in remaining],
                            'writes':[{'path':path,'after_digest':digest} for path,digest in record['write_digests'].items()],
                            'dependencies':record['metadata']['dependencies'],
                            'patches':record['metadata'].get('patches',[]),
@@ -301,7 +308,10 @@ def continue_cleanup(payload,cancelled=lambda: None,progress=lambda message: Non
             cancelled();progress('清理原镜像：'+path)
             if io.digest(path,cancelled) is None:
                 deleted.append(path);continue
-            io.remove(path,file['sha256'],cancelled)
+            if mtp.is_mtp(path) and 'object_id' in file and file['object_id'] is None:
+                if path not in unverified_paths: unverified_paths.add(path);unverified.append({'path':path,'error':'无法确认待移除对象身份'})
+                continue
+            io.remove(path,file['sha256'],cancelled,file.get('object_id'))
         except TaskCancelled as error:
             remaining.append({'path':path,'error':str(error)});stopped=True;continue
         except (OSError,ValueError,RuntimeError) as error:
@@ -321,7 +331,7 @@ def continue_cleanup(payload,cancelled=lambda: None,progress=lambda message: Non
             if path not in unverified_paths: unverified_paths.add(path);unverified.append({'path':path,'error':'删除已执行但未能核对：'+str(error)})
             continue
         if residual is None: deleted.append(path)
-        else: remaining.append({'path':path,'error':'删除后文件仍存在'})
+        elif path not in unverified_paths: unverified_paths.add(path);unverified.append({'path':path,'error':'删除后路径重新出现'})
     if isinstance(pending,list) and not pending: progress('没有待清理的原镜像')
     result={'status':'completed' if not remaining and not unverified else 'partial','deleted':deleted,'remaining':remaining,
             'unverified':unverified,'playlist':playlist,

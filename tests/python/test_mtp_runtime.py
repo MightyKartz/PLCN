@@ -475,3 +475,24 @@ def test_remove_flags_same_named_replacement_object_as_unverified(device_files, 
         mtp.remove_file(target, chd_io.digest(target))
     assert files[target] == b'cue bytes'
     assert len(deleted_ids) == 1
+
+
+def test_remove_rejects_when_object_id_changed(device_files, monkeypatch):
+    root, files, upload, lib = device_files
+    chd_io = _stub_chd_digest(monkeypatch, files)
+    target = mtp.join(root, 'swapped.cue'); upload(None, 65537, 0, 'swapped.cue', b'cue bytes')
+    deleted_ids = []
+    lib.LIBMTP_Delete_Object = lambda handle, ident: deleted_ids.append(ident) or 1
+    approved = mtp.resolve(None, 65537, mtp.parse(target)[2])['id']
+    with pytest.raises(chd_io.RemoveUnverified, match='对象已变化'):
+        mtp.remove_file(target, chd_io.digest(target), expected_id=approved + 77)
+    assert not deleted_ids and files[target] == b'cue bytes'
+
+
+def test_remove_proceeds_when_object_id_matches(device_files, monkeypatch):
+    root, files, upload, lib = device_files
+    chd_io = _stub_chd_digest(monkeypatch, files)
+    target = mtp.join(root, 'same.cue'); upload(None, 65537, 0, 'same.cue', b'cue bytes')
+    approved = mtp.resolve(None, 65537, mtp.parse(target)[2])['id']
+    mtp.remove_file(target, chd_io.digest(target), expected_id=approved)
+    assert target not in files
