@@ -322,7 +322,13 @@ body > :is(#fileModal,#content-scan-dialog) {padding:0;}
 .dialog-icon-button.btn:focus-visible {outline:2px solid var(--primary);outline-offset:3px;}
 .desktop-entry .dialog-icon-button.btn {margin:8px 8px 0 0;}
 body > .desktop-confirm {width:min(420px,calc(100vw - 32px));}
-body > .desktop-confirm p {margin:0 0 24px;font-size:14px;line-height:1.7;}
+body > .desktop-confirm p {margin:0 0 24px;font-size:14px;line-height:1.7;overflow-wrap:anywhere;}
+body > .desktop-confirm .game-file-dialog-name {font-weight:500;}
+body > .desktop-confirm .game-file-progress-track {height:6px;margin:2px 0 14px;border-radius:3px;background:var(--primary-soft);overflow:hidden;}
+body > .desktop-confirm .game-file-progress-fill {height:100%;width:0;border-radius:3px;background:var(--primary);transition:width .2s;}
+body > .desktop-confirm .game-file-progress-track.indeterminate .game-file-progress-fill {width:30%;animation:game-file-progress-slide 1.1s ease-in-out infinite;}
+@keyframes game-file-progress-slide {0% {margin-left:0;} 50% {margin-left:70%;} 100% {margin-left:0;}}
+body > .desktop-confirm .game-file-progress-detail {color:var(--muted);font-size:13px;min-height:1.6em;}
 body > .desktop-confirm .desktop-confirm-actions {display:flex;justify-content:flex-end;gap:8px;}
 #m3u-discs li {gap:8px;}
 #artwork-dialog .artwork-source-controls {grid-template-columns:minmax(0,1fr) 36px;}

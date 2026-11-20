@@ -38,6 +38,7 @@ async function openFileSyncDialog() {
     const dialog = wbElement('dialog', 'desktop-confirm app-dialog game-file-sync-dialog');
     const heading = wbElement('h2', '', tr('同步文件改动到列表', 'Sync file changes to playlists'));
     heading.id = 'game-file-sync-title';
+    heading.setAttribute('autofocus', '');
     dialog.setAttribute('aria-labelledby', heading.id);
     const impact = wbElement('div', 'game-file-delete-impact');
     const message = wbElement('p', '', '');
@@ -51,9 +52,7 @@ async function openFileSyncDialog() {
     dialog.append(heading, impact, message, actions);
     document.body.append(dialog);
     dialog.addEventListener('close', () => { endWorkbenchOperation(); dialog.remove(); }, {once:true});
-    heading.tabIndex = -1;
     dialog.showModal();
-    heading.focus();
     runPreview();
 
     function list(zh, en, entries) {
@@ -306,12 +305,60 @@ function openGameFiles(opener, target = null) {
         }
     }
 
+    async function runOpsJob(title, payload) {
+        const dialog = wbElement('dialog', 'desktop-confirm app-dialog game-file-progress-dialog');
+        const heading = wbElement('h2', '', title);
+        heading.id = 'game-file-progress-title';
+        heading.setAttribute('autofocus', '');
+        dialog.setAttribute('aria-labelledby', heading.id);
+        const track = wbElement('div', 'game-file-progress-track indeterminate');
+        const fill = wbElement('div', 'game-file-progress-fill');
+        track.append(fill);
+        const detail = wbElement('p', 'game-file-progress-detail', tr('正在准备…', 'Preparing…'));
+        const actions = wbElement('div', 'desktop-confirm-actions');
+        let jobId;
+        const cancelButton = gmButton('取消', 'Cancel', requestCancel);
+        actions.append(cancelButton);
+        dialog.append(heading, track, detail, actions);
+        document.body.append(dialog);
+        dialog.addEventListener('cancel', event => { event.preventDefault(); requestCancel(); });
+        dialog.addEventListener('close', () => dialog.remove(), {once:true});
+        dialog.showModal();
+        try {
+            const {result} = await runGameJob('/api/game-files/file-ops', payload, job => {
+                jobId = job.id || gameManagement.job;
+                const total = job.total || 0, done = job.progress || 0;
+                track.classList.toggle('indeterminate', !total);
+                fill.style.width = total ? Math.round(done / total * 100) + '%' : '';
+                detail.textContent = jobDetail(job) + (total ? ` ${done}/${total}` : '');
+            });
+            return result;
+        } finally {
+            dialog.close();
+        }
+
+        function requestCancel() {
+            if (!jobId || cancelButton.disabled) return;
+            cancelButton.disabled = true;
+            detail.textContent = tr('正在取消…', 'Cancelling…');
+            desktopRequest('/api/jobs/cancel', {job_id: jobId}).catch(() => {});
+        }
+    }
+
+    function jobDetail(job) {
+        if (job.connectionError) return job.message;
+        const message = job.message || '';
+        if (currentUILanguage === 'en') return message.split('：').pop();
+        return message;
+    }
+
     function deleteFile(item = selected) {
         if (!item || changing) return;
         const directory = current.path;
         const dialog = wbElement('dialog', 'desktop-confirm app-dialog game-file-delete-dialog');
         const heading = wbElement('h2', '', tr('删除文件', 'Delete item'));
         heading.id = 'game-file-delete-title';
+        heading.setAttribute('autofocus', '');
         dialog.setAttribute('aria-labelledby', heading.id);
         const message = wbElement('p', '', '');
         message.setAttribute('role', 'status');
@@ -319,7 +366,8 @@ function openGameFiles(opener, target = null) {
         const cancel = gmButton('取消', 'Cancel', () => dialog.close());
         const confirm = gmButton('确认', 'Confirm', apply, false);
         actions.append(cancel, confirm);
-        dialog.append(heading, wbElement('p', '', item.name),
+        const name = wbElement('p', 'game-file-dialog-name', item.name);
+        dialog.append(heading, name,
             wbElement('p', '', tr(item.directory ? '文件夹及其内容会移到电脑上的备份目录。' : '文件会移到电脑上的备份目录。',
                                   item.directory ? 'The folder and its contents move to a backup folder on this computer.'
                                                  : 'The file moves to a backup folder on this computer.')),
@@ -327,28 +375,22 @@ function openGameFiles(opener, target = null) {
         document.body.append(dialog);
         dialog.addEventListener('close', () => dialog.remove(), {once:true});
         dialog.addEventListener('cancel', event => { if (changing) event.preventDefault(); });
-        heading.tabIndex = -1;
         dialog.showModal();
-        heading.focus();
 
         async function apply() {
             if (changing) return;
             if (!beginWorkbenchOperation('game-file-ops')) { message.textContent = tr('请等待当前任务完成。', 'Wait for the current task.'); return; }
             changing = true;
-            cancel.disabled = confirm.disabled = true;
-            message.textContent = tr('正在备份和删除…', 'Backing up and deleting…');
+            dialog.close();
             try {
-                const {result} = await runGameJob('/api/game-files/file-ops', {action:'delete', path:item.path, root},
-                    state => { if (state.connectionError || currentUILanguage !== 'en') message.textContent = state.message; });
+                const result = await runOpsJob(tr('正在删除…', 'Deleting…'), {action:'delete', path:item.path, root});
                 recordFileChange(root, {action:'delete', path:item.path, folder:Boolean(item.directory)});
-                dialog.close();
                 if (gameFilesView === view) {
                     await loadDirectory(directory);
                     status.textContent = tr('已删除。备份：', 'Deleted. Backup: ') + result.backup_directory;
                 }
             } catch (error) {
-                message.textContent = gmError(error);
-                cancel.disabled = confirm.disabled = false;
+                status.textContent = gmError(error);
             } finally {
                 changing = false;
                 updateActionState();
@@ -373,10 +415,9 @@ function openGameFiles(opener, target = null) {
         updateActionState();
         status.textContent = tr('正在粘贴…', 'Pasting…');
         try {
-            await runGameJob('/api/game-files/file-ops', {action:'copy', path:item.path, directory, root},
-                state => { if (state.connectionError || currentUILanguage !== 'en') status.textContent = state.message; });
+            const result = await runOpsJob(tr('正在复制…', 'Copying…'), {action:'copy', path:item.path, directory, root});
             if (gameFilesView === view) {
-                await loadDirectory(directory);
+                await loadDirectory(directory, null, new Set([result.path.split('/').pop()]));
                 status.textContent = tr('已粘贴「' + item.name + '」。', 'Pasted "' + item.name + '".');
             }
         } catch (error) {
@@ -486,7 +527,7 @@ function openGameFiles(opener, target = null) {
         const dialog = wbElement('dialog', 'desktop-confirm app-dialog');
         const heading = wbElement('h2', '', tr('文件已存在', 'Already exists'));
         heading.id = 'game-file-conflict-title';
-        heading.tabIndex = -1;
+        heading.setAttribute('autofocus', '');
         dialog.setAttribute('aria-labelledby', heading.id);
         const names = conflicts.join('、');
         const message = all
@@ -502,7 +543,6 @@ function openGameFiles(opener, target = null) {
         document.body.append(dialog);
         dialog.addEventListener('close', () => dialog.remove(), {once:true});
         dialog.showModal();
-        heading.focus();
     }
 
     async function submitAdd(sources, overwrite) {
@@ -513,8 +553,7 @@ function openGameFiles(opener, target = null) {
         updateActionState();
         status.textContent = tr('正在复制…', 'Copying…');
         try {
-            const {result} = await runGameJob('/api/game-files/file-ops', {action:'add', sources, directory, root, overwrite},
-                state => { if (state.connectionError || currentUILanguage !== 'en') status.textContent = state.message; });
+            const result = await runOpsJob(tr('正在复制…', 'Copying…'), {action:'add', sources, directory, root, overwrite});
             if (gameFilesView === view) {
                 await loadDirectory(directory, null, new Set([...result.copied, ...result.replaced]));
                 status.textContent = addSummary(result);
