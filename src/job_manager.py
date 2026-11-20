@@ -42,15 +42,22 @@ class JobManager:
     def complete_job(self, job_id, result=None):
         with self.lock:
             if job_id in self.jobs:
-                self.jobs[job_id]['status'] = 'cancelled' if self.cancel_events[job_id].is_set() else 'completed'
+                # A returned result is the ground truth: if the operation still
+                # finished after a cancel request, report what actually happened.
+                self.jobs[job_id]['status'] = 'cancelled' if isinstance(result, dict) and result.get('cancelled') else 'completed'
                 self.jobs[job_id]['result'] = result
-                self.jobs[job_id]['progress'] = self.jobs[job_id]['total']
+                if isinstance(result, dict) and 'processed_count' in result:
+                    if 'total_count' in result: self.jobs[job_id]['total'] = result['total_count']
+                    self.jobs[job_id]['progress'] = result['processed_count']
+                else:
+                    self.jobs[job_id]['progress'] = self.jobs[job_id]['total']
 
     def fail_job(self, job_id, error):
         with self.lock:
             if job_id in self.jobs:
                 self.jobs[job_id]['status'] = 'cancelled' if isinstance(error, TaskCancelled) else 'failed'
                 self.jobs[job_id]['error'] = str(error)
+                if getattr(error, 'code', None): self.jobs[job_id]['code'] = error.code
 
     def cancelled(self, job_id):
         return self.cancel_events[job_id].is_set()
@@ -83,3 +90,14 @@ class JobManager:
         with self.lock:
             job = self.jobs.get(job_id)
             return dict(job) if job is not None else None
+
+    def find_by_request(self, request_id):
+        """Exact job lookup for a client-issued request id; not capped by the
+        30-entry snapshot used for display."""
+        if not isinstance(request_id, str) or not request_id:
+            return None
+        with self.lock:
+            for key, job in reversed(list(self.jobs.items())):
+                if job.get('request_id') == request_id:
+                    return dict(job, id=key)
+            return None

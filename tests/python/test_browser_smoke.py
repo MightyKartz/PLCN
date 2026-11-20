@@ -103,7 +103,21 @@ def test_home_to_library_to_preview(tmp_path, monkeypatch, chrome_binary, viewpo
     incoming = tmp_path / 'incoming'; incoming.mkdir()
     (incoming / 'Imported demo.sfc').write_bytes(b'game import fixture')
     (incoming / 'Updated demo.sfc').write_bytes(b'new version fixture')
-    monkeypatch.setattr(native_dialog, 'pick', lambda kind='directory', initial='': [str(incoming / 'Imported demo.sfc')] if kind == 'files' else str(incoming / 'Updated demo.sfc') if kind == 'rom' else initial if initial and Path(initial).is_dir() else str(tmp_path / '游戏库/rom-samples/RetroArch/Roms'))
+    browse = tmp_path / 'browse'
+    (browse / 'Subfolder').mkdir(parents=True)
+    (browse / 'Subfolder' / 'inner.txt').write_bytes(b'inner')
+    home = str(Path.home())
+
+    def fake_pick(kind='directory', initial=''):
+        if kind in ('files', 'items'):
+            return [str(incoming / 'Imported demo.sfc')]
+        if kind == 'rom':
+            return str(incoming / 'Updated demo.sfc')
+        if initial == home:
+            return str(browse)
+        return initial if initial and Path(initial).is_dir() else str(tmp_path / '游戏库/rom-samples/RetroArch/Roms')
+
+    monkeypatch.setattr(native_dialog, 'pick', fake_pick)
     source = tmp_path / 'names'
     source.mkdir()
     playlists = tmp_path / '游戏库/playlists'
@@ -155,7 +169,7 @@ def test_home_to_library_to_preview(tmp_path, monkeypatch, chrome_binary, viewpo
                     result = subprocess.run([
                         'node', str(ROOT / 'tests/browser_smoke.cjs'), websocket,
                         f'http://127.0.0.1:{httpd.server_address[1]}', str(playlists.parent),
-                        str(viewport[0]), str(viewport[1]), str(artifacts),
+                        str(viewport[0]), str(viewport[1]), str(artifacts), str(browse),
                     ], capture_output=True, text=True, encoding='utf-8', timeout=180)
                     (artifacts / 'driver.log').write_text(result.stdout + result.stderr, encoding='utf-8')
                     assert result.returncode == 0, result.stdout + result.stderr
@@ -169,4 +183,8 @@ def test_home_to_library_to_preview(tmp_path, monkeypatch, chrome_binary, viewpo
         finally:
             httpd.shutdown()
             thread.join(2)
-    assert {file: file.read_bytes() for file in playlists.iterdir()} == originals
+    final = {file: file.read_bytes() for file in playlists.iterdir()}
+    assert set(final) == set(originals)
+    for file in playlists.iterdir():
+        document = json.loads(file.read_text(encoding='utf-8'))
+        assert isinstance(document.get('items'), list), file

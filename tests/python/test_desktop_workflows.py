@@ -10,7 +10,6 @@ from http.server import ThreadingHTTPServer
 import app_paths
 from app_runtime import InstanceLock
 import playlist_service as plcn
-import repair_history
 import server
 from safe_io import file_digest
 from task_control import TaskCancelled
@@ -59,24 +58,6 @@ def fixture_playlist(tmp_path):
     return path, change
 
 
-def test_history_restore_and_refusal_after_external_edit(tmp_path, desktop_home):
-    path, change = fixture_playlist(tmp_path)
-    original = path.read_bytes()
-    plcn.apply_changes(str(path), [change], str(tmp_path), download_thumbnails=False)
-    entry = repair_history.list_history()[0]
-    modified = path.read_bytes()
-    path.write_bytes(b'{"items":[]}')
-    with pytest.raises(ValueError, match='已发生变化'):
-        repair_history.restore(entry['id'])
-    assert path.read_bytes() == b'{"items":[]}'
-    path.write_bytes(modified)
-    restored = repair_history.restore(entry['id'])
-    assert path.read_bytes() == original
-    assert Path(restored['before_restore_backup']).read_bytes() == modified
-    with pytest.raises(ValueError, match='已经恢复'):
-        repair_history.restore(entry['id'])
-
-
 def test_only_artwork_preserves_playlist_bytes_and_uses_existing_label(tmp_path, desktop_home, monkeypatch):
     path, change = fixture_playlist(tmp_path)
     before = file_digest(path)
@@ -89,7 +70,6 @@ def test_only_artwork_preserves_playlist_bytes_and_uses_existing_label(tmp_path,
     assert file_digest(path) == before
     assert tasks == [('NES', 'Game', 'Original')]
     assert not list(tmp_path.glob('*.bak*'))
-    assert not repair_history.list_history()
 
 
 def test_cancel_before_write_preserves_file(tmp_path, desktop_home):
@@ -98,7 +78,6 @@ def test_cancel_before_write_preserves_file(tmp_path, desktop_home):
     with pytest.raises(TaskCancelled):
         plcn.apply_changes(str(path), [change], str(tmp_path), cancel_check=lambda: True)
     assert path.read_bytes() == before
-    assert not repair_history.list_history()
 
 
 def test_cancel_images_keeps_completed_work(tmp_path):
@@ -138,7 +117,7 @@ def test_desktop_endpoints_and_shutdown_refuses_active_work(tmp_path, desktop_ho
             assert client.post(url + '/api/desktop/shutdown', json={}, timeout=3).status_code == 409
             assert client.post(url + '/api/jobs/cancel', json={'job_id': job}, timeout=3).status_code == 200
             jobs.complete_job(job, {'partial': True})
-            assert jobs.get_job(job)['status'] == 'cancelled'
+            assert jobs.get_job(job)['status'] == 'completed'
             assert client.get(url + '/api/desktop', timeout=3).json()['jobs'][0]['result']['partial']
     finally:
         httpd.shutdown(); httpd.server_close(); thread.join(3)

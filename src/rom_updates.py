@@ -1,4 +1,4 @@
-"""Single-file ROM replacement on the existing guarded backup journal."""
+"""Single-file ROM replacement on the existing guarded transaction."""
 import json
 from pathlib import Path
 
@@ -22,14 +22,6 @@ def supports(system, physical, member, probe):
             and 0 < probe['size'] <= MAX_BYTES
             and extension not in {'.zip','.7z','.rar','.cue','.m3u','.chd','.iso'}
             and extension.lstrip('.') in scan.SYSTEMS[system][2].split())
-
-
-def latest(playlist, target):
-    for record in tx.receipts():
-        if record['mode'] == 'game_rom_update' and record['playlist'] == playlist and any(
-                entry['path'] == target and entry['kind'] == 'rom' for entry in record['files']):
-            return {'id':record['id'], 'status':record['status']}
-    return None
 
 
 def prepare(payload):
@@ -82,8 +74,4 @@ def prepare(payload):
 
 
 def apply(plan):
-    result = tx.start(plan['transaction'])
-    if result['status'] != 'applied':
-        restored = tx.run(result['operation_id'], restore=True)
-        return {**result, 'restored':restored['status']=='restored'}
-    return result
+    return tx.apply(plan['transaction'])

@@ -33,13 +33,36 @@ def run_window():
                 window.restore()
             window.show()
 
+        def pick_items_darwin(initial):
+            """NSOpenPanel that accepts files AND folders in one multi-select panel."""
+            import AppKit
+            from Foundation import NSURL
+            from PyObjCTools import AppHelper
+            selected, finished = [], Event()
+            def run():
+                panel = AppKit.NSOpenPanel.openPanel()
+                panel.setTitle_(NAME + ' — 选择游戏文件或文件夹')
+                panel.setCanChooseFiles_(True)
+                panel.setCanChooseDirectories_(True)
+                panel.setAllowsMultipleSelection_(True)
+                if initial:
+                    panel.setDirectoryURL_(NSURL.fileURLWithPath_(initial))
+                if panel.runModal() == AppKit.NSFileHandlingPanelOKButton:
+                    selected.extend(panel.filenames())
+                finished.set()
+            AppHelper.callAfter(run)
+            finished.wait()
+            return selected
+
         def pick_file(kind, initial):
+            if kind == 'items' and sys.platform == 'darwin':
+                return pick_items_darwin(initial)
             dialog_type = webview.FileDialog.FOLDER if kind == 'directory' else webview.FileDialog.OPEN
             file_types = ('RetroArch playlist (*.lpl)',) if kind == 'file' else ()
             paths = window.create_file_dialog(
-                dialog_type, directory=initial, allow_multiple=kind == 'files', file_types=file_types,
+                dialog_type, directory=initial, allow_multiple=kind in ('files', 'items'), file_types=file_types,
             )
-            if kind == 'files':
+            if kind in ('files', 'items'):
                 return list(paths or ())
             return paths[0] if paths else ''
 

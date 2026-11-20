@@ -17,7 +17,7 @@ function harness(){
     return {c,field:id=>field('m3u-'+id),events};
 }
 function deferred(){let resolve;return {promise:new Promise(r=>{resolve=r;}),resolve};}
-const result={content:'Disc1.chd\nDisc2.chd\n',mode:'file',removed_indices:[],target:'/Roms/Game.m3u',backup_root:'/backups',
+const result={content:'Disc1.chd\nDisc2.chd\n',mode:'file',removed_indices:[],target:'/Roms/Game.m3u',
     core:{message:'Fixture core info'},issues:[],notes:[],changes:[],saves:{issues:[],copies:[],states:[]},affected_playlists:[],
     retained_discs:[],artwork_copies:[],can_apply:true};
 
@@ -33,7 +33,7 @@ test('one confirmation consumes the server plan ID exactly once',async()=>{
     c.m3uPayload=()=>({key:'A'});c.store.previewId='preview';c.store.previewKey=c.m3uInputsKey();
     c.m3uJob=(route,payload)=>{submits++;assert.equal(payload.preview_job_id,'preview');return pending.promise;};
     const first=c.applyM3u();await c.applyM3u();assert.equal(submits,1);
-    pending.resolve({result:{backup_directory:'/backup'}});await first;assert.equal(c.store.previewId,null);
+    pending.resolve({result:{status:'completed'}});await first;assert.equal(c.store.previewId,null);
 });
 
 test('changed inputs invalidate even a previously ready server plan',async()=>{

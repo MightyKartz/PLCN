@@ -407,13 +407,6 @@ async function applyAutoScan(){
     const complete=document.getElementById('auto-scan-complete').checked;
     try{const {result}=await autoScanJob('/api/content/auto-apply',{preview_job_id:autoScanState.previewId,targets});autoScanState.previewId=null;document.getElementById('auto-scan-apply').hidden=true;
         document.getElementById('auto-scan-status').textContent=workbenchText(`已导入 ${result.added} 个游戏。原始游戏文件保持不变。`,`Imported ${result.added} games. Original game files are unchanged.`);
-        const backups = result.playlists.filter(playlist => playlist.backup);
-        if (backups.length) {
-            const details = wbElement('details', 'scan-backups');
-            details.append(wbElement('summary', '', workbenchText('本次列表备份', 'Playlist backups from this scan')));
-            for (const playlist of backups) details.append(wbElement('p', '', playlist.backup));
-            document.getElementById('auto-scan-results').append(details);
-        }
         await refreshLibraryPlaylists(result.playlists.map(playlist => playlist.playlist_path));
         if(complete){closeAutoScan();await runAllSystemsCompletion();}
     }catch(error){autoScanState.previewId=null;document.getElementById('auto-scan-apply').hidden=true;document.getElementById('auto-scan-status').textContent=error.message+workbenchText('；已完成的导入会保留，请重新扫描核对。','; completed imports are kept. Scan again to review.');}

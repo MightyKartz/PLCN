@@ -1,8 +1,12 @@
 """Tasks HTTP handlers; request transport is owned by server.py."""
 import json
 import time
-import repair_history
 from api_common import reply, background
+
+
+def by_request(handler, context, payload):
+    from api_common import reply
+    reply(handler, {'job': context.job_manager.find_by_request(payload.get('request_id'))})
 
 
 def cancel(handler, context, payload):
@@ -31,10 +35,6 @@ def retry(handler, context, payload):
         downloader.cancel_check = lambda: jobs.cancelled(jid)
         return {'download_summary': downloader.download_batch(tasks, lambda a, b, text: jobs.update_job(jid, a, b, text))}
     reply(handler, {'job_id': background(jobs, '重试未完成图片，不修改列表', retry)})
-
-
-def restore(handler, context, payload):
-    reply(handler, repair_history.restore(payload.get('id')))
 
 
 def stream_progress(handler, context, payload):

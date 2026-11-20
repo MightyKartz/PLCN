@@ -98,6 +98,7 @@ def test_remote_rename_reuses_old_label_artwork_without_downloading(tmp_path, mo
             relative = path.relative_to(local)
             if selected is None or str(relative) in selected:
                 published[target(*relative.parts)] = path.read_bytes()
+        return []
     monkeypatch.setattr(mtp, 'push_directory', push)
     monkeypatch.setattr('playlist_transport.push_adb_directory', push)
     def unexpected(*args, **kwargs):

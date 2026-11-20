@@ -41,7 +41,6 @@ def test_preview_does_not_write_then_confirm_only_updates_one_image(context):
     result = art.apply(prepared['token'])
     assert art.valid_png(target.read_bytes())
     assert art.apply(prepared['token']) == result  # Retry cannot write twice.
-    assert result['backup'] is None
     assert other.read_bytes() == picture('blue')
     assert playlist.read_bytes() == original
     assert len(list(other.parent.glob('*.png'))) == 2
@@ -70,7 +69,7 @@ def test_secondary_preview_uses_scoped_candidate_and_never_remembers_it_as_libre
     assert not (art.app_paths.user_data_dir() / 'artwork-sources.json').exists()
 
 
-def test_replacement_preserves_old_image_and_receipt(context):
+def test_replacement_overwrites_target_and_is_idempotent(context):
     target = Path(context['thumbnails']) / 'GBA/Named_Boxarts/游戏一.png'
     target.parent.mkdir(parents=True)
     target.write_bytes(picture('green'))
@@ -78,7 +77,7 @@ def test_replacement_preserves_old_image_and_receipt(context):
     assert prepared['replacing']
     assert target.read_bytes() == picture('green')
     result = art.apply(prepared['token'])
-    assert Path(result['backup']).read_bytes() == picture('green')
+    assert not list(target.parent.glob(target.name + '.bak*'))
     assert prepared['current_image_url'] != result['image_url']
     assert 'before-' in prepared['current_image_url'] and 'after-' in result['image_url']
     assert target.read_bytes() != picture('green')
@@ -218,7 +217,7 @@ def test_adb_stages_verifies_and_only_replaces_selected_image(context, monkeypat
         assert 'mv' not in commands
     else:
         result = art.apply(prepared['token'])
-        assert remote[result['backup']] == picture('green')
+        assert not any(path.endswith('.bak') or '.bak-' in path for path in remote)
         assert art.valid_png(remote[remote_target])
         assert remote[remote_target] != picture('green')
     assert remote[remote_target.replace('游戏一', '游戏二')] == picture('blue')
@@ -260,7 +259,6 @@ def test_shared_entry_gets_independent_artwork_without_changing_other_rom(contex
     updated = json.loads(path.read_text(encoding='utf-8'))
     assert updated['items'][0] == {**data['items'][0], 'label': '游戏一 独立版'}
     assert updated['items'][1] == data['items'][1]
-    assert Path(result['playlist_backup']).read_bytes() == original
     assert old.read_bytes() == picture('blue')
     assert snap.read_bytes() == picture('green')
     assert picture('green') in [p.read_bytes() for p in snap.parent.glob('游戏一*.png')]
@@ -310,9 +308,7 @@ def test_independent_rename_retry_recovers_after_playlist_commit_response_lost(c
         art.apply(prepared['token'])
     result = art.apply(prepared['token'])
     assert result['new_label'] == '独立名称'
-    assert Path(result['playlist_backup']).read_bytes() == original
-    assert not list(path.parent.glob(path.name + '.bak-*'))
-    assert len(list(Path(result['playlist_backup']).parent.glob(path.name + '.bak-*'))) == 1
+    assert not list(path.parent.glob(path.name + '.bak*'))
 
 
 def test_independent_name_cannot_overwrite_an_existing_unreferenced_image(context):
@@ -339,7 +335,7 @@ def test_rom_named_artwork_is_previewed_and_updated_with_label_image(context, re
     assert Path(prepared['rom_target']).name == 'one.png'
     result = art.apply(prepared['token'])
     assert alias.read_bytes() == Path(result['target']).read_bytes()
-    assert (root / ('one.png.bak-' + prepared['token'])).read_bytes() == picture('green')
+    assert not list(root.glob('one.png.bak*'))
     if renaming:
         assert label.read_bytes() == picture('blue')
     assert art.apply(prepared['token']) == result
@@ -414,14 +410,8 @@ def test_disc_artwork_confirm_removes_english_companion(context, rename):
     result = art.apply(prepared['token'])
     assert len(json.loads(path.read_text(encoding='utf-8'))['items']) == 1
     assert json.loads(path.read_text(encoding='utf-8'))['items'][0]['label'] == ('妖精战士2' if rename else '游戏一')
-    assert Path(result['playlist_backup']).parent != path.parent
+    assert not list(path.parent.glob(path.name + '.bak*'))
     assert art.apply(prepared['token']) == result
-
-
-def test_windows_playlist_backup_stays_outside_playlist_folder(tmp_path, monkeypatch):
-    monkeypatch.setattr(art.app_paths, 'user_data_dir', lambda: tmp_path)
-    backup = art.backup_location(r'C:\RetroArch\playlists\SNES.lpl', 'test')
-    assert Path(backup) == tmp_path / 'playlist-backups' / 'SNES.lpl.bak-test'
 
 
 def test_entry_context_reports_every_image_type(context):

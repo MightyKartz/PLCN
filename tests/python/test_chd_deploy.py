@@ -1,4 +1,4 @@
-"""CHD deployment/restore on isolated synthetic images; no user/device mutations."""
+"""Guarded CHD copy/switch/cleanup transactions on synthetic images; no devices."""
 import json
 from pathlib import Path
 import shutil
@@ -10,6 +10,7 @@ import chd_deploy as deploy
 import chd_io
 import chd_operations as ops
 import m3u_transaction as tx
+from task_control import TaskCancelled
 from playlist_browser import read_playlist
 
 SYSTEM='Sega - Saturn'
@@ -32,7 +33,7 @@ def prepared(tmp_path,monkeypatch):
     return playlist,cue,track,payload
 
 
-def test_replace_and_restore_keep_exact_originals_and_identity(prepared):
+def test_replace_applies_exactly_and_keeps_identity(prepared):
     playlist,cue,track,payload=prepared
     before={path:path.read_bytes() for path in [playlist,cue,track]};game=read_playlist(str(playlist),SYSTEM)['items'][0]
     plan=deploy.prepare(payload);assert plan['can_apply'],plan['issues']
@@ -42,8 +43,7 @@ def test_replace_and_restore_keep_exact_originals_and_identity(prepared):
     updated=read_playlist(str(playlist),SYSTEM)['items'][0]
     assert updated['game_id']==game['game_id'] and updated['disc_id']==game['disc_id']
     assert updated['label']=='人工名称' and json.loads(playlist.read_text(encoding='utf-8'))['items'][0]['custom']=='keep'
-    result=deploy.run(result['id'],restore=True);assert result['status']=='restored',result.get('error')
-    assert all(path.read_bytes()==raw for path,raw in before.items()) and not cue.with_suffix('.chd').exists()
+
 
 
 def test_copy_only_needs_no_runtime_report_and_never_changes_references(prepared):
@@ -52,7 +52,6 @@ def test_copy_only_needs_no_runtime_report_and_never_changes_references(prepared
     plan=deploy.prepare(payload);assert plan['can_apply'] and not plan['reference_changes']
     result=deploy.start(plan);assert result['status']=='completed',result['error']
     assert cue.exists() and track.exists() and playlist.read_bytes()==before
-    assert deploy.run(result['id'],restore=True)['status']=='restored'
 
 
 def test_unknown_runtime_and_unknown_scope_block_cleanup(prepared):
@@ -72,8 +71,6 @@ def test_loose_m3u_cross_list_and_shared_track_are_preserved(prepared):
     result=deploy.start(plan);assert result['status']=='completed',result['error']
     assert track.exists() and shared.exists() and '.chd' in loose.read_text(encoding='utf-8')
     assert all(json.loads(path.read_text(encoding='utf-8'))['items'][0]['path'].endswith('.chd') for path in [playlist,other])
-    result=deploy.run(result['id'],restore=True);assert result['status']=='restored',result['error']
-    assert all(path.read_bytes()==raw for path,raw in before.items())
 
 
 def test_new_reference_after_preview_blocks_any_upload(prepared):
@@ -82,7 +79,7 @@ def test_new_reference_after_preview_blocks_any_upload(prepared):
     result=deploy.start(plan);assert result['status']=='partial' and not cue.with_suffix('.chd').exists()
 
 
-def test_partial_upload_can_resume_without_repeating_metadata(prepared,monkeypatch):
+def test_partial_upload_can_retry_from_same_plan(prepared,monkeypatch):
     _,cue,_,payload=prepared;plan=deploy.prepare(payload);original=chd_io.put_new;calls=[0]
     def fail(*args,**kwargs):
         calls[0]+=1
@@ -90,15 +87,15 @@ def test_partial_upload_can_resume_without_repeating_metadata(prepared,monkeypat
         return original(*args,**kwargs)
     monkeypatch.setattr(chd_io,'put_new',fail)
     result=deploy.start(plan);assert result['status']=='partial'
-    result=deploy.run(result['id']);assert result['status']=='completed',result['error']
+    result=deploy.start(plan);assert result['status']=='completed',result['error']
     assert not cue.exists()
-    assert deploy.run(result['id'],restore=True)['status']=='restored'
 
 
-def test_changed_output_or_corrupt_backup_is_never_overwritten(prepared):
-    _,cue,_,payload=prepared;result=deploy.start(deploy.prepare(payload));assert result['status']=='completed'
+def test_changed_output_is_never_overwritten(prepared):
+    _,cue,_,payload=prepared;plan=deploy.prepare(payload)
+    result=deploy.start(plan);assert result['status']=='completed'
     cue.with_suffix('.chd').write_bytes(b'external change')
-    result=deploy.run(result['id'],restore=True);assert result['status']=='restore_pending'
+    result=deploy.start(plan);assert result['status']=='partial'
     assert cue.with_suffix('.chd').read_bytes()==b'external change' and not cue.exists()
 
 
@@ -154,11 +151,16 @@ def remote(tmp_path,monkeypatch):
             assert mtp.digest(files[path])==expected;return
         files[stage]=Path(source).read_bytes();assert mtp.digest(files[stage])==expected
         files[path]=files.pop(stage);calls.append(('upload',path))
-    def remove(path,expected,cancelled=lambda:None):
-        cancelled();assert mtp.digest(files[path])==expected;files.pop(path);calls.append(('remove',path))
+    def remove(path,expected,cancelled=lambda:None,object_id=None):
+        cancelled()
+        entry=mtp.stat_file(path)
+        if object_id is not None and (entry is None or entry['id']!=object_id):
+            raise chd_io.RemoveUnverified('待移除对象已变化：'+path)
+        assert mtp.digest(files[path])==expected
+        files.pop(path);calls.append(('remove',path))
     def write(path,content,expected,suffix=None):
         assert mtp.digest(files.get(path))==expected
-        backup=path+'.bak-test';files[backup]=files[path];files[path]=content;return backup
+        files[path]=content
     monkeypatch.setattr(mtp,'session',session);monkeypatch.setattr(mtp,'listing',listing)
     monkeypatch.setattr(mtp,'resolve',resolve);monkeypatch.setattr(mtp,'children',children)
     monkeypatch.setattr(mtp,'read',read_small);monkeypatch.setattr(mtp,'download_file',download)
@@ -178,17 +180,15 @@ def remote(tmp_path,monkeypatch):
     return files,original,calls,payload,cue,track
 
 
-def test_remote_pull_conversion_transfer_cleanup_and_restore(remote):
+def test_remote_pull_conversion_transfer_and_cleanup(remote):
     files,original,calls,payload,cue,track=remote
     plan=deploy.prepare(payload);assert plan['can_apply'],plan['issues']
     result=deploy.start(plan);assert result['status']=='completed',result['error']
     target=plan['copies'][0]['target'];assert target in files and cue not in files and track not in files
-    result=deploy.run(result['id'],restore=True);assert result['status']=='restored',result['error']
-    assert all(files[path]==value for path,value in original.items()) and target not in files
     assert any(kind=='upload' for kind,_ in calls)
 
 
-def test_remote_disconnect_after_upload_rename_resumes_without_duplicate_upload(remote,monkeypatch):
+def test_remote_disconnect_after_upload_retries_without_duplicate_upload(remote,monkeypatch):
     import mtp_runtime as mtp
     files,original,calls,payload,cue,track=remote
     plan=deploy.prepare(payload);upload=mtp.upload_file;failed=[False]
@@ -197,22 +197,21 @@ def test_remote_disconnect_after_upload_rename_resumes_without_duplicate_upload(
         if not failed[0]:failed[0]=True;raise RuntimeError('disconnected after rename')
     monkeypatch.setattr(mtp,'upload_file',disconnect)
     result=deploy.start(plan);assert result['status']=='partial' and cue in files
-    result=deploy.run(result['id']);assert result['status']=='completed',result['error']
+    result=deploy.start(plan);assert result['status']=='completed',result['error']
     assert len([call for call in calls if call[0]=='upload'])==1
-    assert deploy.run(result['id'],restore=True)['status']=='restored'
 
 
-def test_remote_disconnect_during_source_cleanup_resumes_only_remaining_deletions(remote,monkeypatch):
+def test_remote_disconnect_during_source_cleanup_retries_remaining_deletions(remote,monkeypatch):
     import mtp_runtime as mtp
     files,_,calls,payload,cue,track=remote;remove=mtp.remove_file;failed=[False]
     def disconnect(*args,**kwargs):
         remove(*args,**kwargs)
         if not failed[0]:failed[0]=True;raise RuntimeError('disconnected after delete')
     monkeypatch.setattr(mtp,'remove_file',disconnect)
-    result=deploy.start(deploy.prepare(payload));assert result['status']=='partial'
-    result=deploy.run(result['id']);assert result['status']=='completed',result['error']
+    plan=deploy.prepare(payload)
+    result=deploy.start(plan);assert result['status']=='partial'
+    result=deploy.start(plan);assert result['status']=='completed',result['error']
     assert len([call for call in calls if call[0]=='remove'])==2
-    assert deploy.run(result['id'],restore=True)['status']=='restored'
 
 
 def test_source_edit_during_upload_stops_before_reference_update(prepared,monkeypatch):
@@ -224,18 +223,14 @@ def test_source_edit_during_upload_stops_before_reference_update(prepared,monkey
     assert playlist.read_bytes()==before and cue.exists() and track.read_bytes()==b'changed by another program'
 
 
-def test_metadata_rollback_after_write_stops_cleanup(prepared,monkeypatch):
-    playlist,cue,track,payload=prepared;before=playlist.read_bytes();run=tx.run
-    def rollback(ident,restore=False):
-        result=run(ident,restore)
-        if not restore:playlist.write_bytes(before)
-        return result
-    monkeypatch.setattr(tx,'run',rollback)
+def test_metadata_write_failure_stops_cleanup(prepared,monkeypatch):
+    playlist,cue,track,payload=prepared;before=playlist.read_bytes()
+    monkeypatch.setattr(deploy.tx,'apply',lambda plan:(_ for _ in ()).throw(ValueError('metadata write failed')))
     result=deploy.start(deploy.prepare(payload));assert result['status']=='partial'
     assert cue.exists() and track.exists() and playlist.read_bytes()==before
 
 
-def test_backup_corruption_and_user_source_identity_edits_are_not_overwritten(prepared):
+def test_user_source_identity_edits_are_not_overwritten(prepared):
     import uuid
     playlist,cue,track,payload=prepared;plan=deploy.prepare(payload)
     index=app_paths.user_data_dir()/'library-identities.json';data=json.loads(index.read_text(encoding='utf-8'))
@@ -243,37 +238,7 @@ def test_backup_corruption_and_user_source_identity_edits_are_not_overwritten(pr
     data['game_ids'][key]=str(uuid.uuid4());index.write_text(json.dumps(data),encoding='utf-8')
     result=deploy.start(plan);assert result['status']=='partial' and not cue.with_suffix('.chd').exists()
     payload['mode']='copy';result=deploy.start(deploy.prepare(payload));assert result['status']=='completed'
-    Path(result['copies'][0]['backup']).write_bytes(b'corrupt backup')
-    result=deploy.run(result['id'],restore=True);assert result['status']=='restore_pending'
     assert cue.exists() and track.exists()
-
-
-def test_interrupted_backup_resumes_without_recopying_completed_sources(prepared,monkeypatch):
-    _,_,_,payload=prepared;copy_file=chd_io.copy_to;calls=[];failed=[False]
-    def fail_second(source,target,cancelled=lambda:None):
-        calls.append(source)
-        if len(calls)==2 and not failed[0]:failed[0]=True;raise RuntimeError('computer copy interrupted')
-        return copy_file(source,target,cancelled)
-    monkeypatch.setattr(chd_io,'copy_to',fail_second)
-    result=deploy.start(deploy.prepare(payload));assert result['status']=='partial'
-    first=calls[0];result=deploy.run(result['id']);assert result['status']=='completed',result['error']
-    assert calls.count(first)==1
-
-
-def test_nested_reference_restore_cannot_bypass_parent_source_restoration(prepared,monkeypatch):
-    import api_m3u
-    from types import SimpleNamespace
-    result=deploy.start(deploy.prepare(prepared[3]));assert result['status']=='completed'
-    assert all(item['id']!=result['references_id'] for item in tx.receipts())
-    with pytest.raises(ValueError,match='先还原原镜像'):api_m3u.recover(None,SimpleNamespace(),{'id':result['references_id'],'action':'restore'})
-
-
-def test_restore_preserves_output_that_gained_a_new_unrelated_reference(prepared):
-    _,cue,track,payload=prepared;result=deploy.start(deploy.prepare(payload));assert result['status']=='completed'
-    target=cue.with_suffix('.chd');new=cue.parent/'later.m3u';new.write_text(target.name+'\n',encoding='utf-8')
-    result=deploy.run(result['id'],restore=True);assert result['status']=='restored',result['error']
-    assert cue.exists() and track.exists() and target.exists() and result['restored_retained_outputs']
-    assert result['actual_image_delta_bytes']==-target.stat().st_size
 
 
 def test_server_owned_deployment_plan_is_single_use_and_ignores_client_mutations(prepared,monkeypatch):
@@ -290,7 +255,7 @@ def test_server_owned_deployment_plan_is_single_use_and_ignores_client_mutations
     result=captured[0](jobs.create_job());assert result['mode']=='copy' and cue.exists() and track.exists()
 
 
-def test_cancellation_after_upload_preserves_old_references_and_can_restore(prepared,monkeypatch):
+def test_cancellation_after_upload_preserves_old_references(prepared,monkeypatch):
     from task_control import TaskCancelled
     playlist,cue,track,payload=prepared;before=playlist.read_bytes();put=chd_io.put_new;stop=[False]
     def upload(*args,**kwargs):
@@ -300,7 +265,6 @@ def test_cancellation_after_upload_preserves_old_references_and_can_restore(prep
     monkeypatch.setattr(chd_io,'put_new',upload)
     result=deploy.start(deploy.prepare(payload),cancelled);assert result['status']=='partial'
     assert playlist.read_bytes()==before and cue.exists() and track.exists() and result['actual_image_delta_bytes'] is None
-    result=deploy.run(result['id'],restore=True);assert result['status']=='restored' and result['actual_image_delta_bytes']==0
 
 
 def test_confirmed_m3u_group_keeps_disc_ids_and_split_snapshots_across_conversion(prepared,monkeypatch):
@@ -315,7 +279,7 @@ def test_confirmed_m3u_group_keeps_disc_ids_and_split_snapshots_across_conversio
     monkeypatch.setattr(m3u_plan,'core_support',lambda path:{'id':'mednafen_saturn','extensions':['cue','chd','m3u'],'message':'fixture'})
     graph=inspect_discs(str(playlist),SYSTEM);group=next(group for group in graph['groups'] if group['kind']=='disc_set')
     merge=m3u_plan.prepare({'playlist_path':str(playlist),'system':SYSTEM,'group_id':group['id'],'disc_ids':group['discs'],'mode':'switch','label':'两盘游戏','filename':'两盘.m3u'})
-    assert merge['can_apply'],merge['issues'];assert tx.start(merge)['status']=='applied'
+    assert merge['can_apply'],merge['issues'];assert tx.apply(merge)['status']=='applied'
     before=read_playlist(str(playlist),SYSTEM);ids={disc['id'] for disc in before['library_model']['discs']}
     plan=ops.analyze({'playlist_path':str(playlist),'system':SYSTEM,'workspace':str(root)})
     converted=ops.convert(plan,[row['id'] for row in plan['rows'] if row['eligible']])
@@ -326,18 +290,363 @@ def test_confirmed_m3u_group_keeps_disc_ids_and_split_snapshots_across_conversio
     assert after['items'][0]['game_id']==before['items'][0]['game_id']
     groups=json.loads((app_paths.user_data_dir()/'library-disc-groups.json').read_text(encoding='utf-8'))['groups']
     assert all(item['path'].endswith('.chd') for group in groups.values() for item in group['original_items'].values())
-    restored=deploy.run(result['id'],restore=True);assert restored['status']=='restored',restored['error']
-    assert first.exists() and second.exists() and track.exists()
 
 
-def test_interrupted_metadata_snapshot_preparation_can_be_rebuilt_before_upload(prepared,monkeypatch):
-    payload=prepared[3];prepare=tx.prepare;failed=[False]
-    def interrupt(plan,ident=None):
-        result=prepare(plan,ident)
+def test_interrupted_metadata_apply_retries_from_same_plan(prepared,monkeypatch):
+    payload=prepared[3];real=tx.apply;failed=[False]
+    def interrupt(plan):
         if not failed[0]:
-            failed[0]=True;tx.receipt_path(result).unlink();raise RuntimeError('metadata snapshot interrupted')
-        return result
-    monkeypatch.setattr(tx,'prepare',interrupt)
-    result=deploy.start(deploy.prepare(payload));assert result['status']=='partial'
-    result=deploy.run(result['id']);assert result['status']=='completed',result['error']
-    assert deploy.run(result['id'],restore=True)['status']=='restored'
+            failed[0]=True;raise RuntimeError('metadata apply interrupted')
+        return real(plan)
+    monkeypatch.setattr(deploy.tx,'apply',interrupt)
+    plan=deploy.prepare(payload)
+    result=deploy.start(plan);assert result['status']=='partial'
+    result=deploy.start(plan);assert result['status']=='completed',result['error']
+
+
+def test_interrupted_cleanup_offers_continuation(prepared,monkeypatch):
+    playlist,cue,track,payload=prepared;plan=deploy.prepare(payload)
+    remove=chd_io.remove;failed=[False]
+    def disconnect(*args,**kwargs):
+        if not failed[0]:failed[0]=True;raise RuntimeError('disconnected during cleanup')
+        return remove(*args,**kwargs)
+    monkeypatch.setattr(chd_io,'remove',disconnect)
+    result=deploy.start(plan)
+    assert result['status']=='partial' and result['error']=='disconnected during cleanup'
+    assert cue.exists() and track.exists()
+    cleanup=result['cleanup'];assert result['cleanup_remaining']==[file['path'] for file in plan['deletions']]
+    outcome=deploy.continue_cleanup(cleanup)
+    assert outcome['status']=='completed' and not outcome['remaining']
+    assert not cue.exists() and not track.exists() and cue.with_suffix('.chd').exists()
+    assert json.loads(playlist.read_text(encoding='utf-8'))['items'][0]['path'].endswith('.chd')
+
+
+def test_continuation_rechecks_scope_and_never_redetects_removed(prepared,monkeypatch):
+    playlist,cue,track,payload=prepared;plan=deploy.prepare(payload)
+    remove=chd_io.remove;failed=[False]
+    def disconnect(path,*args,**kwargs):
+        if not failed[0] and path.endswith('.cue'):failed[0]=True;raise RuntimeError('disconnected')
+        return remove(path,*args,**kwargs)
+    monkeypatch.setattr(chd_io,'remove',disconnect)
+    result=deploy.start(plan);assert result['status']=='partial'
+    cleanup=result['cleanup']
+    outcome=deploy.continue_cleanup(cleanup)
+    assert outcome['status']=='completed' and not cue.exists() and not track.exists()
+    # Already-removed entries stay satisfied on a retry; a file recreated with
+    # different content is reported remaining, never deleted unread.
+    track.write_bytes(b'external change')
+    outcome=deploy.continue_cleanup(cleanup)
+    assert outcome['status']=='partial'
+    assert outcome['remaining']==[{'path':str(track),'error':'待移除文件已变化：'+str(track)}]
+    assert track.read_bytes()==b'external change'
+
+
+def test_cleanup_continuation_is_bound_to_its_job(prepared,monkeypatch):
+    import api_chd
+    from job_manager import JobManager
+    from types import SimpleNamespace
+    playlist,cue,track,payload=prepared;plan=deploy.prepare(payload)
+    jobs=JobManager();ident=jobs.create_job();jobs.complete_job(ident);jobs.contexts[ident]={'chd_deployment':plan}
+    captured=[];monkeypatch.setattr(api_chd,'reply',lambda *args:None)
+    monkeypatch.setattr(api_chd,'background',lambda jobs,title,work:captured.append(work))
+    remove=chd_io.remove
+    monkeypatch.setattr(chd_io,'remove',lambda *a,**k:(_ for _ in ()).throw(RuntimeError('disconnected')))
+    api_chd.deployment_apply(None,SimpleNamespace(job_manager=jobs),{'preview_job_id':ident})
+    apply_id=jobs.create_job();result=captured[0](apply_id);jobs.complete_job(apply_id)
+    assert result['status']=='partial' and 'cleanup' not in result and result['cleanup_id']==apply_id
+    # A different job id cannot reach this cleanup plan.
+    with pytest.raises(ValueError,match='失效'):
+        api_chd.deployment_cleanup(None,SimpleNamespace(job_manager=jobs),{'cleanup_job_id':'other'})
+    monkeypatch.setattr(chd_io,'remove',remove)
+    api_chd.deployment_cleanup(None,SimpleNamespace(job_manager=jobs),{'cleanup_job_id':result['cleanup_id']})
+    outcome=captured[1](jobs.create_job())
+    assert outcome['status']=='completed' and not cue.exists() and not track.exists()
+
+
+def test_cleanup_remaining_lists_only_files_still_on_disk(prepared,monkeypatch):
+    playlist,cue,track,payload=prepared;plan=deploy.prepare(payload)
+    remove=chd_io.remove
+    def fail_track(path,*args,**kwargs):
+        if str(path)==str(track):raise RuntimeError('bin locked')
+        return remove(path,*args,**kwargs)
+    monkeypatch.setattr(chd_io,'remove',fail_track)
+    result=deploy.start(plan)
+    assert result['status']=='partial' and not cue.exists() and track.exists()
+    assert result['cleanup_remaining']==[str(track)]
+    monkeypatch.setattr(chd_io,'remove',remove)
+    outcome=deploy.continue_cleanup(result['cleanup'])
+    assert outcome['status']=='completed' and outcome['deleted']==[str(track)] and not track.exists()
+
+
+def test_cleanup_cancel_reports_deleted_and_only_continues_remaining(prepared,monkeypatch):
+    playlist,cue,track,payload=prepared;plan=deploy.prepare(payload)
+    original={str(cue):cue.read_bytes(),str(track):track.read_bytes()}
+    remove=chd_io.remove;failed=[False]
+    def disconnect(*args,**kwargs):
+        if not failed[0]:failed[0]=True;raise RuntimeError('disconnected during cleanup')
+        return remove(*args,**kwargs)
+    monkeypatch.setattr(chd_io,'remove',disconnect)
+    cleanup=deploy.start(plan)['cleanup']
+    monkeypatch.setattr(chd_io,'remove',remove)
+    seen=[]
+    def progress(message):
+        seen.append(message)
+        if len(seen)>=2: raise TaskCancelled('停止')
+    outcome=deploy.continue_cleanup(cleanup,progress=progress)
+    assert outcome['cancelled'] and len(outcome['deleted'])==1
+    remaining={entry['path'] for entry in outcome['remaining']}
+    assert remaining=={str(cue),str(track)}-set(outcome['deleted'])
+    assert {file['path'] for file in outcome['cleanup']['pending']}==remaining
+    # Restoring identical content must not put the file back on the deletion
+    # list: the new continuation removes only the verified remainder.
+    removed_path=outcome['deleted'][0]
+    Path(removed_path).write_bytes(original[removed_path])
+    done=deploy.continue_cleanup(outcome['cleanup'])
+    assert done['deleted']==list(remaining) and Path(removed_path).read_bytes()==original[removed_path]
+
+
+def test_first_deploy_unverified_readback_is_never_relisted(prepared,monkeypatch):
+    playlist,cue,track,payload=prepared;plan=deploy.prepare(payload)
+    original={str(cue):cue.read_bytes(),str(track):track.read_bytes()}
+    real_remove=chd_io.remove
+    def flaky_remove(path,*a,**k):
+        if str(path)==str(cue):
+            cue.unlink();raise chd_io.RemoveUnverified('删除已执行但无法核对：'+str(cue))
+        if str(path)==str(track):raise RuntimeError('bin io')
+        return real_remove(path,*a,**k)
+    monkeypatch.setattr(chd_io,'remove',flaky_remove)
+    result=deploy.start(plan)
+    assert result['status']=='partial' and not cue.exists() and track.exists()
+    assert [entry['path'] for entry in result['unverified']]==[str(cue)]
+    assert {file['path'] for file in result['cleanup']['pending']}=={str(track)}
+    monkeypatch.setattr(chd_io,'remove',real_remove)
+    cue.write_bytes(original[str(cue)])
+    done=deploy.continue_cleanup(result['cleanup'])
+    assert done['deleted']==[str(track)] and cue.read_bytes()==original[str(cue)]
+    assert [entry['path'] for entry in done['unverified']]==[str(cue)]
+
+
+@pytest.mark.parametrize('readback_error',[RuntimeError,ValueError])
+def test_cleanup_unverified_readback_is_never_relisted(prepared,monkeypatch,readback_error):
+    playlist,cue,track,payload=prepared;plan=deploy.prepare(payload)
+    original={str(cue):cue.read_bytes(),str(track):track.read_bytes()}
+    remove=chd_io.remove;failed=[False]
+    def disconnect(*args,**kwargs):
+        if not failed[0]:failed[0]=True;raise RuntimeError('disconnected during cleanup')
+        return remove(*args,**kwargs)
+    monkeypatch.setattr(chd_io,'remove',disconnect)
+    cleanup=deploy.start(plan)['cleanup']
+    # CUE's delete succeeds but the read-back fails; BIN's delete fails outright.
+    real_unlink=Path.unlink;gone=[False]
+    def track_unlink(path,*a,**k):
+        if str(path)==str(cue):gone[0]=True
+        return real_unlink(path,*a,**k)
+    real_digest=chd_io.digest
+    def flaky_digest(path,*a,**k):
+        if str(path)==str(cue) and gone[0]:raise readback_error('device gone')
+        return real_digest(path,*a,**k)
+    def flaky_remove(path,*a,**k):
+        if str(path)==str(track):raise RuntimeError('bin io')
+        return remove(path,*a,**k)
+    monkeypatch.setattr(Path,'unlink',track_unlink)
+    monkeypatch.setattr(chd_io,'digest',flaky_digest)
+    monkeypatch.setattr(chd_io,'remove',flaky_remove)
+    outcome=deploy.continue_cleanup(cleanup)
+    assert [entry['path'] for entry in outcome['unverified']]==[str(cue)]
+    assert [entry['path'] for entry in outcome['remaining']]==[str(track)]
+    assert {file['path'] for file in outcome['cleanup']['pending']}=={str(track)}
+    assert {entry['path'] for entry in outcome['cleanup']['unverified']}=={str(cue)}
+    monkeypatch.setattr(chd_io,'digest',real_digest);monkeypatch.setattr(chd_io,'remove',remove)
+    # A restored CUE must never re-enter automatic deletion, and the pending
+    # verification item stays reported after later files finish (R5-03).
+    cue.write_bytes(original[str(cue)])
+    done=deploy.continue_cleanup(outcome['cleanup'])
+    assert done['deleted']==[str(track)] and cue.read_bytes()==original[str(cue)]
+    assert [entry['path'] for entry in done['unverified']]==[str(cue)] and not done['remaining']
+
+
+def test_continuation_refuses_when_reference_reverted(prepared,monkeypatch):
+    playlist,cue,track,payload=prepared;plan=deploy.prepare(payload)
+    monkeypatch.setattr(chd_io,'remove',lambda *args,**kwargs:(_ for _ in ()).throw(RuntimeError('disconnected')))
+    result=deploy.start(plan);assert result['status']=='partial'
+    doc=json.loads(playlist.read_text(encoding='utf-8'));doc['items'][0]['path']=str(cue);playlist.write_text(json.dumps(doc),encoding='utf-8')
+    with pytest.raises(ValueError,match='引用'):
+        deploy.continue_cleanup(result['cleanup'])
+    assert cue.exists() and track.exists()
+
+
+def test_unverified_first_deploy_is_partial_and_reports_no_delta(prepared,monkeypatch):
+    _,cue,track,payload=prepared;plan=deploy.prepare(payload)
+    first=plan['deletions'][0]['path'];real=chd_io.remove
+    def flaky(path,expected,*args,**kwargs):
+        if path==first:Path(path).unlink(missing_ok=True);raise chd_io.RemoveUnverified('删除指令结果未知：'+path)
+        return real(path,expected,*args,**kwargs)
+    monkeypatch.setattr(chd_io,'remove',flaky)
+    result=deploy.start(plan)
+    assert result['status']=='partial' and '待核对' in result['error']
+    assert result['actual_image_delta_bytes'] is None and 'cleanup' not in result
+    assert [entry['path'] for entry in result['unverified']]==[first]
+
+
+def test_continuation_removes_remaining_with_absent_unverified_source(prepared,monkeypatch):
+    _,cue,track,payload=prepared;plan=deploy.prepare(payload)
+    first,second=(file['path'] for file in plan['deletions']);real=chd_io.remove
+    def flaky(path,expected,*args,**kwargs):
+        if path==first:Path(path).unlink(missing_ok=True);raise chd_io.RemoveUnverified('删除指令结果未知：'+path)
+        raise RuntimeError('disconnected after uncertain delete')
+    monkeypatch.setattr(chd_io,'remove',flaky)
+    result=deploy.start(plan)
+    assert result['status']=='partial' and not Path(first).exists() and Path(second).exists()
+    assert [entry['path'] for entry in result['cleanup']['pending']]==[second]
+    monkeypatch.setattr(chd_io,'remove',real)
+    outcome=deploy.continue_cleanup(result['cleanup'])
+    assert outcome['deleted']==[second] and not Path(second).exists()
+    assert [entry['path'] for entry in outcome['unverified']]==[first]
+
+
+def test_new_reference_still_blocks_continuation_with_unverified_absent(prepared,monkeypatch):
+    _,cue,track,payload=prepared;plan=deploy.prepare(payload)
+    first,second=(file['path'] for file in plan['deletions'])
+    def flaky(path,expected,*args,**kwargs):
+        if path==first:Path(path).unlink(missing_ok=True);raise chd_io.RemoveUnverified('删除指令结果未知：'+path)
+        raise RuntimeError('disconnected after uncertain delete')
+    monkeypatch.setattr(chd_io,'remove',flaky)
+    result=deploy.start(plan)
+    (Path(second).parent/'late.m3u').write_text('late\n',encoding='utf-8')
+    with pytest.raises(ValueError,match='变化'):
+        deploy.continue_cleanup(result['cleanup'])
+    assert Path(second).exists()
+
+
+def test_deployment_api_returns_unverified_only_partial_result(prepared,monkeypatch):
+    import api_chd
+    from job_manager import JobManager
+    from types import SimpleNamespace
+    _,cue,track,payload=prepared;plan=deploy.prepare(payload)
+    jobs=JobManager();ident=jobs.create_job();jobs.complete_job(ident);jobs.contexts[ident]={'chd_deployment':plan}
+    monkeypatch.setattr(api_chd,'reply',lambda *args:None)
+    captured=[];monkeypatch.setattr(api_chd,'background',lambda jobs,title,work:(captured.append(work),'job-x')[1])
+    first=plan['deletions'][0]['path'];real=chd_io.remove
+    def flaky(path,expected,*args,**kwargs):
+        if path==first:Path(path).unlink(missing_ok=True);raise chd_io.RemoveUnverified('删除指令结果未知：'+path)
+        return real(path,expected,*args,**kwargs)
+    monkeypatch.setattr(chd_io,'remove',flaky)
+    api_chd.deployment_apply(None,SimpleNamespace(job_manager=jobs),{'preview_job_id':ident})
+    result=captured[0](jobs.create_job())
+    assert result['status']=='partial' and 'cleanup_id' not in result and 'cleanup' not in result
+    assert [entry['path'] for entry in result['unverified']]==[first]
+    assert result['actual_image_delta_bytes'] is None
+
+
+def test_reappeared_source_is_unverified_not_relisted(prepared,monkeypatch):
+    _,cue,track,payload=prepared;plan=deploy.prepare(payload)
+    first,second=(file['path'] for file in plan['deletions']);real=chd_io.remove
+    def flaky(path,expected,*args,**kwargs):
+        real(path,expected,*args,**kwargs)
+        if path==first:Path(path).write_bytes(b'restored content')
+    monkeypatch.setattr(chd_io,'remove',flaky)
+    result=deploy.start(plan)
+    assert result['status']=='partial' and 'cleanup' not in result
+    assert [entry['path'] for entry in result['unverified']]==[first]
+    assert Path(first).read_bytes()==b'restored content' and not Path(second).exists()
+
+
+def test_continuation_never_deletes_a_same_named_replacement(remote,monkeypatch):
+    import mtp_runtime as mtp
+    files,original,calls,payload,cue,track=remote
+    plan=deploy.prepare(payload)
+    approved=next(file['object_id'] for file in plan['sources'] if file['path']==str(cue))
+    assert approved is not None
+    fixture_remove=mtp.remove_file
+    monkeypatch.setattr(mtp,'remove_file',lambda *args,**kwargs:(_ for _ in ()).throw(RuntimeError('disconnected')))
+    result=deploy.start(plan);assert result['status']=='partial'
+    # A same-named, same-content object with a new device id appears before continuation.
+    real_stat=mtp.stat_file
+    def stat(value):
+        entry=real_stat(value)
+        if entry and value==str(cue): entry=dict(entry,id=entry['id']+9000)
+        return entry
+    monkeypatch.setattr(mtp,'stat_file',stat)
+    monkeypatch.setattr(mtp,'remove_file',fixture_remove)
+    outcome=deploy.continue_cleanup(result['cleanup'])
+    assert [entry['path'] for entry in outcome['unverified']]==[str(cue)]
+    assert outcome['deleted']==[str(track)]
+    assert files[cue]==original[cue]
+    assert not any(call==('remove',cue) for call in calls)
+
+
+def test_continuation_marks_replaced_object_unverified(remote,monkeypatch):
+    import mtp_runtime as mtp
+    files,original,calls,payload,cue,track=remote
+    plan=deploy.prepare(payload)
+    fixture_remove=mtp.remove_file
+    monkeypatch.setattr(mtp,'remove_file',lambda *args,**kwargs:(_ for _ in ()).throw(RuntimeError('disconnected')))
+    result=deploy.start(plan);assert result['status']=='partial'
+    # The BIN is replaced: new device object id AND different bytes.
+    files[track]=b'replacement bytes'
+    real_stat=mtp.stat_file
+    def stat(value):
+        entry=real_stat(value)
+        if entry and value==str(track): entry=dict(entry,id=entry['id']+9000)
+        return entry
+    monkeypatch.setattr(mtp,'stat_file',stat)
+    monkeypatch.setattr(mtp,'remove_file',fixture_remove)
+    outcome=deploy.continue_cleanup(result['cleanup'])
+    assert [entry['path'] for entry in outcome['unverified']]==[str(track)]
+    assert not any(entry['path']==str(track) for entry in outcome['remaining'])
+    assert 'cleanup' not in outcome and outcome['status']=='partial'
+    assert files[track]==b'replacement bytes'
+    assert not any(call==('remove',track) for call in calls)
+
+
+def test_continuation_keeps_replaced_object_in_unverified_while_cleaning_rest(remote,monkeypatch):
+    import mtp_runtime as mtp
+    files,original,calls,payload,cue,track=remote
+    plan=deploy.prepare(payload)
+    fixture_remove=mtp.remove_file
+    monkeypatch.setattr(mtp,'remove_file',lambda *args,**kwargs:(_ for _ in ()).throw(RuntimeError('disconnected')))
+    result=deploy.start(plan);assert result['status']=='partial'
+    # The BIN is replaced (new id + bytes); the CUE stays the approved object.
+    files[track]=b'replacement bytes'
+    real_stat=mtp.stat_file
+    def stat(value):
+        entry=real_stat(value)
+        if entry and value==str(track): entry=dict(entry,id=entry['id']+9000)
+        return entry
+    monkeypatch.setattr(mtp,'stat_file',stat)
+    monkeypatch.setattr(mtp,'remove_file',fixture_remove)
+    outcome=deploy.continue_cleanup(result['cleanup'])
+    assert [entry['path'] for entry in outcome['unverified']]==[str(track)]
+    assert outcome['deleted']==[str(cue)]
+    assert files[track]==b'replacement bytes' and str(cue) not in files
+    assert not any(call==('remove',track) for call in calls)
+
+
+def test_continuation_marks_undownloadable_replacement_unverified(remote,monkeypatch):
+    import mtp_runtime as mtp
+    files,original,calls,payload,cue,track=remote
+    plan=deploy.prepare(payload)
+    fixture_remove=mtp.remove_file
+    monkeypatch.setattr(mtp,'remove_file',lambda *args,**kwargs:(_ for _ in ()).throw(RuntimeError('disconnected')))
+    result=deploy.start(plan);assert result['status']=='partial'
+    # Replacement BIN: metadata resolves, its content cannot be downloaded.
+    files[track]=b'replacement bytes'
+    real_stat=mtp.stat_file
+    def stat(value):
+        entry=real_stat(value)
+        if entry and value==str(track): entry=dict(entry,id=entry['id']+9000)
+        return entry
+    real_download=mtp.download_file
+    def download(path,target_path,cancelled=lambda:None):
+        if path==str(track): raise RuntimeError('read error')
+        return real_download(path,target_path,cancelled)
+    monkeypatch.setattr(mtp,'stat_file',stat)
+    monkeypatch.setattr(mtp,'download_file',download)
+    monkeypatch.setattr(mtp,'remove_file',fixture_remove)
+    before=len(calls)
+    outcome=deploy.continue_cleanup(result['cleanup'])
+    assert [entry['path'] for entry in outcome['unverified']]==[str(track)]
+    assert outcome['deleted']==[str(cue)] and not outcome['remaining']
+    assert 'cleanup' not in outcome and outcome['status']=='partial'
+    assert files[track]==b'replacement bytes'
+    assert not any(call==('remove',track) or call==('download',track) for call in calls[before:])

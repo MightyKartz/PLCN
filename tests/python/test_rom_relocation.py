@@ -1,4 +1,4 @@
-"""Synthetic ROM moves, ZIP references and durable rollback; never real devices."""
+"""Synthetic ROM moves, ZIP references and guarded writes; never real devices."""
 import json
 from pathlib import Path
 
@@ -36,8 +36,8 @@ def plan_for(payload,**kwargs):
     return relocation.prepare({'file_ids':ids,'mode':'replace','runtime':{'version':'synthetic','confirmed':True},'scope_confirmed':True,**kwargs},analysis)
 
 
-def test_move_keeps_ids_crc_core_label_and_restores_exactly(library):
-    payload,rom,playlist,_=library;before={path:path.read_bytes() for path in [rom,playlist]}
+def test_move_keeps_ids_crc_core_and_label(library):
+    payload,rom,playlist,_=library
     old=read_playlist(str(playlist),payload['system'])['items'][0]
     plan=plan_for(payload);assert plan['can_apply'],plan['issues']
     result=engine.start(plan);assert result['status']=='completed',result['error']
@@ -47,11 +47,9 @@ def test_move_keeps_ids_crc_core_label_and_restores_exactly(library):
     raw=json.loads(playlist.read_text(encoding='utf-8'))['items'][0]
     assert raw['label']=='人工中文名' and raw['custom']=='keep' and raw['crc32']=='original-crc'
     assert result['actual_image_delta_bytes']==0
-    restored=engine.run(result['id'],restore=True);assert restored['status']=='restored',restored['error']
-    assert all(path.read_bytes()==content for path,content in before.items()) and not target.exists()
 
 
-def test_zip_new_content_retains_game_and_image_choice_then_restores(library):
+def test_zip_new_content_retains_game_and_image_choice(library):
     from artwork_identity import remember,remembered
     payload,rom,playlist,_=library;old=read_playlist(str(playlist),payload['system'])['items'][0]
     context={'system':payload['system'],'playlist_path':str(playlist),'rom_path':rom.as_posix(),'label':'人工中文名'}
@@ -64,19 +62,15 @@ def test_zip_new_content_retains_game_and_image_choice_then_restores(library):
     assert changed['game_id']==old['game_id'] and changed['content_id']!=old['content_id']
     assert changed['rom_path'].endswith('.zip#游戏.gba') and remembered({**context,'rom_path':changed['rom_path']})
     assert not rom.exists()
-    restored=engine.run(result['id'],restore=True);assert restored['status']=='restored',restored['error']
-    assert rom.exists() and read_playlist(str(playlist),payload['system'])['items'][0]['content_id']==old['content_id']
 
 
-def test_copy_then_history_preview_switch_reuses_owned_target(library):
+def test_copy_then_move_reuses_existing_target(library):
     payload,rom,playlist,_=library;original=playlist.read_bytes()
     first=engine.start(plan_for(payload,mode='copy',runtime={},scope_confirmed=False));assert first['status']=='completed',first['error']
     assert rom.exists() and playlist.read_bytes()==original
-    plan=relocation.prepare({'operation_id':first['id'],'file_ids':first['selected_ids'],'mode':'replace','runtime':{'version':'tested','confirmed':True},'scope_confirmed':True})
+    plan=plan_for(payload)
     assert plan['can_apply'],plan['issues'];assert not plan['copies'][0]['created']
     moved=engine.start(plan);assert moved['status']=='completed',moved['error'];assert not rom.exists()
-    assert engine.run(moved['id'],restore=True)['status']=='restored'
-    assert engine.run(first['id'],restore=True)['status']=='restored'
 
 
 @pytest.mark.parametrize('change',['flag','missing','include','shared','mapping','runtime','scope'])
@@ -93,20 +87,19 @@ def test_unknown_save_rules_or_runtime_block_switch_but_allow_copy(library,chang
     assert plan_for(payload,mode='copy')['can_apply']
 
 
-def test_existing_identical_file_without_owned_copy_is_conflict(library):
+def test_existing_identical_target_is_treated_as_satisfied(library):
     payload,rom,_,_=library;(Path(payload['target_directory'])/rom.name).write_bytes(rom.read_bytes())
-    plan=plan_for(payload);assert not plan['can_apply'] and any('目标已存在' in issue for issue in plan['issues'])
+    plan=plan_for(payload);assert plan['can_apply'] and not plan['copies'][0]['created']
 
 
 def test_loose_m3u_and_cross_playlist_paths_are_updated(library):
     payload,rom,playlist,_=library
     other=playlist.with_name('Other.lpl');other.write_bytes(playlist.read_bytes())
-    loose=rom.parent/'loose.m3u';loose.write_text(rom.name+'\n',encoding='utf-8');before=loose.read_bytes()
+    loose=rom.parent/'loose.m3u';loose.write_text(rom.name+'\n',encoding='utf-8')
     plan=plan_for(payload);assert plan['can_apply'],plan['issues']
     result=engine.start(plan);assert result['status']=='completed',result['error']
     assert json.loads(other.read_text(encoding='utf-8'))['items'][0]['path']==result['copies'][0]['logical']
     assert '../' in loose.read_text(encoding='utf-8')
-    assert engine.run(result['id'],restore=True)['status']=='restored' and loose.read_bytes()==before
 
 
 def test_changed_save_directory_or_new_descriptor_blocks_before_publication(library):
@@ -115,7 +108,7 @@ def test_changed_save_directory_or_new_descriptor_blocks_before_publication(libr
     result=engine.start(plan);assert result['status']=='partial' and not Path(plan['copies'][0]['target']).exists() and rom.exists()
 
 
-def test_interrupt_upload_resume_and_changed_target_blocks_restore(library,monkeypatch):
+def test_interrupted_move_retries_from_plan_and_changed_target_blocks_retry(library,monkeypatch):
     payload,rom,_,_=library;plan=plan_for(payload);original=io.put_new;calls=[0]
     def fail(*args,**kwargs):
         calls[0]+=1
@@ -123,18 +116,9 @@ def test_interrupt_upload_resume_and_changed_target_blocks_restore(library,monke
         return original(*args,**kwargs)
     monkeypatch.setattr(io,'put_new',fail)
     result=engine.start(plan);assert result['status']=='partial'
-    result=engine.run(result['id']);assert result['status']=='completed',result['error']
+    result=engine.start(plan);assert result['status']=='completed',result['error']
     Path(result['copies'][0]['target']).write_bytes(b'external update')
-    assert engine.run(result['id'],restore=True)['status']=='restore_pending' and not rom.exists()
-
-
-def test_zip_member_new_reference_keeps_archive_on_restore(library):
-    payload,_,_,_=library;analysis=rom_storage.analyze(payload);record=rom_storage.convert(analysis,[analysis['rows'][0]['id']])
-    result=engine.start(relocation.prepare({'conversion_id':record['id'],'file_ids':[record['results'][0]['id']],'mode':'replace','runtime':{'version':'test','confirmed':True},'scope_confirmed':True}))
-    assert result['status']=='completed',result['error'];target=result['copies'][0]['target']
-    other=Path(result['playlist']).with_name('new.lpl');other.write_text(json.dumps({'items':[{'path':target+'#游戏.gba'}]}),encoding='utf-8')
-    restored=engine.run(result['id'],restore=True);assert restored['status']=='restored',restored['error']
-    assert Path(target).exists() and restored['restored_retained_outputs']
+    assert engine.start(plan)['status']=='partial'
 
 
 @pytest.fixture
@@ -157,9 +141,8 @@ def optical(library):
     return payload,m3u,discs,playlist,group
 
 
-def test_m3u_move_updates_relative_paths_group_ids_and_restores_original_relationships(optical):
+def test_m3u_move_updates_relative_paths_group_ids_and_relationships(optical):
     payload,m3u,discs,playlist,group=optical
-    originals={path:path.read_bytes() for path in [m3u,*discs,playlist]}
     analysis=rom_storage.analyze(payload);row=next(row for row in analysis['rows'] if row['format']=='m3u')
     assert len(row['members'])==2 and row['layout']=='candidate'
     plan=relocation.prepare({'file_ids':[row['id']],'mode':'replace','runtime':{'version':'test','confirmed':True},'scope_confirmed':True},analysis)
@@ -172,20 +155,6 @@ def test_m3u_move_updates_relative_paths_group_ids_and_restores_original_relatio
     assert [disc['entry']['disc_id'] for disc in moved[0]['discs']]==[disc['entry']['disc_id'] for disc in group['discs']]
     assert [disc['entry']['content_id'] for disc in moved[0]['discs']]==[disc['entry']['content_id'] for disc in group['discs']]
     assert not any(path.exists() for path in [m3u,*discs])
-    restored=engine.run(result['id'],restore=True);assert restored['status']=='restored',restored['error']
-    assert all(path.read_bytes()==raw for path,raw in originals.items())
-    assert not any(Path(item['target']).exists() for item in result['copies'])
-    assert list(library_model.disc_groups()['groups'].values())==[group]
-
-
-def test_new_external_m3u_reference_retains_entire_owned_disc_chain(optical):
-    payload,m3u,discs,playlist,_=optical
-    result=engine.start(plan_for(payload));assert result['status']=='completed',result['error']
-    target=Path(payload['target_directory'])/'Game.m3u'
-    extra=playlist.with_name('external.lpl');extra.write_text(json.dumps({'items':[{'path':target.as_posix()}]}),encoding='utf-8')
-    restored=engine.run(result['id'],restore=True);assert restored['status']=='restored',restored['error']
-    assert all(Path(item['target']).exists() for item in result['copies'])
-    assert len(restored['restored_retained_outputs'])==3
 
 
 def test_m3u_containing_cue_remains_in_place(optical):
@@ -201,7 +170,7 @@ def test_new_descriptor_between_preview_and_apply_blocks_cleanup(library):
     result=engine.start(plan);assert result['status']=='partial' and rom.exists() and not Path(plan['copies'][0]['target']).exists()
 
 
-def test_dual_storage_mtp_move_updates_android_paths_and_restores(library,monkeypatch):
+def test_dual_storage_mtp_move_updates_android_paths(library,monkeypatch):
     from contextlib import contextmanager
     import disc_inspection
     import mtp_runtime as mtp
@@ -246,7 +215,7 @@ def test_dual_storage_mtp_move_updates_android_paths_and_restores(library,monkey
     def remove(path,expected,cancelled=lambda:None):cancelled();assert mtp.digest(files[path])==expected;files.pop(path)
     def write(path,content,expected,suffix=None):
         assert mtp.digest(files.get(path))==expected
-        files[path]=content;return 'synthetic metadata backup'
+        files[path]=content
     for name,value in [('session',session),('listing',listing),('resolve',resolve),('children',children),('read',read_small),
                        ('download_file',download),('upload_file',upload),('remove_file',remove),('write',write)]:monkeypatch.setattr(mtp,name,value)
     monkeypatch.setattr(mtp,'devices',lambda:pytest.fail('No USB access in synthetic test'))
@@ -260,8 +229,6 @@ def test_dual_storage_mtp_move_updates_android_paths_and_restores(library,monkey
     assert game not in files and mtp.join(target,rom.name) in files
     assert json.loads(files[playlist])['items'][0]['path']=='/sdcard/RetroArch/Roms/GBA/'+rom.name
     assert files[mtp.join(source,'loose.m3u')].decode().startswith('/sdcard/RetroArch/')
-    restored=engine.run(result['id'],restore=True);assert restored['status']=='restored',restored['error']
-    assert all(files[path]==content for path,content in original.items()) and mtp.join(target,rom.name) not in files
 
 
 def test_target_directory_conflict_is_an_explicit_blocked_plan(library):
@@ -276,10 +243,9 @@ def test_symlink_target_cannot_pass_hash_checks_and_break_after_cleanup(library)
     result=engine.start(plan);assert result['status']=='partial' and '符号链接' in result['error'] and rom.exists()
 
 
-def test_relocation_api_one_shot_and_nested_metadata_recovery_is_blocked(library,monkeypatch):
+def test_relocation_api_one_shot_plan(library,monkeypatch):
     from types import SimpleNamespace
     import api_rom_storage as api
-    import api_m3u
     from server import JobManager
     payload,_,_,_=library;plan=plan_for(payload)
     jobs=JobManager();ident=jobs.create_job();jobs.complete_job(ident);jobs.contexts[ident]={'rom_relocation_plan':plan}
@@ -288,7 +254,6 @@ def test_relocation_api_one_shot_and_nested_metadata_recovery_is_blocked(library
     api.relocation_apply(None,context,request)
     with pytest.raises(ValueError,match='重新生成'):api.relocation_apply(None,context,request)
     result=work[0](ident);assert result['status']=='completed'
-    with pytest.raises(ValueError,match='先还原原镜像'):api_m3u.recover(None,context,{'id':result['references_id'],'action':'restore'})
 
 
 def test_cross_playlist_artwork_choices_keep_their_bound_system_context(library):
@@ -299,4 +264,3 @@ def test_cross_playlist_artwork_choices_keep_their_bound_system_context(library)
     remember(context,'Other explicit art','Named_Boxarts')
     result=engine.start(plan_for(payload));assert result['status']=='completed',result['error']
     target=result['copies'][0]['logical'];assert remembered({**context,'rom_path':target})['name']=='Other explicit art'
-    assert engine.run(result['id'],restore=True)['status']=='restored' and remembered(context)['name']=='Other explicit art'

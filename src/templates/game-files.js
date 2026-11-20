@@ -1,5 +1,114 @@
 /* File browsing works independently of the selected RetroArch library. */
 let gameFilesView = null;
+let gameFilesClipboard = null;
+let fileChanges = {root: '', items: []};
+
+function recordFileChange(root, entry) {
+    if (fileChanges.root !== root) fileChanges = {root, items: []};
+    fileChanges.items.push(entry);
+    renderFileSyncNotice();
+}
+
+function dismissFileChanges() {
+    fileChanges = {root: fileChanges.root, items: []};
+    renderFileSyncNotice();
+}
+
+function renderFileSyncNotice() {
+    const notice = document.getElementById('game-sync-notice');
+    if (!notice) return;
+    const root = document.getElementById('retroarch_root')?.value || '';
+    const count = fileChanges.root === root ? fileChanges.items.length : 0;
+    notice.hidden = !count;
+    if (!count) { notice.replaceChildren(); return; }
+    notice.replaceChildren(
+        wbElement('span', '', workbenchText(`文件管理中有 ${count} 项改动未同步到列表。`, `${count} file change(s) from the file manager are not synced to playlists.`)),
+        gmButton('更新列表…', 'Update playlists…', openFileSyncDialog, false),
+        gmButton('忽略', 'Dismiss', dismissFileChanges));
+}
+
+async function openFileSyncDialog() {
+    const items = fileChanges.items, root = fileChanges.root;
+    if (!items.length || workbench.operation) return;
+    if (!beginWorkbenchOperation('game-file-sync')) {
+        showStatus(workbenchText('请等待当前任务完成。', 'Wait for the current task.'), 'error');
+        return;
+    }
+    const tr = workbenchText;
+    const dialog = wbElement('dialog', 'desktop-confirm app-dialog game-file-sync-dialog');
+    const heading = wbElement('h2', '', tr('同步文件改动到列表', 'Sync file changes to playlists'));
+    heading.id = 'game-file-sync-title';
+    heading.setAttribute('autofocus', '');
+    dialog.setAttribute('aria-labelledby', heading.id);
+    const impact = wbElement('div', 'game-file-delete-impact');
+    const message = wbElement('p', '', '');
+    message.setAttribute('role', 'status');
+    const actions = wbElement('div', 'desktop-confirm-actions');
+    const cancel = gmButton('取消', 'Cancel', () => dialog.close());
+    const confirm = gmButton('更新列表', 'Update playlists', apply, false);
+    confirm.disabled = true;
+    let previewId;
+    actions.append(cancel, confirm);
+    dialog.append(heading, impact, message, actions);
+    document.body.append(dialog);
+    dialog.addEventListener('close', () => { endWorkbenchOperation(); dialog.remove(); }, {once:true});
+    dialog.showModal();
+    runPreview();
+
+    function list(zh, en, entries) {
+        if (!entries.length) return;
+        const rows = wbElement('ul', '');
+        rows.append(...entries.map(entry => wbElement('li', '', entry)));
+        impact.append(wbElement('h3', '', tr(zh, en)), rows);
+    }
+
+    async function runPreview() {
+        try {
+            const {id, result} = await runGameJob('/api/game-files/sync-preview', {root, changes: items},
+                state => { if (state.connectionError || currentUILanguage !== 'en') message.textContent = state.message; });
+            previewId = id;
+            list('将改写的列表条目', 'Playlist entries to update',
+                 result.renamed.map(entry => entry.playlist + ' · ' + entry.label + ' → ' + entry.new));
+            list('将移出的列表条目', 'Playlist entries to remove',
+                 result.removed.map(entry => entry.playlist + ' · ' + entry.label));
+            list('未匹配到条目的改动', 'Changes with no matching entry', result.unmatched);
+            list('无法读取的列表', 'Unreadable playlists',
+                 (result.failed || []).map(entry => entry.playlist + ' · ' + entry.error));
+            const total = result.renamed.length + result.removed.length;
+            const failures = (result.failed || []).length;
+            const allFailed = failures && failures === result.playlists_total;
+            message.textContent = total
+                ? tr(`将更新 ${result.renamed.length} 条、移出 ${result.removed.length} 条列表条目。` +
+                     (failures ? `${failures} 个列表读取失败，将保持原样。` : ''),
+                     `${result.renamed.length} entries will be updated and ${result.removed.length} removed.` +
+                     (failures ? ` ${failures} playlist(s) unreadable and left unchanged.` : ''))
+                : allFailed
+                    ? tr('所有列表都无法读取，请修复后再同步。', 'Every playlist failed to read; fix them before syncing.')
+                    : failures
+                        ? tr(`没有需要更新的列表条目；${failures} 个列表读取失败，将保持原样。`,
+                             `No playlist entries need updating; ${failures} playlist(s) unreadable and left unchanged.`)
+                        : tr('没有需要更新的列表条目。', 'No playlist entries need updating.');
+            confirm.disabled = !total;
+        } catch (error) {
+            message.textContent = gmError(error);
+        }
+    }
+
+    async function apply() {
+        if (!previewId) return;
+        confirm.disabled = cancel.disabled = true;
+        try {
+            const {result} = await runGameJob('/api/game-files/sync-apply', {preview_job_id: previewId},
+                state => { if (state.connectionError || currentUILanguage !== 'en') message.textContent = state.message; });
+            await refreshDeletedPlaylists(result.playlists);
+            dismissFileChanges();
+            dialog.close();
+        } catch (error) {
+            message.textContent = gmError(error);
+            confirm.disabled = cancel.disabled = false;
+        }
+    }
+}
 
 function closeGameFiles() {
     if (!gameFilesView) return;
@@ -40,6 +149,7 @@ function openGameFiles(opener, target = null) {
     storageStatus.setAttribute('role', 'status');
     const refresh = gmButton('重新检测存储', 'Detect storage again', loadStorages);
     const local = gmButton('电脑目录', 'Computer folder', chooseFolder);
+    local.id = 'game-files-local';
     local.prepend(wbIcon('folder'));
     navigation.append(wbElement('h3', '', tr('电脑', 'Computer')), local,
         wbElement('h3', '', tr('USB 掌机', 'USB handheld')), remote, storageStatus, refresh);
@@ -51,21 +161,23 @@ function openGameFiles(opener, target = null) {
     up.disabled = true;
     const location = wbElement('nav', 'game-files-location', tr('选择要浏览的存储或电脑目录', 'Choose a storage or computer folder'));
     location.setAttribute('aria-label', tr('当前路径', 'Current path'));
-    const add = gmButton('添加文件', 'Add files', () => {
-        openGameImport(current?.path || '');
-    }, false);
-    add.id = 'game-files-import';
-    wbIconButton(add, 'file-plus', add.textContent);
-    const rename = gmButton('重命名', 'Rename', renameFile);
-    const remove = gmButton('删除文件', 'Delete file', deleteFile);
+    const add = gmButton('添加游戏', 'Add games', addItems, false);
+    add.id = 'game-files-add';
+    wbIconButton(add, 'plus', tr('添加游戏', 'Add games'));
+    const rename = gmButton('重命名', 'Rename', () => renameFile());
+    const remove = gmButton('删除文件', 'Delete file', () => deleteFile());
+    const copy = gmButton('复制', 'Copy', () => copyFile());
+    const paste = gmButton('粘贴', 'Paste', pasteFiles);
     wbIconButton(rename, 'pencil', rename.textContent);
     wbIconButton(remove, 'trash', remove.textContent);
-    rename.disabled = remove.disabled = true;
-    toolbar.append(up, location, rename, remove, add);
-    updateImportAction();
+    wbIconButton(copy, 'copy', copy.textContent);
+    wbIconButton(paste, 'clipboard', paste.textContent);
+    rename.disabled = remove.disabled = copy.disabled = paste.disabled = add.disabled = true;
+    toolbar.append(up, location, rename, remove, copy, paste, add);
     const table = wbElement('div', 'game-files-table');
     const rows = wbElement('ul', 'game-files-rows');
-    table.append(wbElement('div', 'game-files-column', tr('名称', 'Name')), rows);
+    const empty = wbElement('p', 'game-files-empty', tr('从左侧选择要存放游戏的目录', 'Pick a folder on the left to store games'));
+    table.append(wbElement('div', 'game-files-column', tr('名称', 'Name')), empty, rows);
     const status = wbElement('p', 'game-files-status');
     status.setAttribute('role', 'status');
     pane.append(toolbar, table, status);
@@ -104,16 +216,16 @@ function openGameFiles(opener, target = null) {
         });
     }
 
-    function updateImportAction(path = '') {
-        const mtp = root.startsWith('mtp://');
-        const storageDevice = value => value.split('/')[2];
-        const compatible = !path || (mtp
-            ? path.startsWith('mtp://') && storageDevice(path) === storageDevice(root)
-            : !path.startsWith('mtp://'));
-        add.disabled = !root || root.startsWith('adb://') || !compatible;
-        add.title = add.disabled
-            ? tr('现有导入流程需要打开对应的 RetroArch 游戏库。', 'Open the matching RetroArch library to import files.')
-            : add.getAttribute('aria-label');
+    function updateActionState() {
+        rename.disabled = remove.disabled = copy.disabled = !selected || changing;
+        paste.disabled = !gameFilesClipboard || gameFilesClipboard.root !== root || !current?.path || changing;
+        const mtpDest = current?.path?.startsWith('mtp://');
+        const blocked = Boolean(mtpDest && (!root.startsWith('mtp://') || root.split('/')[2] !== current.path.split('/')[2]));
+        add.disabled = !current?.path || changing || blocked;
+        add.title = blocked
+            ? tr('先在游戏库中打开这台掌机。', 'Open this handheld library first.')
+            : tr('把电脑上的文件或文件夹复制进当前目录。', 'Copy computer files or folders into this folder.');
+        empty.hidden = Boolean(current);
     }
 
     async function loadStorages() {
@@ -156,12 +268,11 @@ function openGameFiles(opener, target = null) {
         rows.querySelector('[aria-pressed=true]')?.setAttribute('aria-pressed', 'false');
         selected = item;
         button?.setAttribute('aria-pressed', 'true');
-        rename.disabled = remove.disabled = !item || changing;
+        updateActionState();
     }
 
-    function renameFile() {
-        if (!selected || changing) return;
-        const item = selected;
+    function renameFile(item = selected) {
+        if (!item || changing) return;
         const directory = current.path;
         const dialog = wbElement('dialog', 'desktop-confirm app-dialog');
         const heading = wbElement('h2', '', tr('重命名', 'Rename'));
@@ -174,9 +285,11 @@ function openGameFiles(opener, target = null) {
         dialog.append(input);
         const error = wbElement('p', '', '');
         error.setAttribute('role', 'alert');
+        const actions = wbElement('div', 'desktop-confirm-actions');
         const cancel = gmButton('取消', 'Cancel', () => dialog.close());
         const confirm = gmButton('确认', 'Confirm', submit, false);
-        dialog.append(error, cancel, confirm);
+        actions.append(cancel, confirm);
+        dialog.append(error, actions);
         document.body.append(dialog);
         dialog.addEventListener('close', () => dialog.remove(), {once:true});
         dialog.addEventListener('cancel', event => { if (changing) event.preventDefault(); });
@@ -190,7 +303,8 @@ function openGameFiles(opener, target = null) {
             changing = true;
             cancel.disabled = confirm.disabled = true;
             try {
-                await desktopRequest('/api/game-files/change', {action:'rename', path:item.path, root, name:input.value.trim()});
+                const result = await desktopRequest('/api/game-files/file-ops', {action:'rename', path:item.path, root, name:input.value.trim()});
+                recordFileChange(root, {action:'rename', path:item.path, to:result.new_path, folder:Boolean(item.directory)});
                 dialog.close();
                 if (gameFilesView === view) await loadDirectory(directory);
             } catch (failure) {
@@ -202,102 +316,151 @@ function openGameFiles(opener, target = null) {
         }
     }
 
-    function deleteFile() {
-        if (!selected || changing) return;
-        const item = selected;
+    async function runOpsJob(title, payload) {
+        const dialog = wbElement('dialog', 'desktop-confirm app-dialog game-file-progress-dialog');
+        const heading = wbElement('h2', '', title);
+        heading.id = 'game-file-progress-title';
+        heading.setAttribute('autofocus', '');
+        dialog.setAttribute('aria-labelledby', heading.id);
+        const track = wbElement('div', 'game-file-progress-track indeterminate');
+        const fill = wbElement('div', 'game-file-progress-fill');
+        track.append(fill);
+        const detail = wbElement('p', 'game-file-progress-detail', tr('正在准备…', 'Preparing…'));
+        const actions = wbElement('div', 'desktop-confirm-actions');
+        let jobId;
+        const cancelButton = gmButton('取消', 'Cancel', requestCancel);
+        actions.append(cancelButton);
+        dialog.append(heading, track, detail, actions);
+        document.body.append(dialog);
+        dialog.addEventListener('cancel', event => { event.preventDefault(); requestCancel(); });
+        dialog.addEventListener('close', () => dialog.remove(), {once:true});
+        dialog.showModal();
+        try {
+            const {result} = await runGameJob('/api/game-files/file-ops', payload, job => {
+                jobId = job.id || gameManagement.job;
+                const total = job.total || 0, done = job.progress || 0;
+                track.classList.toggle('indeterminate', !total);
+                fill.style.width = total ? Math.round(done / total * 100) + '%' : '';
+                detail.textContent = jobDetail(job) + (total ? ` ${done}/${total}` : '');
+            });
+            return result;
+        } finally {
+            dialog.close();
+        }
+
+        function requestCancel() {
+            if (!jobId || cancelButton.disabled) return;
+            cancelButton.disabled = true;
+            detail.textContent = tr('正在取消…', 'Cancelling…');
+            desktopRequest('/api/jobs/cancel', {job_id: jobId}).catch(() => {});
+        }
+    }
+
+    function jobDetail(job) {
+        if (job.connectionError) return job.message;
+        const message = job.message || '';
+        if (currentUILanguage === 'en') return message.split('：').pop();
+        return message;
+    }
+
+    function deleteFile(item = selected) {
+        if (!item || changing) return;
         const directory = current.path;
         const dialog = wbElement('dialog', 'desktop-confirm app-dialog game-file-delete-dialog');
-        const heading = wbElement('h2', '', tr('删除游戏文件', 'Delete game files'));
+        const heading = wbElement('h2', '', tr('删除文件', 'Delete item'));
         heading.id = 'game-file-delete-title';
+        heading.setAttribute('autofocus', '');
         dialog.setAttribute('aria-labelledby', heading.id);
-        const impact = wbElement('div', 'game-file-delete-impact');
         const message = wbElement('p', '', '');
         message.setAttribute('role', 'status');
-        const cancel = gmButton('关闭', 'Close', () => dialog.close());
-        const confirm = gmButton('确认删除', 'Delete files', apply, false);
-        confirm.disabled = true;
-        const clean = document.createElement('input');
-        clean.type = 'checkbox';
-        let previewId;
-        let affectedLists = [];
-        dialog.append(heading, wbElement('p', '', item.name), impact, message, cancel, confirm);
+        const actions = wbElement('div', 'desktop-confirm-actions');
+        const cancel = gmButton('取消', 'Cancel', () => dialog.close());
+        const confirm = gmButton('确认', 'Confirm', apply, false);
+        actions.append(cancel, confirm);
+        const name = wbElement('p', 'game-file-dialog-name', item.name);
+        dialog.append(heading, name,
+            wbElement('p', '', tr(item.directory ? '文件夹及其内容将被永久删除，无法撤销。' : '文件将被永久删除，无法撤销。',
+                                  item.directory ? 'The folder and its contents will be permanently deleted. There is no undo.'
+                                                 : 'The file will be permanently deleted. There is no undo.')),
+            message, actions);
         document.body.append(dialog);
         dialog.addEventListener('close', () => dialog.remove(), {once:true});
         dialog.addEventListener('cancel', event => { if (changing) event.preventDefault(); });
         dialog.showModal();
-        cancel.focus();
-        preview();
-
-        function list(zh, en, items) {
-            if (!items.length) return;
-            const rows = wbElement('ul', '');
-            rows.append(...items.map(item => wbElement('li', '', item)));
-            impact.append(wbElement('h3', '', tr(zh, en)), rows);
-        }
-
-        async function job(route, payload, busyMessage) {
-            if (!beginWorkbenchOperation('game-file-delete')) throw new Error(tr('请等待当前任务完成。', 'Wait for the current task.'));
-            changing = true;
-            cancel.disabled = true;
-            message.textContent = busyMessage;
-            try {
-                return await runGameJob(route, payload, state => {
-                    if (state.connectionError || currentUILanguage !== 'en') message.textContent = state.message;
-                });
-            } finally {
-                gameManagement.job = null;
-                changing = false;
-                cancel.disabled = false;
-                endWorkbenchOperation();
-            }
-        }
-
-        async function preview() {
-            try {
-                const {id, result} = await job('/api/game-files/delete-preview', {root, path:item.path},
-                    tr('正在检查游戏列表与文件引用…', 'Checking playlists and file references…'));
-                previewId = id;
-                affectedLists = result.playlists;
-                const displayPath = path => path.startsWith('mtp://') ? decodeURIComponent(path) : path;
-                list('将删除的文件', 'Files to delete', result.files.map(displayPath));
-                list('将移出的游戏列表条目', 'Playlist entries to remove',
-                     result.entries.map(entry => entry.playlist + ' · ' + entry.label));
-                list('仍被引用，将保留的文件', 'Referenced files to keep', result.shared.map(displayPath));
-                if (result.covers.length) {
-                    const option = wbElement('label', 'game-file-delete-option');
-                    option.append(clean, document.createTextNode(tr('同时清理下列未使用的封面', 'Also clean up these unused covers')));
-                    impact.append(option);
-                    list('可选封面', 'Optional covers', result.covers.map(displayPath));
-                }
-                message.textContent = tr('请先退出 RetroArch。助手会先备份，再更新列表和删除文件。', 'Quit RetroArch first. The assistant backs up files before updating playlists and deleting files.');
-                confirm.disabled = false;
-            } catch (error) {
-                message.textContent = gmError(error);
-            }
-        }
 
         async function apply() {
-            if (changing || !previewId) return;
-            confirm.disabled = true;
+            if (changing) return;
+            if (!beginWorkbenchOperation('game-file-ops')) { message.textContent = tr('请等待当前任务完成。', 'Wait for the current task.'); return; }
+            changing = true;
+            dialog.close();
             try {
-                const {result} = await job('/api/game-files/delete-apply',
-                    {preview_job_id:previewId, clean_covers:clean.checked}, tr('正在备份和删除…', 'Backing up and deleting…'));
-                await refreshDeletedPlaylists(result.playlists);
+                const result = await runOpsJob(tr('正在删除…', 'Deleting…'), {action:'delete', path:item.path, root})
+                    .catch(error => error.result?.deleted !== undefined ? error.result : Promise.reject(error));
+                const partial = result?.cancelled || result?.error;
+                if (partial) {
+                    for (const deletedPath of result.deleted || []) {
+                        recordFileChange(root, {action:'delete', path:deletedPath, folder:false});
+                    }
+                } else {
+                    recordFileChange(root, {action:'delete', path:item.path, folder:Boolean(item.directory)});
+                }
                 if (gameFilesView === view) {
                     await loadDirectory(directory);
-                    status.textContent = tr('删除完成。备份：', 'Deleted. Backup: ') + result.backup_directory;
+                    const removed = (result?.deleted || []).length;
+                    status.textContent = result?.cancelled
+                        ? tr(`已取消：删除了 ${removed} 项，其余保留。`, `Cancelled: ${removed} item(s) deleted; the rest remains.`)
+                        : result?.error
+                            ? tr(`部分删除：已删 ${removed} 项；失败：${result.error}`, `Partially deleted: ${removed} removed; failed: ${result.error}`)
+                            : tr('已删除「' + item.name + '」。', 'Deleted "' + item.name + '".');
                 }
-                dialog.close();
             } catch (error) {
-                message.textContent = gmError(error);
-                try { await refreshDeletedPlaylists(affectedLists); }
-                catch (refreshError) { message.textContent += ' · ' + gmError(refreshError); }
-                if (gameFilesView === view) await loadDirectory(directory);
+                status.textContent = gmError(error);
+            } finally {
+                changing = false;
+                updateActionState();
+                endWorkbenchOperation();
             }
         }
     }
 
-    async function loadDirectory(path, selectedPath = null) {
+    function copyFile(item = selected) {
+        if (!item || changing) return;
+        gameFilesClipboard = {root, item: {path:item.path, name:item.name, folder:Boolean(item.directory)}};
+        updateActionState();
+        status.textContent = tr('已复制「' + item.name + '」，切换到目标目录后粘贴。', 'Copied "' + item.name + '". Paste it in the destination folder.');
+    }
+
+    async function pasteFiles() {
+        if (!gameFilesClipboard || changing || !current?.path) return;
+        if (!beginWorkbenchOperation('game-file-ops')) { status.textContent = tr('请等待当前任务完成。', 'Wait for the current task.'); return; }
+        const item = gameFilesClipboard.item;
+        const directory = current.path;
+        changing = true;
+        updateActionState();
+        status.textContent = tr('正在粘贴…', 'Pasting…');
+        try {
+            const result = await runOpsJob(tr('正在复制…', 'Copying…'), {action:'copy', path:item.path, directory, root});
+            if (gameFilesView === view) {
+                await loadDirectory(directory, null, new Set([result.name]));
+                status.textContent = tr('已粘贴「' + (result.name || item.name) + '」。', 'Pasted "' + (result.name || item.name) + '".');
+            }
+        } catch (error) {
+            status.textContent = gmError(error);
+        } finally {
+            changing = false;
+            if (gameFilesView === view) updateActionState();
+            endWorkbenchOperation();
+        }
+    }
+
+    function storageLabel(path) {
+        for (const button of remote.children) {
+            if (button.dataset.storage === path) return button.textContent;
+        }
+        return '';
+    }
+
+    async function loadDirectory(path, selectedPath = null, highlightNames = new Set()) {
         const request = ++directoryRequest;
         status.textContent = tr('正在读取目录…', 'Reading folder…');
         try {
@@ -314,7 +477,7 @@ function openGameFiles(opener, target = null) {
                 else button.removeAttribute('aria-current');
             }
             location.replaceChildren(...result.breadcrumbs.flatMap(({name, path}, index, crumbs) => {
-                const label = name || tr('存储根目录', 'Storage root');
+                const label = (index || !isRemote ? name : '') || (isRemote ? storageLabel(path) : '') || name || tr('存储根目录', 'Storage root');
                 const currentCrumb = index === crumbs.length - 1;
                 const crumb = currentCrumb ? wbElement('span', '', label)
                     : gmButton(label, label, () => loadDirectory(path));
@@ -325,13 +488,27 @@ function openGameFiles(opener, target = null) {
                 return [separator, crumb];
             }));
             up.disabled = !result.parent;
-            updateImportAction(result.path);
             rows.replaceChildren(...result.items.map(item => {
                 const row = wbElement('li', 'game-files-row');
+                if (highlightNames.has(item.name)) row.classList.add('game-files-new');
                 if (item.directory) {
                     const button = gmButton(item.name, item.name, () => loadDirectory(item.path));
                     button.prepend(wbIcon('folder'));
-                    row.append(button);
+                    const menu = wbElement('details', 'action-menu game-files-row-menu');
+                    const summary = wbElement('summary', 'action-menu-trigger');
+                    summary.setAttribute('aria-label', tr(item.name + ' 的更多操作', 'More actions for ' + item.name));
+                    summary.append(wbIcon('dots'));
+                    const drop = wbElement('div', 'action-menu-list');
+                    const entry = (zh, en, action) => {
+                        const option = wbElement('button', 'action-menu-item', tr(zh, en));
+                        option.onclick = () => { menu.open = false; action(item); };
+                        drop.append(option);
+                    };
+                    entry('重命名', 'Rename', renameFile);
+                    entry('复制', 'Copy', copyFile);
+                    entry('删除…', 'Delete…', deleteFile);
+                    menu.append(summary, drop);
+                    row.append(button, menu);
                 } else {
                     const button = gmButton(item.name, item.name, () => selectFile(item, button));
                     button.setAttribute('aria-pressed', 'false');
@@ -344,9 +521,88 @@ function openGameFiles(opener, target = null) {
             status.textContent = result.items.length
                 ? tr(result.items.length + ' 个项目', result.items.length + ' items')
                 : tr('此目录没有文件。', 'This folder is empty.');
+            updateActionState();
         } catch (error) {
-            if (gameFilesView === view && request === directoryRequest) status.textContent = error.message;
+            if (gameFilesView !== view || request !== directoryRequest) return;
+            current = null;
+            selectFile(null);
+            up.disabled = true;
+            rows.replaceChildren();
+            status.textContent = tr('读取目录失败：', 'Could not read the folder: ') + error.message;
+            updateActionState();
         }
+    }
+
+    async function addItems() {
+        if (!current?.path || changing) return;
+        try {
+            const result = await desktopRequest('/api/desktop/pick', {kind:'items', initial:lastLocal});
+            if (gameFilesView === view && result.paths?.length) confirmAdd(result.paths);
+        } catch (error) {
+            status.textContent = error.message;
+        }
+    }
+
+    function confirmAdd(sources) {
+        const existing = new Set((current?.items || []).map(item => item.name));
+        const conflicts = sources.map(source => source.split(/[\\/]/).pop()).filter(name => existing.has(name));
+        if (!conflicts.length) { submitAdd(sources, false); return; }
+        const all = conflicts.length === sources.length;
+        const dialog = wbElement('dialog', 'desktop-confirm app-dialog');
+        const heading = wbElement('h2', '', tr('文件已存在', 'Already exists'));
+        heading.id = 'game-file-conflict-title';
+        heading.setAttribute('autofocus', '');
+        dialog.setAttribute('aria-labelledby', heading.id);
+        const names = conflicts.join('、');
+        const message = all
+            ? tr(`「${names}」已存在，是否替换？原有内容将被永久删除。`,
+                 `"${names}" already exists. Replace it? The original will be permanently deleted.`)
+            : tr(`「${names}」已存在。替换会用所选内容覆盖并永久删除原有内容；跳过则保留原有文件。`,
+                 `"${names}" already exists. Replacing overwrites and permanently deletes the original; skipping keeps it.`);
+        const actions = wbElement('div', 'desktop-confirm-actions');
+        actions.append(gmButton('取消', 'Cancel', () => dialog.close()));
+        if (!all) actions.append(gmButton('跳过同名', 'Skip existing', () => { dialog.close(); submitAdd(sources, false); }));
+        actions.append(gmButton(all ? '确认' : '替换', all ? 'Confirm' : 'Replace', () => { dialog.close(); submitAdd(sources, true); }, false));
+        dialog.append(heading, wbElement('p', '', message), actions);
+        document.body.append(dialog);
+        dialog.addEventListener('close', () => dialog.remove(), {once:true});
+        dialog.showModal();
+    }
+
+    async function submitAdd(sources, overwrite) {
+        if (!current?.path || changing || !sources.length) return;
+        if (!beginWorkbenchOperation('game-file-ops')) { status.textContent = tr('请等待当前任务完成。', 'Wait for the current task.'); return; }
+        const directory = current.path;
+        changing = true;
+        updateActionState();
+        status.textContent = tr('正在复制…', 'Copying…');
+        try {
+            const result = await runOpsJob(tr('正在复制…', 'Copying…'), {action:'add', sources, directory, root, overwrite});
+            if (gameFilesView === view) {
+                await loadDirectory(directory, null, new Set([...result.copied, ...result.replaced]));
+                status.textContent = addSummary(result);
+            }
+        } catch (error) {
+            status.textContent = gmError(error);
+        } finally {
+            changing = false;
+            if (gameFilesView === view) updateActionState();
+            endWorkbenchOperation();
+        }
+    }
+
+    function addSummary(result) {
+        const parts = [];
+        const list = names => names.length > 4 ? names.slice(0, 4).join('、') + ' 等 ' + names.length + ' 项' : names.join('、');
+        if (result.copied.length) parts.push(tr('已复制：', 'Copied: ') + list(result.copied));
+        if (result.replaced?.length) parts.push(tr('已替换：', 'Replaced: ') + list(result.replaced));
+        if (result.skipped.length) parts.push(tr('已跳过（同名已存在）：', 'Skipped (same name exists): ') + list(result.skipped));
+        if (result.failed.length) parts.push(tr('失败：', 'Failed: ') + list(result.failed.map(entry => entry.name)));
+        const recoverable = result.failed.flatMap(entry => entry.recoverable || []);
+        if (recoverable.length) parts.push(tr('可找回对象：', 'Recoverable at: ') + list(recoverable));
+        if (result.remaining.length) parts.push(tr('未完成：', 'Not finished: ') + list(result.remaining));
+        if (result.leftovers?.length) parts.push(tr('残留旧对象：', 'Leftover originals: ') + list(result.leftovers.map(entry => entry.path)));
+        return parts.length ? parts.join(tr('；', '; ')) : tr('没有可复制的内容。', 'Nothing to copy.');
     }
 }
 

@@ -1,8 +1,8 @@
 # 一次性数据迁移 / One-time profile migration
 
-退出旧版与新版应用后，先执行迁移，再首次启动新版。迁移保留配置、人工规则、封面备份、列表备份、恢复记录及缓存；更新其中的目录引用，备份和事务快照保持原始字节。成功后移除源目录，不建立旧路径别名。不会移动掌机或存储卡上的 ROM。
+退出旧版与新版应用后，先执行迁移，再首次启动新版。迁移保留配置、人工规则及缓存；更新其中的目录引用，历史文件保持原始字节。成功后移除源目录，不建立旧路径别名。不会移动掌机或存储卡上的 ROM。
 
-Quit both versions before migrating, and migrate **before first launching the new version**. Migration retains settings, manual rules, backups, recovery records and caches. It updates live directory references while preserving backup bytes. Sources are removed only after the new directories are complete. Device ROM files are not moved. Existing destination directories are refused to prevent overwriting data.
+Quit both versions before migrating, and migrate **before first launching the new version**. Migration retains settings, manual rules and caches. It updates live directory references while preserving historical file bytes. Sources are removed only after the new directories are complete. Device ROM files are not moved. Existing destination directories are refused to prevent overwriting data.
 
 macOS（源码方式 / from source）：
 

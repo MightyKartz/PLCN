@@ -6,7 +6,7 @@ import subprocess
 import sys
 
 
-PICK_KINDS = ('file', 'files', 'rom', 'directory', 'executable')
+PICK_KINDS = ('file', 'files', 'rom', 'directory', 'executable', 'items')
 
 
 def helper_pick(kind, initial=''):
@@ -16,7 +16,7 @@ def helper_pick(kind, initial=''):
     root.withdraw()
     root.attributes('-topmost', True)
     try:
-        options = {'title': {'files':'RetroArch 助手 — 选择游戏文件', 'file':'RetroArch 助手 — 选择游戏列表', 'rom':'RetroArch 助手 — 选择新版 ROM','directory':'RetroArch 助手 — 选择目录','executable':'RetroArch 助手 — 选择 chdman 程序'}[kind]}
+        options = {'title': {'files':'RetroArch 助手 — 选择游戏文件', 'file':'RetroArch 助手 — 选择游戏列表', 'rom':'RetroArch 助手 — 选择新版 ROM','directory':'RetroArch 助手 — 选择目录','executable':'RetroArch 助手 — 选择 chdman 程序','items':'RetroArch 助手 — 选择游戏文件或文件夹'}[kind]}
         # On macOS, a parent makes the native panel a sheet attached to that
         # window. Our hidden helper window has no usable on-screen position;
         # let macOS place a standalone panel instead of an off-screen sheet.
@@ -30,7 +30,8 @@ def helper_pick(kind, initial=''):
             return filedialog.askopenfilename(**options)
         if kind == 'file':
             return filedialog.askopenfilename(filetypes=[('RetroArch playlist', '*.lpl')], **options)
-        if kind == 'files':
+        if kind in ('files', 'items'):
+            # tkinter cannot mix files and folders in one panel; 'items' degrades to files.
             return list(filedialog.askopenfilenames(**options))
         return filedialog.askdirectory(**options)
     finally:

@@ -1,6 +1,5 @@
-"""Locked playlist writeback, backups, readback verification and artwork tasks."""
+"""Locked playlist writeback, readback verification and artwork tasks."""
 from pathlib import Path
-from datetime import datetime
 import os
 import time
 from playlist_manager import PlaylistManager
@@ -12,19 +11,6 @@ from playlist_proposals import (
     normalize_value,
     proposal_matches_item,
 )
-
-
-def timestamped_backup_path(playlist_path):
-    backup_dir = app_paths.user_data_dir() / 'playlist-backups'
-    backup_dir.mkdir(parents=True, exist_ok=True)
-    name = Path(playlist_path).name
-    base_path = backup_dir / f"{name}.bak-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
-    backup_path = str(base_path)
-    suffix = 1
-    while os.path.exists(backup_path):
-        backup_path = f"{base_path}-{suffix}"
-        suffix += 1
-    return backup_path
 
 
 def find_playlist_item_by_path(items, target_path):
@@ -141,7 +127,7 @@ def applied_record_verified(record, items):
     return False
 
 
-def apply_changes(playlist_path, changes, thumbnails_dir, backup=True, progress_callback=None, download_thumbnails=True, cancel_check=None, write_names=True, record_history=True, expected_digest=None):
+def apply_changes(playlist_path, changes, thumbnails_dir, progress_callback=None, download_thumbnails=True, cancel_check=None, write_names=True, expected_digest=None):
     from task_control import checkpoint
     checkpoint(cancel_check)
     if not isinstance(changes, list) or any(not isinstance(change, dict) for change in changes):
@@ -149,22 +135,15 @@ def apply_changes(playlist_path, changes, thumbnails_dir, backup=True, progress_
     with file_lock(playlist_path):
         if expected_digest is not None and file_digest(playlist_path) != expected_digest:
             raise ValueError('游戏列表在汇总后已改变，请重新生成汇总：' + str(playlist_path))
-        return _apply_changes_locked(playlist_path, changes, thumbnails_dir, backup, progress_callback, download_thumbnails, cancel_check, write_names, record_history)
+        return _apply_changes_locked(playlist_path, changes, thumbnails_dir, progress_callback, download_thumbnails, cancel_check, write_names)
 
 
-def _apply_changes_locked(playlist_path, changes, thumbnails_dir, backup=True, progress_callback=None, download_thumbnails=True, cancel_check=None, write_names=True, record_history=True):
+def _apply_changes_locked(playlist_path, changes, thumbnails_dir, progress_callback=None, download_thumbnails=True, cancel_check=None, write_names=True):
     """
     Applies the changes to the playlist and downloads thumbnails.
     """
-    backup_path = None
-    if backup and write_names:
-        import shutil
-        backup_path = timestamped_backup_path(playlist_path)
-        shutil.copy2(playlist_path, backup_path)
-        print(f"Backed up playlist to {backup_path}")
 
     writeback = {
-        "backup_path": backup_path,
         "applied": [],
         "skipped": [],
         "failed": [],
@@ -293,13 +272,6 @@ def _apply_changes_locked(playlist_path, changes, thumbnails_dir, backup=True, p
             failed_record["reason"] = "readback_mismatch"
             writeback["failed"].append(failed_record)
 
-    if record_history and write_names and writeback['applied'] and backup_path:
-        try:
-            from repair_history import record_write
-            writeback['history_id'] = record_write(playlist_path, backup_path, len(writeback['applied']))
-        except Exception as error:
-            writeback['history_warning'] = str(error)
-
     download_tasks = [
         (record.get("system"), record.get("thumbnail_source"), record.get("new_label"))
         for record in writeback["applied"]
@@ -344,7 +316,6 @@ def _apply_changes_locked(playlist_path, changes, thumbnails_dir, backup=True, p
         "applied": [apply_summary_applied_record(record) for record in writeback["applied"]],
         "skipped": [apply_summary_skipped_record(record) for record in writeback["skipped"]],
         "verification": verification,
-        "backup_path": backup_path,
     }
 
     def finalize(download_summary):
@@ -352,7 +323,7 @@ def _apply_changes_locked(playlist_path, changes, thumbnails_dir, backup=True, p
         return wrap_apply_result(download_summary, apply_summary)
 
     # Publish existing artwork under the new playlist label after verified writes.
-    # Old files are retained so a playlist backup remains usable.
+    # Old files are retained alongside renamed artwork.
     from artwork_resolver import artwork_path, valid_image_file, THUMBNAIL_TYPES
     from safe_io import atomic_write_bytes
     for record in writeback['applied']:

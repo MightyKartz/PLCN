@@ -129,14 +129,14 @@ function closeGameManagement({returnToLibrary = false} = {}) {
     if (returnToLibrary) closeGameFiles();
     else if (typeof gameFilesView !== 'undefined') gameFilesView?.refresh();
     (document.getElementById('game-files-workspace')?.hidden === false
-        ? document.getElementById('game-files-import') : document.getElementById('game-files-button'))?.focus();
+        ? document.getElementById('game-files-add') : document.getElementById('game-files-button'))?.focus();
 }
 function gmInput(form, id, zh, en, value = '') {
     const label = wbElement('label', 'gm-field', workbenchText(zh, en));
     const input = wbElement('input', ''); input.id = 'gm-' + id; input.type = 'text'; input.value = value;
     input.oninput = () => {input.removeAttribute('aria-invalid'); gmInvalidate(); if (id === 'destination') {gmField('android').value = ''; gmRenderDestinationSummary();} gmScheduleAnalyze();}; label.append(input); form.append(label); return input;
 }
-async function openGameImport(destination = '') {
+async function openGameImport(destination = '', {autoPick = ''} = {}) {
     if (workbench.operation) return;
     const root = document.getElementById('retroarch_root').value;
     if (!root || root.startsWith('adb://')) { showStatus(workbenchText('请先打开 RetroArch 游戏库。', 'Open a RetroArch library first.'), 'error'); return; }
@@ -147,8 +147,12 @@ async function openGameImport(destination = '') {
     gmField('status').textContent = workbenchText('正在读取目标游戏库…', 'Loading the destination library…');
     try {
         const setup = await desktopRequest('/api/content/setup?root=' + encodeURIComponent(root));
+        const inferred = gameManagement.destinationHint
+            ? await desktopRequest('/api/content/infer', {root, directory:gameManagement.destinationHint}).catch(() => ({}))
+            : {};
         if (generation !== gameManagement.generation) return;
         gameManagement.setup = setup;
+        const compact = Boolean(inferred.system && setup.systems.some(system => system.name === inferred.system));
         const sourcePane = wbElement('section', 'gm-source-pane'); sourcePane.id = 'gm-files'; form.append(sourcePane); gmRenderFiles();
         const targetPane = wbElement('section', 'gm-target-pane');
         const destHead = wbElement('div', 'gm-section-head'); destHead.append(wbElement('h3', '', workbenchText('2 · 确认位置', '2 · Confirm location')));
@@ -162,9 +166,10 @@ async function openGameImport(destination = '') {
         const label = wbElement('label', 'gm-field', workbenchText('主机', 'System'));
         const select = wbElement('select', ''); select.id = 'gm-system';
         select.append(...setup.systems.map(system => new Option(getSystemAbbreviation(system.name) + ' · ' + wbSystemName(system.name), system.name)));
-        const selected = document.getElementById('system_name').value;
+        const selected = compact ? inferred.system : document.getElementById('system_name').value;
         if (setup.systems.some(system => system.name === selected)) select.value = selected;
-        select.onchange = gmChangeSystem; label.append(select); targetPane.append(label);
+        select.onchange = gmChangeSystem; label.append(select);
+        if (compact) fields.append(label); else targetPane.append(label);
         const destination = gmInput(fields, 'destination', '复制到目录', 'Copy to folder');
         if (setup.android) destination.type = 'hidden';
         const browse = gmButton('选择目标目录', 'Choose destination', gmBrowseDestination); browse.id = 'gm-pick-destination'; destination.parentElement.append(browse);
@@ -181,6 +186,8 @@ async function openGameImport(destination = '') {
         const playlistPath = wbElement('p', 'gm-path'); playlistPath.id = 'gm-playlist-path'; advanced.append(playlistPath);
         targetPane.append(fields); form.append(targetPane);
         form.disabled = false; gmField('status').textContent = workbenchText('选择文件或目录后开始分析。', 'Choose files or a folder to start the analysis.'); gmChangeSystem();
+        if (inferred.android_directory) gmField('android').value = inferred.android_directory;
+        if (autoPick) gmPickSource(autoPick);
     } catch (error) { if (generation === gameManagement.generation) gmField('status').textContent = gmError(error); }
 }
 function gmChangeSystem() {
@@ -240,7 +247,9 @@ async function runGameJob(route, payload, onProgress) {
                 const job = JSON.parse(event.data);
                 onProgress(job);
                 if (job.status === 'completed') {events.close(); resolve(job.result);}
-                else if (job.error || ['failed', 'cancelled'].includes(job.status)) {events.close(); reject(new Error(job.error || workbenchText('任务已取消', 'Task cancelled')));}
+                else if (job.error || ['failed', 'cancelled'].includes(job.status)) {events.close();
+                    const error = new Error(job.error || workbenchText('任务已取消', 'Task cancelled'));
+                    error.result = job.result; error.cancelled = job.status === 'cancelled'; reject(error);}
             };
             events.onerror = async () => {
                 onProgress({connectionError:true, message:workbenchText('进度连接中断，正在重连；任务不会重复提交。', 'Progress disconnected; reconnecting without resubmitting the task.')});
@@ -338,7 +347,7 @@ async function openGameRemoval(indices) {
     try {
         const {id, result} = await gmJob('/api/games/preview', payload); gameManagement.preview = id;
         for (const item of result.removed) gmField('results').append(wbElement('strong', 'gm-result-name', item.label || item.path), wbElement('small', 'gm-path', item.path));
-        gmField('status').textContent = workbenchText(`将移出 ${result.count} 个列表条目。修改前会保存列表备份。`, `${result.count} playlist entries will be removed. A playlist backup is saved first.`);
+        gmField('status').textContent = workbenchText(`将移出 ${result.count} 个列表条目。`, `${result.count} playlist entries will be removed.`);
         gmField('apply').hidden = false; gmField('apply').disabled = false;
     } catch (error) {gmField('status').textContent = gmError(error);}
 }
@@ -353,13 +362,12 @@ async function applyGameManagement() {
         const results = gmField('results');
         if (gameManagement.mode === 'import') {
             gmStatus(workbenchText(`新增 ${result.added} 个条目 · 复制 ${result.copied} 个文件 · 复用 ${result.reused} 个 · 跳过 ${result.skipped} 个 · 失败 ${result.failed} 个`, `Added ${result.added} entries · Copied ${result.copied} files · Reused ${result.reused} · Skipped ${result.skipped} · Failed ${result.failed}`));
-            const backup = wbElement('details', 'gm-backup'); backup.append(wbElement('summary', '', workbenchText('备份位置', 'Backup location')), wbElement('p', 'gm-path', result.backup_directory));
-            results.replaceChildren(wbElement('h3','',workbenchText('3 · 导入结果', '3 · Import result')), wbElement('p','',gmField('destination-summary').textContent), wbElement('p','',workbenchText('文件复制与列表更新已完成；请在掌机验证启动。', 'Files copied and playlist updated; test startup on the handheld.')), backup); results.hidden = false;
+            results.replaceChildren(wbElement('h3','',workbenchText('3 · 导入结果', '3 · Import result')), wbElement('p','',gmField('destination-summary').textContent), wbElement('p','',workbenchText('文件复制与列表更新已完成；请在掌机验证启动。', 'Files copied and playlist updated; test startup on the handheld.'))); results.hidden = false;
             gmField('fields').hidden = true; gmField('apply').hidden = true;
 
         } else {
-            gmStatus(workbenchText(`完成：新增 ${result.added} 个条目，移出 ${result.removed} 个条目。备份可在列表修改记录中查看。`, `Done: ${result.added} entries added, ${result.removed} removed. The backup is available in Playlist history.`));
-            results.replaceChildren(wbElement('p', 'gm-path', result.backup_directory));
+            gmStatus(workbenchText(`完成：新增 ${result.added} 个条目，移出 ${result.removed} 个条目。`, `Done: ${result.added} entries added, ${result.removed} removed.`));
+            results.replaceChildren();
         }
         const playlistPath = gameManagement.mode === 'import' ? result.playlist_path : previousPlaylist;
         resetGameLibrary();
@@ -368,7 +376,7 @@ async function applyGameManagement() {
         if (selected >= 0) await selectScannedPlaylist(selected);
         const footer = gmField('dialog').querySelector('footer');
         if (gameManagement.mode === 'import') {
-            const more = gmButton('继续添加', 'Add more', () => openGameImport(gameManagement.destinationHint)); more.id = 'gm-add-more';
+            const more = gmButton('继续添加', 'Add more', () => openGameImport(gameManagement.destinationHint, {autoPick: 'files'})); more.id = 'gm-add-more';
             const complete = gmButton('补全名称与封面', 'Complete names and artwork', () => {closeGameManagement({returnToLibrary:true}); startCompletion();}); complete.id = 'gm-complete-metadata';
             footer.append(more, complete);
         }
@@ -378,25 +386,50 @@ async function applyGameManagement() {
     }
 }
 function renderGameSelection(visible) {
-    const toolbar = document.getElementById('game-selection-toolbar'); toolbar.classList.remove('has-selection'); toolbar.replaceChildren();
+    if (typeof renderFileSyncNotice === 'function') renderFileSyncNotice();
+    const toolbar = document.getElementById('game-selection-toolbar'); toolbar.classList.remove('has-selection', 'has-status'); toolbar.replaceChildren();
     const headAll = document.getElementById('game-library-select-all');
     const allChecked = Boolean(visible.length) && visible.every(item => gameLibrary.selection.has(item.index));
     headAll.checked = allChecked;
     headAll.indeterminate = !allChecked && visible.some(item => gameLibrary.selection.has(item.index));
     headAll.disabled = Boolean(workbench.operation) || !visible.length;
+    const selectVisible = workbenchText('选择当前显示的游戏', 'Select visible games');
+    headAll.title = selectVisible; headAll.setAttribute('aria-label', selectVisible);
     headAll.onchange = () => {for (const item of visible) {if (headAll.checked) gameLibrary.selection.add(item.index); else gameLibrary.selection.delete(item.index);} renderGameLibrary();};
-    toolbar.hidden = !gameLibrary.selection.size || !gameLibrary.data?.items.length;
+    const hasSelection = Boolean(gameLibrary.selection.size) && Boolean(gameLibrary.data?.items.length);
+    const items = (gameLibrary.data?.items || []).filter(item => typeof workbenchOverview === 'undefined'
+        || workbenchOverview.scope === 'all' || wbStorageKind(item.rom_path) === workbenchOverview.scope);
+    const missingCount = hasSelection ? 0 : items.filter(item => gameMatchesImageFilter(item, 'missing')).length;
+    toolbar.hidden = !hasSelection && !missingCount;
     if (toolbar.hidden) return;
+    if (!hasSelection) {
+        toolbar.classList.add('has-status');
+        const complete = gmButton('补全当前列表', 'Complete this list', () => startCompletion());
+        complete.id = 'games-complete-button'; complete.disabled = document.getElementById('preview-button').disabled;
+        toolbar.append(wbIcon('photo'),
+            wbElement('span', 'overview-status-text', workbenchText(`${missingCount} 款游戏的图片待补全`, `${missingCount} ${missingCount === 1 ? 'game' : 'games'} missing artwork`)),
+            complete);
+        return;
+    }
+    toolbar.classList.add('has-selection');
     const all = wbElement('label', 'game-select-label');
     const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.checked = allChecked;
     checkbox.indeterminate = headAll.indeterminate; checkbox.disabled = Boolean(workbench.operation);
+    checkbox.title = selectVisible; checkbox.setAttribute('aria-label', selectVisible);
     checkbox.onchange = () => {for (const item of visible) {if (checkbox.checked) gameLibrary.selection.add(item.index); else gameLibrary.selection.delete(item.index);} renderGameLibrary();};
     all.append(checkbox, wbElement('span', '', workbenchText('全选', 'Select all'))); toolbar.append(all);
-    toolbar.classList.add('has-selection');
-    toolbar.append(wbElement('span', '', workbenchText(`已选 ${gameLibrary.selection.size} 项`, `${gameLibrary.selection.size} selected`)));
-    const complete = gmButton('补全', 'Complete', () => runDirectCompletion({entries:gameLibrary.data.items.filter(item => gameLibrary.selection.has(item.index)).map(item => [item.index, item.rom_path])})); complete.id = 'game-selection-complete'; complete.disabled = Boolean(workbench.operation); toolbar.append(complete);
+    const count = gameLibrary.selection.size;
+    toolbar.append(wbElement('span', '', workbenchText(`已选 ${count} 项`, `${count} selected`)));
+    const complete = gmButton(`补全所选 ${count} 项`, `Complete ${count} selected`, () => runDirectCompletion({entries:gameLibrary.data.items.filter(item => gameLibrary.selection.has(item.index)).map(item => [item.index, item.rom_path])}), false); complete.id = 'game-selection-complete'; complete.disabled = Boolean(workbench.operation); toolbar.append(complete);
     toolbar.append(wbElement('span', 'selection-spacer'));
-    const remove = gmButton('移出列表…', 'Remove from playlist…', () => openGameRemoval([...gameLibrary.selection])); remove.id = 'game-selection-remove'; remove.disabled = Boolean(workbench.operation); toolbar.append(remove);
+    const menu = wbElement('details', 'action-menu'); menu.id = 'game-selection-actions';
+    const summary = wbElement('summary', 'btn btn-muted action-menu-trigger', workbenchText('更多操作', 'More actions'));
+    summary.append(wbIcon('chevron-down'));
+    const drop = wbElement('div', 'action-menu-list');
+    const remove = wbElement('button', 'action-menu-item', workbenchText('移出列表…', 'Remove from playlist…'));
+    remove.type = 'button'; remove.id = 'game-selection-remove'; remove.disabled = Boolean(workbench.operation);
+    remove.onclick = () => {menu.open = false; openGameRemoval([...gameLibrary.selection]);};
+    drop.append(remove); menu.append(summary, drop); toolbar.append(menu);
     const clear = wbElement('button', 'btn btn-muted dialog-icon-button');
     wbIconButton(clear, 'x', workbenchText('取消选择', 'Clear selection'));
     clear.id = 'game-selection-clear'; clear.type = 'button';
@@ -406,6 +439,7 @@ function renderGameSelection(visible) {
 
 document.addEventListener('click', event => {
     if (gameManagement.open && !gameManagement.busy && event.target.closest('#scanned-playlists button, #library-all-systems')) closeGameManagement();
+    document.querySelectorAll('.action-menu[open]').forEach(menu => {if (!menu.contains(event.target)) menu.open = false;});
 });
 document.addEventListener('keydown', event => {
     if (event.key !== 'Escape' || !gameLibrary.selection.size || workbench.operation) return;

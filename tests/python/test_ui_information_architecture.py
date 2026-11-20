@@ -30,18 +30,18 @@ def test_primary_labels_are_clear():
     assert 'batch-write-names' not in html
     assert 'batch-review-status' not in html
     assert 'id="action-toast"' in html
-    assert 'id="action-toast-undo"' in html
+    assert 'id="action-toast-undo"' not in html
     assert 'id="action-toast-details"' in html
     assert 'id="action-toast-close"' in html
     assert 'id="completion-cancel"' in html
     assert 'runDirectCompletion' in html
-    assert 'undoCompletion' in html
+    assert 'undoCompletion' not in html
     assert 'showActionToast' in html
     assert 'watchCompletionJob' in html
     assert 'cancelCompletion' in html
-    assert '最近补全' in html
-    assert '/api/completion/receipts' in html
-    assert '/api/completion/undo' in html
+    assert '本次运行的补全' in html
+    assert '/api/completion/receipts' not in html
+    assert '/api/completion/undo' not in html
     assert "全部游戏列表" not in html
     assert "应用已选修复" in html
     assert "修复状态" in html
@@ -295,7 +295,7 @@ def test_home_overview_uses_minimal_concept():
 
     assert 'id="automatic-scan-button"' not in html
     assert 'automatic-scan-button' not in html
-    assert 'id="game-files-button" class="btn"' in html
+    assert 'id="game-files-button" class="btn btn-muted"' in html
     assert 'id="manual-add-button"' not in html
     assert "completion-entry').hidden = !state.previewValid" in html
     assert "'overview-status'" in html
@@ -342,8 +342,8 @@ def test_add_games_workspace_is_single_column_with_auto_analysis():
     assert '正在分析' in html
     assert '已导入 ' in html
     assert 'Imported ' in html
-    assert '备份位置' in html
-    assert 'Backup location' in html
+    assert '备份位置' not in html
+    assert 'Backup location' not in html
     assert 'gm-status-problem' in html
     assert 'previewGameImport' in html
 
@@ -352,9 +352,10 @@ def test_system_page_uses_minimal_concept():
     html = read_template()
 
     assert 'id="game-library-note"' not in html
-    assert 'id="games-status"' in html
+    assert 'id="games-status"' not in html
     assert 'games-complete-button' in html
     assert 'overview-status-text' in html
+    assert '补全当前列表' in html
     assert '缺封面' in html
     assert 'Missing artwork' in html
     assert 'workspace-count' in html
@@ -373,8 +374,9 @@ def test_system_page_uses_minimal_concept():
     assert 'inspector-preview-name' not in html
     assert 'previewGameName' not in html
     assert 'inspector-edit-review' not in html
-    assert 'inspector-actions' in html
+    assert 'inspector-actions-menu' in html
     assert 'inspector-artwork-folder' in html
+    assert 'inspector-copy-path' in html
     assert 'inspector-footer' in html
     assert '在游戏文件中查看' in html
     assert 'preview_job_id:preview.id' in html

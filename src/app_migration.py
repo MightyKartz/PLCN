@@ -54,8 +54,8 @@ def migrate(source, cache_source=None):
                 temporary = Path(resources.enter_context(tempfile.TemporaryDirectory(prefix='.profile-migration-', dir=new.parent)))
                 stage = temporary / 'profile'
             shutil.copytree(old, stage, ignore=shutil.ignore_patterns('instance.lock'))
-            # Only live indexes and receipts change. Backups and transaction snapshots
-            # retain their exact bytes, including the digests used by guarded restore.
+            # Only live indexes and stored manifests change; file payloads retain
+            # their exact bytes.
             documents = list(stage.glob('*.json')) + list((stage / 'history').glob('*.json'))
             documents += [p for p in stage.glob('*/*/manifest.json') if p.parts[-3] != 'packs']
             if old != source:

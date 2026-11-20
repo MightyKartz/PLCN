@@ -17,7 +17,7 @@ test('late deployment preview cannot enable apply after configuration or library
 test('one confirmation sends only a single server-owned deployment plan ID',async()=>{
     const {c}=harness(),pending=deferred();c.relocationKey=()=> 'same';Object.assign(c.store,{preview:'plan',key:'same'});let count=0;
     c.relocationJob=(route,payload)=>{count++;assert.deepEqual(JSON.parse(JSON.stringify(payload)),{preview_job_id:'plan'});return pending.promise;};
-    const task=c.applyRomRelocation();await c.applyRomRelocation();assert.equal(count,1);pending.resolve({result:{backup_directory:'/backup'}});await task;
+    const task=c.applyRomRelocation();await c.applyRomRelocation();assert.equal(count,1);pending.resolve({result:{status:'completed'}});await task;
     assert.equal(c.store.preview,null);
 });
 test('changed runtime report invalidates a ready deployment',async()=>{

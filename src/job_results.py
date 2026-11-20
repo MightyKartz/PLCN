@@ -54,7 +54,7 @@ def split_plcn_apply_result(result):
     return result or {}, None
 
 
-def build_apply_job_result(summary, apply_summary=None, changes=None, transport="local", remote_backup=None):
+def build_apply_job_result(summary, apply_summary=None, changes=None, transport="local"):
     writeback = summary.get("writeback") if isinstance(summary, dict) else None
     if isinstance(writeback, dict):
         applied_count = len(writeback.get("applied") or [])
@@ -68,5 +68,4 @@ def build_apply_job_result(summary, apply_summary=None, changes=None, transport=
         "download_summary": summary,
         "apply": apply_summary,
         "transport": transport,
-        "remote_backup": remote_backup,
     }

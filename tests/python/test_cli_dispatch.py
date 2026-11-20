@@ -66,5 +66,4 @@ def test_cli_directory_pipeline_analyzes_writes_and_skips_unknown_system(tmp_pat
     assert json.loads(playlist.read_text(encoding='utf-8'))['items'][0]['label'] == '游戏'
     assert empty.read_bytes() == empty_original
     assert downloads and all(task == (system, 'Game', '游戏') for task in downloads)
-    backups = list((app_paths.user_data_dir() / 'playlist-backups').glob('*.bak-*'))
-    assert len(backups) == 1 and backups[0].read_bytes() == original
+    assert not (app_paths.user_data_dir() / 'playlist-backups').exists()

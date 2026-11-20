@@ -13,7 +13,7 @@ import mtp_runtime as mtp
 from artwork_identity import memory_key
 from content_scan import read, folders, join
 from disc_inspection import inspect_discs, Reader, METADATA_LIMIT
-from m3u_transaction import patch, operations_dir, patch_value
+from m3u_transaction import patch, patch_value
 from rom_paths import rom_title
 
 SAVE_SUFFIXES={'mednafen_saturn':['.bkr','.bcr','.smpc'], 'mednafen_psx':['.srm','.0.mcr','.1.mcr'],
@@ -316,7 +316,7 @@ def prepare(payload):
     affected=sorted({entry['playlist'] for file in graph['files'] if reader.locate(file['path'])==location for entry in file['playlist_references']})
     return {'playlist':playlist,'system':system,'label':label.strip(),'mode':mode,'target':target,'target_access':location,
             'content':content.decode('utf-8'),'disc_paths':paths,'core':core,'saves':saves,'issues':list(dict.fromkeys(issues)),
-            'backup_root':str(operations_dir()),'notes':notes+['原光盘、音轨、存档、即时存档和其他列表条目均保留；运行与换盘仍需真机验证',
+            'notes':notes+['原光盘、音轨、存档、即时存档和其他列表条目均保留；运行与换盘仍需真机验证',
                            '即时存档不迁移，未验证与新入口或新盘序兼容'],
             'removed_indices':[entry['index'] for entry in removed],'retained_discs':retained_discs,'artwork_copies':artwork_copies,'affected_playlists':affected,
             'can_apply':not issues and bool(writes or patches),'writes':writes,'patches':patches,'dependencies':dependencies}

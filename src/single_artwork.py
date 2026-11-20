@@ -301,7 +301,7 @@ def read_target(target):
         if not path.exists():
             return None
         if path.stat().st_size > LIMIT:
-            raise ValueError('已有图片超过 12 MiB，无法安全备份')
+            raise ValueError('已有图片超过 12 MiB，无法安全核对')
         return path.read_bytes()
     serial, remote = parse_adb_uri(target)
     name = shlex.quote(remote)
@@ -448,14 +448,14 @@ def write_selected_images(manifest, directory, token, receipt):
             raise RuntimeError('目标图片已改变，请重新预览后确认')
     manifest['image_writes_started'] = True
     atomic_write_json(receipt, manifest)
-    backups = []
+    written, leftovers = [], []
     for asset in assets:
-        backup = asset['target'] + '.bak-' + token if asset['original_digest'] is not None else None
         if digest(read_target(asset['target'])) != asset['digest']:
-            backup = write_target(asset['target'], asset['content'], asset['original_digest'], suffix=token)
-        if backup and read_target(backup) is not None:
-            backups.append({'kind': asset['kind'], 'target': asset['target'], 'backup': backup})
-    return backups
+            leftover = write_target(asset['target'], asset['content'], asset['original_digest'], suffix=token)
+            if leftover:
+                leftovers.append(leftover)
+        written.append({'kind': asset['kind'], 'target': asset['target']})
+    return written, leftovers
 
 
 def preview(payload):
@@ -498,7 +498,7 @@ def preview(payload):
     token = uuid.uuid4().hex
     directory = app_paths.cache_dir() / 'artwork-previews'
     directory.mkdir(parents=True, exist_ok=True)
-    # Expired previews and receipts are disposable; backups live beside targets.
+    # Expired previews and receipts are disposable.
     for old in directory.iterdir():
         if old.is_file() and old.suffix in {'.json', '.png', '.lpl'} and time.time() - old.stat().st_mtime > 86400:
             old.unlink(missing_ok=True)
@@ -561,16 +561,6 @@ def preview(payload):
             'current_image_url': primary['current_image_url'], 'current_status': primary['current_status']}
 
 
-def backup_location(target, suffix):
-    if mtp.is_mtp(target):
-        return target + '.bak-' + suffix
-    if target.lower().endswith('.lpl'):
-        root = app_paths.user_data_dir() / 'playlist-backups'
-        root.mkdir(parents=True, exist_ok=True)
-        return str(root / (target.replace('\\', '/').rsplit('/', 1)[-1] + '.bak-' + suffix))
-    return target + '.bak-' + suffix
-
-
 def write_target(target, content, expected, suffix=None):
     if mtp.is_mtp(target):
         return mtp.write(target, content, expected, suffix=suffix)
@@ -578,10 +568,8 @@ def write_target(target, content, expected, suffix=None):
     if digest(before) != expected:
         raise RuntimeError('目标图片已改变，请重新预览后确认')
     suffix = suffix or uuid.uuid4().hex
-    backup = backup_location(target, suffix) if before is not None else None
     if not is_adb_uri(target):
-        if backup:
-            atomic_write_bytes(backup, before)
+        if before is not None:
             atomic_write_bytes(target, content, expected)
         else:
             # An external creator must not be overwritten between review and write.
@@ -619,14 +607,6 @@ def write_target(target, content, expected, suffix=None):
                 raise RuntimeError('设备暂存图片校验失败，原图未替换')
             if digest(read_target(target)) != expected:
                 raise RuntimeError('设备图片已改变，请重新预览')
-            if backup:
-                if is_adb_uri(backup):
-                    _, remote_backup = parse_adb_uri(backup)
-                    adb_command(serial, f'cp {shlex.quote(remote)} {shlex.quote(remote_backup)}')
-                else:
-                    atomic_write_bytes(backup, before)
-                if digest(read_target(backup)) != expected:
-                    raise RuntimeError('旧图片备份校验失败，原图未替换')
             adb_command(serial, f'mv {shlex.quote(remote_stage)} {shlex.quote(remote)}')
         finally:
             try:
@@ -634,16 +614,15 @@ def write_target(target, content, expected, suffix=None):
             except Exception:
                 pass
     if digest(read_target(target)) != digest(content):
-        raise RuntimeError('图片写入后校验失败，请重新读取；旧图备份：' + str(backup or '无'))
-    return backup
+        raise RuntimeError('图片写入后校验失败，请重新读取')
 
 
-def written_images(manifest, directory, token, backups):
-    """Report one URL and backup per staged image, in the order they were previewed."""
+def written_images(manifest, directory, token, written):
+    """Report one URL per written image, in the order they were previewed."""
     by_kind = {}
-    for entry in backups:
+    for entry in written:
         by_kind.setdefault(entry['kind'], entry)
-    return [{'kind': image['kind'], 'target': image['target'], 'backup': by_kind.get(image['kind'], {}).get('backup'),
+    return [{'kind': image['kind'], 'target': image['target'],
              'image_url': '/api/thumbnail/preview?path=' + quote(image['target'], safe='') + '&v=after-' + token}
             for image in manifest_images(manifest)]
 
@@ -670,10 +649,13 @@ def apply(token):
                     content = image_cache(directory, token, image).read_bytes()
                     if digest(content) != image['image_digest']:
                         raise RuntimeError('候选图片已改变，请重新预览')
-                written = written_images(manifest, directory, token, write_selected_images(manifest, directory, token, path))
-                result = {'images': written, 'target': written[0]['target'], 'backup': written[0]['backup'],
+                written_list, leftovers = write_selected_images(manifest, directory, token, path)
+                written = written_images(manifest, directory, token, written_list)
+                result = {'images': written, 'target': written[0]['target'],
                           'index': manifest['index'], 'playlist_path': manifest['playlist_path'],
                           'label': manifest['label'], 'kind': written[0]['kind'], 'image_url': written[0]['image_url']}
+                if leftovers:
+                    result['cleanup_warnings'] = ['图片已写入，但旧版本残留未能移除：' + item for item in leftovers]
             manifest['result'] = result
             atomic_write_json(path, manifest)
             warning = remember_sources(manifest)
@@ -685,8 +667,8 @@ def apply(token):
 def apply_independent(manifest, directory, token, receipt):
     """Create independent images first; publish the one-row label change last.
 
-    A deterministic backup and recorded write progress allow a retry after a
-    lost response. Unchanged shared images are never overwritten or deleted.
+    Recorded write progress allows a retry after a lost response. Unchanged
+    shared images are never overwritten or deleted.
     """
     playlist_path = manifest['playlist_path']
     lock_path = app_paths.cache_dir() / 'locks' / ('playlist-' + digest(playlist_path.encode())) if is_adb_uri(playlist_path) or mtp.is_mtp(playlist_path) else Path(playlist_path)
@@ -725,28 +707,33 @@ def apply_independent(manifest, directory, token, receipt):
         manifest['writes_started'] = True
         atomic_write_json(receipt, manifest)
         # Every selected image is managed with its existing ROM alias as one resumable operation.
-        backups = write_selected_images(manifest, directory, token, receipt)
+        written_assets, leftovers = write_selected_images(manifest, directory, token, receipt)
         companion_errors = []
         for asset in manifest['companions']:
             if digest(read_target(asset['target'])) != asset['digest']:
                 try:
-                    write_target(asset['target'], (directory / asset['cache']).read_bytes(), None)
+                    leftover = write_target(asset['target'], (directory / asset['cache']).read_bytes(), None)
+                    if leftover:
+                        leftovers.append(leftover)
                 except (OSError, RuntimeError) as error:
                     # Keep the selected image and name update; report unwritten companion images.
                     companion_errors.append(str(error))
         if companion_errors:
             print('Warning: Could not copy companion artwork: ' + ' | '.join(companion_errors))
-        playlist_backup = backup_location(playlist_path, token)
         if not completed:
             try:
-                write_target(playlist_path, updated, manifest['playlist_digest'], suffix=token)
+                leftover = write_target(playlist_path, updated, manifest['playlist_digest'], suffix=token)
+                if leftover:
+                    leftovers.append(leftover)
             except Exception as error:
-                raise RuntimeError('独立图片已准备，游戏列表写入未确认；可重试查询。备份位置：' + playlist_backup) from error
-        written = written_images(manifest, directory, token, backups)
-        result = {'images': written, 'target': written[0]['target'], 'backup': written[0]['backup'], 'playlist_backup': playlist_backup,
+                raise RuntimeError('独立图片已准备，游戏列表写入未确认；可重试查询。') from error
+        written = written_images(manifest, directory, token, written_assets)
+        result = {'images': written, 'target': written[0]['target'],
                   'index': manifest['index'], 'playlist_path': playlist_path, 'label': manifest['label'],
                   'new_label': manifest['new_label'], 'kind': written[0]['kind'], 'companion_warnings': companion_errors,
                   'image_url': written[0]['image_url']}
+        if leftovers:
+            result['cleanup_warnings'] = ['已写入，但旧版本残留未能移除：' + item for item in leftovers]
         warning = remember_sources(manifest)
         if warning:
             result['memory_warning'] = warning

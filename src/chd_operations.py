@@ -65,7 +65,7 @@ def analyze(payload,cancelled=lambda: None,progress=lambda message: None):
                         sources[path]={'path':path,'size':file['size'],'sha256':mtp.digest(read(path)) if file['format']=='cue' else None}
                     row.update(eligible=True,files=paths,source_bytes=sum(sources[path]['size'] for path in paths),
                         output_name=node['id'][:12]+'-'+Path(node['path']).stem+'.chd')
-                    row['issues'].append('确认后拉取完整源到电脑备份，再检查 CUE 与逐轨内容；尚未验证可转换')
+                    row['issues'].append('确认后拉取完整源到电脑暂存，再检查 CUE 与逐轨内容；尚未验证可转换')
                 else: row['issues'].append('远程启动路径缺少传输映射')
         elif node['status']!='present' or node['issues']:
             row['issues'].append('CUE 或引用文件尚未通过检查')
@@ -103,7 +103,7 @@ def analyze(payload,cancelled=lambda: None,progress=lambda message: None):
             'tool':tool,'rows':rows,'sources':files,'input_bytes':size,'required_bytes':required,'free_bytes':free,
             'space_sufficient':free>=required,'coverage':graph['coverage'],
             'observed_bytes':sum(node['size'] or 0 for node in graph['files']),
-            'estimated_savings':None,'device_space':{'status':'not_required','message':'本步不上传；回传方案会另行检查目标存储、电脑备份与临时卷空间'},
+            'estimated_savings':None,'device_space':{'status':'not_required','message':'本步不上传；回传方案会另行检查目标存储与暂存空间'},
             'can_convert':bool(eligible) and tool['available'],
             'remote':reader.remote,'mode':'local_copy','note':'只在电脑生成 CHD；不改列表、M3U、核心、存档或原光盘。压缩率未知，完成后报告实际大小。'}
 

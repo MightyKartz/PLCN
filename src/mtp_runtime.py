@@ -272,7 +272,10 @@ def digest(content):
 
 
 def write(value, content, expected, suffix=None):
-    """Verify staging and backup before replacing the named object; return backup URI."""
+    """Stage, verify and atomically swap the named object in place.
+
+    Returns the leftover `.plcn-*.old` URI when cleanup fails after the new
+    content was verified, else None."""
     with session(value) as (handle, storage, parts):
         before = read(value)
         if digest(before) != expected:
@@ -284,7 +287,6 @@ def write(value, content, expected, suffix=None):
         stage_uri = uri(parse(value)[0], storage, '/'.join(parts[:-1] + [stage_name]))
         if read(stage_uri) != content:
             raise RuntimeError('MTP 暂存校验失败，原文件未替换')
-        backup = None
         old = resolve(handle, storage, parts)
         def rename(ident, name):
             metadata = library().LIBMTP_new_file_t()
@@ -296,21 +298,24 @@ def write(value, content, expected, suffix=None):
                 library().LIBMTP_destroy_file_t(metadata)
         if digest(read(value)) != expected:
             raise RuntimeError('设备文件在传输期间发生变化')
+        old_name = parts[-1] + '.plcn-' + suffix + '.old'
         if old:
-            backup = value + '.bak-' + suffix
-            rename(old['id'], parts[-1] + '.bak-' + suffix)
-            if read(backup) != before:
-                rename(old['id'], parts[-1])
-                raise RuntimeError('MTP 原文件备份校验失败，已恢复原名称')
+            rename(old['id'], old_name)
         try:
             rename(ident, parts[-1])
             if read(value) != content:
-                raise RuntimeError('MTP 写回校验失败；备份：' + str(backup))
+                raise RuntimeError('MTP 写回校验失败')
         except RuntimeError:
+            # `ident` still holds the stage name or already the target name;
+            # removing it clears either the stray stage file or the bad write.
+            library().LIBMTP_Delete_Object(handle, ident)
             if old and read(value) is None:
                 rename(old['id'], parts[-1])
             raise
-        return backup
+        if old:
+            if library().LIBMTP_Delete_Object(handle, old['id']):
+                # New content is verified and live; only the parked object remains.
+                return uri(parse(value)[0], storage, '/'.join(parts[:-1] + [old_name]))
 
 
 def materialize(value, cache_dir=None):
@@ -368,6 +373,8 @@ def scan(value):
 
 
 def push_directory(local, target, expected_hashes=None, include_files=None):
+    """Upload changed files; returns any verified-but-uncleaned old-object URIs."""
+    leftovers = []
     for file in Path(local).rglob('*'):
         if file.is_file() and (include_files is None or str(file.relative_to(local)) in include_files):
             destination = join(target, *file.relative_to(local).parts)
@@ -375,21 +382,10 @@ def push_directory(local, target, expected_hashes=None, include_files=None):
             old = read(destination)
             if old != content:
                 expected = expected_hashes[destination] if expected_hashes is not None and destination in expected_hashes else digest(old)
-                write(destination, content, expected)
-
-
-def remove_verified(value, expected):
-    """Remove only an unchanged file created by a recorded, explicitly restored operation."""
-    with session(value) as (handle, storage, parts):
-        if digest(read(value)) != expected:
-            raise ValueError('MTP 新建文件已变化，拒绝移除')
-        entry = resolve(handle, storage, parts)
-        if entry is None or entry['folder']:
-            raise ValueError('MTP 恢复目标不是文件')
-        if library().LIBMTP_Delete_Object(handle, entry['id']):
-            raise RuntimeError('MTP 恢复时移除新建文件失败')
-        if read(value) is not None:
-            raise RuntimeError('MTP 移除后的核对失败')
+                leftover = write(destination, content, expected)
+                if leftover:
+                    leftovers.append(leftover)
+    return leftovers
 
 
 Progress = C.CFUNCTYPE(C.c_int, C.c_uint64, C.c_uint64, C.c_void_p)
@@ -468,38 +464,87 @@ def upload_file(value,source,expected,stage,cancelled=lambda: None):
         if chd_io.digest(value,cancelled)!=expected: raise ValueError('MTP 目标回读校验失败')
 
 
-def remove_file(value,expected,cancelled=lambda: None):
-    """Only a journaled source with a verified computer backup or owned output may call this."""
+def remove_file(value,expected,cancelled=lambda: None,expected_id=None):
+    """Delete one MTP file only when its content still matches the reviewed digest."""
     import chd_io
+    from task_control import TaskCancelled
     with session(value) as (handle, storage, parts):
-        if chd_io.digest(value,cancelled)!=expected: raise ValueError('MTP 待移除文件已变化：'+value)
         cancelled();entry=resolve(handle,storage,parts)
-        if not entry or entry['folder']: raise ValueError('MTP 移除目标不是文件')
-        if library().LIBMTP_Delete_Object(handle,entry['id']): raise RuntimeError('MTP 移除失败')
-        if resolve(handle,storage,parts) is not None: raise RuntimeError('MTP 移除核对失败')
+        if not entry: raise ValueError('MTP 移除目标不是文件')
+        # Identity first: a different object id means the reviewed file is gone
+        # and this path belongs to something else — never auto-delete it.
+        if expected_id is not None and entry['id']!=expected_id: raise chd_io.RemoveUnverified('待移除对象已变化：'+value)
+        if entry['folder']: raise ValueError('MTP 移除目标不是文件')
+        def confirm_identity():
+            # After a failed read-back, the approved id decides whether retrying
+            # is safe; a missing or different object must never be re-attempted.
+            try: probe=resolve(handle,storage,parts)
+            except Exception: probe=None
+            return probe is not None and probe['id']==expected_id
+        try:
+            actual=chd_io.digest(value,cancelled)
+        except TaskCancelled: raise
+        except Exception as error:
+            if expected_id is not None and not confirm_identity():
+                raise chd_io.RemoveUnverified('待移除对象已变化：'+value) from error
+            raise
+        if actual!=expected:
+            if expected_id is not None and not confirm_identity():
+                raise chd_io.RemoveUnverified('待移除对象已变化：'+value)
+            raise ValueError('MTP 待移除文件已变化：'+value)
+        cancelled()
+        # The digest read-back can be slow; the path may have moved meanwhile.
+        # Re-resolve right before issuing the delete command.
+        try:
+            current=resolve(handle,storage,parts)
+        except Exception as error: raise chd_io.RemoveUnverified('删除前无法确认对象：'+value) from error
+        if current is None or current['id']!=entry['id']: raise chd_io.RemoveUnverified('对象已移动或路径已变化：'+value)
+        cancelled()
+        try:
+            failed=bool(library().LIBMTP_Delete_Object(handle,current['id']))
+        except Exception as error: raise chd_io.RemoveUnverified('删除指令结果未知：'+value) from error
+        # The delete command was issued; a nonzero status is ambiguous — the
+        # device may have deleted then reported failure. Presence decides.
+        try:
+            still=resolve(handle,storage,parts)
+        except Exception as error: raise chd_io.RemoveUnverified('删除已执行但无法核对：'+value) from error
+        if still is not None:
+            if still['id']!=entry['id']: raise chd_io.RemoveUnverified('路径已出现同名新对象：'+value)
+            raise RuntimeError('MTP 移除失败' if failed else 'MTP 移除核对失败')
 
 
-def change_game_file(value, name):
-    """Rename or delete one regular object selected in Game Files."""
+def rename_object(value, name):
+    """Rename any MTP object (file or folder); returns the new URI."""
     with session(value) as (handle, storage, parts):
         entry = resolve(handle, storage, parts)
-        if entry is None or entry['folder']:
-            raise ValueError('游戏文件已移动或不存在')
+        if entry is None:
+            raise ValueError('文件已移动或不存在')
+        if name == parts[-1]:
+            return value
+        target = parts[:-1] + [name]
+        if resolve(handle, storage, target) is not None:
+            raise ValueError('已有同名文件')
         lib = library()
-        if name is None:
-            if lib.LIBMTP_Delete_Object(handle, entry['id']) or resolve(handle, storage, parts) is not None:
-                raise RuntimeError('MTP 删除未通过核对')
-        elif name != parts[-1]:
-            target = parts[:-1] + [name]
-            if resolve(handle, storage, target) is not None:
-                raise ValueError('已有同名文件')
-            metadata = lib.LIBMTP_new_file_t()
-            metadata.contents.id = entry['id']
-            try:
-                if lib.LIBMTP_Set_File_Name(handle, metadata, name.encode()):
-                    raise RuntimeError('MTP 重命名失败')
-            finally:
-                lib.LIBMTP_destroy_file_t(metadata)
-            updated = resolve(handle, storage, target)
-            if not updated or updated['id'] != entry['id']:
-                raise RuntimeError('MTP 重命名未通过核对')
+        metadata = lib.LIBMTP_new_file_t()
+        metadata.contents.id = entry['id']
+        try:
+            if lib.LIBMTP_Set_File_Name(handle, metadata, name.encode()):
+                raise RuntimeError('MTP 重命名失败')
+        finally:
+            lib.LIBMTP_destroy_file_t(metadata)
+        updated = resolve(handle, storage, target)
+        if not updated or updated['id'] != entry['id']:
+            raise RuntimeError('MTP 重命名未通过核对')
+        return uri(parse(value)[0], storage, '/'.join(target))
+
+
+def delete_object(value):
+    """Delete one empty MTP folder object."""
+    with session(value) as (handle, storage, parts):
+        entry = resolve(handle, storage, parts)
+        if entry is None:
+            raise ValueError('对象不存在')
+        if library().LIBMTP_Delete_Object(handle, entry['id']):
+            raise RuntimeError('MTP 删除失败')
+        if resolve(handle, storage, parts) is not None:
+            raise RuntimeError('MTP 删除核对失败')

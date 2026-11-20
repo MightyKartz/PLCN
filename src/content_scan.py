@@ -5,7 +5,6 @@ import json
 import posixpath
 from pathlib import Path, PurePosixPath
 import re
-import uuid
 import sys
 import xml.etree.ElementTree as ET
 
@@ -254,17 +253,17 @@ def preview(config, progress=lambda *args: None, cancel_check=None):
 def apply(plan):
     target = plan['target']
     content = (json.dumps(plan['document'], ensure_ascii=False, indent=2) + '\n').encode('utf-8')
+    leftover = None
     if mtp.is_mtp(target):
-        backup = mtp.write(target, content, plan['expected'])
+        leftover = mtp.write(target, content, plan['expected'])
     else:
         with file_lock(target):
-            before = read(target)
-            if mtp.digest(before) != plan['expected']:
+            if mtp.digest(read(target)) != plan['expected']:
                 raise RuntimeError('列表已变化，请重新扫描预览')
-            backup = target + '.bak-' + uuid.uuid4().hex if before is not None else None
-            if backup: atomic_write_bytes(backup, before)
             atomic_write_bytes(target, content, expected_digest=plan['expected'])
-    result = {'playlist_path': target, 'added': len(plan['added']), 'retained': plan['retained'], 'backup': backup}
+    result = {'playlist_path': target, 'added': len(plan['added']), 'retained': plan['retained']}
+    if leftover:
+        result['cleanup_warnings'] = ['列表已更新，但旧版本残留未能移除：' + leftover]
     path = profiles_path()
     try:
         with file_lock(path):
@@ -278,6 +277,23 @@ def apply(plan):
         result['warning'] = '列表已更新，但扫描配置未保存：' + str(error)
     return result
 
+
+
+def storage_mounts(root):
+    """MTP storage id -> Android mount learned from consistent saved mappings."""
+    options = {}
+    for profile in profiles().get(root, []):
+        android = str(profile.get('android_directory') or '').strip('/')
+        try:
+            storage, parts = mtp.parse(profile['directory'])[1:]
+        except (KeyError, TypeError, ValueError):
+            continue
+        if not android or not parts:
+            continue
+        segments = android.split('/')
+        if len(segments) > len(parts) and segments[-len(parts):] == parts:
+            options.setdefault(storage, set()).add('/' + '/'.join(segments[:-len(parts)]))
+    return {storage: mounts.pop() for storage, mounts in options.items() if len(mounts) == 1}
 
 
 def hints(root, system, directory, filename=None):
@@ -298,7 +314,24 @@ def hints(root, system, directory, filename=None):
         if mtp.parse(root)[1] != mtp.parse(directory)[1]:
             saved = next((profile for profile in profiles().get(root, [])
                           if profile['directory'] == directory and profile['system'] == system), None)
-            result['android_directory'] = saved['android_directory'] if saved else ''
+            if saved and saved.get('android_directory'):
+                result['android_directory'] = saved['android_directory']
+                return result
+            storage, parts = mtp.parse(directory)[1], mtp.parse(directory)[2]
+            learned = storage_mounts(root).get(storage)
+            mounts = {learned} if learned else set()
+            paths = [str(item.get('path', '')).replace('\\', '/') for item in document.get('items', [])]
+            for size in range(len(parts), 0, -1):
+                suffix = '/' + '/'.join(parts[-size:]) + '/'
+                candidates = {path for path in
+                              (path.split(suffix, 1)[0] + suffix[:-1] for path in paths
+                               if path.startswith(('/storage/', '/sdcard/')) and path.count(suffix) == 1)
+                              if any(path == mount or path.startswith(mount + '/') for mount in mounts)}
+                if len(candidates) == 1:
+                    result['android_directory'] = candidates.pop()
+                    break
+            if not result['android_directory'] and len(mounts) == 1:
+                result['android_directory'] = mounts.pop() + '/' + '/'.join(parts)
             return result
         parts = mtp.parse(directory)[2]
         paths = [str(item.get('path', '')).replace('\\', '/') for item in document.get('items', [])]

@@ -71,7 +71,11 @@ def device_files(monkeypatch):
         files[new] = files.pop(old)
         ids[ident] = new
         return 0
-    lib = SimpleNamespace(LIBMTP_new_file_t=lambda: ctypes.pointer(mtp.File()), LIBMTP_destroy_file_t=lambda p: None, LIBMTP_Set_File_Name=rename)
+    def delete(handle, ident):
+        files.pop(ids.pop(ident), None)
+        return 0
+    lib = SimpleNamespace(LIBMTP_new_file_t=lambda: ctypes.pointer(mtp.File()), LIBMTP_destroy_file_t=lambda p: None,
+                          LIBMTP_Set_File_Name=rename, LIBMTP_Delete_Object=delete)
     monkeypatch.setattr(mtp, 'session', session)
     monkeypatch.setattr(mtp, 'upload', upload)
     monkeypatch.setattr(mtp, 'resolve', resolve)
@@ -80,7 +84,7 @@ def device_files(monkeypatch):
     return root, files, upload, lib
 
 
-def test_write_preserves_verified_backup_and_rejects_stale_preview(device_files):
+def test_write_replaces_in_place_and_rejects_stale_preview(device_files):
     root, files, upload, lib = device_files
     target = mtp.join(root, '游戏.lpl')
     upload(None, 65537, 0, '游戏.lpl', b'original')
@@ -88,10 +92,9 @@ def test_write_preserves_verified_backup_and_rejects_stale_preview(device_files)
     with pytest.raises(RuntimeError, match='重新预览'):
         mtp.write(target, b'new', mtp.digest(b'outdated'))
     assert files == before
-    backup = mtp.write(target, b'new', mtp.digest(b'original'), suffix='review')
-    assert backup == target + '.bak-review'
-    assert files[backup] == b'original'
+    mtp.write(target, b'new', mtp.digest(b'original'), suffix='review')
     assert files[target] == b'new'
+    assert not any('.bak' in path or '.plcn-' in path for path in files)
 
 
 def test_failed_publish_restores_original_name(device_files):
@@ -105,6 +108,34 @@ def test_failed_publish_restores_original_name(device_files):
     assert files[target] == b'original'
 
 
+def test_push_directory_collects_verified_write_leftovers(device_files, tmp_path, monkeypatch):
+    root, files, upload, lib = device_files
+    target_dir = mtp.join(root, 'thumbs')
+    local = tmp_path / 'local'
+    local.mkdir()
+    (local / 'a.png').write_bytes(b'new a')
+    (local / 'b.png').write_bytes(b'new b')
+    upload(None, 65537, 0, 'thumbs', b'')
+    def flaky(value, content, expected, suffix=None):
+        files[value] = content
+        return value + '.plcn-stuck.old' if value.endswith('a.png') else None
+    monkeypatch.setattr(mtp, 'write', flaky)
+    leftovers = mtp.push_directory(str(local), target_dir)
+    assert leftovers == [target_dir + '/a.png.plcn-stuck.old']
+    assert files[target_dir + '/a.png'] == b'new a' and files[target_dir + '/b.png'] == b'new b'
+
+
+def test_cleanup_failure_reports_leftover_after_verified_write(device_files):
+    root, files, upload, lib = device_files
+    target = mtp.join(root, 'games.lpl')
+    upload(None, 65537, 0, 'games.lpl', b'original')
+    lib.LIBMTP_Delete_Object = lambda handle, ident: 1
+    leftover = mtp.write(target, b'new', mtp.digest(b'original'))
+    assert files[target] == b'new'
+    assert leftover and '.plcn-' in leftover and leftover.endswith('.old')
+    assert files[leftover] == b'original'
+
+
 def test_reviewed_transport_uses_snapshot_digest_and_remote_results(tmp_path, monkeypatch):
     import playlist_transport
     root = mtp.uri('device', 65537, 'RetroArch')
@@ -113,8 +144,8 @@ def test_reviewed_transport_uses_snapshot_digest_and_remote_results(tmp_path, mo
     content = b'{"items": []}'
     monkeypatch.setattr(mtp, 'read', lambda path: content)
     writes, pushes = [], []
-    monkeypatch.setattr(mtp, 'write', lambda *args: writes.append(args) or target + '.bak-test')
-    monkeypatch.setattr(mtp, 'push_directory', lambda *args, **kwargs: pushes.append((args, kwargs)))
+    monkeypatch.setattr(mtp, 'write', lambda *args: writes.append(args))
+    monkeypatch.setattr(mtp, 'push_directory', lambda *args, **kwargs: pushes.append((args, kwargs)) or [])
     def apply(path, changes, images, **kwargs):
         Path(path).write_bytes(b'{"items": [], "version": "1"}')
         return {'download_summary': {'details':[{'path':str(Path(images)/'NES/Named_Boxarts/A.png'), 'type':'Named_Boxarts', 'status':'success'}]}, 'apply':{'applied':[0]}}
@@ -336,7 +367,7 @@ def test_mtp_replaces_only_reviewed_old_artwork_hashes_and_keeps_playlist(tmp_pa
     assert files[path] == playlist
     assert all(files[mtp.join(images, 'MAME', kind, '游戏.png')] == new for kind in THUMBNAIL_TYPES)
     assert result['download_summary']['total']['success'] == 3
-    assert (app_paths.user_data_dir() / 'artwork-backups' / (digest + '.png')).read_bytes() == old
+    assert not (app_paths.user_data_dir() / 'artwork-backups').exists()
 
 
 def test_locked_cached_session_is_released_and_unlock_can_open_a_new_session(monkeypatch):
@@ -372,3 +403,227 @@ def test_locked_cached_session_is_released_and_unlock_can_open_a_new_session(mon
     assert found[0]['path'] == 'mtp://1-2/00010001/'
     assert found[0]['label'] == 'Internal'
     assert found[0]['device_name'] == 'Retroid Pocket Nova'
+
+
+def _stub_chd_digest(monkeypatch, files):
+    import chd_io
+    monkeypatch.setattr(chd_io, 'digest', lambda path, *a, **k: mtp.digest(files[path]) if path in files else None)
+    return chd_io
+
+
+def test_remove_nonzero_status_but_object_gone_counts_as_removed(device_files, monkeypatch):
+    root, files, upload, lib = device_files
+    chd_io = _stub_chd_digest(monkeypatch, files)
+    target = mtp.join(root, 'gone.cue'); upload(None, 65537, 0, 'gone.cue', b'cue bytes')
+    lib.LIBMTP_Delete_Object = lambda handle, ident: (files.pop(target, None), 1)[1]
+    mtp.remove_file(target, chd_io.digest(target))
+    assert target not in files
+
+
+def test_remove_nonzero_status_but_object_present_stays_retryable(device_files, monkeypatch):
+    root, files, upload, lib = device_files
+    chd_io = _stub_chd_digest(monkeypatch, files)
+    target = mtp.join(root, 'stays.cue'); upload(None, 65537, 0, 'stays.cue', b'cue bytes')
+    lib.LIBMTP_Delete_Object = lambda handle, ident: 1
+    with pytest.raises(RuntimeError, match='移除失败'):
+        mtp.remove_file(target, chd_io.digest(target))
+    assert target in files
+
+
+def test_remove_delete_command_transport_error_is_unverified(device_files, monkeypatch):
+    root, files, upload, lib = device_files
+    chd_io = _stub_chd_digest(monkeypatch, files)
+    target = mtp.join(root, 'lost.cue'); upload(None, 65537, 0, 'lost.cue', b'cue bytes')
+    lib.LIBMTP_Delete_Object = lambda handle, ident: (_ for _ in ()).throw(OSError('link dead'))
+    with pytest.raises(chd_io.RemoveUnverified, match='结果未知'):
+        mtp.remove_file(target, chd_io.digest(target))
+
+
+def test_remove_presence_check_failure_is_unverified(device_files, monkeypatch):
+    root, files, upload, lib = device_files
+    chd_io = _stub_chd_digest(monkeypatch, files)
+    target = mtp.join(root, 'grey.cue'); upload(None, 65537, 0, 'grey.cue', b'cue bytes')
+    real = mtp.resolve; calls = [0]
+    def flaky(handle, storage, parts, create=False):
+        calls[0] += 1
+        if calls[0] == 2: raise OSError('link dead')
+        return real(handle, storage, parts, create)
+    monkeypatch.setattr(mtp, 'resolve', flaky)
+    with pytest.raises(chd_io.RemoveUnverified, match='无法核对|无法确认'):
+        mtp.remove_file(target, chd_io.digest(target))
+
+
+def test_remove_flags_same_named_replacement_object_as_unverified(device_files, monkeypatch):
+    root, files, upload, lib = device_files
+    chd_io = _stub_chd_digest(monkeypatch, files)
+    target = mtp.join(root, 'restored.cue'); upload(None, 65537, 0, 'restored.cue', b'cue bytes')
+    deleted_ids = []
+    def flaky_delete(handle, ident):
+        deleted_ids.append(ident)
+        files.pop(target, None)
+        files[target] = b'cue bytes'   # A same-named object appears before read-back.
+        return 1
+    lib.LIBMTP_Delete_Object = flaky_delete
+    real_resolve = mtp.resolve; calls = [0]
+    def resolve(handle, storage, parts, create=False):
+        calls[0] += 1
+        entry = real_resolve(handle, storage, parts, create)
+        if calls[0] == 3 and entry: entry = dict(entry, id=entry['id'] + 5496)
+        return entry
+    monkeypatch.setattr(mtp, 'resolve', resolve)
+    with pytest.raises(chd_io.RemoveUnverified, match='新对象'):
+        mtp.remove_file(target, chd_io.digest(target))
+    assert files[target] == b'cue bytes'
+    assert len(deleted_ids) == 1
+
+
+def test_remove_rejects_when_object_id_changed(device_files, monkeypatch):
+    root, files, upload, lib = device_files
+    chd_io = _stub_chd_digest(monkeypatch, files)
+    target = mtp.join(root, 'swapped.cue'); upload(None, 65537, 0, 'swapped.cue', b'cue bytes')
+    deleted_ids = []
+    lib.LIBMTP_Delete_Object = lambda handle, ident: deleted_ids.append(ident) or 1
+    approved = mtp.resolve(None, 65537, mtp.parse(target)[2])['id']
+    with pytest.raises(chd_io.RemoveUnverified, match='对象已变化'):
+        mtp.remove_file(target, chd_io.digest(target), expected_id=approved + 77)
+    assert not deleted_ids and files[target] == b'cue bytes'
+
+
+def test_remove_proceeds_when_object_id_matches(device_files, monkeypatch):
+    root, files, upload, lib = device_files
+    chd_io = _stub_chd_digest(monkeypatch, files)
+    target = mtp.join(root, 'same.cue'); upload(None, 65537, 0, 'same.cue', b'cue bytes')
+    approved = mtp.resolve(None, 65537, mtp.parse(target)[2])['id']
+    mtp.remove_file(target, chd_io.digest(target), expected_id=approved)
+    assert target not in files
+
+
+def test_remove_identity_change_wins_over_digest_mismatch(device_files, monkeypatch):
+    root, files, upload, lib = device_files
+    chd_io = _stub_chd_digest(monkeypatch, files)
+    target = mtp.join(root, 'swapped2.cue'); upload(None, 65537, 0, 'swapped2.cue', b'new bytes')
+    deleted_ids = []
+    lib.LIBMTP_Delete_Object = lambda handle, ident: deleted_ids.append(ident) or 1
+    # Both the device object id and the content differ from what was approved.
+    with pytest.raises(chd_io.RemoveUnverified, match='对象已变化'):
+        mtp.remove_file(target, 'approved-sha', expected_id=999)
+    assert not deleted_ids and files[target] == b'new bytes'
+
+
+def test_remove_digest_guard_still_blocks_same_id_content_change(device_files, monkeypatch):
+    root, files, upload, lib = device_files
+    chd_io = _stub_chd_digest(monkeypatch, files)
+    target = mtp.join(root, 'mutated.cue'); upload(None, 65537, 0, 'mutated.cue', b'mutated')
+    approved = mtp.resolve(None, 65537, mtp.parse(target)[2])['id']
+    deleted_ids = []
+    lib.LIBMTP_Delete_Object = lambda handle, ident: deleted_ids.append(ident) or 1
+    with pytest.raises(ValueError, match='已变化'):
+        mtp.remove_file(target, 'approved-sha', expected_id=approved)
+    assert not deleted_ids and files[target] == b'mutated'
+
+
+def test_remove_never_deletes_after_path_moved_mid_readback(device_files, monkeypatch):
+    root, files, upload, lib = device_files
+    chd_io = _stub_chd_digest(monkeypatch, files)
+    target = mtp.join(root, 'data.bin'); upload(None, 65537, 0, 'data.bin', b'track')
+    saved = mtp.join(root, 'saved.bin')
+    real_resolve = mtp.resolve; calls = [0]
+    def resolve(handle, storage, parts, create=False):
+        calls[0] += 1
+        if calls[0] == 2:
+            files[saved] = files.pop(target)   # renamed during the read-back
+            return None
+        return real_resolve(handle, storage, parts, create)
+    monkeypatch.setattr(mtp, 'resolve', resolve)
+    deleted_ids = []
+    lib.LIBMTP_Delete_Object = lambda handle, ident: deleted_ids.append(ident) or 1
+    approved = mtp.resolve(None, 65537, mtp.parse(target)[2])['id']
+    calls[0] = 0
+    with pytest.raises(chd_io.RemoveUnverified, match='移动|变化'):
+        mtp.remove_file(target, chd_io.digest(target), expected_id=approved)
+    assert not deleted_ids and files[saved] == b'track'
+
+
+def test_remove_never_deletes_after_new_object_mid_readback(device_files, monkeypatch):
+    root, files, upload, lib = device_files
+    chd_io = _stub_chd_digest(monkeypatch, files)
+    target = mtp.join(root, 'data2.bin'); upload(None, 65537, 0, 'data2.bin', b'track')
+    real_resolve = mtp.resolve; calls = [0]
+    def resolve(handle, storage, parts, create=False):
+        calls[0] += 1
+        entry = real_resolve(handle, storage, parts, create)
+        if calls[0] == 2 and entry: entry = dict(entry, id=entry['id'] + 9000)
+        return entry
+    monkeypatch.setattr(mtp, 'resolve', resolve)
+    deleted_ids = []
+    lib.LIBMTP_Delete_Object = lambda handle, ident: deleted_ids.append(ident) or 1
+    approved = mtp.resolve(None, 65537, mtp.parse(target)[2])['id']
+    calls[0] = 0
+    with pytest.raises(chd_io.RemoveUnverified, match='移动|变化'):
+        mtp.remove_file(target, chd_io.digest(target), expected_id=approved)
+    assert not deleted_ids and files[target] == b'track'
+
+
+def test_remove_honors_cancellation_before_issuing_delete(device_files, monkeypatch):
+    from task_control import TaskCancelled
+    root, files, upload, lib = device_files
+    chd_io = _stub_chd_digest(monkeypatch, files)
+    target = mtp.join(root, 'halt.bin'); upload(None, 65537, 0, 'halt.bin', b'track')
+    hits = [0]
+    def cancelled():
+        hits[0] += 1
+        if hits[0] >= 2: raise TaskCancelled('stop')
+    deleted_ids = []
+    lib.LIBMTP_Delete_Object = lambda handle, ident: deleted_ids.append(ident) or 1
+    with pytest.raises(TaskCancelled):
+        mtp.remove_file(target, chd_io.digest(target), cancelled)
+    assert not deleted_ids and files[target] == b'track'
+
+
+def test_remove_cancels_during_final_lookup(device_files, monkeypatch):
+    from task_control import TaskCancelled
+    root, files, upload, lib = device_files
+    chd_io = _stub_chd_digest(monkeypatch, files)
+    target = mtp.join(root, 'victim.bin'); upload(None, 65537, 0, 'victim.bin', b'track')
+    real_resolve = mtp.resolve; calls = [0]; stop = [False]
+    def resolve(handle, storage, parts, create=False):
+        calls[0] += 1
+        if calls[0] == 2: stop[0] = True   # cancellation lands during the final lookup
+        return real_resolve(handle, storage, parts, create)
+    monkeypatch.setattr(mtp, 'resolve', resolve)
+    def cancelled():
+        if stop[0]: raise TaskCancelled('stop')
+    deleted = []
+    lib.LIBMTP_Delete_Object = lambda handle, ident: deleted.append(ident) or 1
+    with pytest.raises(TaskCancelled):
+        mtp.remove_file(target, chd_io.digest(target), cancelled)
+    assert not deleted and files[target] == b'track'
+
+
+def test_remove_flags_object_whose_readback_failed_after_rename(device_files, monkeypatch):
+    root, files, upload, lib = device_files
+    chd_io = _stub_chd_digest(monkeypatch, files)
+    target = mtp.join(root, 'data3.bin'); upload(None, 65537, 0, 'data3.bin', b'track')
+    saved = mtp.join(root, 'saved3.bin')
+    def digest(path, *args, **kwargs):
+        files[saved] = files.pop(target); raise RuntimeError('download error')
+    monkeypatch.setattr(chd_io, 'digest', digest)
+    deleted = []
+    lib.LIBMTP_Delete_Object = lambda handle, ident: deleted.append(ident) or 1
+    approved = mtp.resolve(None, 65537, mtp.parse(target)[2])['id']
+    with pytest.raises(chd_io.RemoveUnverified, match='变化'):
+        mtp.remove_file(target, b'sha', expected_id=approved)
+    assert not deleted and files[saved] == b'track'
+
+
+def test_remove_stays_retryable_when_identity_confirmed_after_readback_error(device_files, monkeypatch):
+    root, files, upload, lib = device_files
+    chd_io = _stub_chd_digest(monkeypatch, files)
+    target = mtp.join(root, 'flaky.bin'); upload(None, 65537, 0, 'flaky.bin', b'track')
+    monkeypatch.setattr(chd_io, 'digest', lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError('download error')))
+    deleted = []
+    lib.LIBMTP_Delete_Object = lambda handle, ident: deleted.append(ident) or 1
+    approved = mtp.resolve(None, 65537, mtp.parse(target)[2])['id']
+    with pytest.raises(RuntimeError, match='download error'):
+        mtp.remove_file(target, b'sha', expected_id=approved)
+    assert not deleted and files[target] == b'track'

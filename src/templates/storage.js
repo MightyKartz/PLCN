@@ -18,7 +18,7 @@ function updateStorageSelection(){
 function openStorageOptimization(){
     if(workbench.operation)return;
     invalidateStoragePlan();storageField('result').hidden=true;storageField('settings').open=true;
-    storageField('status').textContent='分析当前列表；本地直接转换，MTP 确认后拉取源备份并转换，已有 CHD 自动跳过。';
+    storageField('status').textContent='分析当前列表；本地直接转换，MTP 确认后拉取源文件并转换，已有 CHD 自动跳过。';
     storageField('dialog').showModal();
 }
 function closeStorageOptimization(){if(storageTask.busy)return;invalidateStoragePlan();storageField('dialog').close();}

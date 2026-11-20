@@ -9,7 +9,7 @@
 - 列表视图与封面视图选择统一：列表行新增勾选框与表头全选，两个视图共享选择状态；封面卡片移除冗余菜单，单个「移出列表」移入详情页；Esc 清空选择。
 - 前端请求统一走 `desktopRequest`（自动续期与错误提示），图标统一使用 sprite 引用。
 
-升级前退出应用，并在首次启动新版前完成[一次性数据迁移](https://github.com/MightyKartz/retroarch-assistant/blob/main/DOC/MIGRATION.md)。保留配置、人工规则、备份、恢复记录和缓存；迁移不移动设备 ROM，已有新目录不会被自动合并覆盖。
+升级前退出应用，并在首次启动新版前完成[一次性数据迁移](https://github.com/MightyKartz/retroarch-assistant/blob/main/DOC/MIGRATION.md)。保留配置、人工规则和缓存；迁移不移动设备 ROM，已有新目录不会被自动合并覆盖。
 
 下载对应系统的 Release 附件，无需 Python、Node.js 或 Xcode。Windows/macOS 包内置 ADB；macOS 另内置 MTP 运行库。Android 连接方式及 Windows 驱动要求见 [README](https://github.com/MightyKartz/retroarch-assistant#readme)。
 
@@ -24,6 +24,6 @@
 - Unify selection across cover and list views: rows gain checkboxes and a select-all header, both views share the selection, single removal moves to the details page, and Escape clears the selection.
 - Route frontend requests through `desktopRequest` and reference icons from the shared sprite.
 
-Quit both versions and [migrate the existing profile](https://github.com/MightyKartz/retroarch-assistant/blob/main/DOC/MIGRATION.md) before first launching this preview. Migration keeps settings, manual rules, backups, recovery records and caches; it does not move device ROMs or merge existing destinations.
+Quit both versions and [migrate the existing profile](https://github.com/MightyKartz/retroarch-assistant/blob/main/DOC/MIGRATION.md) before first launching this preview. Migration keeps settings, manual rules and caches; it does not move device ROMs or merge existing destinations.
 
 Download the matching release attachment; Python, Node.js and Xcode are unnecessary. Windows/macOS packages bundle ADB, and macOS bundles the MTP runtime. Packages are not distribution-signed; macOS is not notarized. Device gameplay, disc swapping, save continuity and advanced replacement/move operations still require hardware acceptance. Validate advanced tools using copies first.

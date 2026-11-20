@@ -7,8 +7,8 @@ import urllib.request
 import zipfile
 
 ARCHIVES = {
-    'darwin': ('darwin', 'ee39ad5967e95c2a07f04dbcbde96b1a0c916ba376096db5d2f498b7727a5d1d'),
-    'win32': ('windows', '45f4d63113e895ebde0c90f194099a4676b6ac653bd28d54314a9e022bbc1a99'),
+    'darwin': ('darwin', 'df21339b9371fef9b19264404338dc686f59a88a1dce634b963da344909001d6'),
+    'win32': ('windows', '89d108360a3bf2924d3bea837239edaccc22fd6ff5befd3787c4348a9fe4f09d'),
 }
 
 
@@ -29,7 +29,7 @@ def main():
             target.write_bytes(archive.read('platform-tools/' + name))
             if name == 'adb':
                 target.chmod(0o755)
-    print('Prepared ADB 37.0.1:', root)
+    print('Prepared ADB 37.0.3:', root)
 
 
 if __name__ == '__main__':

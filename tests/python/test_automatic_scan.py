@@ -110,3 +110,29 @@ def test_cover_candidates_are_bounded_unique_box_art(monkeypatch):
     monkeypatch.setattr(workbench_library, 'read_playlist', lambda *args: {'items': entries})
     covers = workbench_library.overview('root')['playlists'][0]['locations']['card']['covers']
     assert [cover['label'] for cover in covers] == ['Original', '2', '3', '4', '5']
+
+
+def test_infer_maps_browsed_folder_to_console_and_launch_path(tmp_path, monkeypatch):
+    import content_scan as scan
+    root = str(tmp_path/'RetroArch'); (tmp_path/'RetroArch/playlists').mkdir(parents=True)
+    result = auto.infer(root, str(tmp_path/'Roms/GBA'))
+    assert result['system'] == 'Nintendo - Game Boy Advance'
+    assert result['playlist_name'] == 'Nintendo - Game Boy Advance.lpl'
+    assert auto.infer(root, str(tmp_path/'Roms')) == {} and auto.infer(root, str(tmp_path/'Roms/Custom')) == {}
+    assert auto.infer('', str(tmp_path/'Roms/GBA')) == {}
+    mtp_root = 'mtp://device/00010001/RetroArch'
+    monkeypatch.setattr(scan, 'read', lambda path: json.dumps({'items': [{'path': '/storage/CARD/Roms/SS/game.cue', 'core_path': 'core.so'}]}).encode())
+    result = auto.infer(mtp_root, 'mtp://device/00010001/Roms/SS')
+    assert result['system'] == 'Sega - Saturn' and result['android_directory'] == '/storage/CARD/Roms/SS'
+
+
+def test_infer_prefers_saved_profile_for_custom_folders(tmp_path, monkeypatch):
+    import content_scan as scan
+    monkeypatch.setenv('RETROARCH_ASSISTANT_HOME', str(tmp_path))
+    root = 'mtp://device/00010001/RetroArch'; directory = 'mtp://device/00010001/Roms/Handheld'
+    scan.profiles_path().write_text(json.dumps({root: [{'system': 'Nintendo - Game Boy Advance', 'directory': directory,
+        'android_directory': '/storage/CARD/Roms/Handheld', 'playlist_name': 'GBA 收藏.lpl', 'core_id': 'mgba',
+        'core_path': 'core.so', 'extensions': 'gba'}]}), encoding='utf-8')
+    result = auto.infer(root, directory)
+    assert result['system'] == 'Nintendo - Game Boy Advance' and result['playlist_name'] == 'GBA 收藏.lpl'
+    assert result['android_directory'] == '/storage/CARD/Roms/Handheld'

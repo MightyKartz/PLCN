@@ -1,5 +1,4 @@
-"""Durable CHD copy/switch/cleanup transactions, with source backups before mutation."""
-from collections import defaultdict
+"""Guarded CHD copy/switch/cleanup transactions."""
 from datetime import datetime, timezone
 import copy
 import base64
@@ -7,7 +6,6 @@ import json
 from pathlib import Path
 import posixpath
 import re
-import shutil
 import tempfile
 import uuid
 
@@ -20,23 +18,13 @@ from m3u_plan import core_support
 from library_model import OPTICAL_SYSTEMS
 import m3u_transaction as tx
 import mtp_runtime as mtp
-from safe_io import atomic_write_bytes, atomic_write_json, file_lock
 from task_control import TaskCancelled
 
 RESERVE=64*1024*1024
 
 
-def receipt(ident):
-    if not isinstance(ident,str) or not re.fullmatch('[a-f0-9]{32}',ident): raise ValueError('CHD 操作 ID 无效')
-    return app_paths.user_data_dir()/'chd-deployments'/ident/'manifest.json'
-
-
-def history():
-    return [json.loads(path.read_text(encoding='utf-8')) for path in sorted((app_paths.user_data_dir()/'chd-deployments').glob('*/manifest.json'),key=lambda path:path.stat().st_mtime,reverse=True)[:100]]
-
-
 def conversion(ident):
-    receipt(ident)
+    if not isinstance(ident,str) or not re.fullmatch('[a-f0-9]{32}',ident): raise ValueError('CHD 操作 ID 无效')
     return json.loads((app_paths.user_data_dir()/'chd-operations'/ident/'manifest.json').read_text(encoding='utf-8'))
 
 
@@ -57,7 +45,6 @@ def prepare(payload,cancelled=lambda: None,progress=lambda message: None):
     inventory={io.key(file['path']):file for file in (record.get('transfer_sources') or record['sources'])}
     issues=[];sources={};copies=[];selections={}
     operation=uuid.uuid4().hex
-    backup=Path(record['output_directory']).parent/('PLCN-DEPLOY-'+operation)
     for disc_id in selected:
         cancelled();result=results[disc_id];node=nodes.get(disc_id)
         if not node or node['format']!='cue' or node['issues']: raise ValueError('原 CUE 或其引用已变化，请重新分析')
@@ -81,7 +68,7 @@ def prepare(payload,cancelled=lambda: None,progress=lambda message: None):
             expected=inventory.get(key)
             if expected is None or not expected.get('sha256'): raise ValueError('缺少原镜像的完整指纹，请重新转换')
             if io.digest(path,cancelled)!=expected['sha256']: raise ValueError('原光盘在转换后变化：'+path)
-            sources[key]={'path':key,'size':expected['size'],'sha256':expected['sha256']}
+            sources[key]={'path':key,'size':expected['size'],'sha256':expected['sha256'],'object_id':io.object_id(path)}
     roots=sorted({path.rsplit('/',1)[0] for path in sources}|{io.key(record['playlist']).rsplit('/',1)[0]})
     roots=[root for root in roots if not any(root.startswith(other+'/') for other in roots if root!=other)]
     checked=references.scope(roots,record['playlist'],cancelled)
@@ -110,10 +97,6 @@ def prepare(payload,cancelled=lambda: None,progress=lambda message: None):
     for item in copies:
         if item['created']: reserve(item['target'],item['size'])
     for write in metadata['writes']: reserve(write['path'],len(write['content']))
-    computer=(sum(file['size'] for file in sources.values()) if mode!='copy' else 0)+sum(item['size'] for item in copies)
-    reserve(str(backup),computer)
-    before_bytes=sum(len(checked['documents'][write['path']]['raw']) for write in metadata['writes'])
-    reserve(str(app_paths.user_data_dir()/'metadata-probe'),before_bytes+sum(len(write['content']) for write in metadata['writes']))
     temp_required=max([file['size'] for file in sources.values()]+[item['size'] for item in copies])
     if reader.remote: reserve(str(Path(tempfile.gettempdir())/'verify-probe'),temp_required)
     capacity=[]
@@ -124,9 +107,9 @@ def prepare(payload,cancelled=lambda: None,progress=lambda message: None):
     # Original source identity/choice keys remain guarded throughout resume; owned patches validate themselves.
     metadata['dependencies']=guards
     return {'id':operation,'conversion_id':ident,'playlist':record['playlist'],'system':system,'mode':mode,
-            'copies':copies,'sources':list(sources.values()),'deletions':deletions,'retained':retained,'backup_directory':str(backup),
+            'copies':copies,'sources':list(sources.values()),'deletions':deletions,'retained':retained,
             'roots':roots,'scope_snapshot':snapshot,'scope_errors':checked['errors'],'runtime':{'cores':sorted(cores),'version':runtime.get('version',''),'confirmed':runtime.get('confirmed') is True,'source':'user_reported'},
-            'metadata_plan':metadata,'capacity':capacity,'computer_required':computer,'temporary_required':temp_required,
+            'metadata_plan':metadata,'capacity':capacity,'temporary_required':temp_required,
             'reference_changes':[{'path':write['path'],'bytes':len(write['content'])} for write in metadata['writes']],
             'image_delta_bytes':sum(file['size'] for file in deletions)-sum(item['size'] for item in copies if item['created']),
             'issues':list(dict.fromkeys(issues)),'can_apply':not issues}
@@ -146,176 +129,236 @@ def check_scope(record,after=False):
             parent=item['target'].rsplit('/',1)[0]
             name=mtp.parse(item['target'])[2][-1] if mtp.is_mtp(item['target']) else Path(item['target']).name
             if parent in current: current[parent]=[entry for entry in current[parent] if entry[0]!=name]
-    # Deleted descriptors legitimately disappear after references have been updated.
+
+    # Deleted descriptors legitimately disappear after references have been updated;
+    # a retried plan may also find scheduled deletions already absent.
+    def _present(path):
+        """Presence check; MTP paths are confirmed by device metadata only, so
+        a replacement object is never downloaded just to be classified."""
+        return io.object_id(path) is not None if mtp.is_mtp(path) else io.digest(path) is not None
     expected=copy.deepcopy(record['scope_snapshot']['directories'])
-    for file in record.get('sources',[]):
-        if file.get('state') in {'deleting','deleted'}:
-            parent=file['path'].rsplit('/',1)[0];name=mtp.parse(file['path'])[2][-1] if mtp.is_mtp(file['path']) else Path(file['path']).name
-            if parent in expected and not io.digest(file['path']): expected[parent]=[entry for entry in expected[parent] if entry[0]!=name]
+    absent={file['path'] for file in record.get('deletions',[]) if not _present(file['path'])}
+    absent.update(file['path'] for file in record.get('sources',[]) if file.get('state') in {'deleting','deleted','unverified'} and not _present(file['path']))
+    for path in absent:
+        parent=path.rsplit('/',1)[0];name=mtp.parse(path)[2][-1] if mtp.is_mtp(path) else Path(path).name
+        if parent in expected: expected[parent]=[entry for entry in expected[parent] if entry[0]!=name]
     if current!=expected: raise ValueError('引用目录在预览后变化，请重新核对')
+    scheduled={file['path'] for file in record.get('deletions',[])}
     for path,digest in record['scope_snapshot']['documents'].items():
-        if any(file['path']==path and file.get('state') in {'deleted','deleting'} and io.digest(path) is None for file in record['sources']): continue
+        gone=not _present(path)
+        if gone and (path in scheduled or any(file['path']==path and file.get('state') in {'deleted','deleting','unverified'} for file in record['sources'])): continue
         acceptable={digest}
-        if after and record.get('references_id'):
-            metadata=json.loads(tx.receipt_path(record['references_id']).read_text(encoding='utf-8'))
-            acceptable.update(file['after_digest'] for file in metadata['files'] if file['path']==path)
+        if after:
+            if record.get('write_digests'):
+                acceptable.add(record['write_digests'].get(path))
+            else:
+                acceptable.update(mtp.digest(write['content']) for write in record['metadata']['writes'] if write['path']==path)
+            acceptable.discard(None)
         if mtp.digest(read(path)) not in acceptable: raise ValueError('引用内容已变化：'+path)
     if checked['errors'] and record['mode']=='replace': raise ValueError('引用检查出现未知项，停止清理')
 
 
 def start(plan,cancelled=lambda: None,progress=lambda message: None):
+    """Apply a confirmed plan: guarded staged uploads, reference update, cleanup."""
     if not plan['can_apply']: raise ValueError('请处理方案中的待确认项')
-    manifest=receipt(plan['id']);manifest.parent.mkdir(parents=True)
-    record={key:copy.deepcopy(value) for key,value in plan.items() if key!='metadata_plan'}
-    metadata=copy.deepcopy(plan['metadata_plan'])
-    for write in metadata['writes']: write['content_base64']=base64.b64encode(write.pop('content')).decode('ascii')
-    record.update(status='backing_up',created_at=datetime.now(timezone.utc).isoformat(),error=None,
-                  references_id=uuid.uuid4().hex if plan['mode']!='copy' else None,metadata=metadata)
-    if plan['mode']=='copy':
-        for file in record['sources']: file['state']='kept'
-    if Path(record['backup_directory']).exists(): raise ValueError('电脑备份目录已存在，请重新预览')
-    atomic_write_json(manifest,record)
-    return run(record['id'],False,cancelled,progress)
-
-
-def backup_files(record):
-    return record['copies'] if record['mode']=='copy' else record['sources']+record['copies']
-
-
-def run(ident,restore=False,cancelled=lambda: None,progress=lambda message: None):
-    manifest=receipt(ident)
-    with file_lock(manifest):
-        record=json.loads(manifest.read_text(encoding='utf-8'))
-        if record['status']=='restored': raise ValueError('该操作已恢复')
-        try:
-            if restore and not any(item.get('state') in {'uploading','verified'} for item in record['copies']):
-                record.update(status='restored',error=None,actual_image_delta_bytes=0);atomic_write_json(manifest,record);return record
-            if not restore:
-                consumed=defaultdict(int)
-                for file in backup_files(record):
-                    if file.get('backup_verified'): consumed[io.volume(file['backup'])]+=file['size']
-                for item in record['copies']:
-                    if item.get('state') in {'uploading','verified'} and io.digest(item['target'],cancelled)==item['sha256']:
-                        consumed[io.volume(item['target'])]+=item['size']
-                if record['references_id'] and tx.receipt_path(record['references_id']).exists():
-                    nested=json.loads(tx.receipt_path(record['references_id']).read_text(encoding='utf-8'))
-                    for file in nested['files']:
-                        for snapshot in [file['before'],file['after']]:
-                            if snapshot: consumed[io.volume(snapshot)]+=Path(snapshot).stat().st_size
-                for capacity in record['capacity']:
-                    if io.free_bytes(capacity['path'])<max(RESERVE,capacity['required']-consumed[io.volume(capacity['path'])]):
-                        raise ValueError('执行前空间检查失败，停止继续')
-                backup=Path(record['backup_directory']);backup.mkdir(exist_ok=True)
-                for number,file in enumerate(backup_files(record)):
-                    if file.get('backup_verified'): continue
-                    cancelled()
-                    if file.get('backup') and io.digest(file['backup'],cancelled)==file['sha256']:
-                        file.update(backup_verified=True,state='kept' if 'path' in file else 'pending');atomic_write_json(manifest,record);continue
-                    source=file['path'] if 'path' in file else file['source']
-                    progress('建立电脑备份：'+source)
-                    file['backup']=str(backup/(f'{number}-'+uuid.uuid4().hex+'.bin'))
-                    atomic_write_json(manifest,record)
-                    if 'content_base64' in file:
-                        atomic_write_bytes(file['backup'],base64.b64decode(file['content_base64']))
-                        actual=io.digest(file['backup'],cancelled)
-                    else: actual=io.copy_to(source,file['backup'],cancelled)
-                    if actual!=file['sha256']: raise ValueError('电脑备份与已确认指纹不一致')
-                    file.update(backup_verified=True,state='kept' if 'path' in file else 'pending');atomic_write_json(manifest,record)
-                if record['references_id'] and not tx.receipt_path(record['references_id']).exists():
-                    metadata=copy.deepcopy(record['metadata'])
-                    for write in metadata['writes']: write['content']=base64.b64decode(write.pop('content_base64'))
-                    tx.prepare(metadata,record['references_id'])
-            # All computer backups and current owned targets are checked before mutation.
-            for file in backup_files(record):
-                if not file.get('backup') or io.digest(file['backup'],cancelled)!=file['sha256']: raise ValueError('电脑备份不完整，停止操作')
+    # One deepcopy keeps shared dict identity (deletions entries are the same
+    # objects as sources entries), so per-file states stay consistent.
+    record=copy.deepcopy(plan)
+    record['metadata']=record.pop('metadata_plan')
+    record['write_digests']={write['path']:mtp.digest(write['content']) for write in record['metadata']['writes']}
+    record.update(status='applying',created_at=datetime.now(timezone.utc).isoformat(),error=None)
+    reached_cleanup=False
+    try:
+        for capacity in record['capacity']:
+            if io.free_bytes(capacity['path'])<max(RESERVE,capacity['required']):
+                raise ValueError('执行前空间检查失败，停止继续')
+        if record['mode']!='copy': check_scope(record,after=True)
+        deleting={file['path'] for file in record['deletions']}
+        for file in record['sources']:
+            current=io.digest(file['path'],cancelled)
+            if current!=file['sha256'] and not (file['path'] in deleting and current is None):
+                raise ValueError('原镜像已变化，停止继续')
+        for item in record['copies']:
+            current=io.digest(item['target'],cancelled)
+            if current is not None and current!=item['sha256']: raise ValueError('CHD 目标已被外部修改')
+        tx.check_dependencies(record['metadata']['dependencies'],patches=record['metadata']['patches'])
+        with tempfile.TemporaryDirectory(prefix='plcn-deploy-') as staging:
+            for index,item in enumerate(record['copies']):
+                cancelled();progress('回传并回读校验：'+item['target'])
+                if 'content_base64' in item:
+                    staged=Path(staging)/f'content-{index}.bin'
+                    staged.write_bytes(base64.b64decode(item['content_base64']))
+                    if io.digest(str(staged),cancelled)!=item['sha256']: raise ValueError('生成内容与已确认指纹不一致')
+                    io.put_new(item['target'],str(staged),item['sha256'],item['stage'],cancelled)
+                else:
+                    source=item['source']
+                    if mtp.is_mtp(source):
+                        staged=Path(staging)/f'source-{index}'
+                        if io.copy_to(source,staged,cancelled)!=item['sha256']: raise ValueError('源回读校验失败：'+source)
+                        source=str(staged)
+                    io.put_new(item['target'],source,item['sha256'],item['stage'],cancelled)
+                item['state']='verified'
+        if record['mode']!='copy':
+            for file in record['sources']:
+                if io.digest(file['path'],cancelled)!=file['sha256'] and not (file['path'] in deleting and io.digest(file['path']) is None):
+                    raise ValueError('原镜像在回传期间变化，不更新引用')
+            cancelled();progress('更新并核对列表与 M3U')
+            tx.apply(record['metadata'])
+            record['status']='references_verified'
+        if record['mode']=='replace':
+            reached_cleanup=True
+            check_scope(record,after=True)
+            for write in record['metadata']['writes']:
+                if mtp.digest(read(write['path']))!=record['write_digests'][write['path']]: raise ValueError('引用未保持已确认的新内容，停止清理')
             for item in record['copies']:
-                current=io.digest(item['target'],cancelled)
-                if current is not None and current!=item['sha256']: raise ValueError('CHD 目标已被外部修改')
-            if restore:
-                record['status']='restoring';atomic_write_json(manifest,record)
-                needs={}
-                restore_sources=record['sources'] if record['mode']!='copy' else []
-                for file in restore_sources:
-                    current=io.digest(file['path'],cancelled)
-                    if current not in {None,file['sha256']}: raise ValueError('原镜像路径已有不同内容，拒绝恢复覆盖')
-                    if current is None:
-                        key=io.volume(file['path']);entry=needs.setdefault(key,{'path':file['path'],'size':0});entry['size']+=file['size']
-                if record['references_id']:
-                    metadata=json.loads(tx.receipt_path(record['references_id']).read_text(encoding='utf-8'))
-                    for file in metadata['files']:
-                        if file['before']:
-                            key=io.volume(file['path']);entry=needs.setdefault(key,{'path':file['path'],'size':0});entry['size']+=Path(file['before']).stat().st_size
-                for entry in needs.values():
-                    if io.free_bytes(entry['path'])<entry['size']+RESERVE: raise ValueError('恢复原镜像与引用所需空间不足')
-                for file in restore_sources:
-                    cancelled()
-                    io.put_new(file['path'],file['backup'],file['sha256'],file['path']+'.plcn-'+ident+'.restore.tmp',cancelled)
-                    file['state']='kept';atomic_write_json(manifest,record)
-                if record['references_id']:
-                    metadata=json.loads(tx.receipt_path(record['references_id']).read_text(encoding='utf-8'))
-                    if metadata['status']!='restored':
-                        result=tx.run(record['references_id'],restore=True)
-                        if result['status']!='restored': raise ValueError('引用恢复未完成：'+str(result['error']))
-                checked=references.scope(record['roots'],record['playlist'],cancelled)
-                record['restored_retained_outputs']=[]
-                owned={item['target'] for item in record['copies'] if item['created']}
-                live={ref['target'] for ref in checked['references'] if ref['owner'] not in owned}
-                while True:
-                    reached={ref['target'] for ref in checked['references'] if ref['owner'] in live}
-                    if reached<=live: break
-                    live.update(reached)
-                removable=owned-live
-                for item in sorted(record['copies'],key=lambda item:not item['target'].lower().endswith('.m3u')):
-                    cancelled();item['state']='restored'
-                    if item['created'] and io.digest(item['target'],cancelled) is not None:
-                        consumers=[ref['owner'] for ref in checked['references'] if ref['target']==item['target'] and ref['owner'] not in removable]
-                        if consumers or checked['errors']:
-                            item['state']='retained';record['restored_retained_outputs'].append({'path':item['target'],'consumers':consumers,'issues':checked['errors']})
-                        else: io.remove(item['target'],item['sha256'],cancelled)
-                    if io.digest(item['stage'],cancelled) is not None: io.remove(item['stage'],item['sha256'],cancelled)
-                record['status']='restored'
+                if io.digest(item['target'],cancelled)!=item['sha256']: raise ValueError('CHD 在回传后变化，停止清理')
+            tx.check_dependencies(record['metadata']['dependencies'],patches=record['metadata']['patches'])
+            deleting={file['path'] for file in record['deletions']}
+            record['unverified']=[]
+            for file in record['sources']:
+                if file['path'] not in deleting: continue
+                path=file['path']
+                cancelled();progress('删除原镜像：'+path)
+                try:
+                    if mtp.is_mtp(path) and 'object_id' in file:
+                        current=io.object_id(path)
+                        if current is not None:
+                            if file['object_id'] is None or current!=file['object_id']:
+                                raise io.RemoveUnverified('待移除对象已变化：'+path)
+                            io.remove(path,file['sha256'],cancelled,file['object_id'])
+                    elif io.digest(path,cancelled) is not None:
+                        io.remove(path,file['sha256'],cancelled,file.get('object_id'))
+                except io.RemoveUnverified as error:
+                    file['state']='unverified'
+                    record['unverified'].append({'path':path,'error':str(error)})
+                    continue
+                # The delete was issued; a failed read-back must not silently
+                # re-list a path that may already be gone.
+                try:
+                    residual=io.digest(path,cancelled)
+                except TaskCancelled:
+                    file['state']='unverified'
+                    record['unverified'].append({'path':path,'error':'删除已执行但核对中断'})
+                    raise
+                except (OSError,ValueError,RuntimeError) as error:
+                    file['state']='unverified'
+                    record['unverified'].append({'path':path,'error':'删除已执行但未能核对：'+str(error)})
+                    continue
+                if residual is not None:
+                    # Verified-absent delete, then the path reappeared: this is a
+                    # new object — never list it for automatic deletion again.
+                    file['state']='unverified'
+                    record['unverified'].append({'path':path,'error':'删除后路径重新出现'})
+                    continue
+                file['state']='deleted'
+        record['status']='completed';record['error']=None
+    except (OSError,ValueError,RuntimeError,TaskCancelled) as error:
+        record.update(status='partial',error=str(error))
+    if record['status']=='completed' and record.get('unverified'):
+        record['status']='partial';record['error']=str(len(record['unverified']))+' 项删除结果待核对'
+    record['actual_image_delta_bytes']=(sum(file['size'] for file in record['sources'] if file.get('state')=='deleted')-sum(item['size'] for item in record['copies'] if item['created'] and item.get('state')=='verified')) if record['status']=='completed' else None
+    # The result travels through the job API; internal descriptors are not JSON-safe.
+    result={key:value for key,value in record.items() if key not in {'metadata','metadata_plan','scope_snapshot','origin_analysis','write_digests'}} | {
+        'copies':[{key:value for key,value in item.items() if key!='content_base64'} for item in record['copies']]}
+    if record.get('unverified'): result['unverified']=record['unverified']
+    if record['mode']=='replace' and record['status']=='partial' and reached_cleanup:
+        remaining=[file for file in record['deletions'] if file.get('state') not in {'deleted','unverified'}]
+        result['cleanup_remaining']=[file['path'] for file in remaining]
+        if not remaining: return result
+        result['cleanup']={'playlist':record['playlist'],'roots':record['roots'],
+                           'copies':[{'target':item['target'],'sha256':item['sha256'],'created':item['created']} for item in record['copies']],
+                           'pending':[{'path':file['path'],'sha256':file['sha256'],'size':file['size'],**({'object_id':file['object_id']} if 'object_id' in file else {})} for file in remaining],
+                           'writes':[{'path':path,'after_digest':digest} for path,digest in record['write_digests'].items()],
+                           'dependencies':record['metadata']['dependencies'],
+                           'patches':record['metadata'].get('patches',[]),
+                           'scope_snapshot':record['scope_snapshot'],
+                           'unverified':record.get('unverified',[]),
+                           'sources':[{'path':file['path'],'sha256':file['sha256'],'size':file['size'],'state':file.get('state')} for file in record['sources']]}
+    return result
+
+
+def continue_cleanup(payload,cancelled=lambda: None,progress=lambda message: None):
+    """Finish a replace-mode cleanup interrupted after references were switched.
+
+    The payload is the `cleanup` section of a partial deployment result. Every
+    deletion is re-guarded by the recorded digest and the current reference
+    state; already-removed files count as satisfied."""
+    if not isinstance(payload,dict): raise ValueError('清理方案无效')
+    playlist=payload.get('playlist');roots=payload.get('roots')
+    if not isinstance(playlist,str) or not playlist or not isinstance(roots,list) or not roots or any(not isinstance(root,str) for root in roots):
+        raise ValueError('清理方案无效')
+    copies=payload.get('copies');pending=payload.get('pending');writes=payload.get('writes')
+    snapshot=payload.get('scope_snapshot');dependencies=payload.get('dependencies',[]);sources=payload.get('sources',[]);patches=payload.get('patches',[])
+    if not isinstance(copies,list) or not isinstance(pending,list) or not isinstance(writes,list) or not isinstance(snapshot,dict) or not isinstance(dependencies,list) or not isinstance(sources,list) or not isinstance(patches,list):
+        raise ValueError('清理方案无效')
+    for entry in [*copies,*pending,*writes,*sources]:
+        if not isinstance(entry,dict) or not isinstance(entry.get('path') or entry.get('target'),str): raise ValueError('清理方案无效')
+    record={'playlist':playlist,'roots':roots,'copies':copies,'mode':'replace',
+            'sources':[dict(file) for file in sources],'deletions':[dict(file) for file in pending],
+            'scope_snapshot':snapshot,'write_digests':{write['path']:write.get('after_digest') for write in writes},
+            'metadata':{'writes':[]},'dependencies':dependencies}
+    check_scope(record,after=True)
+    for write in writes:
+        if mtp.digest(read(write['path']))!=write.get('after_digest'):
+            raise ValueError('引用未保持已切换到 CHD 的内容，停止清理：'+write['path'])
+    for item in copies:
+        if io.digest(item['target'],cancelled)!=item['sha256']: raise ValueError('CHD 在回传后变化，停止清理：'+item['target'])
+    tx.check_dependencies(dependencies,patches=patches)
+    deleted=[];remaining=[];stopped=False
+    prior_unverified=[entry for entry in payload.get('unverified',[]) if isinstance(entry,dict) and isinstance(entry.get('path'),str)]
+    unverified=list(prior_unverified);unverified_paths={entry['path'] for entry in unverified}
+    for file in pending:
+        path=file['path']
+        if stopped:
+            remaining.append({'path':path,'error':'取消后未执行'})
+            continue
+        try:
+            cancelled();progress('清理原镜像：'+path)
+            if mtp.is_mtp(path) and 'object_id' in file:
+                current=io.object_id(path)
+                if current is None:
+                    deleted.append(path);continue
+                if file['object_id'] is None or current!=file['object_id']:
+                    if path not in unverified_paths:
+                        unverified_paths.add(path)
+                        unverified.append({'path':path,'error':'无法确认待移除对象身份' if file['object_id'] is None else '待移除对象已变化'})
+                    continue
+                io.remove(path,file['sha256'],cancelled,file['object_id'])
+            elif io.digest(path,cancelled) is None:
+                deleted.append(path);continue
             else:
-                if record['status'] in {'restore_pending','restoring'}: raise ValueError('请先完成恢复')
-                if record['mode']!='copy': check_scope(record,after=True)
-                for file in record['sources']:
-                    current=io.digest(file['path'],cancelled)
-                    if current is None and file['state'] in {'deleting','deleted'}: continue
-                    if current!=file['sha256']: raise ValueError('原镜像已变化，停止继续')
-                for item in record['copies']:
-                    cancelled();progress('回传并回读校验：'+item['target'])
-                    item['state']='uploading';atomic_write_json(manifest,record)
-                    io.put_new(item['target'],item['backup'],item['sha256'],item['stage'],cancelled)
-                    item['state']='verified';atomic_write_json(manifest,record)
-                if record['references_id']:
-                    for file in record['sources']:
-                        current=io.digest(file['path'],cancelled)
-                        if current is None and file['state'] in {'deleting','deleted'}: continue
-                        if current!=file['sha256']: raise ValueError('原镜像在回传期间变化，不更新引用')
-                    cancelled();progress('更新并核对列表与 M3U')
-                    result=tx.run(record['references_id'])
-                    if result['status']!='applied': raise ValueError('引用部分完成：'+str(result['error']))
-                    record['status']='references_verified';atomic_write_json(manifest,record)
-                if record['mode']=='replace':
-                    check_scope(record,after=True)
-                    metadata=json.loads(tx.receipt_path(record['references_id']).read_text(encoding='utf-8'))
-                    for file in metadata['files']:
-                        if mtp.digest(read(file['path']))!=file['after_digest']: raise ValueError('引用未保持已确认的新内容，停止清理')
-                    for item in record['copies']:
-                        if io.digest(item['target'],cancelled)!=item['sha256']: raise ValueError('CHD 在回传后变化，停止清理')
-                    tx.check_dependencies(record['metadata']['dependencies'])
-                    deleting={file['path'] for file in record['deletions']}
-                    for file in record['sources']:
-                        if file['path'] not in deleting or file['state']=='deleted': continue
-                        cancelled()
-                        if io.digest(file['backup'],cancelled)!=file['sha256']: raise ValueError('清理前电脑备份校验失败')
-                        progress('清理已有电脑备份的原镜像：'+file['path'])
-                        file['state']='deleting';atomic_write_json(manifest,record)
-                        if io.digest(file['path'],cancelled) is not None: io.remove(file['path'],file['sha256'],cancelled)
-                        file['state']='deleted';atomic_write_json(manifest,record)
-                record['status']='completed'
-            record['error']=None
-        except (OSError,ValueError,RuntimeError,TaskCancelled) as error:
-            record.update(status='restore_pending' if restore else 'partial',error=str(error))
-        record['actual_image_delta_bytes']=(sum(file['size'] for file in record['sources'] if file.get('state')=='deleted')-sum(item['size'] for item in record['copies'] if item['created'] and item.get('state') in {'verified','retained'})) if record['status'] in {'completed','restored'} else None
-        atomic_write_json(manifest,record)
-    return record
+                io.remove(path,file['sha256'],cancelled,file.get('object_id'))
+        except TaskCancelled as error:
+            remaining.append({'path':path,'error':str(error)});stopped=True;continue
+        except (OSError,ValueError,RuntimeError) as error:
+            if isinstance(error,io.RemoveUnverified):
+                if path not in unverified_paths: unverified_paths.add(path);unverified.append({'path':path,'error':str(error)})
+            else:
+                remaining.append({'path':path,'error':str(error)})
+            continue
+        # The delete was issued; a failed read-back must not silently re-list
+        # a path that may already be gone (a restored copy would be re-removed).
+        try:
+            residual=io.digest(path,cancelled)
+        except TaskCancelled as error:
+            if path not in unverified_paths: unverified_paths.add(path);unverified.append({'path':path,'error':'删除已执行但核对中断：'+str(error)})
+            stopped=True;continue
+        except (OSError,ValueError,RuntimeError) as error:
+            if path not in unverified_paths: unverified_paths.add(path);unverified.append({'path':path,'error':'删除已执行但未能核对：'+str(error)})
+            continue
+        if residual is None: deleted.append(path)
+        elif path not in unverified_paths: unverified_paths.add(path);unverified.append({'path':path,'error':'删除后路径重新出现'})
+    if isinstance(pending,list) and not pending: progress('没有待清理的原镜像')
+    result={'status':'completed' if not remaining and not unverified else 'partial','deleted':deleted,'remaining':remaining,
+            'unverified':unverified,'playlist':playlist,
+            'error':None if not remaining and not unverified else '；'.join(part for part in
+                ('部分原镜像未能移除' if remaining else '',str(len(unverified))+' 项删除结果待核对' if unverified else '') if part)}
+    if stopped: result['cancelled']=True
+    if remaining:
+        still={entry['path'] for entry in remaining}
+        done={entry['path'] for entry in pending}-still
+        result['cleanup']={**{key:payload[key] for key in ('playlist','roots','copies','writes','dependencies','patches','scope_snapshot')},
+                           'pending':[file for file in pending if file['path'] in still],
+                           'unverified':unverified,
+                           'sources':[{**file,'state':'deleted' if file['path'] in done else file.get('state')} for file in sources]}
+    return result

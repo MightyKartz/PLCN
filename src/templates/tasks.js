@@ -10,13 +10,9 @@ let batchRunCreatedArtworkDir = false;
 
 let actionToastTimer = null;
 
-function showActionToast({message, receiptId = '', details = null}) {
+function showActionToast({message, details = null}) {
     const toast = document.getElementById('action-toast');
     document.getElementById('action-toast-text').textContent = message;
-    const undo = document.getElementById('action-toast-undo');
-    undo.hidden = !receiptId;
-    undo.disabled = Boolean(workbench.operation);
-    undo.onclick = receiptId ? () => undoCompletion(receiptId) : null;
     const view = document.getElementById('action-toast-details');
     view.hidden = !details;
     view.onclick = details || null;
@@ -76,30 +72,6 @@ async function cancelCompletion() {
         await desktopRequest('/api/jobs/cancel', {job_id: jobId});
     } catch (error) {
         showStatus(error.message, 'error');
-    }
-}
-
-async function undoCompletion(receiptId) {
-    if (!beginWorkbenchOperation('apply')) return;
-    document.getElementById('action-toast-undo').disabled = true;
-    try {
-        const started = await desktopRequest('/api/completion/undo', {id: receiptId});
-        workbench.jobId = started.job_id;
-        completionJobIds.add(workbench.jobId);
-        renderWorkbench();
-        const summary = await watchCompletionJob(started.job_id, workbenchText('正在撤销：', 'Undoing: '));
-        const skipped = summary?.skipped?.length || 0;
-        showActionToast({message: skipped
-            ? workbenchText(`已撤销部分内容，${skipped} 项在补全后被改动，已保留`, `Partially undone; ${skipped} items changed since completion were kept`)
-            : workbenchText('已撤销', 'Undone'),
-            details: () => openOperationHistory('completion')});
-    } catch (error) {
-        showActionToast({message: workbenchText('撤销失败：', 'Undo failed: ') + error.message});
-    } finally {
-        workbench.jobId = null;
-        invalidateWorkbenchPreview();
-        endWorkbenchOperation();
-        refreshAfterCompletion();
     }
 }
 
@@ -182,13 +154,14 @@ async function runDirectCompletion(scope = null) {
         let message = workbenchText(`已补全 ${appliedCount} 个游戏`, `Completed ${appliedCount} ${appliedCount === 1 ? 'game' : 'games'}`);
         if (failedImages) message += workbenchText(`，${failedImages} 张封面下载失败`, `, ${failedImages} images failed`);
         if (result?.memory_warning) message += ' · ' + result.memory_warning;
+        if (result?.cleanup_warnings?.length) message += ' · ' + result.cleanup_warnings.join(' · ');
         if (needsManual) message += workbenchText(`，${needsManual} 个游戏需手动处理`, `, ${needsManual} games need manual work`);
-        showActionToast({message, receiptId: result?.receipt_id || '',
+        showActionToast({message,
             details: needsManual ? () => previewTask(scope) : openHistory});
     } catch (error) {
         if (error.cancelled) {
             showActionToast({message: workbenchText('已取消，已完成的部分会保留', 'Cancelled; completed work is kept.'),
-                receiptId: error.result?.receipt_id || '', details: () => openOperationHistory('completion')});
+                details: () => openOperationHistory('completion')});
         } else {
             showActionToast({message: error.message, details: () => openOperationHistory('completion')});
         }
@@ -230,7 +203,7 @@ async function runAllSystemsCompletion(options = {write_names: true, download_th
         renderWorkbench();
         const applyResult = await watchCompletionJob(applied.job_id,
             workbenchText('第 2 步 / 共 2 步 · 补全：', 'Step 2 of 2 · Applying: '));
-        finishBatchRun('completed', analysis, applyResult);
+        finishBatchRun(applyResult?.cancelled ? 'cancelled' : 'completed', analysis, applyResult);
     } catch (error) {
         if (batchRunStage === 'analysis' && batchRunJobId) {
             try { await desktopRequest('/api/batch/discard', {preview_job_id: batchRunJobId}); } catch (discardError) {}
@@ -259,21 +232,32 @@ function finishBatchRun(outcome, analysis, applyResult, errorMessage = '') {
         .reduce((total, stats) => total + (stats.failed || 0), 0);
     const openHistory = () => openOperationHistory('completion');
     if (outcome === 'cancelled') {
-        showActionToast({message: analysis
-            ? workbenchText('已取消，已完成的部分会保留。', 'Cancelled; completed work is kept.')
-            : workbenchText('已取消，未写入任何内容。', 'Cancelled; nothing was written.'),
-            receiptId: applyResult?.receipt_id || '', details: openHistory});
+        const processed = applyResult?.processed_count, total = applyResult?.total_count;
+        let message = processed !== undefined && total !== undefined
+            ? workbenchText(`已取消，已处理 ${processed}/${total} 个列表；完成的部分会保留。`, `Cancelled; ${processed}/${total} playlist(s) processed and kept.`)
+            : processed
+                ? workbenchText(`已取消，已处理 ${processed} 个列表；完成的部分会保留。`, `Cancelled; ${processed} playlist(s) processed and kept.`)
+                : analysis
+                    ? workbenchText('已取消，已完成的部分会保留。', 'Cancelled; completed work is kept.')
+                    : workbenchText('已取消，未写入任何内容。', 'Cancelled; nothing was written.');
+        if (applyResult?.cleanup_warnings?.length) message += ' · ' + applyResult.cleanup_warnings.join(' · ');
+        showActionToast({message, details: openHistory});
     } else if (outcome === 'failed') {
         showActionToast({message: errorMessage || workbenchText('处理失败，请查看补全记录。', 'The run failed; see completion history.'),
             details: openHistory});
     } else if (applyResult) {
-        let text = workbenchText(`已补全 ${completed} 个游戏`,
-            `Completed ${completed} ${completed === 1 ? 'game' : 'games'}`);
+        const processed = applyResult.processed_count, total = applyResult.total_count;
+        let text = processed !== undefined && total !== undefined
+            ? workbenchText(`已完成 ${processed}/${total} 个列表，补全 ${completed} 个游戏`,
+                `Finished ${processed}/${total} playlist(s); completed ${completed} ${completed === 1 ? 'game' : 'games'}`)
+            : workbenchText(`已补全 ${completed} 个游戏`,
+                `Completed ${completed} ${completed === 1 ? 'game' : 'games'}`);
         const failedPlaylists = applyResult.errors?.length || 0;
         if (failedPlaylists) text += workbenchText(`，${failedPlaylists} 个列表处理失败`, `, ${failedPlaylists} playlists failed`);
         if (failedImages) text += workbenchText(`，${failedImages} 张封面下载失败`, `, ${failedImages} images failed`);
         if (manual) text += workbenchText(`，${manual} 个游戏需手动处理`, `, ${manual} games need manual work`);
-        showActionToast({message: text, receiptId: applyResult.receipt_id || '', details: openHistory});
+        if (applyResult.cleanup_warnings?.length) text += ' · ' + applyResult.cleanup_warnings.join(' · ');
+        showActionToast({message: text, details: openHistory});
     } else {
         const failedRows = (analysis?.rows || []).filter(row => row.error);
         let message = workbenchText('没有需要自动补全的内容', 'Nothing needed auto-completion')
@@ -394,7 +378,9 @@ function trackProgress(jobId, mode = 'single') {
             }
             if (mode === 'single' && job.result) applyCompletedJobToPreview(job.result);
             if (job.result?.memory_warning) outcome.message += ' · ' + job.result.memory_warning;
-            showStatus(outcome.message, outcome.complete ? (job.result?.memory_warning ? 'info' : 'success') : job.status === 'cancelled' ? 'info' : 'error');
+            if (job.result?.cleanup_warnings?.length) outcome.message += ' · ' + job.result.cleanup_warnings.join(' · ');
+            const hasWarning = job.result?.memory_warning || job.result?.cleanup_warnings?.length;
+            showStatus(outcome.message, outcome.complete ? (hasWarning ? 'info' : 'success') : job.status === 'cancelled' ? 'info' : 'error');
         } else showStatus(job.error || workbenchText('任务失败', 'Task failed'), 'error');
         workbench.jobId = null;
         endWorkbenchOperation();

@@ -108,7 +108,7 @@ test('duplicate confirmation is locked and successful update changes only the cu
     let submit, calls=0;
     const {context, item, elements} = harness(async url => {
         if (url.endsWith('/apply')) {calls++;return new Promise(resolve=>{submit=resolve;});}
-        return {jobs:[{id:'one',status:'completed',result:{target:'image.png',image_url:'/updated',backup:'image.png.bak'}}]};
+        return {jobs:[{id:'one',status:'completed',result:{target:'image.png',image_url:'/updated'}}]};
     });
     context.state().candidate = {token:'token'};
     const first=context.confirmArtwork();
@@ -122,8 +122,7 @@ test('duplicate confirmation is locked and successful update changes only the cu
     assert.equal(elements['artwork-dialog'].open,false);
     assert.equal(elements['game-artwork-action-4'].focused,true);
     assert.equal(elements['game-artwork-action-4'].scrolled,true);
-    assert.equal(item.artwork_backup,'image.png.bak');
-    assert.match(item.artwork_result,/backed up/);
+    assert.match(item.artwork_result,/已更新|updated/i);
 });
 
 test('artwork opened from repair preview preserves edits on cancel and invalidates them after a write', async () => {
@@ -369,7 +368,7 @@ test('clearing every image type blocks the preview instead of a partial write', 
 
 test('a confirmed update reports every written type on the game row', async () => {
     const {context,item,elements}=harness(async url=>url.endsWith('/apply') ? {job_id:'one'}
-        : {jobs:[{id:'one',status:'completed',result:{backup:'Game.png.bak',images:[
+        : {jobs:[{id:'one',status:'completed',result:{images:[
             {kind:'Named_Boxarts',target:'/img/Named_Boxarts/Game.png',image_url:'/box'},
             {kind:'Named_Snaps',target:'/img/Named_Snaps/Game.png',image_url:'/snap'}]}}]});
     context.state().candidate={token:'token'};

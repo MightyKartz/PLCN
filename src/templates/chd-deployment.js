@@ -5,7 +5,7 @@ function deploymentPayload(){return {conversion_id:chdDeployment.record.id,syste
     disc_ids:[...deployField('discs').querySelectorAll('input:checked')].map(input=>input.value),mode:deployField('mode').value,
     runtime:{version:deployField('version').value.trim(),confirmed:deployField('tested').checked},scope_confirmed:deployField('scope').checked};}
 function deploymentKey(){return JSON.stringify(deploymentPayload())+document.getElementById('playlist_path').value;}
-function invalidateDeployment(){chdDeployment.revision++;chdDeployment.preview=null;chdDeployment.key=null;deployField('apply').disabled=true;deployField('review').hidden=true;}
+function invalidateDeployment(){chdDeployment.revision++;chdDeployment.preview=null;chdDeployment.key=null;deployField('apply').disabled=true;deployField('review').hidden=true;clearCleanupOffer();}
 function openChdDeployment(record){
     if(workbench.operation)return;
     Object.assign(chdDeployment,{record,changed:false});invalidateDeployment();
@@ -25,13 +25,15 @@ async function closeChdDeployment(){
 async function deploymentJob(route,payload){
     if(!beginWorkbenchOperation('chd-deploy'))throw new Error('请等待当前任务');
     chdDeployment.busy=true;deployField('fields').disabled=true;deployField('cancel').hidden=false;
-    for(const name of ['close','preview','apply'])deployField(name).disabled=true;
+    for(const name of ['close','preview','apply','cleanup'])deployField(name).disabled=true;
     try{
-        const started=await desktopRequest(route,payload);chdDeployment.job=started.job_id;
+        const started=await desktopRequest(route,payload);chdDeployment.job=started.job_id;chdDeployment.lastJob=started.job_id;
         return await new Promise((resolve,reject)=>{
             const events=new EventSource('/api/progress?job_id='+encodeURIComponent(started.job_id));
             events.onmessage=event=>{const job=JSON.parse(event.data);
-                if(['failed','cancelled'].includes(job.status)){events.close();reject(new Error(job.error||'任务已停止，请检查持久记录'));}
+                if(['failed','cancelled'].includes(job.status)){events.close();
+                    const error=new Error(job.error||'任务已停止，请检查持久记录');
+                    error.result=job.result;error.code=job.code;error.cancelled=job.status==='cancelled';reject(error);}
                 else if(job.status==='completed'){events.close();resolve({id:started.job_id,result:job.result});}
                 else deployField('status').textContent=job.message||'正在核对…';
             };
@@ -53,10 +55,10 @@ async function previewChdDeployment(){
         if(revision!==chdDeployment.revision||key!==deploymentKey())return;
         chdDeployment.preview=id;chdDeployment.key=key;deployField('review').hidden=false;deployField('settings').open=!result.can_apply;deployField('dialog').scrollTop=0;
         const details=deployField('details');details.replaceChildren();
-        for(const text of ['方式：'+({copy:'仅回传；保留原文件与引用',switch:'回传并更新引用；保留原文件',replace:'回传、更新引用并清理有备份且无其他引用的原文件'}[result.mode]),
-            '电脑备份：'+result.backup_directory,'镜像空间净变化：'+storageBytes(result.image_delta_bytes)+'；不含电脑备份和元数据备份，电脑同卷备份可能使总可用空间减少',
+        for(const text of ['方式：'+({copy:'仅回传；保留原文件与引用',switch:'回传并更新引用；保留原文件',replace:'回传、更新引用并清理无其他引用的原文件'}[result.mode]),
+            '镜像空间净变化：'+storageBytes(result.image_delta_bytes),
             ...result.copies.map(item=>'回传并回读：'+item.source+' → '+item.target+(item.created?'':'（已有相同目标，保留）')),
-            ...result.reference_changes.map(item=>'备份并更新引用：'+item.path),...result.deletions.map(item=>'有电脑备份后移除：'+item.path),
+            ...result.reference_changes.map(item=>'更新引用：'+item.path),...result.deletions.map(item=>'校验后移除：'+item.path),
             ...result.retained.map(item=>'保留共享源：'+item.path+'；引用：'+item.consumers.join('、')),
             ...result.roots.map(path=>'递归引用检查目录：'+path),...result.scope_errors,
             ...result.capacity.map(item=>'空间检查：'+item.path+' · 需要 '+storageBytes(item.required)+'／可用 '+storageBytes(item.free)),
@@ -69,16 +71,92 @@ async function previewChdDeployment(){
 async function applyChdDeployment(){
     const id=chdDeployment.preview;if(!id||chdDeployment.busy)return;
     if(chdDeployment.key!==deploymentKey()){invalidateDeployment();deployField('status').textContent='输入或游戏库已变化，请重新预览。';return;}
-    chdDeployment.preview=null;
+    chdDeployment.preview=null;const record=chdDeployment.record;
     try{
         const {result}=await deploymentJob('/api/chd/deployment/apply',{preview_job_id:id});chdDeployment.changed=true;
-        deployField('status').textContent='已完成。电脑备份：'+result.backup_directory+'。可从操作记录还原原镜像和引用。';deployField('review').hidden=true;
-    }catch(error){chdDeployment.changed=true;deployField('status').textContent=error.message+'；请在操作记录检查 CHD 回传记录。';}
+        if(result?.status==='partial'&&result.cleanup_id&&chdDeployment.record===record){offerCleanup(result);}
+        else if(result?.unverified?.length){showCleanupResult(result);}
+        else{deployField('status').textContent='已完成。';deployField('review').hidden=true;}
+    }catch(error){chdDeployment.changed=true;deployField('status').textContent=error.message;}
 }
-async function recoverChdDeployment(id,action){
-    assertWorkbenchIdle();
-    if(!await desktopConfirm(action==='restore'?'恢复此 CHD 操作？先还原原镜像，再还原引用，最后移除本次新建且未变化的 CHD。':'核对电脑备份、目标与引用后继续原方案？'))return;
+function offerCleanup(result){
+    deployField('status').textContent='引用已切换，但清理未全部完成：'+(result.error||'');
+    const button=deployField('cleanup');button.hidden=false;button.disabled=false;button.dataset.job=result.cleanup_id;
+    const details=deployField('details');details.replaceChildren();
+    for(const entry of result.unverified||[]){const line=document.createElement('li');line.textContent='待核对：'+entry.path+' · '+entry.error;details.appendChild(line);}
+    for(const path of result.cleanup_remaining||[]){const line=document.createElement('li');line.textContent='待清理：'+path;details.appendChild(line);}
+    deployField('review').hidden=false;
+}
+function setCleanupButton(check){
+    // Keep the icon container: checking must not look like a delete action.
+    wbIconButton(deployField('cleanup'),check?'search':'trash',
+        workbenchText(check?'核对清理结果':'继续清理原镜像',check?'Check cleanup result':'Continue removing originals'));
+}
+function clearCleanupOffer(){
+    const button=deployField('cleanup');button.hidden=true;
+    if(button.dataset){delete button.dataset.job;delete button.dataset.check;}
+    setCleanupButton(false);chdDeployment.cleanupRequest=null;
+}
+function showCleanupResult(result){
+    const button=deployField('cleanup');
+    const unverified=result.unverified||[],remaining=result.remaining||[];
+    if(result.status==='completed'&&!unverified.length&&!remaining.length){
+        deployField('status').textContent=(result.cancelled?'已取消；':'')+'清理完成：已移除 '+(result.deleted||[]).length+' 个原镜像。';
+        deployField('review').hidden=true;return;}
+    deployField('status').textContent=(result.cancelled?'已取消；':'')+
+        (remaining.length?(result.error||'部分原镜像未能移除')
+            :unverified.length?'自动清理已结束；仍有 '+unverified.length+' 项删除结果待核对':(result.error||''));
+    const details=deployField('details');details.replaceChildren();
+    for(const entry of unverified){const line=document.createElement('li');line.textContent='待核对：'+entry.path+' · '+entry.error;details.appendChild(line);}
+    for(const entry of remaining){const line=document.createElement('li');line.textContent='待清理：'+entry.path+' · '+entry.error;details.appendChild(line);}
+    deployField('review').hidden=false;
+    if(result.cleanup_id){button.dataset.job=result.cleanup_id;delete button.dataset.check;setCleanupButton(false);
+        button.hidden=false;button.disabled=false;}
+    else button.hidden=true;
+}
+function offerCleanupCheck(){
+    const button=deployField('cleanup');
+    button.dataset.check='1';button.hidden=false;button.disabled=false;setCleanupButton(true);
+}
+async function reconcileCleanup(requestId,record,cause){
+    // The request outcome is unknown: never resubmit until the server state is
+    // confirmed. Only the job carrying this request's id counts — a same-titled
+    // task from another game must never be bound here.
+    const button=deployField('cleanup');
+    deployField('status').textContent=(cause?cause+'；':'')+'正在核对清理结果…';
+    let job;
     try{
-        await deploymentJob('/api/chd/deployment/recover',{id,action});resetGameLibrary();desktopClearPreview();await refreshDesktop();
-    }catch(error){await refreshDesktop();showStatus(error.message,'error');}
+        job=(await desktopRequest('/api/jobs/by-request',{request_id:requestId})).job;
+    }catch(_error){job=null;}
+    if(chdDeployment.record!==record||chdDeployment.cleanupRequest!==requestId)return;
+    if(!job){deployField('status').textContent='无法确认清理结果；恢复连接后可再次核对。';offerCleanupCheck();return;}
+    if(['pending','running'].includes(job.status)){deployField('status').textContent='清理仍在执行，可稍后再次核对。';offerCleanupCheck();return;}
+    if(job.status==='failed'){
+        if(job.code==='cleanup_invalid'){delete button.dataset.job;chdDeployment.cleanupRequest=null;deployField('status').textContent=job.error||'该清理任务已失效。';return;}
+        chdDeployment.cleanupRequest=null;
+        deployField('status').textContent='清理未能完成：'+(job.error||'未知错误')+'，可重试。';button.hidden=false;button.disabled=false;return;}
+    chdDeployment.cleanupRequest=null;
+    if(job.result)showCleanupResult(job.result);
+    else{deployField('status').textContent='清理已停止且无结果，请查看任务记录。';}
+}
+async function continueChdCleanup(){
+    const button=deployField('cleanup');if(chdDeployment.busy)return;
+    const record=chdDeployment.record;
+    if(button.dataset.check&&chdDeployment.cleanupRequest){button.hidden=true;delete button.dataset.check;setCleanupButton(false);
+        await reconcileCleanup(chdDeployment.cleanupRequest,record);return;}
+    const cleanupId=button.dataset.job;if(!cleanupId)return;
+    button.hidden=true;
+    const requestId='clr-'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+    chdDeployment.cleanupRequest=requestId;
+    try{
+        const {result}=await deploymentJob('/api/chd/deployment/cleanup',{cleanup_job_id:cleanupId,request_id:requestId});
+        chdDeployment.cleanupRequest=null;showCleanupResult(result);
+    }catch(error){
+        if(chdDeployment.record!==record){chdDeployment.cleanupRequest=null;return;}
+        // A cancelled job still returns what it did: bind the freshly issued id.
+        if(error.result&&Array.isArray(error.result.deleted)){chdDeployment.cleanupRequest=null;showCleanupResult(error.result);return;}
+        // Only a server-side invalid-id code retires the entry; a lost
+        // connection message must never destroy a still-valid plan.
+        if(error.code==='cleanup_invalid'){chdDeployment.cleanupRequest=null;delete button.dataset.job;deployField('status').textContent=error.message;return;}
+        await reconcileCleanup(requestId,record,error.message);}
 }
