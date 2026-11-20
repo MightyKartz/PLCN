@@ -335,6 +335,28 @@ def test_continuation_rechecks_scope_and_never_redetects_removed(prepared,monkey
     assert track.read_bytes()==b'external change'
 
 
+def test_cleanup_continuation_is_bound_to_its_job(prepared,monkeypatch):
+    import api_chd
+    from job_manager import JobManager
+    from types import SimpleNamespace
+    playlist,cue,track,payload=prepared;plan=deploy.prepare(payload)
+    jobs=JobManager();ident=jobs.create_job();jobs.complete_job(ident);jobs.contexts[ident]={'chd_deployment':plan}
+    captured=[];monkeypatch.setattr(api_chd,'reply',lambda *args:None)
+    monkeypatch.setattr(api_chd,'background',lambda jobs,title,work:captured.append(work))
+    remove=chd_io.remove
+    monkeypatch.setattr(chd_io,'remove',lambda *a,**k:(_ for _ in ()).throw(RuntimeError('disconnected')))
+    api_chd.deployment_apply(None,SimpleNamespace(job_manager=jobs),{'preview_job_id':ident})
+    apply_id=jobs.create_job();result=captured[0](apply_id);jobs.complete_job(apply_id)
+    assert result['status']=='partial' and 'cleanup' not in result and result['cleanup_id']==apply_id
+    # A different job id cannot reach this cleanup plan.
+    with pytest.raises(ValueError,match='失效'):
+        api_chd.deployment_cleanup(None,SimpleNamespace(job_manager=jobs),{'cleanup_job_id':'other'})
+    monkeypatch.setattr(chd_io,'remove',remove)
+    api_chd.deployment_cleanup(None,SimpleNamespace(job_manager=jobs),{'cleanup_job_id':result['cleanup_id']})
+    outcome=captured[1](jobs.create_job())
+    assert outcome['status']=='completed' and not cue.exists() and not track.exists()
+
+
 def test_continuation_refuses_when_reference_reverted(prepared,monkeypatch):
     playlist,cue,track,payload=prepared;plan=deploy.prepare(payload)
     monkeypatch.setattr(chd_io,'remove',lambda *args,**kwargs:(_ for _ in ()).throw(RuntimeError('disconnected')))

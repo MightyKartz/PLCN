@@ -30,10 +30,11 @@ def test_rename_copy_and_delete_work_on_any_local_file_and_folder(tmp_path, monk
     assert ops.apply_rename(path, name, remote)['new_path'] == str(directory / 'renamed.bak')
     path, target, remote = ops.validate_op({'action': 'copy', 'path': str(directory / 'renamed.bak'),
                                           'root': str(root), 'directory': str(directory)})
-    assert ops.apply_copy(path, target, remote) == str(directory / 'renamed 副本.bak')
+    copied = ops.apply_copy(path, target, remote)
+    assert copied['path'] == str(directory / 'renamed 副本.bak') and copied['name'] == 'renamed 副本.bak'
     path, _, remote = ops.validate_op({'action': 'delete', 'path': str(folder), 'root': str(root)})
     deleted = ops.apply_delete(path, remote)
-    assert deleted == str(folder) and not folder.exists()
+    assert deleted['path'] == str(folder) and not deleted['cancelled'] and not folder.exists()
 
 
 def test_file_ops_reject_device_boundary_and_bad_names(tmp_path):
@@ -242,8 +243,14 @@ def test_replace_failure_reports_recoverable_paths_when_rollback_fails(tmp_path,
         raise OSError('rollback failed')
     monkeypatch.setattr(Path, 'rename', fail_rollback)
     result = ops.apply_add([str(source / 'Game')], str(destination), False, overwrite=True)
-    error = result['failed'][0]['error']
-    assert '.plcn-old-' in error and '.plcn-replace-' in error
+    entry = result['failed'][0]
+    assert '.plcn-old-' in entry['error'] and '.plcn-replace-' in entry['error']
+    # Both the parked original and the staged copy remain readable on disk.
+    assert len(entry['recoverable']) == 2
+    parked_dir = next(Path(path) for path in entry['recoverable'] if '.plcn-old-' in path)
+    staged_dir = next(Path(path) for path in entry['recoverable'] if '.plcn-replace-' in path)
+    assert (parked_dir / 'a.bin').read_bytes() == b'old bin'
+    assert (staged_dir / 'b.bin').read_bytes() == b'new bin'
 
 
 def test_local_delete_and_copy_respect_cancellation(tmp_path):
@@ -255,8 +262,8 @@ def test_local_delete_and_copy_respect_cancellation(tmp_path):
 
     def cancelled():
         raise TaskCancelled('cancelled')
-    with pytest.raises(TaskCancelled):
-        ops.apply_delete(str(folder), False, cancelled=cancelled)
+    deleted = ops.apply_delete(str(folder), False, cancelled=cancelled)
+    assert deleted['cancelled'] and deleted['deleted'] == []
     assert (folder / 'a.bin').exists() and (folder / 'b.bin').exists()
 
     target = tmp_path / 'dest'
@@ -278,10 +285,11 @@ def test_local_delete_can_stop_mid_folder(tmp_path):
         calls[0] += 1
         if calls[0] > 2:
             raise TaskCancelled('cancelled')
-    with pytest.raises(TaskCancelled):
-        ops.apply_delete(str(folder), False, cancelled=cancelled)
+    deleted = ops.apply_delete(str(folder), False, cancelled=cancelled)
+    assert deleted['cancelled']
     remaining = list(folder.glob('*.bin'))
     assert 0 < len(remaining) < 3 and folder.exists()
+    assert {Path(path).name for path in deleted['deleted']} == {'a.bin', 'b.bin', 'c.bin'} - {entry.name for entry in remaining}
 
 
 def test_copy_paste_uses_host_platform_source_name(tmp_path):
@@ -291,7 +299,7 @@ def test_copy_paste_uses_host_platform_source_name(tmp_path):
     target = tmp_path / 'dest'
     target.mkdir()
     copied = ops.apply_copy(str(source / 'game.nes'), str(target), False)
-    assert copied == str(target / 'game.nes')
+    assert copied['path'] == str(target / 'game.nes') and copied['name'] == 'game.nes'
     assert not list(source.glob('*副本*'))
 
 
@@ -360,8 +368,8 @@ def test_mtp_copy_decodes_percent_encoded_source_name(tmp_path, monkeypatch):
 
     copied = ops.apply_copy(source_uri, dest_uri, True)
     expected_target = mtp.join(dest_uri, '仙剑 1.cue')
-    assert copied == expected_target
-    assert mtp.parse(copied)[2][-1] == '仙剑 1.cue'
+    assert copied['path'] == expected_target and copied['name'] == '仙剑 1.cue'
+    assert mtp.parse(copied['path'])[2][-1] == '仙剑 1.cue'
     assert written == {expected_target: b'cue content'}
 
 
@@ -432,3 +440,34 @@ def test_sync_reports_all_playlists_broken(tmp_path):
     plan = sync.preview(str(root), [{'action': 'rename', 'path': '/x.nes', 'to': '/y.nes', 'folder': False}])
     public = plan['public']
     assert public['failed'] and not public['renamed'] and not plan['writes']
+    assert public['playlists_total'] == 1 and public['playlists_read'] == 0
+
+
+@pytest.mark.parametrize('payload', ['{"items": null}', '{"items": [null]}', '{"items": [{"path": null}]}'])
+def test_sync_structurally_broken_playlist_does_not_block_valid_ones(tmp_path, payload):
+    roms = tmp_path / 'Roms'
+    roms.mkdir()
+    root, target = library(tmp_path, [{'path': str(roms / 'a.nes'), 'label': 'A'}])
+    broken = root / 'playlists' / 'Broken.lpl'
+    broken.write_text(payload, encoding='utf-8')
+    broken_bytes = broken.read_bytes()
+    changes = [{'action': 'rename', 'path': str(roms / 'a.nes'), 'to': str(roms / 'b.nes'), 'folder': False}]
+    plan = sync.preview(str(root), changes)
+    public = plan['public']
+    assert [entry['label'] for entry in public['renamed']] == ['A']
+    assert [entry['playlist'] for entry in public['failed']] == ['Broken.lpl']
+    assert public['playlists_total'] == 2 and public['playlists_read'] == 1
+    sync.apply(str(root), changes, public['signature'])
+    assert json.loads(target.read_text(encoding='utf-8'))['items'][0]['path'] == str(roms / 'b.nes')
+    assert broken.read_bytes() == broken_bytes
+
+
+def test_sync_zero_match_distinguishes_unreadable_from_unmatched(tmp_path):
+    root, _ = library(tmp_path, [{'path': '/elsewhere.nes', 'label': 'far'}])
+    broken = root / 'playlists' / 'Broken.lpl'
+    broken.write_text('{invalid', encoding='utf-8')
+    changes = [{'action': 'rename', 'path': '/nothing/here.nes', 'to': '/there.nes', 'folder': False}]
+    public = sync.preview(str(root), changes)['public']
+    assert not public['renamed'] and not public['removed'] and public['unmatched']
+    assert [entry['playlist'] for entry in public['failed']] == ['Broken.lpl']
+    assert public['playlists_read'] == 1 and public['playlists_total'] == 2

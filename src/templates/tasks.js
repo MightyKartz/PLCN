@@ -203,7 +203,7 @@ async function runAllSystemsCompletion(options = {write_names: true, download_th
         renderWorkbench();
         const applyResult = await watchCompletionJob(applied.job_id,
             workbenchText('第 2 步 / 共 2 步 · 补全：', 'Step 2 of 2 · Applying: '));
-        finishBatchRun('completed', analysis, applyResult);
+        finishBatchRun(applyResult?.cancelled ? 'cancelled' : 'completed', analysis, applyResult);
     } catch (error) {
         if (batchRunStage === 'analysis' && batchRunJobId) {
             try { await desktopRequest('/api/batch/discard', {preview_job_id: batchRunJobId}); } catch (discardError) {}
@@ -232,9 +232,12 @@ function finishBatchRun(outcome, analysis, applyResult, errorMessage = '') {
         .reduce((total, stats) => total + (stats.failed || 0), 0);
     const openHistory = () => openOperationHistory('completion');
     if (outcome === 'cancelled') {
-        showActionToast({message: analysis
-            ? workbenchText('已取消，已完成的部分会保留。', 'Cancelled; completed work is kept.')
-            : workbenchText('已取消，未写入任何内容。', 'Cancelled; nothing was written.'),
+        const processed = applyResult?.processed_count || 0;
+        showActionToast({message: processed
+            ? workbenchText(`已取消，已处理 ${processed} 个列表；完成的部分会保留。`, `Cancelled; ${processed} playlist(s) processed and kept.`)
+            : analysis
+                ? workbenchText('已取消，已完成的部分会保留。', 'Cancelled; completed work is kept.')
+                : workbenchText('已取消，未写入任何内容。', 'Cancelled; nothing was written.'),
             details: openHistory});
     } else if (outcome === 'failed') {
         showActionToast({message: errorMessage || workbenchText('处理失败，请查看补全记录。', 'The run failed; see completion history.'),
@@ -246,6 +249,7 @@ function finishBatchRun(outcome, analysis, applyResult, errorMessage = '') {
         if (failedPlaylists) text += workbenchText(`，${failedPlaylists} 个列表处理失败`, `, ${failedPlaylists} playlists failed`);
         if (failedImages) text += workbenchText(`，${failedImages} 张封面下载失败`, `, ${failedImages} images failed`);
         if (manual) text += workbenchText(`，${manual} 个游戏需手动处理`, `, ${manual} games need manual work`);
+        if (applyResult.cleanup_warnings?.length) text += ' · ' + applyResult.cleanup_warnings.join(' · ');
         showActionToast({message: text, details: openHistory});
     } else {
         const failedRows = (analysis?.rows || []).filter(row => row.error);

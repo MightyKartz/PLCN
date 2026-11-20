@@ -373,6 +373,8 @@ def scan(value):
 
 
 def push_directory(local, target, expected_hashes=None, include_files=None):
+    """Upload changed files; returns any verified-but-uncleaned old-object URIs."""
+    leftovers = []
     for file in Path(local).rglob('*'):
         if file.is_file() and (include_files is None or str(file.relative_to(local)) in include_files):
             destination = join(target, *file.relative_to(local).parts)
@@ -380,7 +382,10 @@ def push_directory(local, target, expected_hashes=None, include_files=None):
             old = read(destination)
             if old != content:
                 expected = expected_hashes[destination] if expected_hashes is not None and destination in expected_hashes else digest(old)
-                write(destination, content, expected)
+                leftover = write(destination, content, expected)
+                if leftover:
+                    leftovers.append(leftover)
+    return leftovers
 
 
 Progress = C.CFUNCTYPE(C.c_int, C.c_uint64, C.c_uint64, C.c_void_p)

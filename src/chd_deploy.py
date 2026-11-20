@@ -273,5 +273,12 @@ def continue_cleanup(payload,cancelled=lambda: None,progress=lambda message: Non
         except (OSError,ValueError,RuntimeError,TaskCancelled) as error:
             remaining.append({'path':path,'error':str(error)})
     if isinstance(pending,list) and not pending: progress('没有待清理的原镜像')
-    return {'status':'completed' if not remaining else 'partial','deleted':deleted,'remaining':remaining,
+    result={'status':'completed' if not remaining else 'partial','deleted':deleted,'remaining':remaining,
             'playlist':playlist,'error':None if not remaining else '部分原镜像未能移除'}
+    if remaining:
+        still={entry['path'] for entry in remaining}
+        done={entry['path'] for entry in pending}-still
+        result['cleanup']={**{key:payload[key] for key in ('playlist','roots','copies','writes','dependencies','patches','scope_snapshot')},
+                           'pending':[file for file in pending if file['path'] in still],
+                           'sources':[{**file,'state':'deleted' if file['path'] in done else file.get('state')} for file in sources]}
+    return result

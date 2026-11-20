@@ -76,14 +76,18 @@ async function openFileSyncDialog() {
                  (result.failed || []).map(entry => entry.playlist + ' · ' + entry.error));
             const total = result.renamed.length + result.removed.length;
             const failures = (result.failed || []).length;
+            const allFailed = failures && failures === result.playlists_total;
             message.textContent = total
                 ? tr(`将更新 ${result.renamed.length} 条、移出 ${result.removed.length} 条列表条目。` +
                      (failures ? `${failures} 个列表读取失败，将保持原样。` : ''),
                      `${result.renamed.length} entries will be updated and ${result.removed.length} removed.` +
                      (failures ? ` ${failures} playlist(s) unreadable and left unchanged.` : ''))
-                : failures
+                : allFailed
                     ? tr('所有列表都无法读取，请修复后再同步。', 'Every playlist failed to read; fix them before syncing.')
-                    : tr('没有需要更新的列表条目。', 'No playlist entries need updating.');
+                    : failures
+                        ? tr(`没有需要更新的列表条目；${failures} 个列表读取失败，将保持原样。`,
+                             `No playlist entries need updating; ${failures} playlist(s) unreadable and left unchanged.`)
+                        : tr('没有需要更新的列表条目。', 'No playlist entries need updating.');
             confirm.disabled = !total;
         } catch (error) {
             message.textContent = gmError(error);
@@ -391,10 +395,19 @@ function openGameFiles(opener, target = null) {
             dialog.close();
             try {
                 const result = await runOpsJob(tr('正在删除…', 'Deleting…'), {action:'delete', path:item.path, root});
-                recordFileChange(root, {action:'delete', path:item.path, folder:Boolean(item.directory)});
+                if (result?.cancelled) {
+                    for (const deletedPath of result.deleted || []) {
+                        recordFileChange(root, {action:'delete', path:deletedPath, folder:false});
+                    }
+                } else {
+                    recordFileChange(root, {action:'delete', path:item.path, folder:Boolean(item.directory)});
+                }
                 if (gameFilesView === view) {
                     await loadDirectory(directory);
-                    status.textContent = tr('已删除「' + item.name + '」。', 'Deleted "' + item.name + '".');
+                    status.textContent = result?.cancelled
+                        ? tr(`已取消：删除了 ${(result.deleted || []).length} 项，其余保留。`,
+                             `Cancelled: ${(result.deleted || []).length} item(s) deleted; the rest remains.`)
+                        : tr('已删除「' + item.name + '」。', 'Deleted "' + item.name + '".');
                 }
             } catch (error) {
                 status.textContent = gmError(error);
@@ -424,8 +437,8 @@ function openGameFiles(opener, target = null) {
         try {
             const result = await runOpsJob(tr('正在复制…', 'Copying…'), {action:'copy', path:item.path, directory, root});
             if (gameFilesView === view) {
-                await loadDirectory(directory, null, new Set([result.path.split('/').pop()]));
-                status.textContent = tr('已粘贴「' + item.name + '」。', 'Pasted "' + item.name + '".');
+                await loadDirectory(directory, null, new Set([result.name]));
+                status.textContent = tr('已粘贴「' + (result.name || item.name) + '」。', 'Pasted "' + (result.name || item.name) + '".');
             }
         } catch (error) {
             status.textContent = gmError(error);
@@ -581,6 +594,8 @@ function openGameFiles(opener, target = null) {
         if (result.replaced?.length) parts.push(tr('已替换：', 'Replaced: ') + list(result.replaced));
         if (result.skipped.length) parts.push(tr('已跳过（同名已存在）：', 'Skipped (same name exists): ') + list(result.skipped));
         if (result.failed.length) parts.push(tr('失败：', 'Failed: ') + list(result.failed.map(entry => entry.name)));
+        const recoverable = result.failed.flatMap(entry => entry.recoverable || []);
+        if (recoverable.length) parts.push(tr('可找回对象：', 'Recoverable at: ') + list(recoverable));
         if (result.remaining.length) parts.push(tr('未完成：', 'Not finished: ') + list(result.remaining));
         if (result.leftovers?.length) parts.push(tr('残留旧对象：', 'Leftover originals: ') + list(result.leftovers.map(entry => entry.path)));
         return parts.length ? parts.join(tr('；', '; ')) : tr('没有可复制的内容。', 'Nothing to copy.');

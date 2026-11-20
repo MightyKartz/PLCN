@@ -108,6 +108,23 @@ def test_failed_publish_restores_original_name(device_files):
     assert files[target] == b'original'
 
 
+def test_push_directory_collects_verified_write_leftovers(device_files, tmp_path, monkeypatch):
+    root, files, upload, lib = device_files
+    target_dir = mtp.join(root, 'thumbs')
+    local = tmp_path / 'local'
+    local.mkdir()
+    (local / 'a.png').write_bytes(b'new a')
+    (local / 'b.png').write_bytes(b'new b')
+    upload(None, 65537, 0, 'thumbs', b'')
+    def flaky(value, content, expected, suffix=None):
+        files[value] = content
+        return value + '.plcn-stuck.old' if value.endswith('a.png') else None
+    monkeypatch.setattr(mtp, 'write', flaky)
+    leftovers = mtp.push_directory(str(local), target_dir)
+    assert leftovers == [target_dir + '/a.png.plcn-stuck.old']
+    assert files[target_dir + '/a.png'] == b'new a' and files[target_dir + '/b.png'] == b'new b'
+
+
 def test_cleanup_failure_reports_leftover_after_verified_write(device_files):
     root, files, upload, lib = device_files
     target = mtp.join(root, 'games.lpl')
@@ -128,7 +145,7 @@ def test_reviewed_transport_uses_snapshot_digest_and_remote_results(tmp_path, mo
     monkeypatch.setattr(mtp, 'read', lambda path: content)
     writes, pushes = [], []
     monkeypatch.setattr(mtp, 'write', lambda *args: writes.append(args))
-    monkeypatch.setattr(mtp, 'push_directory', lambda *args, **kwargs: pushes.append((args, kwargs)))
+    monkeypatch.setattr(mtp, 'push_directory', lambda *args, **kwargs: pushes.append((args, kwargs)) or [])
     def apply(path, changes, images, **kwargs):
         Path(path).write_bytes(b'{"items": [], "version": "1"}')
         return {'download_summary': {'details':[{'path':str(Path(images)/'NES/Named_Boxarts/A.png'), 'type':'Named_Boxarts', 'status':'success'}]}, 'apply':{'applied':[0]}}

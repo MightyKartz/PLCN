@@ -113,36 +113,46 @@ def _ensure_remote_dir(path):
 
 
 def apply_delete(path, remote, progress=lambda *args: None, cancelled=lambda: None):
-    """Permanently delete a file or folder; return the deleted path."""
-    if not remote:
-        source = Path(path)
-        if not source.exists() and not source.is_symlink():
-            raise ValueError('文件已移动或不存在')
-        cancelled()
-        with file_lock(path):
-            if source.is_dir() and not source.is_symlink():
-                entries = sorted(source.rglob('*'), key=lambda p: len(p.parts), reverse=True)
-                total = len(entries)
-                for index, entry in enumerate(entries):
-                    cancelled()
-                    progress(index + 1, total, '删除：' + str(entry))
-                    if entry.is_dir() and not entry.is_symlink():
-                        entry.rmdir()
-                    else:
-                        entry.unlink()
-                source.rmdir()
-            else:
-                source.unlink()
-        return path
-    files, folders = _walk_remote(path)
-    for index, entry in enumerate(files):
-        cancelled()
-        progress(index, len(files), '删除：' + entry['path'])
-        mtp.delete_object(entry['path'])
-    for folder in sorted(folders, key=lambda f: len(mtp.parse(f)[2]), reverse=True):
-        cancelled()
-        mtp.delete_object(folder)
-    return path
+    """Permanently delete a file or folder.
+
+    Returns {'path', 'deleted', 'cancelled'}: the files actually removed stay
+    reported even when cancellation stops the sweep partway."""
+    deleted = []
+    try:
+        if not remote:
+            source = Path(path)
+            if not source.exists() and not source.is_symlink():
+                raise ValueError('文件已移动或不存在')
+            cancelled()
+            with file_lock(path):
+                if source.is_dir() and not source.is_symlink():
+                    entries = sorted(source.rglob('*'), key=lambda p: len(p.parts), reverse=True)
+                    total = len(entries)
+                    for index, entry in enumerate(entries):
+                        cancelled()
+                        progress(index + 1, total, '删除：' + str(entry))
+                        if entry.is_dir() and not entry.is_symlink():
+                            entry.rmdir()
+                        else:
+                            entry.unlink()
+                            deleted.append(str(entry))
+                    source.rmdir()
+                else:
+                    source.unlink()
+                    deleted.append(path)
+            return {'path': path, 'deleted': deleted, 'cancelled': False}
+        files, folders = _walk_remote(path)
+        for index, entry in enumerate(files):
+            cancelled()
+            progress(index, len(files), '删除：' + entry['path'])
+            mtp.delete_object(entry['path'])
+            deleted.append(entry['path'])
+        for folder in sorted(folders, key=lambda f: len(mtp.parse(f)[2]), reverse=True):
+            cancelled()
+            mtp.delete_object(folder)
+        return {'path': path, 'deleted': deleted, 'cancelled': False}
+    except TaskCancelled:
+        return {'path': path, 'deleted': deleted, 'cancelled': True}
 
 
 def _unique_name(directory, name, remote):
@@ -165,7 +175,10 @@ def _source_leaf(path, remote):
 
 
 def apply_copy(path, directory, remote, progress=lambda *args: None, cancelled=lambda: None):
-    """Copy a file or folder into a directory, auto-renaming on conflict; return the new path."""
+    """Copy a file or folder into a directory, auto-renaming on conflict.
+
+    Returns {'path', 'name'} where name is the final display name of the new
+    copy (which may have been auto-renamed on conflict)."""
     name = _unique_name(directory, _source_leaf(path, remote), remote)
     if not remote:
         source = Path(path)
@@ -190,7 +203,7 @@ def apply_copy(path, directory, remote, progress=lambda *args: None, cancelled=l
         except Exception:
             _remove_destination(str(target), False)
             raise
-        return str(target)
+        return {'path': str(target), 'name': name}
     destination = mtp.join(directory, name)
     files, folders = _walk_remote(path)
     if folders:
@@ -202,7 +215,7 @@ def apply_copy(path, directory, remote, progress=lambda *args: None, cancelled=l
         progress(index, len(files), '复制：' + entry['path'])
         target = mtp.join(destination, entry['relative']) if folders else destination
         _remote_copy_file(entry['path'], target, cancelled)
-    return destination
+    return {'path': destination, 'name': name}
 
 
 def _remote_copy_file(source, destination, cancelled):
@@ -274,6 +287,13 @@ def _write_item(item, target, remote, cancelled, on_file):
         on_file()
 
 
+class PublishFailed(RuntimeError):
+    """Publishing the staged copy failed AND restoring the original failed too.
+
+    `recoverable` lists the real locations that still hold content — the parked
+    original and the staged new copy, both left in place for manual salvage."""
+
+
 def _rename_into(target, staged, remote):
     if remote:
         mtp.rename_object(staged, mtp.parse(target)[2][-1])
@@ -308,7 +328,9 @@ def _publish_replace(target, staged, remote):
         try:
             rollback()
         except Exception:
-            raise RuntimeError('发布失败且无法还原原件：原内容保留在「' + parked + '」，新内容在「' + staged + '」') from error
+            failure = PublishFailed('发布失败且无法还原原件：原内容保留在「' + parked + '」，新内容在「' + staged + '」')
+            failure.recoverable = [parked, staged]
+            raise failure from error
         raise
     try:
         apply_delete(parked, remote)
@@ -365,6 +387,13 @@ def apply_add(sources, directory, remote, overwrite=False, progress=lambda *args
         except TaskCancelled as error:
             _remove_destination(staged, remote)
             result['failed'].append({'name': name, 'error': str(error)})
+            result['remaining'] = [pending['name'] for pending in items[index + 1:]]
+            return result
+        except PublishFailed as error:
+            # Both the parked original and the staged copy are left in place;
+            # report their real paths instead of deleting evidence.
+            entry = {'name': name, 'error': str(error), 'recoverable': list(error.recoverable)}
+            result['failed'].append(entry)
             result['remaining'] = [pending['name'] for pending in items[index + 1:]]
             return result
         except Exception as error:

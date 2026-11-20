@@ -5,7 +5,7 @@ function deploymentPayload(){return {conversion_id:chdDeployment.record.id,syste
     disc_ids:[...deployField('discs').querySelectorAll('input:checked')].map(input=>input.value),mode:deployField('mode').value,
     runtime:{version:deployField('version').value.trim(),confirmed:deployField('tested').checked},scope_confirmed:deployField('scope').checked};}
 function deploymentKey(){return JSON.stringify(deploymentPayload())+document.getElementById('playlist_path').value;}
-function invalidateDeployment(){chdDeployment.revision++;chdDeployment.preview=null;chdDeployment.key=null;deployField('apply').disabled=true;deployField('review').hidden=true;}
+function invalidateDeployment(){chdDeployment.revision++;chdDeployment.preview=null;chdDeployment.key=null;deployField('apply').disabled=true;deployField('review').hidden=true;clearCleanupOffer();}
 function openChdDeployment(record){
     if(workbench.operation)return;
     Object.assign(chdDeployment,{record,changed:false});invalidateDeployment();
@@ -25,7 +25,7 @@ async function closeChdDeployment(){
 async function deploymentJob(route,payload){
     if(!beginWorkbenchOperation('chd-deploy'))throw new Error('请等待当前任务');
     chdDeployment.busy=true;deployField('fields').disabled=true;deployField('cancel').hidden=false;
-    for(const name of ['close','preview','apply'])deployField(name).disabled=true;
+    for(const name of ['close','preview','apply','cleanup'])deployField(name).disabled=true;
     try{
         const started=await desktopRequest(route,payload);chdDeployment.job=started.job_id;
         return await new Promise((resolve,reject)=>{
@@ -69,32 +69,36 @@ async function previewChdDeployment(){
 async function applyChdDeployment(){
     const id=chdDeployment.preview;if(!id||chdDeployment.busy)return;
     if(chdDeployment.key!==deploymentKey()){invalidateDeployment();deployField('status').textContent='输入或游戏库已变化，请重新预览。';return;}
-    chdDeployment.preview=null;
+    chdDeployment.preview=null;const record=chdDeployment.record;
     try{
         const {result}=await deploymentJob('/api/chd/deployment/apply',{preview_job_id:id});chdDeployment.changed=true;
-        if(result?.status==='partial'&&result.cleanup){offerCleanup(result);}
+        if(result?.status==='partial'&&result.cleanup_id&&chdDeployment.record===record){offerCleanup(result);}
         else{deployField('status').textContent='已完成。';deployField('review').hidden=true;}
     }catch(error){chdDeployment.changed=true;deployField('status').textContent=error.message;}
 }
 function offerCleanup(result){
     deployField('status').textContent='引用已切换，但清理未全部完成：'+(result.error||'');
-    const button=deployField('cleanup');button.hidden=false;button.dataset.payload=JSON.stringify(result.cleanup);
+    const button=deployField('cleanup');button.hidden=false;button.disabled=false;button.dataset.job=result.cleanup_id;
     const details=deployField('details');details.replaceChildren();
     for(const path of result.cleanup_remaining||[]){const line=document.createElement('li');line.textContent='待清理：'+path;details.appendChild(line);}
     deployField('review').hidden=false;
 }
+function clearCleanupOffer(){
+    const button=deployField('cleanup');button.hidden=true;if(button.dataset)delete button.dataset.job;
+}
 async function continueChdCleanup(){
     const button=deployField('cleanup');if(chdDeployment.busy)return;
-    let payload=null;try{payload=JSON.parse(button.dataset.payload||'null');}catch(error){}
-    if(!payload)return;button.hidden=true;
+    const cleanupId=button.dataset.job;if(!cleanupId)return;
+    button.hidden=true;
     try{
-        const {result}=await deploymentJob('/api/chd/deployment/cleanup',{cleanup:payload});
+        const {result}=await deploymentJob('/api/chd/deployment/cleanup',{cleanup_job_id:cleanupId});
         if(result.status==='completed'){deployField('status').textContent='清理完成：已移除 '+result.deleted.length+' 个原镜像。';deployField('review').hidden=true;}
         else{
             deployField('status').textContent='部分原镜像未能移除：'+(result.error||'');
             const details=deployField('details');details.replaceChildren();
             for(const entry of result.remaining||[]){const line=document.createElement('li');line.textContent='待清理：'+entry.path+' · '+entry.error;details.appendChild(line);}
-            deployField('review').hidden=false;button.hidden=false;
+            deployField('review').hidden=false;
+            if(result.cleanup_id){button.dataset.job=result.cleanup_id;button.hidden=false;}
         }
     }catch(error){deployField('status').textContent=error.message;button.hidden=false;}
 }

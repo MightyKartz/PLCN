@@ -94,8 +94,10 @@ def apply_review(review, progress, cancel_check, continue_on_error=True):
     if errors and not continue_on_error:
         raise ValueError('汇总包含读取失败的主机，请修正后重新分析')
     plans = [plan for plan in review['plans'] if plan['changes']]
+    stopped_early = False
     for index, plan in enumerate(plans):
         if cancel_check():
+            stopped_early = True
             break
         progress(index, len(plans), '正在应用 ' + plan['system'])
         try:
@@ -105,10 +107,13 @@ def apply_review(review, progress, cancel_check, continue_on_error=True):
             results.append({'system': plan['system'], **result})
             summaries.append(result['download_summary'])
         except TaskCancelled:
+            stopped_early = True
             break
         except (OSError, ValueError, RuntimeError) as error:
             errors.append(plan['system'] + ': ' + str(error))
             if not continue_on_error:
                 raise
     return {'processed_count': len(results), 'applied_count': sum(r['applied_count'] for r in results),
+            'cancelled': stopped_early, 'total_count': len(plans),
+            'cleanup_warnings': [warning for result in results for warning in result.get('cleanup_warnings', [])],
             'errors': errors, 'playlists': results, 'download_summary': ThumbnailDownloader.merge_summaries(summaries)}

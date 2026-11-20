@@ -50,6 +50,11 @@ def preview(root, changes):
                 raise ValueError('播放列表已移除')
             data = json.loads(raw.decode('utf-8-sig'))
             items_source = data['items']
+            if not isinstance(items_source, list):
+                raise ValueError('播放列表条目结构损坏')
+            for item in items_source:
+                if not isinstance(item, dict) or not isinstance(item.get('path'), str):
+                    raise ValueError('播放列表条目结构损坏')
         except (OSError, ValueError, KeyError, TypeError) as error:
             failed.append({'playlist': row['name'], 'error': str(error)})
             continue
@@ -92,7 +97,8 @@ def preview(root, changes):
             writes[row['path']] = {'expected': next(entry['digest'] for entry in dependencies if entry['path'] == row['path']),
                                    'document': {**data, 'items': items}}
     unmatched = [rule['source'] for rule in rules if id(rule) not in matched]
-    public = {'renamed': renamed, 'removed': removed, 'unmatched': unmatched, 'failed': failed}
+    public = {'renamed': renamed, 'removed': removed, 'unmatched': unmatched, 'failed': failed,
+              'playlists_total': len(library['playlists']), 'playlists_read': len(library['playlists']) - len(failed)}
     signature = hashlib.sha256(json.dumps({'public': public, 'dependencies': dependencies},
                                           sort_keys=True).encode()).hexdigest()
     return {'public': {**public, 'signature': signature}, 'signature': signature, 'dependencies': dependencies,
