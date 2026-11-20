@@ -337,6 +337,10 @@ def test_cancelled_batch_progress_reports_processed_count():
     jobs.complete_job(ident, {'processed_count': 1, 'total_count': 3, 'applied_count': 5, 'cancelled': True})
     job = jobs.jobs[ident]
     assert job['status'] == 'cancelled' and job['progress'] == 1 and job['total'] == 3
+    # Cancelling before the first progress update still adopts the batch total.
+    early = jobs.create_job()
+    jobs.complete_job(early, {'processed_count': 0, 'total_count': 3, 'cancelled': True})
+    assert jobs.jobs[early]['status'] == 'cancelled' and jobs.jobs[early]['progress'] == 0 and jobs.jobs[early]['total'] == 3
 
 
 def test_local_replace_reports_parked_leftover_when_cleanup_partially_fails(tmp_path, monkeypatch):

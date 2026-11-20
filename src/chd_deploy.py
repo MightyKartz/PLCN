@@ -264,7 +264,7 @@ def continue_cleanup(payload,cancelled=lambda: None,progress=lambda message: Non
     for item in copies:
         if io.digest(item['target'],cancelled)!=item['sha256']: raise ValueError('CHD 在回传后变化，停止清理：'+item['target'])
     tx.check_dependencies(dependencies,patches=patches)
-    deleted=[];remaining=[];stopped=False
+    deleted=[];remaining=[];unverified=[];stopped=False
     for file in pending:
         path=file['path']
         if stopped:
@@ -275,14 +275,29 @@ def continue_cleanup(payload,cancelled=lambda: None,progress=lambda message: Non
             if io.digest(path,cancelled) is None:
                 deleted.append(path);continue
             io.remove(path,file['sha256'],cancelled)
-            if io.digest(path,cancelled) is not None: raise RuntimeError('删除后文件仍存在')
-            deleted.append(path)
-        except (OSError,ValueError,RuntimeError,TaskCancelled) as error:
-            remaining.append({'path':path,'error':str(error)})
-            if isinstance(error,TaskCancelled): stopped=True
+        except TaskCancelled as error:
+            remaining.append({'path':path,'error':str(error)});stopped=True;continue
+        except (OSError,ValueError,RuntimeError) as error:
+            if isinstance(error,io.RemoveUnverified):
+                unverified.append({'path':path,'error':str(error)})
+            else:
+                remaining.append({'path':path,'error':str(error)})
+            continue
+        # The delete was issued; a failed read-back must not silently re-list
+        # a path that may already be gone (a restored copy would be re-removed).
+        try:
+            residual=io.digest(path,cancelled)
+        except TaskCancelled as error:
+            unverified.append({'path':path,'error':'删除已执行但核对中断：'+str(error)});stopped=True;continue
+        except (OSError,RuntimeError) as error:
+            unverified.append({'path':path,'error':'删除已执行但未能核对：'+str(error)});continue
+        if residual is None: deleted.append(path)
+        else: remaining.append({'path':path,'error':'删除后文件仍存在'})
     if isinstance(pending,list) and not pending: progress('没有待清理的原镜像')
-    result={'status':'completed' if not remaining else 'partial','deleted':deleted,'remaining':remaining,
-            'playlist':playlist,'error':None if not remaining else '部分原镜像未能移除'}
+    result={'status':'completed' if not remaining and not unverified else 'partial','deleted':deleted,'remaining':remaining,
+            'unverified':unverified,'playlist':playlist,
+            'error':None if not remaining and not unverified else '；'.join(part for part in
+                ('部分原镜像未能移除' if remaining else '',str(len(unverified))+' 项删除结果待核对' if unverified else '') if part)}
     if stopped: result['cancelled']=True
     if remaining:
         still={entry['path'] for entry in remaining}

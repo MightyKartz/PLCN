@@ -400,6 +400,41 @@ def test_cleanup_cancel_reports_deleted_and_only_continues_remaining(prepared,mo
     assert done['deleted']==list(remaining) and Path(removed_path).read_bytes()==original[removed_path]
 
 
+def test_cleanup_unverified_readback_is_never_relisted(prepared,monkeypatch):
+    playlist,cue,track,payload=prepared;plan=deploy.prepare(payload)
+    original={str(cue):cue.read_bytes(),str(track):track.read_bytes()}
+    remove=chd_io.remove;failed=[False]
+    def disconnect(*args,**kwargs):
+        if not failed[0]:failed[0]=True;raise RuntimeError('disconnected during cleanup')
+        return remove(*args,**kwargs)
+    monkeypatch.setattr(chd_io,'remove',disconnect)
+    cleanup=deploy.start(plan)['cleanup']
+    # CUE's delete succeeds but the read-back fails; BIN's delete fails outright.
+    real_unlink=Path.unlink;gone=[False]
+    def track_unlink(path,*a,**k):
+        if str(path)==str(cue):gone[0]=True
+        return real_unlink(path,*a,**k)
+    real_digest=chd_io.digest
+    def flaky_digest(path,*a,**k):
+        if str(path)==str(cue) and gone[0]:raise RuntimeError('device gone')
+        return real_digest(path,*a,**k)
+    def flaky_remove(path,*a,**k):
+        if str(path)==str(track):raise RuntimeError('bin io')
+        return remove(path,*a,**k)
+    monkeypatch.setattr(Path,'unlink',track_unlink)
+    monkeypatch.setattr(chd_io,'digest',flaky_digest)
+    monkeypatch.setattr(chd_io,'remove',flaky_remove)
+    outcome=deploy.continue_cleanup(cleanup)
+    assert [entry['path'] for entry in outcome['unverified']]==[str(cue)]
+    assert [entry['path'] for entry in outcome['remaining']]==[str(track)]
+    assert {file['path'] for file in outcome['cleanup']['pending']}=={str(track)}
+    monkeypatch.setattr(chd_io,'digest',real_digest);monkeypatch.setattr(chd_io,'remove',remove)
+    # A restored CUE must never re-enter automatic deletion.
+    cue.write_bytes(original[str(cue)])
+    done=deploy.continue_cleanup(outcome['cleanup'])
+    assert done['deleted']==[str(track)] and cue.read_bytes()==original[str(cue)]
+
+
 def test_continuation_refuses_when_reference_reverted(prepared,monkeypatch):
     playlist,cue,track,payload=prepared;plan=deploy.prepare(payload)
     monkeypatch.setattr(chd_io,'remove',lambda *args,**kwargs:(_ for _ in ()).throw(RuntimeError('disconnected')))

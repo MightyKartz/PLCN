@@ -41,7 +41,7 @@ async function desktopRequest(path, payload, {signal} = {}) {
         throw new Error(desktopText('连接已失效，请重新连接后重试。', 'The connection expired. Reconnect and retry.'));
     }
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error || String(response.status));
+    if (!response.ok) {const error = new Error(data.error || String(response.status));error.code = data.code;throw error;}
     return data;
 }
 

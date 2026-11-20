@@ -63,6 +63,13 @@ def put_new(target,source,expected,stage,cancelled=lambda: None):
     if digest(target,cancelled)!=expected: raise ValueError('目标回读校验失败：'+target)
 
 
+class RemoveUnverified(RuntimeError):
+    """The delete was issued but its outcome could not be verified.
+
+    Callers must not silently re-list the path for automatic deletion: the file
+    may already be gone, and a user-restored copy must never be re-removed."""
+
+
 def remove(path,expected,cancelled=lambda: None):
     if mtp.is_mtp(path): return mtp.remove_file(path,expected,cancelled)
     if digest(path,cancelled)!=expected: raise ValueError('待移除文件已变化：'+path)

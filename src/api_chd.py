@@ -73,15 +73,17 @@ def deployment_cleanup(handler,context,payload):
     import chd_deploy
     jobs=context.job_manager;ident=payload.get('cleanup_job_id')
     if not isinstance(ident,str): raise ValueError('缺少继续清理的任务标识')
+    def invalid(message):
+        error=ValueError(message);error.code='cleanup_invalid';return error
     with jobs.lock:
-        if not jobs.contexts.get(ident,{}).get('chd_cleanup'): raise ValueError('该清理任务已失效，请重新生成方案')
+        if not jobs.contexts.get(ident,{}).get('chd_cleanup'): raise invalid('该清理任务已失效，请重新生成方案')
     def work(jid):
         def cancelled():
             if jobs.cancelled(jid): raise TaskCancelled('清理已在安全步骤停止')
         # Atomically claim the plan: only one task may execute a given id.
         with jobs.lock:
             cleanup=jobs.contexts.get(ident,{}).pop('chd_cleanup',None)
-            if cleanup is None: raise ValueError('该清理任务已被执行或已失效')
+            if cleanup is None: raise invalid('该清理任务已被执行或已失效')
         try:
             result=chd_deploy.continue_cleanup(cleanup,cancelled,lambda message:jobs.update_job(jid,0,1,message))
         except Exception:

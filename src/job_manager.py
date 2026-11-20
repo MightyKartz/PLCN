@@ -47,6 +47,7 @@ class JobManager:
                 self.jobs[job_id]['status'] = 'cancelled' if isinstance(result, dict) and result.get('cancelled') else 'completed'
                 self.jobs[job_id]['result'] = result
                 if isinstance(result, dict) and 'processed_count' in result:
+                    if 'total_count' in result: self.jobs[job_id]['total'] = result['total_count']
                     self.jobs[job_id]['progress'] = result['processed_count']
                 else:
                     self.jobs[job_id]['progress'] = self.jobs[job_id]['total']
@@ -56,6 +57,7 @@ class JobManager:
             if job_id in self.jobs:
                 self.jobs[job_id]['status'] = 'cancelled' if isinstance(error, TaskCancelled) else 'failed'
                 self.jobs[job_id]['error'] = str(error)
+                if getattr(error, 'code', None): self.jobs[job_id]['code'] = error.code
 
     def cancelled(self, job_id):
         return self.cancel_events[job_id].is_set()

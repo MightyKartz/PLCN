@@ -14,6 +14,8 @@ def reply(handler, data, status=200):
 
 def background(jobs, title, work):
     job_id = jobs.create_job()
+    with jobs.lock:
+        jobs.jobs[job_id]['title'] = title
     def run():
         try:
             jobs.update_job(job_id, 0, 1, title)

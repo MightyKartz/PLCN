@@ -162,7 +162,9 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
             try:
                 GET_ROUTES[path](self, sys.modules[__name__], urllib.parse.parse_qs(parsed.query))
             except Exception as error:
-                reply(self, {'error': str(error)}, 400)
+                body = {'error': str(error)}
+                if getattr(error, 'code', None): body['code'] = error.code
+                reply(self, body, 400)
         else:
             self.send_error(404)
 
@@ -189,7 +191,9 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
                 raise ValueError('请求必须是 JSON 对象')
             route(self, sys.modules[__name__], payload)
         except Exception as error:
-            reply(self, {'error': str(error)}, 400)
+            body = {'error': str(error)}
+            if getattr(error, 'code', None): body['code'] = error.code
+            reply(self, body, 400)
 
 
 @contextmanager

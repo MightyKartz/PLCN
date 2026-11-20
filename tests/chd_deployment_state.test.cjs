@@ -48,11 +48,43 @@ test('a queued settings close cannot discard the response for a reopened CHD his
 
 test('an invalid cleanup id retires the continuation entry',async()=>{
     const {c,field}=harness();
-    c.deploymentJob=async()=>{throw new Error('该清理任务已失效，请重新生成方案');};
+    c.deploymentJob=async()=>{const error=new Error('该清理任务已失效，请重新生成方案');error.code='cleanup_invalid';throw error;};
     const button=field('cleanup');button.dataset={job:'old-id'};button.hidden=false;
     await c.continueChdCleanup();
     assert.equal(button.dataset.job,undefined);assert.equal(button.hidden,true);
     assert.match(field('status').textContent,/失效/);
+});
+
+test('a lost connection does not destroy the cleanup context; reconcile re-enables when nothing ran',async()=>{
+    const {c,field}=harness();
+    c.deploymentJob=async()=>{throw new Error('连接已失效，请重新连接后重试。');};
+    c.desktopRequest=async()=>({jobs:[]});
+    const button=field('cleanup');button.dataset={job:'old-id'};button.hidden=false;
+    await c.continueChdCleanup();
+    assert.equal(button.dataset.job,'old-id');assert.equal(button.hidden,false);assert.equal(button.disabled,false);
+    assert.match(field('status').textContent,/未执行/);
+});
+
+test('an ambiguous failure never resubmits while the outcome is unconfirmed',async()=>{
+    const {c,field}=harness();
+    c.deploymentJob=async()=>{throw new Error('网络错误');};
+    c.desktopRequest=async()=>{throw new Error('offline');};
+    const button=field('cleanup');button.dataset={job:'old-id'};button.hidden=false;
+    await c.continueChdCleanup();
+    assert.equal(button.hidden,true);
+    assert.match(field('status').textContent,/无法确认/);
+});
+
+test('reconcile binds the latest remaining list when the submitted job finished',async()=>{
+    const {c,field}=harness();
+    c.document.createElement=()=>({textContent:''});
+    field('details').appendChild=function(){};
+    c.deploymentJob=async()=>{throw new Error('连接已失效');};
+    c.store.lastJob='job-9';
+    c.desktopRequest=async()=>({jobs:[{id:'job-9',status:'completed',result:{status:'partial',deleted:['/a.cue'],remaining:[{path:'/a.bin',error:'io'}],cleanup_id:'next-id'}}]});
+    const button=field('cleanup');button.dataset={job:'old-id'};button.hidden=false;
+    await c.continueChdCleanup();
+    assert.equal(button.dataset.job,'next-id');assert.equal(button.hidden,false);assert.equal(button.disabled,false);
 });
 
 test('a cancelled cleanup job rebinds the freshly issued id with its remaining list',async()=>{
