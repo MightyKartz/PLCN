@@ -42,15 +42,18 @@ async function openFileSyncDialog() {
     const impact = wbElement('div', 'game-file-delete-impact');
     const message = wbElement('p', '', '');
     message.setAttribute('role', 'status');
-    const cancel = gmButton('关闭', 'Close', () => dialog.close());
+    const actions = wbElement('div', 'desktop-confirm-actions');
+    const cancel = gmButton('取消', 'Cancel', () => dialog.close());
     const confirm = gmButton('更新列表', 'Update playlists', apply, false);
     confirm.disabled = true;
     let previewId;
-    dialog.append(heading, impact, message, cancel, confirm);
+    actions.append(cancel, confirm);
+    dialog.append(heading, impact, message, actions);
     document.body.append(dialog);
     dialog.addEventListener('close', () => { endWorkbenchOperation(); dialog.remove(); }, {once:true});
+    heading.tabIndex = -1;
     dialog.showModal();
-    cancel.focus();
+    heading.focus();
     runPreview();
 
     function list(zh, en, entries) {
@@ -148,10 +151,9 @@ function openGameFiles(opener, target = null) {
     up.disabled = true;
     const location = wbElement('nav', 'game-files-location', tr('选择要浏览的存储或电脑目录', 'Choose a storage or computer folder'));
     location.setAttribute('aria-label', tr('当前路径', 'Current path'));
-    const add = gmButton('添加游戏文件…', 'Add game files…', addFiles, false);
+    const add = gmButton('添加游戏', 'Add games', addItems, false);
     add.id = 'game-files-add';
-    const addFolder = gmButton('添加文件夹…', 'Add folder…', addFolderFiles);
-    addFolder.id = 'game-files-add-folder';
+    wbIconButton(add, 'plus', tr('添加游戏', 'Add games'));
     const rename = gmButton('重命名', 'Rename', () => renameFile());
     const remove = gmButton('删除文件', 'Delete file', () => deleteFile());
     const copy = gmButton('复制', 'Copy', () => copyFile());
@@ -160,8 +162,8 @@ function openGameFiles(opener, target = null) {
     wbIconButton(remove, 'trash', remove.textContent);
     wbIconButton(copy, 'copy', copy.textContent);
     wbIconButton(paste, 'clipboard', paste.textContent);
-    rename.disabled = remove.disabled = copy.disabled = paste.disabled = add.disabled = addFolder.disabled = true;
-    toolbar.append(up, location, rename, remove, copy, paste, addFolder, add);
+    rename.disabled = remove.disabled = copy.disabled = paste.disabled = add.disabled = true;
+    toolbar.append(up, location, rename, remove, copy, paste, add);
     const table = wbElement('div', 'game-files-table');
     const rows = wbElement('ul', 'game-files-rows');
     const empty = wbElement('p', 'game-files-empty', tr('从左侧选择要存放游戏的目录', 'Pick a folder on the left to store games'));
@@ -209,10 +211,10 @@ function openGameFiles(opener, target = null) {
         paste.disabled = !gameFilesClipboard || gameFilesClipboard.root !== root || !current?.path || changing;
         const mtpDest = current?.path?.startsWith('mtp://');
         const blocked = Boolean(mtpDest && (!root.startsWith('mtp://') || root.split('/')[2] !== current.path.split('/')[2]));
-        add.disabled = addFolder.disabled = !current?.path || changing || blocked;
-        add.title = addFolder.title = blocked
+        add.disabled = !current?.path || changing || blocked;
+        add.title = blocked
             ? tr('先在游戏库中打开这台掌机。', 'Open this handheld library first.')
-            : tr('把电脑上的文件复制进当前目录。', 'Copy computer files into this folder.');
+            : tr('把电脑上的文件或文件夹复制进当前目录。', 'Copy computer files or folders into this folder.');
         empty.hidden = Boolean(current);
     }
 
@@ -273,9 +275,11 @@ function openGameFiles(opener, target = null) {
         dialog.append(input);
         const error = wbElement('p', '', '');
         error.setAttribute('role', 'alert');
+        const actions = wbElement('div', 'desktop-confirm-actions');
         const cancel = gmButton('取消', 'Cancel', () => dialog.close());
         const confirm = gmButton('确认', 'Confirm', submit, false);
-        dialog.append(error, cancel, confirm);
+        actions.append(cancel, confirm);
+        dialog.append(error, actions);
         document.body.append(dialog);
         dialog.addEventListener('close', () => dialog.remove(), {once:true});
         dialog.addEventListener('cancel', event => { if (changing) event.preventDefault(); });
@@ -311,18 +315,21 @@ function openGameFiles(opener, target = null) {
         dialog.setAttribute('aria-labelledby', heading.id);
         const message = wbElement('p', '', '');
         message.setAttribute('role', 'status');
-        const cancel = gmButton('关闭', 'Close', () => dialog.close());
-        const confirm = gmButton('确认删除', 'Delete', apply, false);
+        const actions = wbElement('div', 'desktop-confirm-actions');
+        const cancel = gmButton('取消', 'Cancel', () => dialog.close());
+        const confirm = gmButton('确认', 'Confirm', apply, false);
+        actions.append(cancel, confirm);
         dialog.append(heading, wbElement('p', '', item.name),
             wbElement('p', '', tr(item.directory ? '文件夹及其内容会移到电脑上的备份目录。' : '文件会移到电脑上的备份目录。',
                                   item.directory ? 'The folder and its contents move to a backup folder on this computer.'
                                                  : 'The file moves to a backup folder on this computer.')),
-            message, cancel, confirm);
+            message, actions);
         document.body.append(dialog);
         dialog.addEventListener('close', () => dialog.remove(), {once:true});
         dialog.addEventListener('cancel', event => { if (changing) event.preventDefault(); });
+        heading.tabIndex = -1;
         dialog.showModal();
-        cancel.focus();
+        heading.focus();
 
         async function apply() {
             if (changing) return;
@@ -461,27 +468,44 @@ function openGameFiles(opener, target = null) {
         }
     }
 
-    async function addFiles() {
+    async function addItems() {
         if (!current?.path || changing) return;
         try {
-            const result = await desktopRequest('/api/desktop/pick', {kind:'files', initial:lastLocal});
-            if (gameFilesView === view && result.paths?.length) await submitAdd(result.paths);
+            const result = await desktopRequest('/api/desktop/pick', {kind:'items', initial:lastLocal});
+            if (gameFilesView === view && result.paths?.length) confirmAdd(result.paths);
         } catch (error) {
             status.textContent = error.message;
         }
     }
 
-    async function addFolderFiles() {
-        if (!current?.path || changing) return;
-        try {
-            const result = await desktopRequest('/api/desktop/pick', {kind:'directory', initial:lastLocal});
-            if (gameFilesView === view && result.path) await submitAdd([result.path]);
-        } catch (error) {
-            status.textContent = error.message;
-        }
+    function confirmAdd(sources) {
+        const existing = new Set((current?.items || []).map(item => item.name));
+        const conflicts = sources.map(source => source.split(/[\\/]/).pop()).filter(name => existing.has(name));
+        if (!conflicts.length) { submitAdd(sources, false); return; }
+        const all = conflicts.length === sources.length;
+        const dialog = wbElement('dialog', 'desktop-confirm app-dialog');
+        const heading = wbElement('h2', '', tr('文件已存在', 'Already exists'));
+        heading.id = 'game-file-conflict-title';
+        heading.tabIndex = -1;
+        dialog.setAttribute('aria-labelledby', heading.id);
+        const names = conflicts.join('、');
+        const message = all
+            ? tr(`「${names}」已存在，是否替换？原有内容会移到电脑上的备份目录。`,
+                 `"${names}" already exists. Replace it? The original moves to a backup folder on this computer.`)
+            : tr(`「${names}」已存在。替换会用所选内容覆盖并备份原有内容；跳过则保留原有文件。`,
+                 `"${names}" already exists. Replacing overwrites it after backup; skipping keeps the original.`);
+        const actions = wbElement('div', 'desktop-confirm-actions');
+        actions.append(gmButton('取消', 'Cancel', () => dialog.close()));
+        if (!all) actions.append(gmButton('跳过同名', 'Skip existing', () => { dialog.close(); submitAdd(sources, false); }));
+        actions.append(gmButton(all ? '确认' : '替换', all ? 'Confirm' : 'Replace', () => { dialog.close(); submitAdd(sources, true); }, false));
+        dialog.append(heading, wbElement('p', '', message), actions);
+        document.body.append(dialog);
+        dialog.addEventListener('close', () => dialog.remove(), {once:true});
+        dialog.showModal();
+        heading.focus();
     }
 
-    async function submitAdd(sources) {
+    async function submitAdd(sources, overwrite) {
         if (!current?.path || changing || !sources.length) return;
         if (!beginWorkbenchOperation('game-file-ops')) { status.textContent = tr('请等待当前任务完成。', 'Wait for the current task.'); return; }
         const directory = current.path;
@@ -489,10 +513,10 @@ function openGameFiles(opener, target = null) {
         updateActionState();
         status.textContent = tr('正在复制…', 'Copying…');
         try {
-            const {result} = await runGameJob('/api/game-files/file-ops', {action:'add', sources, directory, root},
+            const {result} = await runGameJob('/api/game-files/file-ops', {action:'add', sources, directory, root, overwrite},
                 state => { if (state.connectionError || currentUILanguage !== 'en') status.textContent = state.message; });
             if (gameFilesView === view) {
-                await loadDirectory(directory, null, new Set(result.copied));
+                await loadDirectory(directory, null, new Set([...result.copied, ...result.replaced]));
                 status.textContent = addSummary(result);
             }
         } catch (error) {
@@ -508,6 +532,7 @@ function openGameFiles(opener, target = null) {
         const parts = [];
         const list = names => names.length > 4 ? names.slice(0, 4).join('、') + ' 等 ' + names.length + ' 项' : names.join('、');
         if (result.copied.length) parts.push(tr('已复制：', 'Copied: ') + list(result.copied));
+        if (result.replaced?.length) parts.push(tr('已替换：', 'Replaced: ') + list(result.replaced));
         if (result.skipped.length) parts.push(tr('已跳过（同名已存在）：', 'Skipped (same name exists): ') + list(result.skipped));
         if (result.failed.length) parts.push(tr('失败：', 'Failed: ') + list(result.failed.map(entry => entry.name)));
         if (result.remaining.length) parts.push(tr('未完成：', 'Not finished: ') + list(result.remaining));

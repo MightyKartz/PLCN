@@ -60,16 +60,47 @@ def test_add_copies_files_and_folders_and_skips_existing(tmp_path):
     rom.write_bytes(b'new')
     clash = source_dir / 'existing.sfc'
     clash.write_bytes(b'clash')
-    sources, directory, remote = ops.validate_add({
+    sources, directory, remote, overwrite = ops.validate_add({
         'action': 'add', 'sources': [str(rom), str(game_folder), str(clash)],
         'directory': str(destination), 'root': str(tmp_path)})
-    result = ops.apply_add(sources, directory, remote)
+    assert overwrite is False
+    result = ops.apply_add(sources, directory, remote, overwrite)
     assert result['copied'] == ['new.sfc', 'Game']
     assert result['skipped'] == ['existing.sfc']
     assert result['failed'] == [] and result['remaining'] == []
     assert (destination / 'new.sfc').read_bytes() == b'new'
     assert (destination / 'Game' / 'disc' / 'game.cue').read_bytes() == b'cue'
     assert (destination / 'existing.sfc').read_bytes() == b'old'
+
+
+def test_add_overwrite_backs_up_then_replaces(tmp_path, monkeypatch):
+    monkeypatch.setenv('RETROARCH_ASSISTANT_HOME', str(tmp_path / 'home'))
+    destination = tmp_path / 'Roms'
+    destination.mkdir()
+    (destination / 'game.sfc').write_bytes(b'old version')
+    folder = destination / 'Game'
+    folder.mkdir()
+    (folder / 'a.bin').write_bytes(b'old bin')
+    source_dir = tmp_path / 'incoming'
+    source_dir.mkdir()
+    (source_dir / 'game.sfc').write_bytes(b'new version')
+    new_folder = source_dir / 'Game'
+    new_folder.mkdir()
+    (new_folder / 'b.bin').write_bytes(b'new bin')
+    _, _, _, overwrite = ops.validate_add({
+        'action': 'add', 'sources': [str(source_dir / 'game.sfc'), str(new_folder)],
+        'directory': str(destination), 'root': str(tmp_path), 'overwrite': True})
+    assert overwrite is True
+    result = ops.apply_add([str(source_dir / 'game.sfc'), str(new_folder)], str(destination), False, True)
+    assert result['replaced'] == ['game.sfc', 'Game']
+    assert result['skipped'] == [] and result['failed'] == []
+    assert (destination / 'game.sfc').read_bytes() == b'new version'
+    assert (destination / 'Game' / 'b.bin').read_bytes() == b'new bin'
+    trash = tmp_path / 'home' / 'file-trash'
+    backups = list(trash.iterdir())
+    assert len(backups) == 2
+    backup_files = [entry.read_bytes() for entry in trash.rglob('*') if entry.is_file()]
+    assert sorted(backup_files) == [b'old bin', b'old version']
 
 
 def test_add_reports_failure_and_remaining_and_cleans_partial(tmp_path):

@@ -109,7 +109,7 @@ def test_home_to_library_to_preview(tmp_path, monkeypatch, chrome_binary, viewpo
     home = str(Path.home())
 
     def fake_pick(kind='directory', initial=''):
-        if kind == 'files':
+        if kind in ('files', 'items'):
             return [str(incoming / 'Imported demo.sfc')]
         if kind == 'rom':
             return str(incoming / 'Updated demo.sfc')

@@ -69,7 +69,7 @@ def validate_add(payload):
     for source in sources:
         if not Path(source).is_absolute() or not Path(source).exists():
             raise ValueError('请选择电脑上存在的文件或文件夹')
-    return [str(Path(source)) for source in sources], directory, remote
+    return [str(Path(source)) for source in sources], directory, remote, payload.get('overwrite') is True
 
 
 def _walk_remote(path):
@@ -220,11 +220,49 @@ def _remove_destination(target, remote):
         pass
 
 
-def apply_add(sources, directory, remote, progress=lambda *args: None, cancelled=lambda: None):
-    """Copy local sources into the browsed directory, skipping same-named items.
+def _write_item(item, target, remote, cancelled, on_file):
+    """Write one source file/folder to an empty destination path."""
+    is_dir = item['source'].is_dir()
+    if remote:
+        if is_dir:
+            _ensure_remote_dir(target)
+            for folder in item['folders']:
+                _ensure_remote_dir(target + '/' + folder.relative_to(item['source']).as_posix())
+        for entry in item['files']:
+            cancelled()
+            relative = entry.relative_to(item['source']).as_posix() if is_dir else item['name']
+            _upload_local(entry, target + '/' + relative if is_dir else target, cancelled)
+            on_file()
+    elif is_dir:
+        Path(target).mkdir()
+        for folder in item['folders']:
+            (Path(target) / folder.relative_to(item['source'])).mkdir(parents=True, exist_ok=True)
+        for entry in item['files']:
+            cancelled()
+            (Path(target) / entry.relative_to(item['source'])).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(entry, Path(target) / entry.relative_to(item['source']))
+            on_file()
+    else:
+        cancelled()
+        with file_lock(str(item['source'])):
+            shutil.copy2(item['source'], target)
+        on_file()
 
-    Top-level folders are treated as units so two releases never merge. The
-    report keeps copied/skipped/failed/remaining lists even after cancellation.
+
+def _rename_into(target, staged, remote):
+    if remote:
+        mtp.rename_object(staged, mtp.parse(target)[2][-1])
+    else:
+        Path(staged).rename(target)
+
+
+def apply_add(sources, directory, remote, overwrite=False, progress=lambda *args: None, cancelled=lambda: None):
+    """Copy local sources into the browsed directory.
+
+    Same-named top-level items are skipped, or — when overwrite is set — staged,
+    then the original moves to the local backup folder before the staged copy
+    takes its name. The report keeps copied/replaced/skipped/failed/remaining
+    lists even after cancellation.
     """
     items = []
     for source in sources:
@@ -236,53 +274,39 @@ def apply_add(sources, directory, remote, progress=lambda *args: None, cancelled
             files, folders = [path], []
         items.append({'source': path, 'name': path.name, 'files': files, 'folders': folders})
     total = sum(len(item['files']) for item in items)
-    result = {'copied': [], 'skipped': [], 'failed': [], 'remaining': [], 'destination': directory}
+    result = {'copied': [], 'replaced': [], 'skipped': [], 'failed': [], 'remaining': [], 'destination': directory}
     done = 0
     for index, item in enumerate(items):
         name = item['name']
         target = mtp.join(directory, name) if remote else str(Path(directory) / name)
         exists = mtp.stat_file(target) is not None if remote else (Path(target).exists() or Path(target).is_symlink())
-        if exists:
+        if exists and not overwrite:
             result['skipped'].append(name)
             done += len(item['files'])
             continue
-        is_dir = item['source'].is_dir()
+        staged = target + '.plcn-replace-' + uuid.uuid4().hex if exists else target
+
+        def note_file():
+            nonlocal done
+            done += 1
+            progress(done, total, '复制：' + name)
+
         try:
-            if remote:
-                if is_dir:
-                    _ensure_remote_dir(target)
-                    for folder in item['folders']:
-                        _ensure_remote_dir(target + '/' + folder.relative_to(item['source']).as_posix())
-                for entry in item['files']:
-                    cancelled()
-                    relative = entry.relative_to(item['source']).as_posix() if is_dir else name
-                    _upload_local(entry, target + '/' + relative if is_dir else target, cancelled)
-                    done += 1
-                    progress(done, total, '复制：' + name)
-            elif is_dir:
-                Path(target).mkdir()
-                for folder in item['folders']:
-                    (Path(target) / folder.relative_to(item['source'])).mkdir(parents=True, exist_ok=True)
-                for entry in item['files']:
-                    cancelled()
-                    (Path(target) / entry.relative_to(item['source'])).parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(entry, Path(target) / entry.relative_to(item['source']))
-                    done += 1
-                    progress(done, total, '复制：' + name)
-            else:
+            _write_item(item, staged, remote, cancelled, note_file)
+            if exists:
                 cancelled()
-                with file_lock(str(item['source'])):
-                    shutil.copy2(item['source'], target)
-                done += 1
-                progress(done, total, '复制：' + name)
-            result['copied'].append(name)
+                apply_delete(target, remote, cancelled=cancelled)
+                _rename_into(target, staged, remote)
+                result['replaced'].append(name)
+            else:
+                result['copied'].append(name)
         except TaskCancelled as error:
-            _remove_destination(target, remote)
+            _remove_destination(staged, remote)
             result['failed'].append({'name': name, 'error': str(error)})
             result['remaining'] = [pending['name'] for pending in items[index + 1:]]
             return result
         except Exception as error:
-            _remove_destination(target, remote)
+            _remove_destination(staged, remote)
             result['failed'].append({'name': name, 'error': str(error)})
             result['remaining'] = [pending['name'] for pending in items[index + 1:]]
             return result
