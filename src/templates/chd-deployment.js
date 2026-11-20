@@ -75,6 +75,7 @@ async function applyChdDeployment(){
     try{
         const {result}=await deploymentJob('/api/chd/deployment/apply',{preview_job_id:id});chdDeployment.changed=true;
         if(result?.status==='partial'&&result.cleanup_id&&chdDeployment.record===record){offerCleanup(result);}
+        else if(result?.unverified?.length){showCleanupResult(result);}
         else{deployField('status').textContent='已完成。';deployField('review').hidden=true;}
     }catch(error){chdDeployment.changed=true;deployField('status').textContent=error.message;}
 }
@@ -82,57 +83,75 @@ function offerCleanup(result){
     deployField('status').textContent='引用已切换，但清理未全部完成：'+(result.error||'');
     const button=deployField('cleanup');button.hidden=false;button.disabled=false;button.dataset.job=result.cleanup_id;
     const details=deployField('details');details.replaceChildren();
+    for(const entry of result.unverified||[]){const line=document.createElement('li');line.textContent='待核对：'+entry.path+' · '+entry.error;details.appendChild(line);}
     for(const path of result.cleanup_remaining||[]){const line=document.createElement('li');line.textContent='待清理：'+path;details.appendChild(line);}
     deployField('review').hidden=false;
 }
 function clearCleanupOffer(){
-    const button=deployField('cleanup');button.hidden=true;if(button.dataset)delete button.dataset.job;
+    const button=deployField('cleanup');button.hidden=true;
+    if(button.dataset){delete button.dataset.job;delete button.dataset.check;}
+    button.textContent='继续清理原镜像';chdDeployment.cleanupRequest=null;
 }
-async function reconcileCleanup(button,showResult,cause){
+function showCleanupResult(result){
+    const button=deployField('cleanup');
+    const unverified=result.unverified||[],remaining=result.remaining||[];
+    if(result.status==='completed'&&!unverified.length&&!remaining.length){
+        deployField('status').textContent=(result.cancelled?'已取消；':'')+'清理完成：已移除 '+(result.deleted||[]).length+' 个原镜像。';
+        deployField('review').hidden=true;return;}
+    deployField('status').textContent=(result.cancelled?'已取消；':'')+
+        (remaining.length?(result.error||'部分原镜像未能移除')
+            :unverified.length?'自动清理已结束；仍有 '+unverified.length+' 项删除结果待核对':(result.error||''));
+    const details=deployField('details');details.replaceChildren();
+    for(const entry of unverified){const line=document.createElement('li');line.textContent='待核对：'+entry.path+' · '+entry.error;details.appendChild(line);}
+    for(const entry of remaining){const line=document.createElement('li');line.textContent='待清理：'+entry.path+' · '+entry.error;details.appendChild(line);}
+    deployField('review').hidden=false;
+    if(result.cleanup_id){button.dataset.job=result.cleanup_id;delete button.dataset.check;button.textContent='继续清理原镜像';
+        button.hidden=false;button.disabled=false;}
+}
+function offerCleanupCheck(){
+    const button=deployField('cleanup');
+    button.dataset.check='1';button.hidden=false;button.disabled=false;button.textContent='核对清理结果';
+}
+async function reconcileCleanup(requestId,record,cause){
     // The request outcome is unknown: never resubmit until the server state is
-    // confirmed. The submitted job (or the newest cleanup task) decides.
-    deployField('status').textContent=cause+'；正在核对清理结果…';
+    // confirmed. Only the job carrying this request's id counts — a same-titled
+    // task from another game must never be bound here.
+    const button=deployField('cleanup');
+    deployField('status').textContent=(cause?cause+'；':'')+'正在核对清理结果…';
     let job;
     try{
         const state=await desktopRequest('/api/desktop');
-        const jobs=state.jobs||[];
-        job=chdDeployment.lastJob?jobs.find(entry=>entry.id===chdDeployment.lastJob):undefined;
-        if(!job)job=jobs.find(entry=>entry.title==='继续清理 CHD 原镜像');
-    }catch(_error){
-        deployField('status').textContent=cause+'；无法确认清理结果，请稍后重新打开部署窗口或查看任务记录。';
-        return;}
-    if(!job){deployField('status').textContent='清理未执行，可重试。';button.hidden=false;button.disabled=false;return;}
-    if(['pending','running'].includes(job.status)){deployField('status').textContent='清理仍在执行，完成后请查看任务记录。';return;}
+        job=(state.jobs||[]).find(entry=>entry.request_id===requestId);
+    }catch(_error){job=null;}
+    if(chdDeployment.record!==record||chdDeployment.cleanupRequest!==requestId)return;
+    if(!job){deployField('status').textContent='无法确认清理结果；恢复连接后可再次核对。';offerCleanupCheck();return;}
+    if(['pending','running'].includes(job.status)){deployField('status').textContent='清理仍在执行，可稍后再次核对。';offerCleanupCheck();return;}
     if(job.status==='failed'){
-        if(job.code==='cleanup_invalid'){delete button.dataset.job;deployField('status').textContent=job.error||'该清理任务已失效。';return;}
+        if(job.code==='cleanup_invalid'){delete button.dataset.job;chdDeployment.cleanupRequest=null;deployField('status').textContent=job.error||'该清理任务已失效。';return;}
+        chdDeployment.cleanupRequest=null;
         deployField('status').textContent='清理未能完成：'+(job.error||'未知错误')+'，可重试。';button.hidden=false;button.disabled=false;return;}
-    if(job.result)showResult(job.result);
+    chdDeployment.cleanupRequest=null;
+    if(job.result)showCleanupResult(job.result);
     else{deployField('status').textContent='清理已停止且无结果，请查看任务记录。';}
 }
 async function continueChdCleanup(){
     const button=deployField('cleanup');if(chdDeployment.busy)return;
+    const record=chdDeployment.record;
+    if(button.dataset.check&&chdDeployment.cleanupRequest){button.hidden=true;delete button.dataset.check;button.textContent='继续清理原镜像';
+        await reconcileCleanup(chdDeployment.cleanupRequest,record);return;}
     const cleanupId=button.dataset.job;if(!cleanupId)return;
     button.hidden=true;
-    const showResult=result=>{
-        const unverified=result.unverified||[],remaining=result.remaining||[];
-        if(result.status==='completed'&&!unverified.length&&!remaining.length){
-            deployField('status').textContent=(result.cancelled?'已取消；':'')+'清理完成：已移除 '+(result.deleted||[]).length+' 个原镜像。';
-            deployField('review').hidden=true;return;}
-        deployField('status').textContent=(result.cancelled?'已取消；':'')+(result.error||'部分原镜像未能移除');
-        const details=deployField('details');details.replaceChildren();
-        for(const entry of unverified){const line=document.createElement('li');line.textContent='待核对：'+entry.path+' · '+entry.error;details.appendChild(line);}
-        for(const entry of remaining){const line=document.createElement('li');line.textContent='待清理：'+entry.path+' · '+entry.error;details.appendChild(line);}
-        deployField('review').hidden=false;
-        if(result.cleanup_id){button.dataset.job=result.cleanup_id;button.hidden=false;button.disabled=false;}
-    };
+    const requestId='clr-'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+    chdDeployment.cleanupRequest=requestId;
     try{
-        const {result}=await deploymentJob('/api/chd/deployment/cleanup',{cleanup_job_id:cleanupId});
-        showResult(result);
+        const {result}=await deploymentJob('/api/chd/deployment/cleanup',{cleanup_job_id:cleanupId,request_id:requestId});
+        chdDeployment.cleanupRequest=null;showCleanupResult(result);
     }catch(error){
+        if(chdDeployment.record!==record){chdDeployment.cleanupRequest=null;return;}
         // A cancelled job still returns what it did: bind the freshly issued id.
-        if(error.result&&Array.isArray(error.result.deleted)){showResult(error.result);return;}
+        if(error.result&&Array.isArray(error.result.deleted)){chdDeployment.cleanupRequest=null;showCleanupResult(error.result);return;}
         // Only a server-side invalid-id code retires the entry; a lost
         // connection message must never destroy a still-valid plan.
-        if(error.code==='cleanup_invalid'){delete button.dataset.job;deployField('status').textContent=error.message;return;}
-        await reconcileCleanup(button,showResult,error.message);}
+        if(error.code==='cleanup_invalid'){chdDeployment.cleanupRequest=null;delete button.dataset.job;deployField('status').textContent=error.message;return;}
+        await reconcileCleanup(requestId,record,error.message);}
 }

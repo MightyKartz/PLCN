@@ -400,7 +400,29 @@ def test_cleanup_cancel_reports_deleted_and_only_continues_remaining(prepared,mo
     assert done['deleted']==list(remaining) and Path(removed_path).read_bytes()==original[removed_path]
 
 
-def test_cleanup_unverified_readback_is_never_relisted(prepared,monkeypatch):
+def test_first_deploy_unverified_readback_is_never_relisted(prepared,monkeypatch):
+    playlist,cue,track,payload=prepared;plan=deploy.prepare(payload)
+    original={str(cue):cue.read_bytes(),str(track):track.read_bytes()}
+    real_remove=chd_io.remove
+    def flaky_remove(path,*a,**k):
+        if str(path)==str(cue):
+            cue.unlink();raise chd_io.RemoveUnverified('删除已执行但无法核对：'+str(cue))
+        if str(path)==str(track):raise RuntimeError('bin io')
+        return real_remove(path,*a,**k)
+    monkeypatch.setattr(chd_io,'remove',flaky_remove)
+    result=deploy.start(plan)
+    assert result['status']=='partial' and not cue.exists() and track.exists()
+    assert [entry['path'] for entry in result['unverified']]==[str(cue)]
+    assert {file['path'] for file in result['cleanup']['pending']}=={str(track)}
+    monkeypatch.setattr(chd_io,'remove',real_remove)
+    cue.write_bytes(original[str(cue)])
+    done=deploy.continue_cleanup(result['cleanup'])
+    assert done['deleted']==[str(track)] and cue.read_bytes()==original[str(cue)]
+    assert [entry['path'] for entry in done['unverified']]==[str(cue)]
+
+
+@pytest.mark.parametrize('readback_error',[RuntimeError,ValueError])
+def test_cleanup_unverified_readback_is_never_relisted(prepared,monkeypatch,readback_error):
     playlist,cue,track,payload=prepared;plan=deploy.prepare(payload)
     original={str(cue):cue.read_bytes(),str(track):track.read_bytes()}
     remove=chd_io.remove;failed=[False]
@@ -416,7 +438,7 @@ def test_cleanup_unverified_readback_is_never_relisted(prepared,monkeypatch):
         return real_unlink(path,*a,**k)
     real_digest=chd_io.digest
     def flaky_digest(path,*a,**k):
-        if str(path)==str(cue) and gone[0]:raise RuntimeError('device gone')
+        if str(path)==str(cue) and gone[0]:raise readback_error('device gone')
         return real_digest(path,*a,**k)
     def flaky_remove(path,*a,**k):
         if str(path)==str(track):raise RuntimeError('bin io')
@@ -428,11 +450,14 @@ def test_cleanup_unverified_readback_is_never_relisted(prepared,monkeypatch):
     assert [entry['path'] for entry in outcome['unverified']]==[str(cue)]
     assert [entry['path'] for entry in outcome['remaining']]==[str(track)]
     assert {file['path'] for file in outcome['cleanup']['pending']}=={str(track)}
+    assert {entry['path'] for entry in outcome['cleanup']['unverified']}=={str(cue)}
     monkeypatch.setattr(chd_io,'digest',real_digest);monkeypatch.setattr(chd_io,'remove',remove)
-    # A restored CUE must never re-enter automatic deletion.
+    # A restored CUE must never re-enter automatic deletion, and the pending
+    # verification item stays reported after later files finish (R5-03).
     cue.write_bytes(original[str(cue)])
     done=deploy.continue_cleanup(outcome['cleanup'])
     assert done['deleted']==[str(track)] and cue.read_bytes()==original[str(cue)]
+    assert [entry['path'] for entry in done['unverified']]==[str(cue)] and not done['remaining']
 
 
 def test_continuation_refuses_when_reference_reverted(prepared,monkeypatch):

@@ -232,20 +232,26 @@ function finishBatchRun(outcome, analysis, applyResult, errorMessage = '') {
         .reduce((total, stats) => total + (stats.failed || 0), 0);
     const openHistory = () => openOperationHistory('completion');
     if (outcome === 'cancelled') {
-        const processed = applyResult?.processed_count || 0;
-        let message = processed
-            ? workbenchText(`已取消，已处理 ${processed} 个列表；完成的部分会保留。`, `Cancelled; ${processed} playlist(s) processed and kept.`)
-            : analysis
-                ? workbenchText('已取消，已完成的部分会保留。', 'Cancelled; completed work is kept.')
-                : workbenchText('已取消，未写入任何内容。', 'Cancelled; nothing was written.');
+        const processed = applyResult?.processed_count, total = applyResult?.total_count;
+        let message = processed !== undefined && total !== undefined
+            ? workbenchText(`已取消，已处理 ${processed}/${total} 个列表；完成的部分会保留。`, `Cancelled; ${processed}/${total} playlist(s) processed and kept.`)
+            : processed
+                ? workbenchText(`已取消，已处理 ${processed} 个列表；完成的部分会保留。`, `Cancelled; ${processed} playlist(s) processed and kept.`)
+                : analysis
+                    ? workbenchText('已取消，已完成的部分会保留。', 'Cancelled; completed work is kept.')
+                    : workbenchText('已取消，未写入任何内容。', 'Cancelled; nothing was written.');
         if (applyResult?.cleanup_warnings?.length) message += ' · ' + applyResult.cleanup_warnings.join(' · ');
         showActionToast({message, details: openHistory});
     } else if (outcome === 'failed') {
         showActionToast({message: errorMessage || workbenchText('处理失败，请查看补全记录。', 'The run failed; see completion history.'),
             details: openHistory});
     } else if (applyResult) {
-        let text = workbenchText(`已补全 ${completed} 个游戏`,
-            `Completed ${completed} ${completed === 1 ? 'game' : 'games'}`);
+        const processed = applyResult.processed_count, total = applyResult.total_count;
+        let text = processed !== undefined && total !== undefined
+            ? workbenchText(`已完成 ${processed}/${total} 个列表，补全 ${completed} 个游戏`,
+                `Finished ${processed}/${total} playlist(s); completed ${completed} ${completed === 1 ? 'game' : 'games'}`)
+            : workbenchText(`已补全 ${completed} 个游戏`,
+                `Completed ${completed} ${completed === 1 ? 'game' : 'games'}`);
         const failedPlaylists = applyResult.errors?.length || 0;
         if (failedPlaylists) text += workbenchText(`，${failedPlaylists} 个列表处理失败`, `, ${failedPlaylists} playlists failed`);
         if (failedImages) text += workbenchText(`，${failedImages} 张封面下载失败`, `, ${failedImages} images failed`);

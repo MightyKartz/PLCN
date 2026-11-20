@@ -96,4 +96,7 @@ def deployment_cleanup(handler,context,payload):
                 jobs.contexts[jid]={'chd_cleanup':result.pop('cleanup')}
             result['cleanup_id']=jid
         return result
-    reply(handler,{'job_id':background(jobs,'继续清理 CHD 原镜像',work)})
+    request_id=payload.get('request_id');job_id=background(jobs,'继续清理 CHD 原镜像',work)
+    if isinstance(request_id,str) and request_id:
+        with jobs.lock: jobs.jobs[job_id]['request_id']=request_id
+    reply(handler,{'job_id':job_id})

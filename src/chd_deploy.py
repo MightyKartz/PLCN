@@ -210,11 +210,31 @@ def start(plan,cancelled=lambda: None,progress=lambda message: None):
                 if io.digest(item['target'],cancelled)!=item['sha256']: raise ValueError('CHD 在回传后变化，停止清理')
             tx.check_dependencies(record['metadata']['dependencies'],patches=record['metadata']['patches'])
             deleting={file['path'] for file in record['deletions']}
+            record['unverified']=[]
             for file in record['sources']:
                 if file['path'] not in deleting: continue
-                cancelled();progress('删除原镜像：'+file['path'])
-                if io.digest(file['path'],cancelled) is not None:
-                    io.remove(file['path'],file['sha256'],cancelled)
+                path=file['path']
+                cancelled();progress('删除原镜像：'+path)
+                try:
+                    if io.digest(path,cancelled) is not None:
+                        io.remove(path,file['sha256'],cancelled)
+                except io.RemoveUnverified as error:
+                    file['state']='unverified'
+                    record['unverified'].append({'path':path,'error':str(error)})
+                    continue
+                # The delete was issued; a failed read-back must not silently
+                # re-list a path that may already be gone.
+                try:
+                    residual=io.digest(path,cancelled)
+                except TaskCancelled:
+                    file['state']='unverified'
+                    record['unverified'].append({'path':path,'error':'删除已执行但核对中断'})
+                    raise
+                except (OSError,ValueError,RuntimeError) as error:
+                    file['state']='unverified'
+                    record['unverified'].append({'path':path,'error':'删除已执行但未能核对：'+str(error)})
+                    continue
+                if residual is not None: raise RuntimeError('删除后文件仍存在：'+path)
                 file['state']='deleted'
         record['status']='completed';record['error']=None
     except (OSError,ValueError,RuntimeError,TaskCancelled) as error:
@@ -223,8 +243,9 @@ def start(plan,cancelled=lambda: None,progress=lambda message: None):
     # The result travels through the job API; internal descriptors are not JSON-safe.
     result={key:value for key,value in record.items() if key not in {'metadata','metadata_plan','scope_snapshot','origin_analysis','write_digests'}} | {
         'copies':[{key:value for key,value in item.items() if key!='content_base64'} for item in record['copies']]}
+    if record.get('unverified'): result['unverified']=record['unverified']
     if record['mode']=='replace' and record['status']=='partial' and reached_cleanup:
-        remaining=[file for file in record['deletions'] if file.get('state')!='deleted']
+        remaining=[file for file in record['deletions'] if file.get('state') not in {'deleted','unverified'}]
         result['cleanup_remaining']=[file['path'] for file in remaining]
         result['cleanup']={'playlist':record['playlist'],'roots':record['roots'],
                            'copies':[{'target':item['target'],'sha256':item['sha256'],'created':item['created']} for item in record['copies']],
@@ -233,6 +254,7 @@ def start(plan,cancelled=lambda: None,progress=lambda message: None):
                            'dependencies':record['metadata']['dependencies'],
                            'patches':record['metadata'].get('patches',[]),
                            'scope_snapshot':record['scope_snapshot'],
+                           'unverified':record.get('unverified',[]),
                            'sources':[{'path':file['path'],'sha256':file['sha256'],'size':file['size'],'state':file.get('state')} for file in record['sources']]}
     return result
 
@@ -264,7 +286,9 @@ def continue_cleanup(payload,cancelled=lambda: None,progress=lambda message: Non
     for item in copies:
         if io.digest(item['target'],cancelled)!=item['sha256']: raise ValueError('CHD 在回传后变化，停止清理：'+item['target'])
     tx.check_dependencies(dependencies,patches=patches)
-    deleted=[];remaining=[];unverified=[];stopped=False
+    deleted=[];remaining=[];stopped=False
+    prior_unverified=[entry for entry in payload.get('unverified',[]) if isinstance(entry,dict) and isinstance(entry.get('path'),str)]
+    unverified=list(prior_unverified);unverified_paths={entry['path'] for entry in unverified}
     for file in pending:
         path=file['path']
         if stopped:
@@ -279,7 +303,7 @@ def continue_cleanup(payload,cancelled=lambda: None,progress=lambda message: Non
             remaining.append({'path':path,'error':str(error)});stopped=True;continue
         except (OSError,ValueError,RuntimeError) as error:
             if isinstance(error,io.RemoveUnverified):
-                unverified.append({'path':path,'error':str(error)})
+                if path not in unverified_paths: unverified_paths.add(path);unverified.append({'path':path,'error':str(error)})
             else:
                 remaining.append({'path':path,'error':str(error)})
             continue
@@ -288,9 +312,11 @@ def continue_cleanup(payload,cancelled=lambda: None,progress=lambda message: Non
         try:
             residual=io.digest(path,cancelled)
         except TaskCancelled as error:
-            unverified.append({'path':path,'error':'删除已执行但核对中断：'+str(error)});stopped=True;continue
-        except (OSError,RuntimeError) as error:
-            unverified.append({'path':path,'error':'删除已执行但未能核对：'+str(error)});continue
+            if path not in unverified_paths: unverified_paths.add(path);unverified.append({'path':path,'error':'删除已执行但核对中断：'+str(error)})
+            stopped=True;continue
+        except (OSError,ValueError,RuntimeError) as error:
+            if path not in unverified_paths: unverified_paths.add(path);unverified.append({'path':path,'error':'删除已执行但未能核对：'+str(error)})
+            continue
         if residual is None: deleted.append(path)
         else: remaining.append({'path':path,'error':'删除后文件仍存在'})
     if isinstance(pending,list) and not pending: progress('没有待清理的原镜像')
@@ -304,5 +330,6 @@ def continue_cleanup(payload,cancelled=lambda: None,progress=lambda message: Non
         done={entry['path'] for entry in pending}-still
         result['cleanup']={**{key:payload[key] for key in ('playlist','roots','copies','writes','dependencies','patches','scope_snapshot')},
                            'pending':[file for file in pending if file['path'] in still],
+                           'unverified':unverified,
                            'sources':[{**file,'state':'deleted' if file['path'] in done else file.get('state')} for file in sources]}
     return result

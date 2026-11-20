@@ -688,7 +688,7 @@ async function main() {
     assert.equal(await evaluate(visible, '#game-library'), false);
     assert.equal(await evaluate(() => document.querySelector('#library-all-systems').getAttribute('aria-pressed')), 'true');
     await evaluate(() => { runAllSystemsCompletion(); });
-    await waitFor(() => document.querySelector('#action-toast-text').textContent.startsWith('已补全'), 'completed all-systems toast');
+    await waitFor(() => /^已完成 \d+\/\d+ 个列表，补全 \d+ 个游戏/.test(document.querySelector('#action-toast-text').textContent), 'completed all-systems toast');
     assert.equal(await evaluate(visible, '#action-toast-undo'), false);
     assert.equal(await evaluate(visible, '#action-toast-details'), true);
     await screenshot('02-all-systems-done');
@@ -704,7 +704,7 @@ async function main() {
     await evaluate(()=>toggleTheme());
     await evaluate(()=>toggleUILanguage());
     await evaluate(() => { runAllSystemsCompletion(); });
-    await waitFor(() => document.querySelector('#action-toast-text').textContent.startsWith('Completed'), 'English all-systems toast');
+    await waitFor(() => /^Finished \d+\/\d+ playlist/.test(document.querySelector('#action-toast-text').textContent), 'English all-systems toast');
     await screenshot('02-dark-en-all-systems-done');
     await waitFor(() => !workbench.operation, 'English run finished');
     await evaluate(()=>toggleUILanguage());

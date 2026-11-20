@@ -55,33 +55,49 @@ test('an invalid cleanup id retires the continuation entry',async()=>{
     assert.match(field('status').textContent,/失效/);
 });
 
-test('a lost connection does not destroy the cleanup context; reconcile re-enables when nothing ran',async()=>{
+test('an ambiguous failure offers a recheck entry instead of resubmitting',async()=>{
     const {c,field}=harness();
-    c.deploymentJob=async()=>{throw new Error('连接已失效，请重新连接后重试。');};
+    let requestId;c.deploymentJob=async(route,payload)=>{requestId=payload.request_id;throw new Error('网络错误');};
     c.desktopRequest=async()=>({jobs:[]});
     const button=field('cleanup');button.dataset={job:'old-id'};button.hidden=false;
     await c.continueChdCleanup();
-    assert.equal(button.dataset.job,'old-id');assert.equal(button.hidden,false);assert.equal(button.disabled,false);
-    assert.match(field('status').textContent,/未执行/);
-});
-
-test('an ambiguous failure never resubmits while the outcome is unconfirmed',async()=>{
-    const {c,field}=harness();
-    c.deploymentJob=async()=>{throw new Error('网络错误');};
-    c.desktopRequest=async()=>{throw new Error('offline');};
-    const button=field('cleanup');button.dataset={job:'old-id'};button.hidden=false;
+    assert.equal(button.dataset.job,'old-id');assert.equal(button.dataset.check,'1');
+    assert.equal(button.hidden,false);assert.equal(button.disabled,false);
+    assert.match(field('status').textContent,/无法确认|核对/);
+    // The recheck only binds the job carrying this request's id.
+    c.deploymentJob=async()=>assert.fail('must not resubmit');
+    c.desktopRequest=async()=>({jobs:[{id:'job-9',request_id:requestId,status:'completed',
+        result:{status:'completed',deleted:['/a.cue'],remaining:[],unverified:[]}}]});
     await c.continueChdCleanup();
     assert.equal(button.hidden,true);
-    assert.match(field('status').textContent,/无法确认/);
+    assert.match(field('status').textContent,/清理完成/);
+});
+
+test('reconcile never binds a cleanup job from another request or game',async()=>{
+    const {c,field}=harness();
+    c.deploymentJob=async()=>{throw new Error('连接已失效');};
+    // Same-titled job without this request's id must not be claimed.
+    c.desktopRequest=async()=>({jobs:[{id:'other',title:'继续清理 CHD 原镜像',status:'completed',result:{cleanup_id:'foreign'}}]});
+    c.store.record='game-A';
+    const button=field('cleanup');button.dataset={job:'old-id'};button.hidden=false;
+    await c.continueChdCleanup();
+    assert.equal(button.dataset.job,'old-id');assert.equal(button.dataset.check,'1');
+    // A stale response after switching games must not touch the new window.
+    let resolve;c.desktopRequest=()=>new Promise(r=>resolve=r);
+    c.deploymentJob=async()=>assert.fail('recheck must not resubmit');
+    const task=c.continueChdCleanup();
+    c.store.record='game-B';button.dataset.job='b-cleanup';button.hidden=false;
+    resolve({jobs:[]});await task;
+    assert.equal(button.dataset.job,'b-cleanup');assert.equal(button.dataset.check,undefined);
 });
 
 test('reconcile binds the latest remaining list when the submitted job finished',async()=>{
     const {c,field}=harness();
     c.document.createElement=()=>({textContent:''});
     field('details').appendChild=function(){};
-    c.deploymentJob=async()=>{throw new Error('连接已失效');};
-    c.store.lastJob='job-9';
-    c.desktopRequest=async()=>({jobs:[{id:'job-9',status:'completed',result:{status:'partial',deleted:['/a.cue'],remaining:[{path:'/a.bin',error:'io'}],cleanup_id:'next-id'}}]});
+    let requestId;c.deploymentJob=async(route,payload)=>{requestId=payload.request_id;throw new Error('连接已失效');};
+    c.store.record='game';
+    c.desktopRequest=async()=>({jobs:[{id:'job-9',request_id:requestId,status:'completed',result:{status:'partial',deleted:['/a.cue'],remaining:[{path:'/a.bin',error:'io'}],cleanup_id:'next-id'}}]});
     const button=field('cleanup');button.dataset={job:'old-id'};button.hidden=false;
     await c.continueChdCleanup();
     assert.equal(button.dataset.job,'next-id');assert.equal(button.hidden,false);assert.equal(button.disabled,false);
