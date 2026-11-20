@@ -46,9 +46,9 @@ GET_ROUTES = {
 }
 
 POST_ROUTES = {
-    '/api/game-files/change': api_library.change_game_file,
-    '/api/game-files/delete-preview': api_library.preview_game_file_deletion,
-    '/api/game-files/delete-apply': api_library.apply_game_file_deletion,
+    '/api/game-files/file-ops': api_library.game_file_ops,
+    '/api/game-files/sync-preview': api_library.preview_game_file_sync,
+    '/api/game-files/sync-apply': api_library.apply_game_file_sync,
     '/api/games/mapping': api_games.save_mapping,
     '/api/games/preview': api_games.preview,
     '/api/games/details': api_games.details,

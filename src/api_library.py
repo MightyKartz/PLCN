@@ -60,48 +60,55 @@ def game_file_directory(handler, context, query):
     ]})
 
 
-def change_game_file(handler, context, payload):
+def game_file_ops(handler, context, payload):
     import game_file_actions
-
-    game_file_actions.apply(*game_file_actions.validate(payload))
-    reply(handler, {'ok': True})
-
-
-def preview_game_file_deletion(handler, context, payload):
-    from game_file_deletion import preview, validate
-
-    path, root = validate(payload)
-    thumbnails = context.load_server_config().get('thumbnails_override') or ''
-
-    def work(job_id):
-        plan = preview(path, root, thumbnails)
-        with context.job_manager.lock:
-            context.job_manager.contexts[job_id] = {
-                'file_deletion': (path, root, thumbnails, plan['signature'])
-            }
-        return plan['public']
-
-    reply(handler, {'job_id': background(context.job_manager, '检查游戏文件引用', work)})
-
-
-def apply_game_file_deletion(handler, context, payload):
-    from game_file_deletion import apply
     from task_control import checkpoint
 
-    ident, clean = payload.get('preview_job_id'), payload.get('clean_covers')
-    if not isinstance(ident, str) or not isinstance(clean, bool):
-        raise ValueError('请先预览删除方案')
-    job = context.job_manager.get_job(ident)
+    path, argument, remote = game_file_actions.validate_op(payload)
+    action = payload['action']
+    if action == 'rename':
+        reply(handler, game_file_actions.apply_rename(path, argument, remote))
+        return
+    manager = context.job_manager
+    title = '删除文件' if action == 'delete' else '复制文件'
+    work = (lambda jid: {'backup_directory': game_file_actions.apply_delete(
+        path, remote, lambda current, total, msg: manager.update_job(jid, current, total, msg),
+        lambda: checkpoint(lambda: manager.cancelled(jid)))}) if action == 'delete' else (
+        lambda jid: {'path': game_file_actions.apply_copy(
+            path, argument, remote, lambda current, total, msg: manager.update_job(jid, current, total, msg),
+            lambda: checkpoint(lambda: manager.cancelled(jid)))})
+    reply(handler, {'job_id': background(manager, title, work)})
+
+
+def preview_game_file_sync(handler, context, payload):
+    import game_file_sync
+
+    root, changes = payload.get('root'), payload.get('changes')
+    if not isinstance(root, str) or not root or not isinstance(changes, list):
+        raise ValueError('请先打开游戏库')
+
+    def work(job_id):
+        plan = game_file_sync.preview(root, changes)
+        with context.job_manager.lock:
+            context.job_manager.contexts[job_id] = {'file_sync': (root, changes, plan['signature'])}
+        return plan['public']
+
+    reply(handler, {'job_id': background(context.job_manager, '核对文件改动', work)})
+
+
+def apply_game_file_sync(handler, context, payload):
+    import game_file_sync
+
+    ident = payload.get('preview_job_id')
+    job = context.job_manager.get_job(ident) if isinstance(ident, str) else None
     if not job or job['status'] != 'completed':
-        raise ValueError('请先预览删除方案')
+        raise ValueError('请先预览同步方案')
     manager = context.job_manager
     with manager.lock:
-        args = manager.contexts.get(ident, {}).pop('file_deletion', None)
+        args = manager.contexts.get(ident, {}).pop('file_sync', None)
     if args is None:
-        raise ValueError('删除方案已失效，请重新预览')
-    reply(handler, {'job_id': background(manager, '删除游戏文件', lambda jid: apply(
-        *args, clean, lambda current, total, msg: manager.update_job(jid, current, total, msg),
-        lambda: checkpoint(lambda: manager.cancelled(jid))))})
+        raise ValueError('同步方案已失效，请重新预览')
+    reply(handler, {'job_id': background(manager, '同步文件改动', lambda jid: game_file_sync.apply(*args))})
 
 
 def overview(handler, context, query):

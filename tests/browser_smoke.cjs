@@ -600,9 +600,8 @@ async function main() {
     await click('#inspector-locate-file');
     await waitFor(()=>document.querySelector('.game-files-rows [aria-pressed="true"]')?.textContent.includes('Imported demo.sfc'),'located ROM selected');
     await click('.game-files-toolbar button[aria-label="Delete file"]');
-    await waitFor(()=>document.querySelector('.game-file-delete-impact')?.textContent.includes('Imported demo.sfc'),'deletion plan rendered');
-    assert.ok(await evaluate(()=>document.querySelector('.game-file-delete-impact').textContent.includes('Imported demo')));
-    await click('.game-file-delete-dialog button[aria-label="Close"], .game-file-delete-dialog button.btn-muted');
+    await waitFor(()=>document.querySelector('.game-file-delete-dialog')?.textContent.includes('Imported demo.sfc'),'delete dialog rendered');
+    await click('.game-file-delete-dialog button.btn-muted');
     await click('.game-files-header button');
     const beforeRomUpdate=fs.readFileSync(path.join(libraryPath,'playlists/Nintendo - Super Nintendo Entertainment System.lpl'));
     await click('#inspector-actions-menu > summary');

@@ -479,27 +479,38 @@ def remove_file(value,expected,cancelled=lambda: None):
         if resolve(handle,storage,parts) is not None: raise RuntimeError('MTP 移除核对失败')
 
 
-def change_game_file(value, name):
-    """Rename or delete one regular object selected in Game Files."""
+def rename_object(value, name):
+    """Rename any MTP object (file or folder); returns the new URI."""
     with session(value) as (handle, storage, parts):
         entry = resolve(handle, storage, parts)
-        if entry is None or entry['folder']:
-            raise ValueError('游戏文件已移动或不存在')
+        if entry is None:
+            raise ValueError('文件已移动或不存在')
+        if name == parts[-1]:
+            return value
+        target = parts[:-1] + [name]
+        if resolve(handle, storage, target) is not None:
+            raise ValueError('已有同名文件')
         lib = library()
-        if name is None:
-            if lib.LIBMTP_Delete_Object(handle, entry['id']) or resolve(handle, storage, parts) is not None:
-                raise RuntimeError('MTP 删除未通过核对')
-        elif name != parts[-1]:
-            target = parts[:-1] + [name]
-            if resolve(handle, storage, target) is not None:
-                raise ValueError('已有同名文件')
-            metadata = lib.LIBMTP_new_file_t()
-            metadata.contents.id = entry['id']
-            try:
-                if lib.LIBMTP_Set_File_Name(handle, metadata, name.encode()):
-                    raise RuntimeError('MTP 重命名失败')
-            finally:
-                lib.LIBMTP_destroy_file_t(metadata)
-            updated = resolve(handle, storage, target)
-            if not updated or updated['id'] != entry['id']:
-                raise RuntimeError('MTP 重命名未通过核对')
+        metadata = lib.LIBMTP_new_file_t()
+        metadata.contents.id = entry['id']
+        try:
+            if lib.LIBMTP_Set_File_Name(handle, metadata, name.encode()):
+                raise RuntimeError('MTP 重命名失败')
+        finally:
+            lib.LIBMTP_destroy_file_t(metadata)
+        updated = resolve(handle, storage, target)
+        if not updated or updated['id'] != entry['id']:
+            raise RuntimeError('MTP 重命名未通过核对')
+        return uri(parse(value)[0], storage, '/'.join(target))
+
+
+def delete_object(value):
+    """Delete one empty MTP folder object."""
+    with session(value) as (handle, storage, parts):
+        entry = resolve(handle, storage, parts)
+        if entry is None:
+            raise ValueError('对象不存在')
+        if library().LIBMTP_Delete_Object(handle, entry['id']):
+            raise RuntimeError('MTP 删除失败')
+        if resolve(handle, storage, parts) is not None:
+            raise RuntimeError('MTP 删除核对失败')

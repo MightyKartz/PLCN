@@ -280,6 +280,23 @@ def apply(plan):
 
 
 
+def storage_mounts(root):
+    """MTP storage id -> Android mount learned from consistent saved mappings."""
+    options = {}
+    for profile in profiles().get(root, []):
+        android = str(profile.get('android_directory') or '').strip('/')
+        try:
+            storage, parts = mtp.parse(profile['directory'])[1:]
+        except (KeyError, TypeError, ValueError):
+            continue
+        if not android or not parts:
+            continue
+        segments = android.split('/')
+        if len(segments) > len(parts) and segments[-len(parts):] == parts:
+            options.setdefault(storage, set()).add('/' + '/'.join(segments[:-len(parts)]))
+    return {storage: mounts.pop() for storage, mounts in options.items() if len(mounts) == 1}
+
+
 def hints(root, system, directory, filename=None):
     if system not in SYSTEMS or not isinstance(directory, str) or not directory:
         raise ValueError('请选择主机和目录')
@@ -302,18 +319,8 @@ def hints(root, system, directory, filename=None):
                 result['android_directory'] = saved['android_directory']
                 return result
             storage, parts = mtp.parse(directory)[1], mtp.parse(directory)[2]
-            mounts = set()
-            for profile in profiles().get(root, []):
-                android = str(profile.get('android_directory') or '').strip('/')
-                try:
-                    profile_storage, profile_parts = mtp.parse(profile['directory'])[1:]
-                except (KeyError, TypeError, ValueError):
-                    continue
-                if profile_storage != storage or not android or not profile_parts:
-                    continue
-                segments = android.split('/')
-                if len(segments) > len(profile_parts) and segments[-len(profile_parts):] == profile_parts:
-                    mounts.add('/' + '/'.join(segments[:-len(profile_parts)]))
+            learned = storage_mounts(root).get(storage)
+            mounts = {learned} if learned else set()
             paths = [str(item.get('path', '')).replace('\\', '/') for item in document.get('items', [])]
             for size in range(len(parts), 0, -1):
                 suffix = '/' + '/'.join(parts[-size:]) + '/'

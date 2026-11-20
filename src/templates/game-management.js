@@ -385,6 +385,7 @@ async function applyGameManagement() {
     }
 }
 function renderGameSelection(visible) {
+    if (typeof renderFileSyncNotice === 'function') renderFileSyncNotice();
     const toolbar = document.getElementById('game-selection-toolbar'); toolbar.classList.remove('has-selection', 'has-status'); toolbar.replaceChildren();
     const headAll = document.getElementById('game-library-select-all');
     const allChecked = Boolean(visible.length) && visible.every(item => gameLibrary.selection.has(item.index));
